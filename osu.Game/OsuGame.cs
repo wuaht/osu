@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Humanizer;
@@ -66,6 +65,7 @@ using osu.Game.Screens.Edit;
 using osu.Game.Screens.Footer;
 using osu.Game.Screens.Menu;
 using osu.Game.Screens.OnlinePlay.DailyChallenge;
+using osu.Game.Screens.OnlinePlay.Matchmaking.Queue;
 using osu.Game.Screens.OnlinePlay.Multiplayer;
 using osu.Game.Screens.OnlinePlay.Playlists;
 using osu.Game.Screens.Play;
@@ -80,6 +80,7 @@ using osu.Game.Utils;
 using osuTK;
 using osuTK.Graphics;
 using Sentry;
+using IntroScreen = osu.Game.Screens.Menu.IntroScreen;
 using MatchType = osu.Game.Online.Rooms.MatchType;
 
 namespace osu.Game
@@ -1055,13 +1056,6 @@ namespace osu.Game
         {
             base.LoadComplete();
 
-            if (RuntimeInfo.EntryAssembly.GetCustomAttribute<OfficialBuildAttribute>() == null)
-                Logger.Log(NotificationsStrings.NotOfficialBuild.ToString());
-
-            // Make sure the release stream setting matches the build which was just run.
-            if (Enum.TryParse<ReleaseStream>(Version.Split('-').Last(), true, out var releaseStream))
-                LocalConfig.SetValue(OsuSetting.ReleaseStream, releaseStream);
-
             var languages = Enum.GetValues<Language>();
 
             var mappings = languages.Select(language =>
@@ -1278,6 +1272,7 @@ namespace osu.Game
 
             loadComponentSingleFile(new BackgroundDataStoreProcessor(), Add);
             loadComponentSingleFile<BeatmapStore>(detachedBeatmapStore = new RealmDetachedBeatmapStore(), Add, true);
+            loadComponentSingleFile(new QueueController(), Add, true);
 
             Add(externalLinkOpener = new ExternalLinkOpener());
             Add(new MusicKeyBindingHandler());
