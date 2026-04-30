@@ -7,14 +7,17 @@ using NUnit.Framework;
 using osu.Framework.Allocation;
 using osu.Framework.Audio;
 using osu.Framework.Extensions;
+using osu.Framework.Extensions.ObjectExtensions;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.UserInterface;
 using osu.Framework.Platform;
 using osu.Framework.Screens;
 using osu.Framework.Testing;
 using osu.Game.Beatmaps;
+using osu.Game.Database;
 using osu.Game.Online.API;
 using osu.Game.Online.API.Requests.Responses;
+using osu.Game.Online.Chat;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
 using osu.Game.Overlays;
@@ -43,6 +46,7 @@ namespace osu.Game.Tests.Visual.Multiplayer
     public partial class TestSceneMultiplayerMatchSubScreen : MultiplayerTestScene
     {
         private MultiplayerMatchSubScreen screen = null!;
+        private RulesetStore rulesets = null!;
         private BeatmapManager beatmaps = null!;
         private BeatmapSetInfo importedSet = null!;
         private Room room = null!;
@@ -50,13 +54,21 @@ namespace osu.Game.Tests.Visual.Multiplayer
         [BackgroundDependencyLoader]
         private void load(GameHost host, AudioManager audio)
         {
-            Dependencies.Cache(new RealmRulesetStore(Realm));
+            Dependencies.Cache(rulesets = new RealmRulesetStore(Realm));
             Dependencies.Cache(beatmaps = new BeatmapManager(LocalStorage, Realm, null, audio, Resources, host, Beatmap.Default));
             Dependencies.Cache(Realm);
+            Dependencies.CacheAs<BeatmapStore>(new RealmDetachedBeatmapStore());
+            Dependencies.Cache(new ChannelManager(API));
 
             beatmaps.Import(TestResources.GetQuickTestBeatmapForImport()).WaitSafely();
 
             importedSet = beatmaps.GetAllUsableBeatmapSets().First();
+
+            Realm.Write(r =>
+            {
+                foreach (var beatmapInfo in r.All<BeatmapInfo>())
+                    beatmapInfo.OnlineMD5Hash = beatmapInfo.MD5Hash;
+            });
         }
 
         public override void SetUpSteps()
@@ -342,6 +354,30 @@ namespace osu.Game.Tests.Visual.Multiplayer
         }
 
         [Test]
+        public void TestChangeSettingsButtonAlwaysVisibleForReferee()
+        {
+            AddStep("add playlist item", () =>
+            {
+                room.Playlist =
+                [
+                    new PlaylistItem(new TestBeatmap(new OsuRuleset().RulesetInfo).BeatmapInfo)
+                    {
+                        RulesetID = new OsuRuleset().RulesetInfo.OnlineID
+                    }
+                ];
+            });
+            AddStep("setup referee", () => MultiplayerClient.RoomSetupAction = r => r.Host!.Role = MultiplayerRoomUserRole.Referee);
+            ClickButtonWhenEnabled<MultiplayerMatchSettingsOverlay.CreateOrUpdateButton>();
+
+            AddUntilStep("wait for join", () => RoomJoined);
+
+            AddUntilStep("button visible", () => this.ChildrenOfType<MultiplayerRoomPanel>().Single().ChangeSettingsButton.Alpha, () => Is.GreaterThan(0));
+            AddStep("join other user", void () => MultiplayerClient.AddUser(new APIUser { Id = PLAYER_1_ID }));
+            AddStep("make other user host", () => MultiplayerClient.TransferHost(PLAYER_1_ID));
+            AddAssert("button hidden", () => this.ChildrenOfType<MultiplayerRoomPanel>().Single().ChangeSettingsButton.Alpha, () => Is.GreaterThan(0));
+        }
+
+        [Test]
         public void TestUserModSelectUpdatesWhenNotVisible()
         {
             AddStep("add playlist item", () =>
@@ -430,6 +466,27 @@ namespace osu.Game.Tests.Visual.Multiplayer
         }
 
         [Test]
+        public void TestRoll()
+        {
+            AddStep("set playlist", () =>
+            {
+                room.Playlist =
+                [
+                    new PlaylistItem(beatmaps.GetWorkingBeatmap(importedSet.Beatmaps.First()).BeatmapInfo)
+                    {
+                        RulesetID = new OsuRuleset().RulesetInfo.OnlineID
+                    }
+                ];
+            });
+            ClickButtonWhenEnabled<MultiplayerMatchSettingsOverlay.CreateOrUpdateButton>();
+            AddStep("set channel", () => room.ChannelId = 1);
+
+            AddUntilStep("wait for room join", () => RoomJoined);
+
+            AddStep("roll", () => MultiplayerClient.SendMatchRequest(new RollRequest()));
+        }
+
+        [Test]
         public void TestSettingsRemainsOpenOnRoomUpdate()
         {
             AddStep("set playlist", () =>
@@ -452,6 +509,14 @@ namespace osu.Game.Tests.Visual.Multiplayer
 
             AddStep("trigger room update", () => MultiplayerClient.AddPlaylistItem(MultiplayerClient.ServerRoom!.Playlist[0].Clone()));
             AddAssert("settings still open", () => this.ChildrenOfType<MultiplayerMatchSettingsOverlay>().Single().State.Value, () => Is.EqualTo(Visibility.Visible));
+        }
+
+        protected override void Dispose(bool isDisposing)
+        {
+            base.Dispose(isDisposing);
+
+            if (rulesets.IsNotNull())
+                rulesets.Dispose();
         }
 
         private partial class TestMultiplayerMatchSubScreen : MultiplayerMatchSubScreen
