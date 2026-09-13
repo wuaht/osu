@@ -344,3 +344,6 @@ FodyWeavers.xsd
 
 .idea/.idea.osu.Desktop/.idea/misc.xml
 .idea/.idea.osu.Android/.idea/deploymentTargetDropDown.xml
+osu.Game/osu.Game.csproj
+osu.sln
+osu.Desktop.slnf
