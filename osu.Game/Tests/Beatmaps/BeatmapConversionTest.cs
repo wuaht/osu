@@ -48,7 +48,8 @@ namespace osu.Game.Tests.Beatmaps
             foreach (var m in expectedResult.Mappings)
                 m.PostProcess();
 
-            Assert.Multiple(() =>
+            // TestDelegate is obsolete
+            Assert.Multiple((Action)(() =>
             {
                 int mappingCounter = 0;
 
@@ -75,7 +76,8 @@ namespace osu.Game.Tests.Beatmaps
                         var ourMapping = ourResult.Mappings[mappingCounter];
                         var expectedMapping = expectedResult.Mappings[mappingCounter];
 
-                        Assert.Multiple(() =>
+                        // TestDelegate is obsolete
+                        Assert.Multiple((Action)(() =>
                         {
                             int objectCounter = 0;
 
@@ -103,12 +105,12 @@ namespace osu.Game.Tests.Beatmaps
 
                                 objectCounter++;
                             }
-                        });
+                        }));
                     }
 
                     mappingCounter++;
                 }
-            });
+            }));
         }
 
         private ConvertResult convert(string name, Mod[] mods)
