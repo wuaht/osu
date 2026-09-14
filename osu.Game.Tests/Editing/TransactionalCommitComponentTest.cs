@@ -86,7 +86,7 @@ namespace osu.Game.Tests.Editing
         {
             handler.BeginChange();
             handler.EndChange();
-            Assert.That(() => handler.EndChange(), Throws.TypeOf<InvalidOperationException>());
+            Assert.That(new Action(() => handler.EndChange()), Throws.TypeOf<InvalidOperationException>());
         }
 
         private partial class TestHandler : TransactionalCommitComponent

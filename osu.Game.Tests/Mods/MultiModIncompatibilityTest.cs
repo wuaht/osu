@@ -32,7 +32,7 @@ namespace osu.Game.Tests.Mods
 
             var allMultiMods = getMultiMods(ruleset!);
 
-            Assert.Multiple(() =>
+            Assert.Multiple((Action)(() =>
             {
                 foreach (var multiMod in allMultiMods)
                 {
@@ -53,7 +53,7 @@ namespace osu.Game.Tests.Mods
                         }
                     }
                 }
-            });
+            }));
         }
 
         /// <remarks>

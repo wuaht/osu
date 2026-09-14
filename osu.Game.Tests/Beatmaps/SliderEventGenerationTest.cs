@@ -1,6 +1,7 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Linq;
 using NUnit.Framework;
 using osu.Game.Rulesets.Objects;
@@ -99,7 +100,7 @@ namespace osu.Game.Tests.Beatmaps
 
             var events = SliderEventGenerator.Generate(start_time, span_duration, velocity, velocity, span_duration, 2).ToArray();
 
-            Assert.Multiple(() =>
+            Assert.Multiple((Action)(() =>
             {
                 int tickIndex = -1;
 
@@ -110,7 +111,7 @@ namespace osu.Game.Tests.Beatmaps
 
                     Assert.That(events[tickIndex].Time, Is.LessThan(span_duration - min_distance).Or.GreaterThan(span_duration + min_distance));
                 }
-            });
+            }));
         }
 
         [Test]

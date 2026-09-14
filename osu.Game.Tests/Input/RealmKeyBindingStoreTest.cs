@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Collections.Generic;
 using NUnit.Framework;
 using osu.Framework.Input.Bindings;
@@ -26,7 +27,7 @@ namespace osu.Game.Tests.Input
 
             int countCleared = RealmKeyBindingStore.ClearDuplicateBindings(bindings);
 
-            Assert.Multiple(() =>
+            Assert.Multiple((Action)(() =>
             {
                 Assert.That(countCleared, Is.Zero);
 
@@ -41,7 +42,7 @@ namespace osu.Game.Tests.Input
 
                 Assert.That(bindings[3].Action, Is.EqualTo((int)GlobalAction.MusicNext));
                 Assert.That(bindings[3].KeyCombination, Is.EqualTo(new KeyCombination(InputKey.F5)));
-            });
+            }));
         }
 
         [Test]
@@ -60,7 +61,7 @@ namespace osu.Game.Tests.Input
 
             int countCleared = RealmKeyBindingStore.ClearDuplicateBindings(bindings);
 
-            Assert.Multiple(() =>
+            Assert.Multiple((Action)(() =>
             {
                 Assert.That(countCleared, Is.EqualTo(4));
 
@@ -84,7 +85,7 @@ namespace osu.Game.Tests.Input
 
                 Assert.That(bindings[6].Action, Is.EqualTo((int)GlobalAction.TakeScreenshot));
                 Assert.That(bindings[6].KeyCombination, Is.EqualTo(new KeyCombination(InputKey.PrintScreen)));
-            });
+            }));
         }
 
         [Test]
@@ -99,7 +100,7 @@ namespace osu.Game.Tests.Input
 
             int countCleared = RealmKeyBindingStore.ClearDuplicateBindings(bindings);
 
-            Assert.Multiple(() =>
+            Assert.Multiple((Action)(() =>
             {
                 Assert.That(countCleared, Is.EqualTo(0));
 
@@ -111,7 +112,7 @@ namespace osu.Game.Tests.Input
 
                 Assert.That(bindings[2].Action, Is.EqualTo((int)GlobalAction.MusicPrev));
                 Assert.That(bindings[2].KeyCombination, Is.EqualTo(new KeyCombination(InputKey.F1)));
-            });
+            }));
         }
     }
 }

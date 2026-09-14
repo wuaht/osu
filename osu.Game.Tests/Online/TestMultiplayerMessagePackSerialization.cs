@@ -1,6 +1,7 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using MessagePack;
 using NUnit.Framework;
 using NUnit.Framework.Legacy;
@@ -51,7 +52,7 @@ namespace osu.Game.Tests.Online
             MessagePackSerializer.Deserialize<TeamVersusUserState>(serialized);
 
             // fails with base (union) type.
-            Assert.Throws<MessagePackSerializationException>(() => MessagePackSerializer.Deserialize<MatchUserState>(serialized));
+            Assert.Throws<MessagePackSerializationException>(new Action(() => MessagePackSerializer.Deserialize<MatchUserState>(serialized)));
         }
 
         [Test]

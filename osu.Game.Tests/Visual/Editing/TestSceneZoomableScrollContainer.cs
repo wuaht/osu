@@ -72,10 +72,10 @@ namespace osu.Game.Tests.Visual.Editing
         {
             AddStep("Invalid ZoomableScrollContainer throws ArgumentException", () =>
             {
-                Assert.Throws<ArgumentException>(() =>
+                Assert.Throws<ArgumentException>(new Action(() =>
                 {
                     _ = new ZoomableScrollContainer(1, 60, 0);
-                });
+                }));
             });
         }
 

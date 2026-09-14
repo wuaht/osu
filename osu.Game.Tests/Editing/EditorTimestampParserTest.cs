@@ -35,12 +35,12 @@ namespace osu.Game.Tests.Editing
         {
             bool actualSuccess = EditorTimestampParser.TryParse(timestamp, out var actualParsedTime, out string? actualSelection);
 
-            Assert.Multiple(() =>
+            Assert.Multiple((Action)(() =>
             {
                 Assert.That(actualSuccess, Is.EqualTo(expectedSuccess));
                 Assert.That(actualParsedTime, Is.EqualTo(expectedParsedTime));
                 Assert.That(actualSelection, Is.EqualTo(expectedSelection));
-            });
+            }));
         }
     }
 }

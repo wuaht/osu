@@ -37,7 +37,7 @@ namespace osu.Game.Tests.Beatmaps.Formats
             var encoded = encode(decoded);
             var decodedAfterEncode = decode(encoded);
 
-            Assert.Multiple(() =>
+            Assert.Multiple((Action)(() =>
             {
                 assertSame(decoded, decodedAfterEncode, skin => skin.SkinInfo.PerformRead(s => s.Name));
                 assertSame(decoded, decodedAfterEncode, skin => skin.SkinInfo.PerformRead(s => s.Creator));
@@ -106,7 +106,7 @@ namespace osu.Game.Tests.Beatmaps.Formats
                     assertSame(decodedMania, decodedAfterEncodeMania!, mania => mania.NoteBodyStyle);
                     assertSame(decodedMania, decodedAfterEncodeMania!, mania => mania.ColumnNoteBodyStyles);
                 }
-            });
+            }));
         }
 
         private LegacySkin decode(Stream stream)

@@ -39,7 +39,7 @@ namespace osu.Game.Tests.NonVisual
             AddAssert("first operation in progress", () => operationInProgress.Value);
 
             AddStep("cannot start another operation",
-                () => Assert.Throws<InvalidOperationException>(() => tracker.BeginOperation()));
+                () => Assert.Throws<InvalidOperationException>(new Action(() => tracker.BeginOperation())));
 
             AddStep("end first operation", () => firstOperation.Dispose());
             AddAssert("first operation is ended", () => !operationInProgress.Value);
