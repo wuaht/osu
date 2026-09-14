@@ -9,7 +9,6 @@ using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Game.Beatmaps.ControlPoints;
-using osu.Game.Graphics.UserInterface;
 using osu.Game.Graphics.UserInterfaceV2;
 using osu.Game.Rulesets.Edit;
 using osu.Game.Rulesets.Objects;
@@ -25,10 +24,12 @@ namespace osu.Game.Rulesets.Osu.Edit
 {
     public partial class PolygonGenerationPopover : OsuPopover
     {
-        private SliderWithTextBoxInput<double> distanceSnapInput = null!;
-        private SliderWithTextBoxInput<int> offsetAngleInput = null!;
-        private SliderWithTextBoxInput<int> repeatCountInput = null!;
-        private SliderWithTextBoxInput<int> pointInput = null!;
+        private DependencyContainer dependencies = null!;
+
+        private FormSliderBar<double> distanceSnapInput { get; set; } = null!;
+        private FormSliderBar<int> offsetAngleInput { get; set; } = null!;
+        private FormSliderBar<int> repeatCountInput { get; set; } = null!;
+        private FormSliderBar<int> pointInput { get; set; } = null!;
         private RoundedButton commitButton = null!;
 
         private readonly List<HitCircle> insertedCircles = new List<HitCircle>();
@@ -50,18 +51,28 @@ namespace osu.Game.Rulesets.Osu.Edit
         [Resolved]
         private HitObjectComposer composer { get; set; } = null!;
 
+        private PlacementStateManager? placementStateManager;
+
+        protected override IReadOnlyDependencyContainer CreateChildDependencies(IReadOnlyDependencyContainer parent)
+        {
+            return dependencies = new DependencyContainer(base.CreateChildDependencies(parent));
+        }
+
         [BackgroundDependencyLoader]
         private void load()
         {
+            AllowableAnchors = new[] { Anchor.CentreLeft, Anchor.CentreRight };
+
             Child = new FillFlowContainer
             {
                 Width = 220,
                 AutoSizeAxes = Axes.Y,
-                Spacing = new Vector2(20),
+                Spacing = new Vector2(5),
                 Children = new Drawable[]
                 {
-                    distanceSnapInput = new SliderWithTextBoxInput<double>("Distance snap:")
+                    distanceSnapInput = new FormSliderBar<double>
                     {
+                        Caption = "Distance snap",
                         Current = new BindableNumber<double>(1)
                         {
                             MinValue = 0.1,
@@ -69,37 +80,40 @@ namespace osu.Game.Rulesets.Osu.Edit
                             Precision = 0.1,
                             Value = ((OsuHitObjectComposer)composer).DistanceSnapProvider.DistanceSpacingMultiplier.Value,
                         },
-                        Instantaneous = true
+                        TabbableContentContainer = this
                     },
-                    offsetAngleInput = new SliderWithTextBoxInput<int>("Offset angle:")
+                    offsetAngleInput = new FormSliderBar<int>
                     {
+                        Caption = "Offset angle",
                         Current = new BindableNumber<int>
                         {
                             MinValue = 0,
                             MaxValue = 180,
                             Precision = 1
                         },
-                        Instantaneous = true
+                        TabbableContentContainer = this
                     },
-                    repeatCountInput = new SliderWithTextBoxInput<int>("Repeats:")
+                    repeatCountInput = new FormSliderBar<int>
                     {
+                        Caption = "Repeats",
                         Current = new BindableNumber<int>(1)
                         {
                             MinValue = 1,
                             MaxValue = 10,
                             Precision = 1
                         },
-                        Instantaneous = true
+                        TabbableContentContainer = this
                     },
-                    pointInput = new SliderWithTextBoxInput<int>("Vertices:")
+                    pointInput = new FormSliderBar<int>
                     {
+                        Caption = "Vertices",
                         Current = new BindableNumber<int>(3)
                         {
                             MinValue = 3,
-                            MaxValue = 10,
+                            MaxValue = 32,
                             Precision = 1,
                         },
-                        Instantaneous = true
+                        TabbableContentContainer = this
                     },
                     commitButton = new RoundedButton
                     {
@@ -109,6 +123,10 @@ namespace osu.Game.Rulesets.Osu.Edit
                     }
                 }
             };
+
+            // TODO: This is a pretty ugly dependency chain.
+            // We should look to rearrange things to avoid this altogether.
+            dependencies.CacheAs(composer.BlueprintContainer.SelectionHandler);
         }
 
         protected override void LoadComplete()
@@ -118,10 +136,10 @@ namespace osu.Game.Rulesets.Osu.Edit
             changeHandler?.BeginChange();
             began = true;
 
-            distanceSnapInput.Current.BindValueChanged(_ => tryCreatePolygon());
-            offsetAngleInput.Current.BindValueChanged(_ => tryCreatePolygon());
-            repeatCountInput.Current.BindValueChanged(_ => tryCreatePolygon());
-            pointInput.Current.BindValueChanged(_ => tryCreatePolygon());
+            distanceSnapInput.Current.BindValueChanged(_ => Scheduler.AddOnce(tryCreatePolygon));
+            offsetAngleInput.Current.BindValueChanged(_ => Scheduler.AddOnce(tryCreatePolygon));
+            repeatCountInput.Current.BindValueChanged(_ => Scheduler.AddOnce(tryCreatePolygon));
+            pointInput.Current.BindValueChanged(_ => Scheduler.AddOnce(tryCreatePolygon));
             tryCreatePolygon();
         }
 
@@ -136,39 +154,63 @@ namespace osu.Game.Rulesets.Osu.Edit
             double length = distanceSnapInput.Current.Value * velocity * timeSpacing;
             float polygonRadius = (float)(length / (2 * Math.Sin(double.Pi / pointInput.Current.Value)));
 
-            editorBeatmap.RemoveRange(insertedCircles);
-            insertedCircles.Clear();
+            int totalPoints = pointInput.Current.Value * repeatCountInput.Current.Value;
 
-            var selectionHandler = (EditorSelectionHandler)composer.BlueprintContainer.SelectionHandler;
-            bool first = true;
-
-            for (int i = 1; i <= pointInput.Current.Value * repeatCountInput.Current.Value; ++i)
+            if (insertedCircles.Count > totalPoints)
             {
-                float angle = float.DegreesToRadians(offsetAngleInput.Current.Value) + i * (2 * float.Pi / pointInput.Current.Value);
+                editorBeatmap.RemoveRange(insertedCircles.GetRange(totalPoints, insertedCircles.Count - totalPoints));
+                insertedCircles.RemoveRange(totalPoints, insertedCircles.Count - totalPoints);
+            }
+
+            var newlyAdded = new List<HitCircle>();
+
+            for (int i = 0; i < totalPoints; ++i)
+            {
+                float angle = float.DegreesToRadians(offsetAngleInput.Current.Value) + (i + 1) * (2 * float.Pi / pointInput.Current.Value);
                 var position = OsuPlayfield.BASE_SIZE / 2 + new Vector2(polygonRadius * float.Cos(angle), polygonRadius * float.Sin(angle));
 
-                var circle = new HitCircle
+                HitCircle circle;
+
+                if (i < insertedCircles.Count)
                 {
-                    Position = position,
-                    StartTime = startTime,
-                    NewCombo = first && selectionHandler.SelectionNewComboState.Value == TernaryState.True,
-                };
-                // TODO: probably ensure samples also follow current ternary status (not trivial)
-                circle.Samples.Add(circle.CreateHitSampleInfo());
+                    circle = insertedCircles[i];
+
+                    circle.Position = position;
+                    circle.StartTime = startTime;
+                }
+                else
+                {
+                    circle = new HitCircle
+                    {
+                        Position = position,
+                        StartTime = startTime,
+                    };
+
+                    newlyAdded.Add(circle);
+
+                    circle.Samples.Add(circle.CreateHitSampleInfo());
+                }
 
                 if (position.X < 0 || position.Y < 0 || position.X > OsuPlayfield.BASE_SIZE.X || position.Y > OsuPlayfield.BASE_SIZE.Y)
                 {
                     commitButton.Enabled.Value = false;
+                    editorBeatmap.RemoveRange(insertedCircles);
+                    insertedCircles.Clear();
                     return;
                 }
 
-                insertedCircles.Add(circle);
                 startTime = beatSnapProvider.SnapTime(startTime + timeSpacing);
-
-                first = false;
             }
 
-            editorBeatmap.AddRange(insertedCircles);
+            insertedCircles.AddRange(newlyAdded);
+            editorBeatmap.AddRange(newlyAdded);
+
+            placementStateManager?.RemoveAndDisposeImmediately();
+            Content.Add(placementStateManager = new PlacementStateManager(insertedCircles.Cast<HitObject>().ToArray())
+            {
+                PerformBeatmapUpdates = true,
+            });
+
             commitButton.Enabled.Value = true;
         }
 

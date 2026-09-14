@@ -71,7 +71,7 @@ namespace osu.Game.Online.API
 
         protected virtual WebRequest CreateWebRequest() => new OsuWebRequest(Uri);
 
-        protected virtual string Uri => $@"{API!.APIEndpointUrl}/api/v2/{Target}";
+        protected virtual string Uri => $@"{API!.Endpoints.APIUrl}/api/v2/{Target}";
 
         protected IAPIProvider? API;
 
@@ -221,7 +221,7 @@ namespace osu.Game.Online.API
                             // attempt to decode a displayable error string.
                             var error = JsonConvert.DeserializeObject<DisplayableError>(responseString);
                             if (error != null)
-                                e = new APIException(error.ErrorMessage, e);
+                                e = new APIException(error.ErrorMessage, e, WebRequest?.ResponseStatusCode);
                         }
                         catch
                         {

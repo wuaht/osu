@@ -9,7 +9,10 @@ using osu.Framework.Testing;
 using osu.Game.Beatmaps;
 using osu.Game.Rulesets.Mania.Beatmaps;
 using osu.Game.Rulesets.Scoring;
+using osu.Game.Screens.Play.HUD;
+using osu.Game.Screens.Play.HUD.HitErrorMeters;
 using osu.Game.Skinning;
+using osuTK;
 using osuTK.Graphics;
 
 namespace osu.Game.Rulesets.Mania.Skinning.Argon
@@ -38,7 +41,14 @@ namespace osu.Game.Rulesets.Mania.Skinning.Argon
                         case GlobalSkinnableContainers.MainHUDComponents:
                             return new DefaultSkinComponentsContainer(container =>
                             {
+                                var leaderboard = container.OfType<DrawableGameplayLeaderboard>().FirstOrDefault();
                                 var combo = container.ChildrenOfType<ArgonManiaComboCounter>().FirstOrDefault();
+                                var spectatorList = container.OfType<SpectatorList>().FirstOrDefault();
+                                var hitError = container.OfType<HitErrorMeter>().FirstOrDefault();
+                                var hitError2 = container.OfType<HitErrorMeter>().LastOrDefault();
+
+                                if (leaderboard != null)
+                                    leaderboard.Position = new Vector2(36, 115);
 
                                 if (combo != null)
                                 {
@@ -47,9 +57,37 @@ namespace osu.Game.Rulesets.Mania.Skinning.Argon
                                     combo.Origin = Anchor.Centre;
                                     combo.Y = 200;
                                 }
+
+                                if (spectatorList != null)
+                                    spectatorList.Position = new Vector2(36, -66);
+
+                                if (hitError != null)
+                                {
+                                    hitError.Anchor = Anchor.CentreLeft;
+                                    hitError.Origin = Anchor.CentreLeft;
+                                }
+
+                                if (hitError2 != null)
+                                {
+                                    hitError2.Anchor = Anchor.CentreRight;
+                                    hitError2.Scale = new Vector2(-1, 1);
+                                    // origin flipped to match scale above.
+                                    hitError2.Origin = Anchor.CentreLeft;
+                                }
+
+                                foreach (var d in container.OfType<ISerialisableDrawable>())
+                                    d.UsesFixedAnchor = true;
                             })
                             {
+                                new DrawableGameplayLeaderboard(),
                                 new ArgonManiaComboCounter(),
+                                new SpectatorList
+                                {
+                                    Anchor = Anchor.BottomLeft,
+                                    Origin = Anchor.BottomLeft,
+                                },
+                                new BarHitErrorMeter(),
+                                new BarHitErrorMeter(),
                             };
                     }
 
@@ -120,8 +158,9 @@ namespace osu.Game.Rulesets.Mania.Skinning.Argon
 
                 switch (maniaLookup.Lookup)
                 {
-                    case LegacyManiaSkinConfigurationLookups.ColumnSpacing:
-                        return SkinUtils.As<TValue>(new Bindable<float>(2));
+                    case LegacyManiaSkinConfigurationLookups.LeftColumnSpacing:
+                    case LegacyManiaSkinConfigurationLookups.RightColumnSpacing:
+                        return SkinUtils.As<TValue>(new Bindable<float>(1));
 
                     case LegacyManiaSkinConfigurationLookups.StagePaddingBottom:
                     case LegacyManiaSkinConfigurationLookups.StagePaddingTop:
@@ -135,7 +174,6 @@ namespace osu.Game.Rulesets.Mania.Skinning.Argon
                         return SkinUtils.As<TValue>(new Bindable<float>(width));
 
                     case LegacyManiaSkinConfigurationLookups.ColumnBackgroundColour:
-
                         var colour = getColourForLayout(columnIndex, stage);
 
                         return SkinUtils.As<TValue>(new Bindable<Color4>(colour));
@@ -164,7 +202,7 @@ namespace osu.Game.Rulesets.Mania.Skinning.Argon
 
                         case 1: return colour_cyan;
 
-                        default: throw new ArgumentOutOfRangeException();
+                        default: throw new ArgumentOutOfRangeException(nameof(columnIndex));
                     }
 
                 case 3:
@@ -176,7 +214,7 @@ namespace osu.Game.Rulesets.Mania.Skinning.Argon
 
                         case 2: return colour_cyan;
 
-                        default: throw new ArgumentOutOfRangeException();
+                        default: throw new ArgumentOutOfRangeException(nameof(columnIndex));
                     }
 
                 case 4:
@@ -190,7 +228,7 @@ namespace osu.Game.Rulesets.Mania.Skinning.Argon
 
                         case 3: return colour_purple;
 
-                        default: throw new ArgumentOutOfRangeException();
+                        default: throw new ArgumentOutOfRangeException(nameof(columnIndex));
                     }
 
                 case 5:
@@ -206,7 +244,7 @@ namespace osu.Game.Rulesets.Mania.Skinning.Argon
 
                         case 4: return colour_cyan;
 
-                        default: throw new ArgumentOutOfRangeException();
+                        default: throw new ArgumentOutOfRangeException(nameof(columnIndex));
                     }
 
                 case 6:
@@ -224,7 +262,7 @@ namespace osu.Game.Rulesets.Mania.Skinning.Argon
 
                         case 5: return colour_pink;
 
-                        default: throw new ArgumentOutOfRangeException();
+                        default: throw new ArgumentOutOfRangeException(nameof(columnIndex));
                     }
 
                 case 7:
@@ -244,7 +282,7 @@ namespace osu.Game.Rulesets.Mania.Skinning.Argon
 
                         case 6: return colour_pink;
 
-                        default: throw new ArgumentOutOfRangeException();
+                        default: throw new ArgumentOutOfRangeException(nameof(columnIndex));
                     }
 
                 case 8:
@@ -266,7 +304,7 @@ namespace osu.Game.Rulesets.Mania.Skinning.Argon
 
                         case 7: return colour_purple;
 
-                        default: throw new ArgumentOutOfRangeException();
+                        default: throw new ArgumentOutOfRangeException(nameof(columnIndex));
                     }
 
                 case 9:
@@ -290,7 +328,7 @@ namespace osu.Game.Rulesets.Mania.Skinning.Argon
 
                         case 8: return colour_purple;
 
-                        default: throw new ArgumentOutOfRangeException();
+                        default: throw new ArgumentOutOfRangeException(nameof(columnIndex));
                     }
 
                 case 10:
@@ -316,7 +354,7 @@ namespace osu.Game.Rulesets.Mania.Skinning.Argon
 
                         case 9: return colour_purple;
 
-                        default: throw new ArgumentOutOfRangeException();
+                        default: throw new ArgumentOutOfRangeException(nameof(columnIndex));
                     }
             }
 
@@ -339,7 +377,7 @@ namespace osu.Game.Rulesets.Mania.Skinning.Argon
 
                 case 5: return colour_green;
 
-                default: throw new ArgumentOutOfRangeException();
+                default: throw new ArgumentOutOfRangeException(nameof(columnIndex));
             }
         }
     }

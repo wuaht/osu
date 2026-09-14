@@ -9,7 +9,7 @@ using osu.Framework.Graphics.Colour;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
-using osu.Framework.Graphics.Textures;
+using osu.Game.Graphics;
 using osu.Game.Online.API.Requests.Responses;
 using osuTK.Graphics;
 
@@ -33,7 +33,10 @@ namespace osu.Game.Users
         protected virtual double UnloadDelay => 5000;
 
         protected override DelayedLoadWrapper CreateDelayedLoadWrapper(Func<Drawable> createContentFunc, double timeBeforeLoad)
-            => new DelayedLoadUnloadWrapper(createContentFunc, timeBeforeLoad, UnloadDelay);
+            => new DelayedLoadUnloadWrapper(createContentFunc, timeBeforeLoad, UnloadDelay)
+            {
+                RelativeSizeAxes = Axes.Both,
+            };
 
         [LongRunningLoad]
         private partial class Cover : CompositeDrawable
@@ -48,7 +51,7 @@ namespace osu.Game.Users
             }
 
             [BackgroundDependencyLoader]
-            private void load(LargeTextureStore textures)
+            private void load(OnlineAssetCachingStore textures)
             {
                 if (user == null)
                 {

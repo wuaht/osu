@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using NUnit.Framework;
+using NUnit.Framework.Legacy;
 using osu.Framework.Extensions;
 using osu.Game.Beatmaps;
 using osu.Game.Database;
@@ -89,7 +90,7 @@ namespace osu.Game.Tests.Database
             RunTestWithRealm((realm, _) =>
             {
                 realm.Dispose();
-                Assert.ThrowsAsync<ObjectDisposedException>(() => realm.WriteAsync(r => r.Add(TestResources.CreateTestBeatmapSetInfo())));
+                Assert.ThrowsAsync<ObjectDisposedException>(new Func<Task>(() => realm.WriteAsync(r => r.Add(TestResources.CreateTestBeatmapSetInfo()))));
             });
         }
 
@@ -143,7 +144,7 @@ namespace osu.Game.Tests.Database
                     return null;
                 });
 
-                Assert.IsTrue(callbackRan);
+                ClassicAssert.True(callbackRan);
             });
         }
 
@@ -167,12 +168,12 @@ namespace osu.Game.Tests.Database
 
                 hasThreadedUsage.Wait(60000);
 
-                Assert.Throws<TimeoutException>(() =>
+                Assert.Throws<TimeoutException>(new Action(() =>
                 {
                     using (realm.BlockAllOperations("testing"))
                     {
                     }
-                });
+                }));
 
                 stopThreadedUsage.Set();
 

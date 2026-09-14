@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Moq;
 using NUnit.Framework;
+using NUnit.Framework.Legacy;
 using osu.Game.Beatmaps;
 using osu.Game.Rulesets;
 using osu.Game.Rulesets.Mods;
@@ -29,7 +30,7 @@ namespace osu.Game.Tests.Beatmaps
 
             working.ResetEvent.Set();
 
-            Assert.NotNull(working.GetPlayableBeatmap(new OsuRuleset().RulesetInfo));
+            ClassicAssert.NotNull(working.GetPlayableBeatmap(new OsuRuleset().RulesetInfo));
         }
 
         [Test]
@@ -44,15 +45,15 @@ namespace osu.Game.Tests.Beatmaps
             Task.Factory.StartNew(() =>
             {
                 loadStarted.Set();
-                Assert.Throws<OperationCanceledException>(() => working.GetPlayableBeatmap(new OsuRuleset().RulesetInfo, Array.Empty<Mod>(), cts.Token));
+                Assert.Throws<OperationCanceledException>(new Action(() => working.GetPlayableBeatmap(new OsuRuleset().RulesetInfo, Array.Empty<Mod>(), cts.Token)));
                 loadCompleted.Set();
             }, TaskCreationOptions.LongRunning);
 
-            Assert.IsTrue(loadStarted.Wait(10000));
+            ClassicAssert.True(loadStarted.Wait(10000));
 
             cts.Cancel();
 
-            Assert.IsTrue(loadCompleted.Wait(10000));
+            ClassicAssert.True(loadCompleted.Wait(10000));
 
             working.ResetEvent.Set();
         }
@@ -62,7 +63,7 @@ namespace osu.Game.Tests.Beatmaps
         {
             var working = new TestNeverLoadsWorkingBeatmap();
 
-            Assert.Throws(Is.InstanceOf<TimeoutException>(), () => working.GetPlayableBeatmap(new OsuRuleset().RulesetInfo));
+            Assert.Throws(Is.InstanceOf<TimeoutException>(), new Action(() => working.GetPlayableBeatmap(new OsuRuleset().RulesetInfo)));
 
             working.ResetEvent.Set();
         }
@@ -75,7 +76,7 @@ namespace osu.Game.Tests.Beatmaps
             // by default mocks return nulls if not set up, which is actually desired here to simulate a ruleset load failure scenario.
             var ruleset = new Mock<IRulesetInfo>();
 
-            Assert.Throws<RulesetLoadException>(() => working.GetPlayableBeatmap(ruleset.Object));
+            Assert.Throws<RulesetLoadException>(new Action(() => working.GetPlayableBeatmap(ruleset.Object)));
         }
 
         public class TestNeverLoadsWorkingBeatmap : TestWorkingBeatmap

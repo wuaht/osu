@@ -15,7 +15,10 @@ using osu.Game.Beatmaps;
 using osu.Game.Rulesets.Mania.Beatmaps;
 using osu.Game.Rulesets.Objects.Legacy;
 using osu.Game.Rulesets.Scoring;
+using osu.Game.Screens.Play.HUD;
+using osu.Game.Screens.Play.HUD.HitErrorMeters;
 using osu.Game.Skinning;
+using osuTK;
 
 namespace osu.Game.Rulesets.Mania.Skinning.Legacy
 {
@@ -62,11 +65,13 @@ namespace osu.Game.Rulesets.Mania.Skinning.Legacy
         private readonly Lazy<bool> hasKeyTexture;
 
         private readonly ManiaBeatmap beatmap;
+        private readonly bool isBeatmapConverted;
 
         public ManiaLegacySkinTransformer(ISkin skin, IBeatmap beatmap)
             : base(skin)
         {
             this.beatmap = (ManiaBeatmap)beatmap;
+            isBeatmapConverted = !beatmap.BeatmapInfo.Ruleset.Equals(new ManiaRuleset().RulesetInfo);
 
             isLegacySkin = new Lazy<bool>(() => GetConfig<SkinConfiguration.LegacySetting, decimal>(SkinConfiguration.LegacySetting.Version) != null);
             hasKeyTexture = new Lazy<bool>(() =>
@@ -95,6 +100,9 @@ namespace osu.Game.Rulesets.Mania.Skinning.Legacy
                             return new DefaultSkinComponentsContainer(container =>
                             {
                                 var combo = container.ChildrenOfType<LegacyManiaComboCounter>().FirstOrDefault();
+                                var spectatorList = container.OfType<SpectatorList>().FirstOrDefault();
+                                var leaderboard = container.OfType<DrawableGameplayLeaderboard>().FirstOrDefault();
+                                var hitError = container.OfType<HitErrorMeter>().FirstOrDefault();
 
                                 if (combo != null)
                                 {
@@ -102,9 +110,35 @@ namespace osu.Game.Rulesets.Mania.Skinning.Legacy
                                     combo.Origin = Anchor.Centre;
                                     combo.Y = this.GetManiaSkinConfig<float>(LegacyManiaSkinConfigurationLookups.ComboPosition)?.Value ?? 0;
                                 }
+
+                                if (spectatorList != null)
+                                {
+                                    spectatorList.Anchor = Anchor.BottomLeft;
+                                    spectatorList.Origin = Anchor.BottomLeft;
+                                    spectatorList.Position = new Vector2(10, -10);
+                                }
+
+                                if (leaderboard != null)
+                                {
+                                    leaderboard.Anchor = Anchor.CentreLeft;
+                                    leaderboard.Origin = Anchor.CentreLeft;
+                                    leaderboard.X = 10;
+                                }
+
+                                if (hitError != null)
+                                {
+                                    hitError.Anchor = Anchor.BottomCentre;
+                                    hitError.Origin = Anchor.BottomCentre;
+                                }
+
+                                foreach (var d in container.OfType<ISerialisableDrawable>())
+                                    d.UsesFixedAnchor = true;
                             })
                             {
                                 new LegacyManiaComboCounter(),
+                                new SpectatorList(),
+                                new DrawableGameplayLeaderboard(),
+                                new LegacyBarHitErrorMeter(),
                             };
                     }
 
@@ -152,7 +186,7 @@ namespace osu.Game.Rulesets.Mania.Skinning.Legacy
                             return new LegacyStageForeground();
 
                         case ManiaSkinComponents.BarLine:
-                            return null; // Not yet implemented.
+                            return new LegacyBarLine();
 
                         default:
                             throw new UnsupportedSkinComponentException(lookup);
@@ -164,10 +198,10 @@ namespace osu.Game.Rulesets.Mania.Skinning.Legacy
 
         private Drawable getResult(HitResult result)
         {
-            if (!hit_result_mapping.ContainsKey(result))
+            if (!hit_result_mapping.TryGetValue(result, out var value))
                 return null;
 
-            string filename = this.GetManiaSkinConfig<string>(hit_result_mapping[result])?.Value
+            string filename = this.GetManiaSkinConfig<string>(value)?.Value
                               ?? default_hit_result_skin_filenames[result];
 
             var animation = this.GetAnimation(filename, true, true, frameLength: 1000 / 20d);
@@ -176,8 +210,8 @@ namespace osu.Game.Rulesets.Mania.Skinning.Legacy
 
         public override ISample GetSample(ISampleInfo sampleInfo)
         {
-            // layered hit sounds never play in mania
-            if (sampleInfo is ConvertHitObjectParser.LegacyHitSampleInfo legacySample && legacySample.IsLayered)
+            // layered hit sounds never play in mania-native beatmaps (but do play on converts)
+            if (sampleInfo is ConvertHitObjectParser.LegacyHitSampleInfo legacySample && legacySample.IsLayered && !isBeatmapConverted)
                 return new SampleVirtual();
 
             return base.GetSample(sampleInfo);

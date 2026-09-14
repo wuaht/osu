@@ -12,12 +12,13 @@ using osu.Framework.Graphics.Containers;
 using osu.Game.Beatmaps;
 using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.UserInterface;
+using osu.Game.Localisation;
 using osu.Game.Online.API;
 using osu.Game.Online.Rooms;
 using osu.Game.Rulesets;
 using osu.Game.Rulesets.Mods;
 using osu.Game.Scoring;
-using osu.Game.Screens.SelectV2.Leaderboards;
+using osu.Game.Screens.Select;
 using osuTK;
 
 namespace osu.Game.Screens.OnlinePlay.DailyChallenge
@@ -40,7 +41,7 @@ namespace osu.Game.Screens.OnlinePlay.DailyChallenge
         private readonly Room room;
         private readonly PlaylistItem playlistItem;
 
-        private FillFlowContainer<LeaderboardScoreV2> scoreFlow = null!;
+        private FillFlowContainer<BeatmapLeaderboardScore> scoreFlow = null!;
         private Container userBestContainer = null!;
         private SectionHeader userBestHeader = null!;
         private LoadingLayer loadingLayer = null!;
@@ -80,7 +81,7 @@ namespace osu.Game.Screens.OnlinePlay.DailyChallenge
                 ],
                 Content = new[]
                 {
-                    new Drawable[] { new SectionHeader("Leaderboard") },
+                    new Drawable[] { new SectionHeader(OnlinePlayStrings.PlaylistLeaderboard) },
                     new Drawable[]
                     {
                         new Container
@@ -91,7 +92,7 @@ namespace osu.Game.Screens.OnlinePlay.DailyChallenge
                                 new OsuScrollContainer
                                 {
                                     RelativeSizeAxes = Axes.Both,
-                                    Child = scoreFlow = new FillFlowContainer<LeaderboardScoreV2>
+                                    Child = scoreFlow = new FillFlowContainer<BeatmapLeaderboardScore>
                                     {
                                         RelativeSizeAxes = Axes.X,
                                         AutoSizeAxes = Axes.Y,
@@ -109,7 +110,7 @@ namespace osu.Game.Screens.OnlinePlay.DailyChallenge
                             }
                         }
                     },
-                    new Drawable[] { userBestHeader = new SectionHeader("Personal best") { Alpha = 0, } },
+                    new Drawable[] { userBestHeader = new SectionHeader(BeatmapLeaderboardWedgeStrings.PersonalBest) { Alpha = 0, } },
                     new Drawable[]
                     {
                         userBestContainer = new Container
@@ -138,14 +139,14 @@ namespace osu.Game.Screens.OnlinePlay.DailyChallenge
             if (request?.CompletionState == APIRequestCompletionState.Waiting)
                 return;
 
-            request = new IndexPlaylistScoresRequest(room.RoomID.Value!.Value, playlistItem.ID);
+            request = new IndexPlaylistScoresRequest(room.RoomID!.Value, playlistItem.ID);
 
             request.Success += req => Schedule(() =>
             {
-                var best = req.Scores.Select(s => s.CreateScoreInfo(scoreManager, rulesets, playlistItem, beatmap.Value.BeatmapInfo)).ToArray();
+                var best = req.Scores.Select(s => s.CreateScoreInfo(scoreManager, rulesets, beatmap.Value.BeatmapInfo)).ToArray();
 
                 userBestScore.Value = req.UserScore;
-                var userBest = userBestScore.Value?.CreateScoreInfo(scoreManager, rulesets, playlistItem, beatmap.Value.BeatmapInfo);
+                var userBest = userBestScore.Value?.CreateScoreInfo(scoreManager, rulesets, beatmap.Value.BeatmapInfo);
 
                 cancellationTokenSource?.Cancel();
                 cancellationTokenSource = null;
@@ -158,13 +159,23 @@ namespace osu.Game.Screens.OnlinePlay.DailyChallenge
                 }
                 else
                 {
-                    LoadComponentsAsync(best.Select((s, index) => new LeaderboardScoreV2(s, sheared: false)
+                    LoadComponentsAsync(best.Select((s, index) =>
                     {
-                        Rank = index + 1,
-                        IsPersonalBest = s.UserID == api.LocalUser.Value.Id,
-                        Action = () => PresentScore?.Invoke(s.OnlineID),
-                        SelectedMods = { BindTarget = SelectedMods },
-                        IsValidMod = IsValidMod,
+                        BeatmapLeaderboardScore.HighlightType? highlightType = null;
+
+                        if (s.UserID == api.LocalUser.Value.Id)
+                            highlightType = BeatmapLeaderboardScore.HighlightType.Own;
+                        else if (api.LocalUserState.Friends.Any(r => r.TargetID == s.UserID))
+                            highlightType = BeatmapLeaderboardScore.HighlightType.Friend;
+
+                        return new BeatmapLeaderboardScore(s, sheared: false)
+                        {
+                            Rank = index + 1,
+                            Highlight = highlightType,
+                            Action = () => PresentScore?.Invoke(s.OnlineID),
+                            SelectedMods = { BindTarget = SelectedMods },
+                            IsValidMod = IsValidMod,
+                        };
                     }), loaded =>
                     {
                         scoreFlow.Clear();
@@ -178,10 +189,10 @@ namespace osu.Game.Screens.OnlinePlay.DailyChallenge
 
                 if (userBest != null)
                 {
-                    userBestContainer.Add(new LeaderboardScoreV2(userBest, sheared: false)
+                    userBestContainer.Add(new BeatmapLeaderboardScore(userBest, sheared: false)
                     {
                         Rank = userBest.Position,
-                        IsPersonalBest = true,
+                        Highlight = BeatmapLeaderboardScore.HighlightType.Own,
                         Action = () => PresentScore?.Invoke(userBest.OnlineID),
                         SelectedMods = { BindTarget = SelectedMods },
                         IsValidMod = IsValidMod,

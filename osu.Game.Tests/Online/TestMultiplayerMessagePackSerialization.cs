@@ -1,8 +1,10 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using MessagePack;
 using NUnit.Framework;
+using NUnit.Framework.Legacy;
 using osu.Game.Online;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.MatchTypes.TeamVersus;
@@ -24,7 +26,7 @@ namespace osu.Game.Tests.Online
 
             var deserialized = MessagePackSerializer.Deserialize<MultiplayerRoom>(serialized);
 
-            Assert.IsTrue(deserialized.MatchState is TeamVersusRoomState);
+            ClassicAssert.True(deserialized.MatchState is TeamVersusRoomState);
         }
 
         [Test]
@@ -35,7 +37,7 @@ namespace osu.Game.Tests.Online
             byte[] serialized = MessagePackSerializer.Serialize(typeof(MatchUserState), state);
             var deserialized = MessagePackSerializer.Deserialize<MatchUserState>(serialized);
 
-            Assert.IsTrue(deserialized is TeamVersusUserState);
+            ClassicAssert.True(deserialized is TeamVersusUserState);
         }
 
         [Test]
@@ -50,7 +52,7 @@ namespace osu.Game.Tests.Online
             MessagePackSerializer.Deserialize<TeamVersusUserState>(serialized);
 
             // fails with base (union) type.
-            Assert.Throws<MessagePackSerializationException>(() => MessagePackSerializer.Deserialize<MatchUserState>(serialized));
+            Assert.Throws<MessagePackSerializationException>(new Action(() => MessagePackSerializer.Deserialize<MatchUserState>(serialized)));
         }
 
         [Test]
@@ -66,7 +68,7 @@ namespace osu.Game.Tests.Online
 
             // works with custom resolver.
             var deserialized = MessagePackSerializer.Deserialize<MatchUserState>(serialized, SignalRUnionWorkaroundResolver.OPTIONS);
-            Assert.IsTrue(deserialized is TeamVersusUserState);
+            ClassicAssert.True(deserialized is TeamVersusUserState);
         }
     }
 }

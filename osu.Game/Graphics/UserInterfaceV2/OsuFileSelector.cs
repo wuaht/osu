@@ -9,10 +9,12 @@ using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Graphics.UserInterface;
+using osu.Framework.Localisation;
 using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.Sprites;
 using osu.Game.Graphics.UserInterfaceV2.FileSelection;
 using osu.Game.Overlays;
+using osu.Game.Utils;
 
 namespace osu.Game.Graphics.UserInterfaceV2
 {
@@ -68,7 +70,7 @@ namespace osu.Game.Graphics.UserInterfaceV2
 
         protected override DirectorySelectorDirectory CreateParentDirectoryItem(DirectoryInfo directory) => new OsuDirectorySelectorParentDirectory(directory);
 
-        protected override DirectorySelectorDirectory CreateDirectoryItem(DirectoryInfo directory, string? displayName = null) => new OsuDirectorySelectorDirectory(directory, displayName);
+        protected override DirectorySelectorDirectory CreateDirectoryItem(DirectoryInfo directory, LocalisableString? displayName = null) => new OsuDirectorySelectorDirectory(directory, displayName);
 
         protected override DirectoryListingFile CreateFileItem(FileInfo file) => new OsuDirectoryListingFile(file);
 
@@ -96,24 +98,18 @@ namespace osu.Game.Graphics.UserInterfaceV2
             {
                 get
                 {
-                    if (OsuGameBase.VIDEO_EXTENSIONS.Contains(File.Extension.ToLowerInvariant()))
+                    string extension = File.Extension.ToLowerInvariant();
+
+                    if (SupportedExtensions.VIDEO_EXTENSIONS.Contains(extension))
                         return FontAwesome.Regular.FileVideo;
 
-                    switch (File.Extension)
-                    {
-                        case @".ogg":
-                        case @".mp3":
-                        case @".wav":
-                            return FontAwesome.Regular.FileAudio;
+                    if (SupportedExtensions.AUDIO_EXTENSIONS.Contains(extension))
+                        return FontAwesome.Regular.FileAudio;
 
-                        case @".jpg":
-                        case @".jpeg":
-                        case @".png":
-                            return FontAwesome.Regular.FileImage;
+                    if (SupportedExtensions.IMAGE_EXTENSIONS.Contains(extension))
+                        return FontAwesome.Regular.FileImage;
 
-                        default:
-                            return FontAwesome.Regular.File;
-                    }
+                    return FontAwesome.Regular.File;
                 }
             }
 

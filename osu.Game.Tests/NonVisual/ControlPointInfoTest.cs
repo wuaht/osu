@@ -215,7 +215,7 @@ namespace osu.Game.Tests.NonVisual
 
             Assert.That(group.ControlPoints.Count, Is.EqualTo(0));
             Assert.That(cpi.DifficultyPoints.Count, Is.EqualTo(0));
-            Assert.That(cpi.AllControlPoints.Count, Is.EqualTo(0));
+            Assert.That(cpi.AllControlPoints.Count(), Is.EqualTo(0));
         }
 
         [Test]
@@ -232,7 +232,7 @@ namespace osu.Game.Tests.NonVisual
             cpi.GroupAt(1000).Add(new SampleControlPoint { SampleVolume = 0 });
             cpi.GroupAt(8000, true).Add(new EffectControlPoint { KiaiMode = true });
 
-            Assert.That(cpi.AllControlPoints.Count, Is.EqualTo(8));
+            Assert.That(cpi.AllControlPoints.Count(), Is.EqualTo(8));
 
             Assert.That(cpi.Groups, Is.Ordered.Ascending.By(nameof(ControlPointGroup.Time)));
 
@@ -258,7 +258,7 @@ namespace osu.Game.Tests.NonVisual
 
             Assert.That(cpi.Groups.Count, Is.EqualTo(0));
             Assert.That(cpi.DifficultyPoints.Count, Is.EqualTo(0));
-            Assert.That(cpi.AllControlPoints.Count, Is.EqualTo(0));
+            Assert.That(cpi.AllControlPoints.Count(), Is.EqualTo(0));
         }
 
         [Test]

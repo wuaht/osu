@@ -1,6 +1,7 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Linq;
 using NUnit.Framework;
 using osu.Game.Rulesets.Objects;
@@ -99,7 +100,7 @@ namespace osu.Game.Tests.Beatmaps
 
             var events = SliderEventGenerator.Generate(start_time, span_duration, velocity, velocity, span_duration, 2).ToArray();
 
-            Assert.Multiple(() =>
+            Assert.Multiple((Action)(() =>
             {
                 int tickIndex = -1;
 
@@ -110,7 +111,22 @@ namespace osu.Game.Tests.Beatmaps
 
                     Assert.That(events[tickIndex].Time, Is.LessThan(span_duration - min_distance).Or.GreaterThan(span_duration + min_distance));
                 }
-            });
+            }));
+        }
+
+        [Test]
+        public void TestRepeatsGeneratedEvenForZeroLengthSlider()
+        {
+            var events = SliderEventGenerator.Generate(start_time, span_duration, 1, span_duration / 2, 0, 2).ToArray();
+
+            Assert.That(events[0].Type, Is.EqualTo(SliderEventType.Head));
+            Assert.That(events[0].Time, Is.EqualTo(start_time));
+
+            Assert.That(events[1].Type, Is.EqualTo(SliderEventType.Repeat));
+            Assert.That(events[1].Time, Is.EqualTo(span_duration));
+
+            Assert.That(events[3].Type, Is.EqualTo(SliderEventType.Tail));
+            Assert.That(events[3].Time, Is.EqualTo(span_duration * 2));
         }
     }
 }

@@ -141,28 +141,28 @@ namespace osu.Game.Screens.Menu
                     Anchor = Anchor.Centre,
                     Origin = Anchor.TopCentre,
                     Position = new Vector2(0, circle_offset),
-                    Colour = Color4Extensions.FromHex(@"AA92FF"),
+                    Colour = Color4Extensions.FromHex(@"002855"),
                 },
                 blueCircle = new Circle
                 {
                     Anchor = Anchor.Centre,
                     Origin = Anchor.CentreRight,
                     Position = new Vector2(-circle_offset, 0),
-                    Colour = Color4Extensions.FromHex(@"8FE5FE"),
+                    Colour = Color4Extensions.FromHex(@"023e7d"),
                 },
                 yellowCircle = new Circle
                 {
                     Anchor = Anchor.Centre,
                     Origin = Anchor.BottomCentre,
                     Position = new Vector2(0, -circle_offset),
-                    Colour = Color4Extensions.FromHex(@"FFD64C"),
+                    Colour = Color4Extensions.FromHex(@"0353a4"),
                 },
                 pinkCircle = new Circle
                 {
                     Anchor = Anchor.Centre,
                     Origin = Anchor.CentreLeft,
                     Position = new Vector2(circle_offset, 0),
-                    Colour = Color4Extensions.FromHex(@"e967a1"),
+                    Colour = Color4Extensions.FromHex(@"0466c8"),
                 },
             };
 

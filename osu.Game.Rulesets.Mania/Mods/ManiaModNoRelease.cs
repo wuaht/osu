@@ -4,8 +4,10 @@
 using System;
 using System.Linq;
 using System.Threading;
+using osu.Framework.Graphics.Sprites;
 using osu.Framework.Localisation;
 using osu.Game.Beatmaps;
+using osu.Game.Graphics;
 using osu.Game.Rulesets.Mania.Beatmaps;
 using osu.Game.Rulesets.Mania.Objects;
 using osu.Game.Rulesets.Mania.Objects.Drawables;
@@ -24,11 +26,11 @@ namespace osu.Game.Rulesets.Mania.Mods
 
         public override LocalisableString Description => "No more timing the end of hold notes.";
 
-        public override double ScoreMultiplier => 0.9;
+        public override IconUsage? Icon => OsuIcon.ModNoRelease;
 
         public override ModType Type => ModType.DifficultyReduction;
 
-        public override Type[] IncompatibleMods => new[] { typeof(ManiaModHoldOff) };
+        public override Type[] IncompatibleMods => new[] { typeof(ManiaModHoldOff), typeof(ManiaModInvert) };
 
         public void ApplyToBeatmap(IBeatmap beatmap)
         {
@@ -62,7 +64,7 @@ namespace osu.Game.Rulesets.Mania.Mods
             protected override void CheckForResult(bool userTriggered, double timeOffset)
             {
                 // apply perfect once the tail is reached
-                if (HoldNote.HoldStartTime != null && timeOffset >= 0)
+                if (HoldNote.IsHolding.Value && timeOffset >= 0)
                     ApplyResult(GetCappedResult(HitResult.Perfect));
                 else
                     base.CheckForResult(userTriggered, timeOffset);
@@ -80,7 +82,9 @@ namespace osu.Game.Rulesets.Mania.Mods
                 StartTime = hold.StartTime;
                 Duration = hold.Duration;
                 Column = hold.Column;
+                Samples = hold.Samples;
                 NodeSamples = hold.NodeSamples;
+                PlaySlidingSamples = hold.PlaySlidingSamples;
             }
 
             protected override void CreateNestedHitObjects(CancellationToken cancellationToken)
