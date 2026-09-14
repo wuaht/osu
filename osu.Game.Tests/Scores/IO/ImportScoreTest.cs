@@ -236,7 +236,7 @@ namespace osu.Game.Tests.Scores.IO
                         Mods = new Mod[] { new OsuModHalfTime(), new OsuModDoubleTime() },
                     };
 
-                    Assert.Throws<InvalidOperationException>(() => LoadScoreIntoOsu(osu, toImport));
+                    Assert.Throws<InvalidOperationException>(new Action(() => LoadScoreIntoOsu(osu, toImport)));
                 }
                 finally
                 {

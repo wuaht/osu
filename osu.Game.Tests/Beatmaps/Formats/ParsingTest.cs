@@ -52,9 +52,9 @@ namespace osu.Game.Tests.Beatmaps.Formats
         private void allThrow<T>(string input, double limit = Parsing.MAX_PARSE_VALUE)
             where T : Exception
         {
-            Assert.Throws(getIntParseException(input) ?? typeof(T), () => Parsing.ParseInt(input, (int)limit));
-            Assert.Throws<T>(() => Parsing.ParseFloat(input, (float)limit));
-            Assert.Throws<T>(() => Parsing.ParseDouble(input, limit));
+            Assert.Throws(getIntParseException(input) ?? typeof(T), new Action(() => Parsing.ParseInt(input, (int)limit)));
+            Assert.Throws<T>(new Action(() => Parsing.ParseFloat(input, (float)limit)));
+            Assert.Throws<T>(new Action(() => Parsing.ParseDouble(input, limit)));
         }
 
         /// <summary>

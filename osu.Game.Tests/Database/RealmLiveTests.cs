@@ -63,14 +63,14 @@ namespace osu.Game.Tests.Database
         {
             RunTestWithRealm((realm, _) =>
             {
-                Assert.Throws<InvalidOperationException>(() =>
+                Assert.Throws<InvalidOperationException>(new Action(() =>
                 {
                     realm.Write(r =>
                     {
                         r.Add(new BeatmapInfo(CreateRuleset(), new BeatmapDifficulty(), new BeatmapMetadata()));
                         throw new InvalidOperationException();
                     });
-                });
+                }));
 
                 Assert.That(realm.Run(r => r.All<BeatmapInfo>()), Is.Empty);
             });
@@ -81,7 +81,7 @@ namespace osu.Game.Tests.Database
         {
             RunTestWithRealm((realm, _) =>
             {
-                Assert.Throws<InvalidOperationException>(() =>
+                Assert.Throws<InvalidOperationException>(new Action(() =>
                 {
                     realm.Write(r =>
                     {
@@ -91,7 +91,7 @@ namespace osu.Game.Tests.Database
                             throw new InvalidOperationException();
                         });
                     });
-                });
+                }));
 
                 Assert.That(realm.Run(r => r.All<BeatmapInfo>()), Is.Empty);
             });
@@ -141,7 +141,7 @@ namespace osu.Game.Tests.Database
             ClassicAssert.False(liveBeatmap.Value.Hidden);
             ClassicAssert.False(liveBeatmap.PerformRead(l => l.Hidden));
 
-            Assert.Throws<InvalidOperationException>(() => liveBeatmap.PerformWrite(l => l.Hidden = true));
+            Assert.Throws<InvalidOperationException>(new Action(() => liveBeatmap.PerformWrite(l => l.Hidden = true)));
 
             ClassicAssert.False(beatmap.Hidden);
             ClassicAssert.False(liveBeatmap.Value.Hidden);
@@ -159,7 +159,7 @@ namespace osu.Game.Tests.Database
 
                 var liveBeatmap = beatmap.ToLive(realm);
 
-                Assert.Throws<InvalidOperationException>(() => liveBeatmap.PerformWrite(l => throw new InvalidOperationException()));
+                Assert.Throws<InvalidOperationException>(new Action(() => liveBeatmap.PerformWrite(l => throw new InvalidOperationException())));
                 ClassicAssert.False(liveBeatmap.PerformRead(l => l.Hidden));
 
                 liveBeatmap.PerformWrite(l => l.Hidden = true);
@@ -230,10 +230,10 @@ namespace osu.Game.Tests.Database
                 var beatmap = new BeatmapInfo(CreateRuleset(), new BeatmapDifficulty(), new BeatmapMetadata());
                 var liveBeatmap = beatmap.ToLive(realm);
 
-                Assert.DoesNotThrow(() =>
+                Assert.DoesNotThrow(new Action(() =>
                 {
                     var __ = liveBeatmap.Value;
-                });
+                }));
             });
         }
 
@@ -259,18 +259,18 @@ namespace osu.Game.Tests.Database
                 Task.Factory.StartNew(() =>
                 {
                     // Can't be used, without a valid context.
-                    Assert.Throws<InvalidOperationException>(() =>
+                    Assert.Throws<InvalidOperationException>(new Action(() =>
                     {
                         var __ = liveBeatmap.Value;
-                    });
+                    }));
 
                     // Can't be used, even from within a valid context.
                     realm.Run(_ =>
                     {
-                        Assert.Throws<InvalidOperationException>(() =>
+                        Assert.Throws<InvalidOperationException>(new Action(() =>
                         {
                             var __ = liveBeatmap.Value;
-                        });
+                        }));
                     });
                 }, TaskCreationOptions.LongRunning | TaskCreationOptions.HideScheduler).WaitSafely();
             });
@@ -296,10 +296,10 @@ namespace osu.Game.Tests.Database
 
                 Task.Factory.StartNew(() =>
                 {
-                    Assert.Throws<InvalidOperationException>(() =>
+                    Assert.Throws<InvalidOperationException>(new Action(() =>
                     {
                         var unused = liveBeatmap.Value;
-                    });
+                    }));
                 }, TaskCreationOptions.LongRunning | TaskCreationOptions.HideScheduler).WaitSafely();
             });
         }

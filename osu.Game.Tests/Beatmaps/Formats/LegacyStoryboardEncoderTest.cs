@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -40,11 +41,11 @@ namespace osu.Game.Tests.Beatmaps.Formats
             var encoded = encode(initial);
             var decodedAfterEncode = decode(encoded);
 
-            Assert.Multiple(() =>
+            Assert.Multiple((Action)(() =>
             {
                 Assert.That(decodedAfterEncode.Beatmap.BeatmapInfo.Metadata.BackgroundFile, Is.EqualTo("bg_offset.jpg"));
                 Assert.That(decodedAfterEncode.Storyboard.BackgroundOffset, Is.EqualTo(new Vector2(0, 45)));
-            });
+            }));
         }
 
         [Test]
@@ -58,7 +59,7 @@ namespace osu.Game.Tests.Beatmaps.Formats
             var encoded = encode(initial);
             var decodedAfterEncode = decode(encoded);
 
-            Assert.Multiple(() =>
+            Assert.Multiple((Action)(() =>
             {
                 var videoLayer = decodedAfterEncode.Storyboard.GetLayer("Video");
                 Assert.That(videoLayer.Elements, Has.Count.EqualTo(2));
@@ -70,7 +71,7 @@ namespace osu.Game.Tests.Beatmaps.Formats
                 Assert.That(videoLayer.Elements[1].Source, Is.EqualTo(StoryboardElementSource.Shared));
                 Assert.That(videoLayer.Elements[1].Path, Is.EqualTo("video2.mp4"));
                 Assert.That(videoLayer.Elements[1].StartTime, Is.EqualTo(1234));
-            });
+            }));
         }
 
         [Test]
@@ -85,7 +86,7 @@ namespace osu.Game.Tests.Beatmaps.Formats
             var encoded = encode(initial);
             var decodedAfterEncode = decode(encoded);
 
-            Assert.Multiple(() =>
+            Assert.Multiple((Action)(() =>
             {
                 var decodedVideo = (StoryboardVideo)decodedAfterEncode.Storyboard.GetLayer("Video").Elements.Single();
 
@@ -100,7 +101,7 @@ namespace osu.Game.Tests.Beatmaps.Formats
                 Assert.That(scaleCommand.EndTime, Is.EqualTo(0));
                 Assert.That(scaleCommand.StartValue, Is.EqualTo(0.7f));
                 Assert.That(scaleCommand.EndValue, Is.EqualTo(0.7f));
-            });
+            }));
         }
 
         [Test]
@@ -119,7 +120,7 @@ namespace osu.Game.Tests.Beatmaps.Formats
 
             var sb = decodedAfterEncode.Storyboard;
 
-            Assert.Multiple(() =>
+            Assert.Multiple((Action)(() =>
             {
                 var backgroundSprite = (StoryboardSprite)sb.GetLayer("Background").Elements.Single();
                 Assert.That(backgroundSprite.Source, Is.EqualTo(StoryboardElementSource.Beatmap));
@@ -156,7 +157,7 @@ namespace osu.Game.Tests.Beatmaps.Formats
                 Assert.That(overlayAnimation.FrameCount, Is.EqualTo(4));
                 Assert.That(overlayAnimation.FrameDelay, Is.EqualTo(100));
                 Assert.That(overlayAnimation.LoopType, Is.EqualTo(AnimationLoopType.LoopOnce));
-            });
+            }));
         }
 
         [Test]
@@ -182,7 +183,7 @@ namespace osu.Game.Tests.Beatmaps.Formats
 
             var decodedSprite = (StoryboardSprite)decodedAfterEncode.Storyboard.GetLayer("Background").Elements.Single();
 
-            Assert.Multiple(() =>
+            Assert.Multiple((Action)(() =>
             {
                 var alphaCommand = decodedSprite.Commands.Alpha.Single();
                 Assert.That(alphaCommand.Easing, Is.EqualTo(Easing.InBack));
@@ -253,7 +254,7 @@ namespace osu.Game.Tests.Beatmaps.Formats
                 Assert.That(yCommand.EndTime, Is.EqualTo(1800));
                 Assert.That(yCommand.StartValue, Is.EqualTo(300));
                 Assert.That(yCommand.EndValue, Is.EqualTo(100));
-            });
+            }));
         }
 
         [Test]
@@ -271,7 +272,7 @@ namespace osu.Game.Tests.Beatmaps.Formats
 
             var decodedSprite = (StoryboardSprite)decodedAfterEncode.Storyboard.GetLayer("Background").Elements.Single();
 
-            Assert.Multiple(() =>
+            Assert.Multiple((Action)(() =>
             {
                 Assert.That(decodedSprite.LoopingGroups, Has.Count.EqualTo(1));
                 var decodedLoopingGroup = decodedSprite.LoopingGroups.Single();
@@ -284,7 +285,7 @@ namespace osu.Game.Tests.Beatmaps.Formats
                 Assert.That(alphaCommand.EndTime, Is.EqualTo(1500));
                 Assert.That(alphaCommand.StartValue, Is.EqualTo(0));
                 Assert.That(alphaCommand.EndValue, Is.EqualTo(1));
-            });
+            }));
         }
 
         [Test]
@@ -302,7 +303,7 @@ namespace osu.Game.Tests.Beatmaps.Formats
 
             var decodedSprite = (StoryboardSprite)decodedAfterEncode.Storyboard.GetLayer("Background").Elements.Single();
 
-            Assert.Multiple(() =>
+            Assert.Multiple((Action)(() =>
             {
                 Assert.That(decodedSprite.TriggerGroups, Has.Count.EqualTo(1));
                 var decodedTriggerGroup = decodedSprite.TriggerGroups.Single();
@@ -317,7 +318,7 @@ namespace osu.Game.Tests.Beatmaps.Formats
                 Assert.That(alphaCommand.EndTime, Is.EqualTo(500));
                 Assert.That(alphaCommand.StartValue, Is.EqualTo(0));
                 Assert.That(alphaCommand.EndValue, Is.EqualTo(1));
-            });
+            }));
         }
 
         [Test]
@@ -331,7 +332,7 @@ namespace osu.Game.Tests.Beatmaps.Formats
             var encoded = encode(initial);
             var decodedAfterEncode = decode(encoded);
 
-            Assert.Multiple(() =>
+            Assert.Multiple((Action)(() =>
             {
                 var passingSample = (StoryboardSampleInfo)decodedAfterEncode.Storyboard.GetLayer("Pass").Elements.Single();
                 Assert.That(passingSample.Source, Is.EqualTo(StoryboardElementSource.Beatmap));
@@ -344,7 +345,7 @@ namespace osu.Game.Tests.Beatmaps.Formats
                 Assert.That(failingSample.Path, Is.EqualTo("fail.wav"));
                 Assert.That(failingSample.StartTime, Is.EqualTo(4000));
                 Assert.That(failingSample.Volume, Is.EqualTo(100));
-            });
+            }));
         }
 
         private record DecodedBeatmapComponents(IBeatmap Beatmap, Storyboard Storyboard);

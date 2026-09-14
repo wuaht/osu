@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using NUnit.Framework;
 using osu.Game.Beatmaps;
 using osu.Game.Beatmaps.ControlPoints;
@@ -145,12 +146,12 @@ namespace osu.Game.Tests.Editing
             beatmapProcessor.PreProcess();
             beatmapProcessor.PostProcess();
 
-            Assert.Multiple(() =>
+            Assert.Multiple((Action)(() =>
             {
                 Assert.That(beatmap.Breaks, Has.Count.EqualTo(1));
                 Assert.That(beatmap.Breaks[0].StartTime, Is.EqualTo(1200));
                 Assert.That(beatmap.Breaks[0].EndTime, Is.EqualTo(4000));
-            });
+            }));
         }
 
         [Test]
@@ -178,12 +179,12 @@ namespace osu.Game.Tests.Editing
             beatmapProcessor.PreProcess();
             beatmapProcessor.PostProcess();
 
-            Assert.Multiple(() =>
+            Assert.Multiple((Action)(() =>
             {
                 Assert.That(beatmap.Breaks, Has.Count.EqualTo(1));
                 Assert.That(beatmap.Breaks[0].StartTime, Is.EqualTo(1200));
                 Assert.That(beatmap.Breaks[0].EndTime, Is.EqualTo(8000));
-            });
+            }));
         }
 
         [Test]
@@ -211,14 +212,14 @@ namespace osu.Game.Tests.Editing
             beatmapProcessor.PreProcess();
             beatmapProcessor.PostProcess();
 
-            Assert.Multiple(() =>
+            Assert.Multiple((Action)(() =>
             {
                 Assert.That(beatmap.Breaks, Has.Count.EqualTo(2));
                 Assert.That(beatmap.Breaks[0].StartTime, Is.EqualTo(1200));
                 Assert.That(beatmap.Breaks[0].EndTime, Is.EqualTo(4000));
                 Assert.That(beatmap.Breaks[1].StartTime, Is.EqualTo(5200));
                 Assert.That(beatmap.Breaks[1].EndTime, Is.EqualTo(8000));
-            });
+            }));
         }
 
         [Test]
@@ -245,12 +246,12 @@ namespace osu.Game.Tests.Editing
             beatmapProcessor.PreProcess();
             beatmapProcessor.PostProcess();
 
-            Assert.Multiple(() =>
+            Assert.Multiple((Action)(() =>
             {
                 Assert.That(beatmap.Breaks, Has.Count.EqualTo(1));
                 Assert.That(beatmap.Breaks[0].StartTime, Is.EqualTo(1300));
                 Assert.That(beatmap.Breaks[0].EndTime, Is.EqualTo(8000));
-            });
+            }));
         }
 
         [Test]
@@ -278,14 +279,14 @@ namespace osu.Game.Tests.Editing
             beatmapProcessor.PreProcess();
             beatmapProcessor.PostProcess();
 
-            Assert.Multiple(() =>
+            Assert.Multiple((Action)(() =>
             {
                 Assert.That(beatmap.Breaks, Has.Count.EqualTo(2));
                 Assert.That(beatmap.Breaks[0].StartTime, Is.EqualTo(1200));
                 Assert.That(beatmap.Breaks[0].EndTime, Is.EqualTo(4000));
                 Assert.That(beatmap.Breaks[1].StartTime, Is.EqualTo(5200));
                 Assert.That(beatmap.Breaks[1].EndTime, Is.EqualTo(8000));
-            });
+            }));
         }
 
         [Test]
@@ -313,14 +314,14 @@ namespace osu.Game.Tests.Editing
             beatmapProcessor.PreProcess();
             beatmapProcessor.PostProcess();
 
-            Assert.Multiple(() =>
+            Assert.Multiple((Action)(() =>
             {
                 Assert.That(beatmap.Breaks, Has.Count.EqualTo(2));
                 Assert.That(beatmap.Breaks[0].StartTime, Is.EqualTo(1200));
                 Assert.That(beatmap.Breaks[0].EndTime, Is.EqualTo(4000));
                 Assert.That(beatmap.Breaks[1].StartTime, Is.EqualTo(5200));
                 Assert.That(beatmap.Breaks[1].EndTime, Is.EqualTo(8000));
-            });
+            }));
         }
 
         [Test]
@@ -347,12 +348,12 @@ namespace osu.Game.Tests.Editing
             beatmapProcessor.PreProcess();
             beatmapProcessor.PostProcess();
 
-            Assert.Multiple(() =>
+            Assert.Multiple((Action)(() =>
             {
                 Assert.That(beatmap.Breaks, Has.Count.EqualTo(1));
                 Assert.That(beatmap.Breaks[0].StartTime, Is.EqualTo(1200));
                 Assert.That(beatmap.Breaks[0].EndTime, Is.EqualTo(8800));
-            });
+            }));
         }
 
         [Test]
@@ -517,12 +518,12 @@ namespace osu.Game.Tests.Editing
             beatmapProcessor.PreProcess();
             beatmapProcessor.PostProcess();
 
-            Assert.Multiple(() =>
+            Assert.Multiple((Action)(() =>
             {
                 Assert.That(beatmap.Breaks, Has.Count.EqualTo(1));
                 Assert.That(beatmap.Breaks[0].StartTime, Is.EqualTo(1200));
                 Assert.That(beatmap.Breaks[0].EndTime, Is.EqualTo(5000 - OsuHitObject.PREEMPT_MIN));
-            });
+            }));
 
             beatmap.Difficulty.ApproachRate = 0;
 
@@ -532,12 +533,12 @@ namespace osu.Game.Tests.Editing
             beatmapProcessor.PreProcess();
             beatmapProcessor.PostProcess();
 
-            Assert.Multiple(() =>
+            Assert.Multiple((Action)(() =>
             {
                 Assert.That(beatmap.Breaks, Has.Count.EqualTo(1));
                 Assert.That(beatmap.Breaks[0].StartTime, Is.EqualTo(1200));
                 Assert.That(beatmap.Breaks[0].EndTime, Is.EqualTo(5000 - OsuHitObject.PREEMPT_MAX));
-            });
+            }));
         }
 
         [Test]
@@ -572,7 +573,7 @@ namespace osu.Game.Tests.Editing
             beatmapProcessor.PreProcess();
             beatmapProcessor.PostProcess();
 
-            Assert.Multiple(() =>
+            Assert.Multiple((Action)(() =>
             {
                 Assert.That(((HitCircle)beatmap.HitObjects[1]).NewCombo, Is.True);
                 Assert.That(((HitCircle)beatmap.HitObjects[2]).NewCombo, Is.True);
@@ -580,7 +581,7 @@ namespace osu.Game.Tests.Editing
                 Assert.That(((HitCircle)beatmap.HitObjects[0]).ComboIndex, Is.EqualTo(1));
                 Assert.That(((HitCircle)beatmap.HitObjects[1]).ComboIndex, Is.EqualTo(2));
                 Assert.That(((HitCircle)beatmap.HitObjects[2]).ComboIndex, Is.EqualTo(3));
-            });
+            }));
         }
 
         [Test]
@@ -610,14 +611,14 @@ namespace osu.Game.Tests.Editing
             beatmapProcessor.PreProcess();
             beatmapProcessor.PostProcess();
 
-            Assert.Multiple(() =>
+            Assert.Multiple((Action)(() =>
             {
                 Assert.That(beatmap.Breaks, Has.Count.EqualTo(1));
                 Assert.That(((HitCircle)beatmap.HitObjects[1]).NewCombo, Is.True);
 
                 Assert.That(((HitCircle)beatmap.HitObjects[0]).ComboIndex, Is.EqualTo(1));
                 Assert.That(((HitCircle)beatmap.HitObjects[1]).ComboIndex, Is.EqualTo(2));
-            });
+            }));
         }
     }
 }

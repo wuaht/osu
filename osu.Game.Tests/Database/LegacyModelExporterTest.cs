@@ -92,10 +92,10 @@ namespace osu.Game.Tests.Database
 
         private void exportItemAndAssert(TestModel item, string expectedName)
         {
-            Assert.DoesNotThrow(() =>
+            Assert.DoesNotThrow(new Action(() =>
             {
                 Task.Run(() => legacyExporter.ExportAsync(new RealmLiveUnmanaged<TestModel>(item))).WaitSafely();
-            });
+            }));
             Assert.That(storage.Exists($"exports/{expectedName}{legacyExporter.GetExtension()}"), Is.True);
         }
 

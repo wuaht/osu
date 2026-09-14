@@ -20,17 +20,17 @@ namespace osu.Game.Tests.Rulesets.Scoring
         {
             HitResult[] unsupportedResults = HitResultExtensions.ALL_TYPES.Where(t => !minResults.Contains(t)).ToArray();
 
-            Assert.Multiple(() =>
+            Assert.Multiple((Action)(() =>
             {
                 foreach (var max in maxResults)
                 {
                     foreach (var min in minResults)
-                        Assert.DoesNotThrow(() => HitResultExtensions.ValidateHitResultPair(max, min), $"{max} + {min} should be supported.");
+                        Assert.DoesNotThrow(new Action(() => HitResultExtensions.ValidateHitResultPair(max, min)), $"{max} + {min} should be supported.");
 
                     foreach (var unsupported in unsupportedResults)
-                        Assert.Throws<ArgumentOutOfRangeException>(() => HitResultExtensions.ValidateHitResultPair(max, unsupported), $"{max} + {unsupported} should not be supported.");
+                        Assert.Throws<ArgumentOutOfRangeException>(new Action(() => HitResultExtensions.ValidateHitResultPair(max, unsupported)), $"{max} + {unsupported} should not be supported.");
                 }
-            });
+            }));
         }
     }
 }

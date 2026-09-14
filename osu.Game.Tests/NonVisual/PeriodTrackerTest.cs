@@ -72,13 +72,13 @@ namespace osu.Game.Tests.NonVisual
         [Test]
         public void TestReversedPeriodHandling()
         {
-            Assert.Throws<ArgumentException>(() =>
+            Assert.Throws<ArgumentException>(new Action(() =>
             {
                 _ = new PeriodTracker(new[]
                 {
                     new Period(2.0, 1.0)
                 });
-            });
+            }));
         }
 
         private double getMidpoint(Period period) => period.Start + (period.End - period.Start) / 2;

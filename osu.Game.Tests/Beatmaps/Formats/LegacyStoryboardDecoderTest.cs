@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System.Linq;
+using System;
 using NUnit.Framework;
 using NUnit.Framework.Legacy;
 using osuTK;
@@ -334,7 +335,7 @@ namespace osu.Game.Tests.Beatmaps.Formats
 
             var storyboard = decoder.Decode(stream);
 
-            Assert.Multiple(() =>
+            Assert.Multiple((Action)(() =>
             {
                 Assert.That(storyboard.GetLayer(@"Video").Elements, Has.Count.EqualTo(1));
                 Assert.That(storyboard.GetLayer(@"Video").Elements.Single(), Is.InstanceOf<StoryboardVideo>());
@@ -344,7 +345,7 @@ namespace osu.Game.Tests.Beatmaps.Formats
 
                 Assert.That(storyboard.EarliestEventTime, Is.Null);
                 Assert.That(storyboard.LatestEventTime, Is.Null);
-            });
+            }));
         }
 
         [Test]
@@ -357,7 +358,7 @@ namespace osu.Game.Tests.Beatmaps.Formats
 
             var storyboard = decoder.Decode(stream);
 
-            Assert.Multiple(() =>
+            Assert.Multiple((Action)(() =>
             {
                 Assert.That(storyboard.GetLayer(@"Video").Elements, Has.Count.EqualTo(1));
                 Assert.That(storyboard.GetLayer(@"Video").Elements.Single(), Is.InstanceOf<StoryboardVideo>());
@@ -365,7 +366,7 @@ namespace osu.Game.Tests.Beatmaps.Formats
 
                 Assert.That(storyboard.EarliestEventTime, Is.Null);
                 Assert.That(storyboard.LatestEventTime, Is.Null);
-            });
+            }));
         }
     }
 }

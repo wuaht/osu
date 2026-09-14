@@ -28,9 +28,9 @@ namespace osu.Game.Tests.NonVisual
         {
             ClassicAssert.AreEqual(0, queue.Count);
 
-            Assert.Throws<ArgumentOutOfRangeException>(() => _ = queue[0]);
+            Assert.Throws<ArgumentOutOfRangeException>(new Action(() => _ = queue[0]));
 
-            Assert.Throws<InvalidOperationException>(() => _ = queue.Dequeue());
+            Assert.Throws<InvalidOperationException>(new Action(() => _ = queue.Dequeue()));
 
             int count = 0;
             foreach (int _ in queue)
@@ -57,7 +57,7 @@ namespace osu.Game.Tests.NonVisual
                 ClassicAssert.AreEqual(j++, item);
 
             for (int i = queue.Count; i < queue.Count + capacity; i++)
-                Assert.Throws<ArgumentOutOfRangeException>(() => _ = queue[i]);
+                Assert.Throws<ArgumentOutOfRangeException>(new Action(() => _ = queue[i]));
         }
 
         [TestCase(4)]
@@ -78,7 +78,7 @@ namespace osu.Game.Tests.NonVisual
                 ClassicAssert.AreEqual(j++, item);
 
             for (int i = queue.Count; i < queue.Count + capacity; i++)
-                Assert.Throws<ArgumentOutOfRangeException>(() => _ = queue[i]);
+                Assert.Throws<ArgumentOutOfRangeException>(new Action(() => _ = queue[i]));
         }
 
         [TestCase(4)]
@@ -95,7 +95,7 @@ namespace osu.Game.Tests.NonVisual
                 ClassicAssert.AreEqual(2 - i, queue.Count);
             }
 
-            Assert.Throws<InvalidOperationException>(() => queue.Dequeue());
+            Assert.Throws<InvalidOperationException>(new Action(() => queue.Dequeue()));
         }
 
         [Test]
@@ -107,12 +107,12 @@ namespace osu.Game.Tests.NonVisual
 
             queue.Clear();
             ClassicAssert.AreEqual(0, queue.Count);
-            Assert.Throws<ArgumentOutOfRangeException>(() => _ = queue[0]);
+            Assert.Throws<ArgumentOutOfRangeException>(new Action(() => _ = queue[0]));
 
             queue.Enqueue(7);
             ClassicAssert.AreEqual(1, queue.Count);
             ClassicAssert.AreEqual(7, queue[0]);
-            Assert.Throws<ArgumentOutOfRangeException>(() => _ = queue[1]);
+            Assert.Throws<ArgumentOutOfRangeException>(new Action(() => _ = queue[1]));
 
             queue.Enqueue(9);
             ClassicAssert.AreEqual(2, queue.Count);

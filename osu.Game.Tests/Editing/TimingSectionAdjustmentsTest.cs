@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
@@ -43,35 +44,35 @@ namespace osu.Game.Tests.Editing
 
             moveTimingPoint(beatmap, 100, -50);
 
-            Assert.Multiple(() =>
+            Assert.Multiple((Action)(() =>
             {
                 Assert.That(beatmap.HitObjects[0].StartTime, Is.EqualTo(-50));
                 Assert.That(beatmap.HitObjects[1].StartTime, Is.EqualTo(150));
                 Assert.That(beatmap.HitObjects[2].StartTime, Is.EqualTo(49_850));
                 Assert.That(beatmap.HitObjects[3].StartTime, Is.EqualTo(50_000));
-            });
+            }));
 
             moveTimingPoint(beatmap, 50_000, 1_000);
 
-            Assert.Multiple(() =>
+            Assert.Multiple((Action)(() =>
             {
                 Assert.That(beatmap.HitObjects[2].StartTime, Is.EqualTo(49_850));
                 Assert.That(beatmap.HitObjects[3].StartTime, Is.EqualTo(51_000));
                 Assert.That(beatmap.HitObjects[4].StartTime, Is.EqualTo(51_200));
                 Assert.That(beatmap.HitObjects[5].StartTime, Is.EqualTo(100_800));
                 Assert.That(beatmap.HitObjects[6].StartTime, Is.EqualTo(100_000));
-            });
+            }));
 
             moveTimingPoint(beatmap, 100_000, 10_000);
 
-            Assert.Multiple(() =>
+            Assert.Multiple((Action)(() =>
             {
                 Assert.That(beatmap.HitObjects[4].StartTime, Is.EqualTo(51_200));
                 Assert.That(beatmap.HitObjects[5].StartTime, Is.EqualTo(110_800));
                 Assert.That(beatmap.HitObjects[6].StartTime, Is.EqualTo(110_000));
                 Assert.That(beatmap.HitObjects[7].StartTime, Is.EqualTo(110_050));
                 Assert.That(beatmap.HitObjects[8].StartTime, Is.EqualTo(110_550));
-            });
+            }));
         }
 
         [Test]
@@ -103,7 +104,7 @@ namespace osu.Game.Tests.Editing
 
             adjustBeatLength(beatmap, 100, 50);
 
-            Assert.Multiple(() =>
+            Assert.Multiple((Action)(() =>
             {
                 Assert.That(beatmap.HitObjects[0].StartTime, Is.EqualTo(50));
                 Assert.That(beatmap.HitObjects[1].StartTime, Is.EqualTo(150));
@@ -111,11 +112,11 @@ namespace osu.Game.Tests.Editing
                 Assert.That(beatmap.HitObjects[2].GetEndTime(), Is.EqualTo(550));
                 Assert.That(beatmap.HitObjects[3].StartTime, Is.EqualTo(25_000));
                 Assert.That(beatmap.HitObjects[4].StartTime, Is.EqualTo(50_000));
-            });
+            }));
 
             adjustBeatLength(beatmap, 50_000, 400);
 
-            Assert.Multiple(() =>
+            Assert.Multiple((Action)(() =>
             {
                 Assert.That(beatmap.HitObjects[2].StartTime, Is.EqualTo(300));
                 Assert.That(beatmap.HitObjects[2].GetEndTime(), Is.EqualTo(550));
@@ -124,18 +125,18 @@ namespace osu.Game.Tests.Editing
                 Assert.That(beatmap.HitObjects[5].StartTime, Is.EqualTo(50_400));
                 Assert.That(beatmap.HitObjects[6].StartTime, Is.EqualTo(149_600));
                 Assert.That(beatmap.HitObjects[7].StartTime, Is.EqualTo(100_000));
-            });
+            }));
 
             adjustBeatLength(beatmap, 100_000, 100);
 
-            Assert.Multiple(() =>
+            Assert.Multiple((Action)(() =>
             {
                 Assert.That(beatmap.HitObjects[5].StartTime, Is.EqualTo(50_400));
                 Assert.That(beatmap.HitObjects[6].StartTime, Is.EqualTo(199_200));
                 Assert.That(beatmap.HitObjects[7].StartTime, Is.EqualTo(100_000));
                 Assert.That(beatmap.HitObjects[8].StartTime, Is.EqualTo(100_100));
                 Assert.That(beatmap.HitObjects[9].StartTime, Is.EqualTo(101_100));
-            });
+            }));
         }
 
         private static void moveTimingPoint(IBeatmap beatmap, double originalTime, double adjustment)

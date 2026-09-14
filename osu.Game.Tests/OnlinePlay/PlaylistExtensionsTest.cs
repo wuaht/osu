@@ -17,12 +17,12 @@ namespace osu.Game.Tests.OnlinePlay
             // mostly an extreme edge case, i.e. during room creation.
             var items = Array.Empty<PlaylistItem>();
 
-            Assert.Multiple(() =>
+            Assert.Multiple((Action)(() =>
             {
                 Assert.That(items.GetHistoricalItems(), Is.Empty);
                 Assert.That(items.GetCurrentItem(), Is.Null);
                 Assert.That(items.GetUpcomingItems(), Is.Empty);
-            });
+            }));
         }
 
         [Test]
@@ -35,12 +35,12 @@ namespace osu.Game.Tests.OnlinePlay
                 new PlaylistItem(new APIBeatmap { OnlineID = 1003 }) { ID = 3, PlaylistOrder = 3 },
             };
 
-            Assert.Multiple(() =>
+            Assert.Multiple((Action)(() =>
             {
                 Assert.That(items.GetHistoricalItems(), Is.Empty);
                 Assert.That(items.GetCurrentItem(), Is.EqualTo(items[0]));
                 Assert.That(items.GetUpcomingItems(), Is.EquivalentTo(items));
-            });
+            }));
         }
 
         [Test]
@@ -53,12 +53,12 @@ namespace osu.Game.Tests.OnlinePlay
                 new PlaylistItem(new APIBeatmap { OnlineID = 1003 }) { ID = 3, PlaylistOrder = 3 },
             };
 
-            Assert.Multiple(() =>
+            Assert.Multiple((Action)(() =>
             {
                 Assert.That(items.GetHistoricalItems(), Is.Empty);
                 Assert.That(items.GetCurrentItem(), Is.EqualTo(items[1]));
                 Assert.That(items.GetUpcomingItems(), Is.EquivalentTo(new[] { items[1], items[0], items[2] }));
-            });
+            }));
         }
 
         [Test]
@@ -71,12 +71,12 @@ namespace osu.Game.Tests.OnlinePlay
                 new PlaylistItem(new APIBeatmap { OnlineID = 1003 }) { ID = 3, PlaylistOrder = 3 },
             };
 
-            Assert.Multiple(() =>
+            Assert.Multiple((Action)(() =>
             {
                 Assert.That(items.GetHistoricalItems(), Is.EquivalentTo(new[] { items[1], items[0] }));
                 Assert.That(items.GetCurrentItem(), Is.EqualTo(items[2]));
                 Assert.That(items.GetUpcomingItems(), Is.EquivalentTo(new[] { items[2] }));
-            });
+            }));
         }
 
         [Test]
@@ -89,13 +89,13 @@ namespace osu.Game.Tests.OnlinePlay
                 new PlaylistItem(new APIBeatmap { OnlineID = 1002 }) { ID = 3, Expired = true, PlayedAt = new DateTimeOffset(2021, 12, 21, 7, 57, 0, TimeSpan.Zero) },
             };
 
-            Assert.Multiple(() =>
+            Assert.Multiple((Action)(() =>
             {
                 Assert.That(items.GetHistoricalItems(), Is.EquivalentTo(new[] { items[1], items[0], items[2] }));
                 // if all items are expired, the last-played item is expected to be returned.
                 Assert.That(items.GetCurrentItem(), Is.EqualTo(items[2]));
                 Assert.That(items.GetUpcomingItems(), Is.Empty);
-            });
+            }));
         }
     }
 }

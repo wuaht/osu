@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Collections.Generic;
 using NUnit.Framework;
 using osu.Game.Beatmaps;
@@ -134,11 +135,11 @@ namespace osu.Game.Tests.Mods
 
             var mod = (OsuModDifficultyAdjust)apiMod.ToMod(ruleset);
 
-            Assert.Multiple(() =>
+            Assert.Multiple((Action)(() =>
             {
                 Assert.That(mod.CircleSize.Value, Is.GreaterThanOrEqualTo(0).And.LessThanOrEqualTo(11));
                 Assert.That(mod.ApproachRate.Value, Is.GreaterThanOrEqualTo(-10).And.LessThanOrEqualTo(11));
-            });
+            }));
         }
 
         [Test]

@@ -183,16 +183,16 @@ namespace osu.Game.Tests.NonVisual
                 {
                     var osu = LoadOsuIntoHost(host);
 
-                    Assert.DoesNotThrow(() => osu.MigrateUserData(customPath));
+                    Assert.DoesNotThrow(new Action(() => osu.MigrateUserData(customPath)));
                     Assert.That(File.Exists(Path.Combine(customPath, OsuGameBase.CLIENT_DATABASE_FILENAME)));
 
-                    Assert.DoesNotThrow(() => osu.MigrateUserData(customPath2));
+                    Assert.DoesNotThrow(new Action(() => osu.MigrateUserData(customPath2)));
                     Assert.That(File.Exists(Path.Combine(customPath2, OsuGameBase.CLIENT_DATABASE_FILENAME)));
 
                     // some files may have been left behind for whatever reason, but that's not what we're testing here.
                     cleanupPath(customPath);
 
-                    Assert.DoesNotThrow(() => osu.MigrateUserData(customPath));
+                    Assert.DoesNotThrow(new Action(() => osu.MigrateUserData(customPath)));
                     Assert.That(File.Exists(Path.Combine(customPath, OsuGameBase.CLIENT_DATABASE_FILENAME)));
                 }
                 finally
@@ -212,8 +212,8 @@ namespace osu.Game.Tests.NonVisual
                 {
                     var osu = LoadOsuIntoHost(host);
 
-                    Assert.DoesNotThrow(() => osu.MigrateUserData(customPath));
-                    Assert.Throws<ArgumentException>(() => osu.MigrateUserData(customPath));
+                    Assert.DoesNotThrow(new Action(() => osu.MigrateUserData(customPath)));
+                    Assert.Throws<ArgumentException>(new Action(() => osu.MigrateUserData(customPath)));
                 }
                 finally
                 {
@@ -238,14 +238,14 @@ namespace osu.Game.Tests.NonVisual
 
                     string originalDirectory = storage.GetFullPath(".");
 
-                    Assert.DoesNotThrow(() => osu.MigrateUserData(customPath));
+                    Assert.DoesNotThrow(new Action(() => osu.MigrateUserData(customPath)));
                     Assert.That(File.Exists(Path.Combine(customPath, OsuGameBase.CLIENT_DATABASE_FILENAME)));
 
                     Directory.CreateDirectory(customPath2);
                     File.WriteAllText(Path.Combine(customPath2, OsuGameBase.CLIENT_DATABASE_FILENAME), "I am a text");
 
                     // Fails because file already exists.
-                    Assert.Throws<ArgumentException>(() => osu.MigrateUserData(customPath2));
+                    Assert.Throws<ArgumentException>(new Action(() => osu.MigrateUserData(customPath2)));
 
                     osuStorage?.ChangeDataPath(customPath2);
 
@@ -269,7 +269,7 @@ namespace osu.Game.Tests.NonVisual
                 {
                     var osu = LoadOsuIntoHost(host);
 
-                    Assert.DoesNotThrow(() => osu.MigrateUserData(customPath));
+                    Assert.DoesNotThrow(new Action(() => osu.MigrateUserData(customPath)));
 
                     string subFolder = Path.Combine(customPath, "sub");
 
@@ -278,7 +278,7 @@ namespace osu.Game.Tests.NonVisual
 
                     Directory.CreateDirectory(subFolder);
 
-                    Assert.Throws<ArgumentException>(() => osu.MigrateUserData(subFolder));
+                    Assert.Throws<ArgumentException>(new Action(() => osu.MigrateUserData(subFolder)));
                 }
                 finally
                 {
@@ -297,7 +297,7 @@ namespace osu.Game.Tests.NonVisual
                 {
                     var osu = LoadOsuIntoHost(host);
 
-                    Assert.DoesNotThrow(() => osu.MigrateUserData(customPath));
+                    Assert.DoesNotThrow(new Action(() => osu.MigrateUserData(customPath)));
 
                     string seeminglySubFolder = customPath + "sub";
 

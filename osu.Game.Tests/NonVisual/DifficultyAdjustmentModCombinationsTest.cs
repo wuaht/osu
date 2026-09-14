@@ -144,7 +144,7 @@ namespace osu.Game.Tests.NonVisual
         {
             ClassicAssert.AreEqual(expectedCombinations.Length, actualCombinations.Length);
 
-            Assert.Multiple(() =>
+            Assert.Multiple((Action)(() =>
             {
                 for (int i = 0; i < expectedCombinations.Length; ++i)
                 {
@@ -153,7 +153,7 @@ namespace osu.Game.Tests.NonVisual
 
                     Assert.That(expectedTypes, Is.EquivalentTo(actualTypes));
                 }
-            });
+            }));
         }
 
         private class ModA : Mod

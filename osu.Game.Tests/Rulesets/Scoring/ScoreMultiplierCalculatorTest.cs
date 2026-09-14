@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using NUnit.Framework;
 using osu.Game.Beatmaps;
 using osu.Game.Rulesets.Osu.Mods;
@@ -38,7 +39,7 @@ namespace osu.Game.Tests.Rulesets.Scoring
 
             double multiplier;
 
-            Assert.Multiple(() =>
+            Assert.Multiple((Action)(() =>
             {
                 calculator = new TestScoreMultiplierCalculator(new ScoreMultiplierContext(new BeatmapDifficulty()));
                 multiplier = calculator.CalculateFor([new OsuModHardRock()]);
@@ -47,7 +48,7 @@ namespace osu.Game.Tests.Rulesets.Scoring
                 calculator = new TestScoreMultiplierCalculator(new ScoreMultiplierContext(new BeatmapDifficulty(), new ScoreInfo { ClientVersion = "2024.123.0" }));
                 multiplier = calculator.CalculateFor([new OsuModHardRock()]);
                 Assert.That(multiplier, Is.EqualTo(1.2));
-            });
+            }));
         }
 
         [Test]
@@ -57,7 +58,7 @@ namespace osu.Game.Tests.Rulesets.Scoring
 
             double multiplier;
 
-            Assert.Multiple(() =>
+            Assert.Multiple((Action)(() =>
             {
                 calculator = new TestScoreMultiplierCalculator(new ScoreMultiplierContext(new BeatmapDifficulty()));
                 multiplier = calculator.CalculateFor([new OsuModEasy()]);
@@ -66,7 +67,7 @@ namespace osu.Game.Tests.Rulesets.Scoring
                 calculator = new TestScoreMultiplierCalculator(new ScoreMultiplierContext(new BeatmapDifficulty { ApproachRate = 0 }));
                 multiplier = calculator.CalculateFor([new OsuModEasy()]);
                 Assert.That(multiplier, Is.EqualTo(0.1));
-            });
+            }));
         }
 
         [Test]

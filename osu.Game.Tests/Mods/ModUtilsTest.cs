@@ -228,7 +228,7 @@ namespace osu.Game.Tests.Mods
         [Test]
         public void TestFormatScoreMultiplier()
         {
-            Assert.Multiple(() =>
+            Assert.Multiple((Action)(() =>
             {
                 Assert.That(ModUtils.FormatScoreMultiplier(0.9999).ToString(), Is.EqualTo("0.99x"));
                 Assert.That(ModUtils.FormatScoreMultiplier(1.0).ToString(), Is.EqualTo("1.00x"));
@@ -250,7 +250,7 @@ namespace osu.Game.Tests.Mods
                 Assert.That(ModUtils.FormatScoreMultiplier(1.1599999904632567).ToString(), Is.EqualTo("1.16x"));
                 Assert.That(ModUtils.FormatScoreMultiplier(1.1400000095367431).ToString(), Is.EqualTo("1.14x"));
                 Assert.That(ModUtils.FormatScoreMultiplier(1.1200000047683716).ToString(), Is.EqualTo("1.12x"));
-            });
+            }));
         }
 
         private static readonly object[] multiplayer_mod_test_scenarios =
@@ -358,7 +358,7 @@ namespace osu.Game.Tests.Mods
             commonAcronyms.IntersectWith(new CatchRuleset().CreateAllMods().Select(m => m.Acronym));
             commonAcronyms.IntersectWith(new ManiaRuleset().CreateAllMods().Select(m => m.Acronym));
 
-            Assert.Multiple(() =>
+            Assert.Multiple((Action)(() =>
             {
                 foreach (var ruleset in new Ruleset[] { new OsuRuleset(), new TaikoRuleset(), new CatchRuleset(), new ManiaRuleset() })
                 {
@@ -374,7 +374,7 @@ namespace osu.Game.Tests.Mods
                             Assert.Fail($"{mod.GetType().ReadableName()} declares {nameof(Mod.ValidForFreestyleAsRequiredMod)} but does not exist in all four basic rulesets!");
                     }
                 }
-            });
+            }));
         }
 
         [Test]
@@ -382,7 +382,7 @@ namespace osu.Game.Tests.Mods
         {
             Dictionary<(string firstMod, string secondMod), bool> compatibilityMap = new Dictionary<(string, string), bool>();
 
-            Assert.Multiple(() =>
+            Assert.Multiple((Action)(() =>
             {
                 for (int rulesetId = 0; rulesetId < 4; ++rulesetId)
                 {
@@ -407,7 +407,7 @@ namespace osu.Game.Tests.Mods
                         }
                     }
                 }
-            });
+            }));
         }
 
         public abstract class CustomMod1 : Mod, IModCompatibilitySpecification
