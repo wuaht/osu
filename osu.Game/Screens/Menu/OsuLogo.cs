@@ -188,7 +188,7 @@ namespace osu.Game.Screens.Menu
                                                                         new Box
                                                                         {
                                                                             RelativeSizeAxes = Axes.Both,
-                                                                            Colour = ColourInfo.GradientVertical(Color4Extensions.FromHex(@"ff66ab"), Color4Extensions.FromHex(@"cc5289")),
+                                                                            Colour = ColourInfo.GradientVertical(Color4Extensions.FromHex(@"023e7d"), Color4Extensions.FromHex(@"0466c8")),
                                                                         },
                                                                         triangles = new TrianglesV2
                                                                         {
@@ -197,7 +197,7 @@ namespace osu.Game.Screens.Menu
                                                                             Thickness = 0.009f,
                                                                             ScaleAdjust = 3,
                                                                             SpawnRatio = 1.4f,
-                                                                            Colour = ColourInfo.GradientVertical(Color4Extensions.FromHex(@"ff66ab"), Color4Extensions.FromHex(@"b6346f")),
+                                                                            Colour = ColourInfo.GradientVertical(Color4Extensions.FromHex(@"0466c8"), Color4Extensions.FromHex(@"023e7d")),
                                                                             RelativeSizeAxes = Axes.Both,
                                                                         },
                                                                     }
