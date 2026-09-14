@@ -47,4 +47,7 @@
     <PackageReference Include="System.ComponentModel.Annotations" Version="5.0.0"/>
     <PackageReference Include="TagLibSharp" Version="2.3.0"/>
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\osu-resources\osu.Game.Resources\osu.Game.Resources.csproj" />
+  </ItemGroup>
 </Project>
