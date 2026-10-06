@@ -185,14 +185,7 @@ namespace osu.Game.Screens.Backgrounds
 
         private string getBackgroundTextureName()
         {
-            switch (introSequence.Value)
-            {
-                case IntroSequence.Welcome:
-                    return @"Intro/Welcome/menu-background";
-
-                default:
-                    return $@"Menu/menu-background-{currentDisplay % background_count + 1}";
-            }
+            return @"Menu/menu-background-7";
         }
     }
 }
