@@ -70,6 +70,30 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                 }),
                 new SettingsItemV2(new FormCheckBox
                 {
+                    Caption = SlopSettingsStrings.ShowSelectionBox,
+                    HintText = SlopSettingsStrings.ShowSelectionBoxDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorShowSelectionBox),
+                }),
+                new SettingsItemV2(new FormCheckBox
+                {
+                    Caption = SlopSettingsStrings.ShowSelectionBoxButtons,
+                    HintText = SlopSettingsStrings.ShowSelectionBoxButtonsDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorShowSelectionBoxButtons),
+                }),
+                new SettingsItemV2(new FormCheckBox
+                {
+                    Caption = SlopSettingsStrings.ShowSliderEndDragMarker,
+                    HintText = SlopSettingsStrings.ShowSliderEndDragMarkerDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorShowSliderEndDragMarker),
+                }),
+                new SettingsItemV2(new FormCheckBox
+                {
+                    Caption = SlopSettingsStrings.ImmediateDrag,
+                    HintText = SlopSettingsStrings.ImmediateDragDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorImmediateDrag),
+                }),
+                new SettingsItemV2(new FormCheckBox
+                {
                     Caption = SlopSettingsStrings.BackupOnSave,
                     HintText = SlopSettingsStrings.BackupOnSaveDescription,
                     Current = config.GetBindable<bool>(OsuSetting.SlopEditorBackupOnSave),

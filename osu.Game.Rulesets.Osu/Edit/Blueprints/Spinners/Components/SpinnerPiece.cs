@@ -28,7 +28,8 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Spinners.Components
                 circle = new Circle
                 {
                     RelativeSizeAxes = Axes.Both,
-                    Alpha = 0.5f,
+                    // kept faint, as this covers the whole playfield.
+                    Alpha = 0.3f,
                 },
                 ring = new Circle
                 {
