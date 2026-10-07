@@ -9,6 +9,7 @@ using osu.Framework.Input.Bindings;
 using osu.Framework.Input.Events;
 using osu.Framework.Localisation;
 using osu.Game.Localisation;
+using RuntimeInfo = osu.Framework.RuntimeInfo;
 
 namespace osu.Game.Input.Bindings
 {
@@ -186,7 +187,32 @@ namespace osu.Game.Input.Bindings
             new KeyBinding(new[] { InputKey.Control, InputKey.L }, GlobalAction.EditorDiscardUnsavedChanges),
             new KeyBinding(new[] { InputKey.Control, InputKey.Shift, InputKey.U }, GlobalAction.EditorSubmitBeatmap),
             new KeyBinding(new[] { InputKey.Control, InputKey.Shift, InputKey.O }, GlobalAction.EditorEditExternally),
-        };
+        }.Concat(editorUndoRedoKeyBindings);
+
+        /// <summary>
+        /// Undo / redo default to the same keys as the platform's undo / redo shortcuts (see <see cref="PlatformAction"/>).
+        /// </summary>
+        private static IEnumerable<KeyBinding> editorUndoRedoKeyBindings
+        {
+            get
+            {
+                if (RuntimeInfo.OS == RuntimeInfo.Platform.macOS)
+                {
+                    return new[]
+                    {
+                        new KeyBinding(new[] { InputKey.Super, InputKey.Z }, GlobalAction.EditorUndo),
+                        new KeyBinding(new[] { InputKey.Super, InputKey.Shift, InputKey.Z }, GlobalAction.EditorRedo),
+                    };
+                }
+
+                return new[]
+                {
+                    new KeyBinding(new[] { InputKey.Control, InputKey.Z }, GlobalAction.EditorUndo),
+                    new KeyBinding(new[] { InputKey.Control, InputKey.Y }, GlobalAction.EditorRedo),
+                    new KeyBinding(new[] { InputKey.Control, InputKey.Shift, InputKey.Z }, GlobalAction.EditorRedo),
+                };
+            }
+        }
 
         private static IEnumerable<KeyBinding> editorTestPlayKeyBindings => new[]
         {
@@ -635,6 +661,12 @@ namespace osu.Game.Input.Bindings
 
         [LocalisableDescription(typeof(GlobalActionKeyBindingStrings), nameof(GlobalActionKeyBindingStrings.TakeAndUploadScreenshot))]
         TakeAndUploadScreeshot,
+
+        [LocalisableDescription(typeof(CommonStrings), nameof(CommonStrings.Undo))]
+        EditorUndo,
+
+        [LocalisableDescription(typeof(CommonStrings), nameof(CommonStrings.Redo))]
+        EditorRedo,
     }
 
     public enum GlobalActionCategory

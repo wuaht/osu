@@ -388,8 +388,8 @@ namespace osu.Game.Screens.Edit
                                     {
                                         Items = new[]
                                         {
-                                            undoMenuItem = new EditorMenuItem(CommonStrings.Undo, MenuItemType.Standard, Undo) { Hotkey = new Hotkey(PlatformAction.Undo) },
-                                            redoMenuItem = new EditorMenuItem(CommonStrings.Redo, MenuItemType.Standard, Redo) { Hotkey = new Hotkey(PlatformAction.Redo) },
+                                            undoMenuItem = new EditorMenuItem(CommonStrings.Undo, MenuItemType.Standard, Undo) { Hotkey = new Hotkey(GlobalAction.EditorUndo) },
+                                            redoMenuItem = new EditorMenuItem(CommonStrings.Redo, MenuItemType.Standard, Redo) { Hotkey = new Hotkey(GlobalAction.EditorRedo) },
                                             new OsuMenuItemSpacer(),
                                             cutMenuItem = new EditorMenuItem(CommonStrings.Cut, MenuItemType.Standard, Cut) { Hotkey = new Hotkey(PlatformAction.Cut) },
                                             copyMenuItem = new EditorMenuItem(CommonStrings.Copy, MenuItemType.Standard, Copy) { Hotkey = new Hotkey(PlatformAction.Copy) },
@@ -637,14 +637,6 @@ namespace osu.Game.Screens.Edit
                     Paste();
                     return true;
 
-                case PlatformAction.Undo:
-                    Undo();
-                    return true;
-
-                case PlatformAction.Redo:
-                    Redo();
-                    return true;
-
                 case PlatformAction.Save:
                     if (e.Repeat)
                         return false;
@@ -735,6 +727,14 @@ namespace osu.Game.Screens.Edit
 
                 case GlobalAction.EditorSeekToNextSamplePoint:
                     seekSamplePoint(1);
+                    return true;
+
+                case GlobalAction.EditorUndo:
+                    Undo();
+                    return true;
+
+                case GlobalAction.EditorRedo:
+                    Redo();
                     return true;
             }
 
