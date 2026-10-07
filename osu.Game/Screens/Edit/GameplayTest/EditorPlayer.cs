@@ -10,6 +10,7 @@ using osu.Framework.Input.Bindings;
 using osu.Framework.Input.Events;
 using osu.Framework.Screens;
 using osu.Game.Beatmaps;
+using osu.Game.Configuration;
 using osu.Game.Input.Bindings;
 using osu.Game.Overlays;
 using osu.Game.Rulesets.Judgements;
@@ -20,6 +21,7 @@ using osu.Game.Scoring;
 using osu.Game.Screens.Play;
 using osu.Game.Screens.Play.Leaderboards;
 using osu.Game.Screens.Ranking;
+using osu.Game.Skinning;
 using osu.Game.Users;
 
 namespace osu.Game.Screens.Edit.GameplayTest
@@ -42,6 +44,32 @@ namespace osu.Game.Screens.Edit.GameplayTest
         {
             this.editor = editor;
             editorState = editor.GetState();
+        }
+
+        private EditorSkinSource? editorSkinSource;
+
+        protected override IReadOnlyDependencyContainer CreateChildDependencies(IReadOnlyDependencyContainer parent)
+        {
+            var dependencies = new DependencyContainer(base.CreateChildDependencies(parent));
+
+            var config = parent.Get<OsuConfigManager>();
+            var skinManager = parent.Get<SkinManager>();
+
+            // This screen is loaded via the editor's dependencies, so it inherits the editor's skin source.
+            // Always provide the skin source explicitly so that test play (including the HUD) uses the regular gameplay skin by default.
+            if (config.Get<bool>(OsuSetting.SlopEditorSkinInTestMode))
+                dependencies.CacheAs<ISkinSource>(editorSkinSource = new EditorSkinSource(skinManager, config));
+            else
+                dependencies.CacheAs<ISkinSource>(skinManager);
+
+            return dependencies;
+        }
+
+        protected override void Dispose(bool isDisposing)
+        {
+            base.Dispose(isDisposing);
+
+            editorSkinSource?.Dispose();
         }
 
         protected override GameplayClockContainer CreateGameplayClockContainer(WorkingBeatmap beatmap, double gameplayStart)

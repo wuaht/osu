@@ -101,6 +101,7 @@ namespace osu.Game.Overlays
                 new GraphicsSection(),
                 new OnlineSection(),
                 new MaintenanceSection(),
+                new SlopSection(),
                 new DebugSection()
             });
 
