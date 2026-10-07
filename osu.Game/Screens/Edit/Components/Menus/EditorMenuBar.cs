@@ -35,7 +35,7 @@ namespace osu.Game.Screens.Edit.Components.Menus
         [BackgroundDependencyLoader]
         private void load(OverlayColourProvider colourProvider)
         {
-            BackgroundColour = colourProvider.Background3;
+            BackgroundColour = EditorPanelStyle.PanelBackground;
 
             TextFlowContainer text;
 
@@ -94,9 +94,9 @@ namespace osu.Game.Screens.Edit.Components.Menus
             private void load(OverlayColourProvider colourProvider)
             {
                 ForegroundColour = colourProvider.Light3;
-                BackgroundColour = colourProvider.Background2;
+                BackgroundColour = Colour4.Transparent;
                 ForegroundColourHover = colourProvider.Content1;
-                BackgroundColourHover = colourProvider.Background1;
+                BackgroundColourHover = EditorPanelStyle.HoverHighlight;
 
                 AddInternal(hoverClickSounds = new HoverClickSounds(HoverSampleSet.MenuOpen));
             }

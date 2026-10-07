@@ -47,7 +47,7 @@ namespace osu.Game.Screens.Edit.Compose.Components
                 {
                     Name = "Main background",
                     RelativeSizeAxes = Axes.Both,
-                    Colour = colourProvider.Background3,
+                    Colour = EditorPanelStyle.PanelBackground,
                 },
                 new GridContainer
                 {
@@ -65,7 +65,7 @@ namespace osu.Game.Screens.Edit.Compose.Components
                                     {
                                         Name = "Tick area background",
                                         RelativeSizeAxes = Axes.Both,
-                                        Colour = colourProvider.Background5,
+                                        Colour = EditorPanelStyle.PanelAccent,
                                     },
                                     new TickSliderBar(beatDivisor)
                                     {
@@ -84,7 +84,7 @@ namespace osu.Game.Screens.Edit.Compose.Components
                                     new Box
                                     {
                                         RelativeSizeAxes = Axes.Both,
-                                        Colour = colourProvider.Background3
+                                        Colour = Colour4.Transparent
                                     },
                                     new GridContainer
                                     {

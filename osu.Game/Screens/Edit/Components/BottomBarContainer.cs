@@ -22,6 +22,15 @@ namespace osu.Game.Screens.Edit.Components
 
         protected override Container<Drawable> Content => content;
 
+        /// <summary>
+        /// The padding around the contents of this container.
+        /// </summary>
+        protected MarginPadding ContentPadding
+        {
+            get => content.Padding;
+            set => content.Padding = value;
+        }
+
         public BottomBarContainer()
         {
             Masking = true;

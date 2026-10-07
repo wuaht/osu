@@ -43,7 +43,7 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
                     Origin = Anchor.TopRight,
                     Width = 35 + HitObjectComposer.TOOLBOX_CONTRACTED_SIZE_RIGHT,
                     RelativeSizeAxes = Axes.Y,
-                    Colour = colourProvider.Background4
+                    Colour = EditorPanelStyle.PanelBackground
                 },
                 new GridContainer
                 {
@@ -73,7 +73,7 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
                                     {
                                         RelativeSizeAxes = Axes.Both,
                                         Depth = float.MaxValue,
-                                        Colour = colourProvider.Background5
+                                        Colour = EditorPanelStyle.PanelBackground
                                     },
                                     Timeline = new Timeline(userContent),
                                 }
@@ -88,7 +88,7 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
                                     new Box
                                     {
                                         RelativeSizeAxes = Axes.Both,
-                                        Colour = colourProvider.Background2,
+                                        Colour = EditorPanelStyle.PanelAccent,
                                     },
                                     new Container<TimelineButton>
                                     {

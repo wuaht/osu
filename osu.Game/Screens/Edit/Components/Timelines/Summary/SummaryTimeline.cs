@@ -19,7 +19,10 @@ namespace osu.Game.Screens.Edit.Components.Timelines.Summary
         [BackgroundDependencyLoader]
         private void load(OverlayColourProvider colourProvider)
         {
-            Background.Colour = colourProvider.Background6;
+            Background.Colour = EditorPanelStyle.PanelBackground;
+
+            // the neighbouring bottom bar containers already have padding, so keep the gap to them small and give the timeline as much width as possible.
+            ContentPadding = new MarginPadding { Horizontal = 5 };
 
             Children = new Drawable[]
             {
@@ -64,19 +67,20 @@ namespace osu.Game.Screens.Edit.Components.Timelines.Summary
                     Origin = Anchor.Centre,
                     RelativeSizeAxes = Axes.Both,
                 },
+                // control points occupy the upper half and bookmarks the lower half, so that their lines don't overlap.
                 new ControlPointPart
                 {
                     Anchor = Anchor.Centre,
                     Origin = Anchor.BottomCentre,
                     RelativeSizeAxes = Axes.Both,
-                    Height = 0.4f
+                    Height = 0.5f
                 },
                 new BookmarkPart
                 {
                     Anchor = Anchor.Centre,
                     Origin = Anchor.TopCentre,
                     RelativeSizeAxes = Axes.Both,
-                    Height = 0.4f
+                    Height = 0.5f
                 },
                 new PreviewTimePart
                 {

@@ -3,22 +3,24 @@
 
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
-using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
-using osu.Framework.Graphics.Effects;
 using osu.Framework.Input.Events;
 using osu.Framework.Testing;
 using osu.Game.Rulesets.Edit;
 using osu.Game.Screens.Edit.Components;
 using osu.Game.Screens.Edit.Components.Timelines.Summary;
 using osuTK;
-using osuTK.Graphics;
 
 namespace osu.Game.Screens.Edit
 {
     internal partial class BottomBar : CompositeDrawable
     {
+        /// <summary>
+        /// Kept compact (matching osu!stable) to leave more space for the playfield.
+        /// </summary>
+        public const float HEIGHT = 34;
+
         public TestGameplayButton TestGameplayButton { get; private set; } = null!;
 
         private IBindable<bool> saveInProgress = null!;
@@ -32,15 +34,9 @@ namespace osu.Game.Screens.Edit
 
             RelativeSizeAxes = Axes.X;
 
-            Height = 50;
+            Height = HEIGHT;
 
             Masking = true;
-            EdgeEffect = new EdgeEffectParameters
-            {
-                Colour = Color4.Black.Opacity(0.2f),
-                Type = EdgeEffectType.Shadow,
-                Radius = 10f,
-            };
 
             InternalChildren = new Drawable[]
             {
@@ -49,9 +45,10 @@ namespace osu.Game.Screens.Edit
                     RelativeSizeAxes = Axes.Both,
                     ColumnDimensions = new[]
                     {
-                        new Dimension(GridSizeMode.Absolute, 150),
+                        // the outer columns are sized to fit their contents (the timestamp and the playback speed label), so that the summary timeline gets the remaining space.
+                        new Dimension(GridSizeMode.Absolute, 120),
                         new Dimension(),
-                        new Dimension(GridSizeMode.Absolute, 220),
+                        new Dimension(GridSizeMode.Absolute, 205),
                         new Dimension(GridSizeMode.Absolute, HitObjectComposer.TOOLBOX_CONTRACTED_SIZE_RIGHT),
                     },
                     Content = new[]
