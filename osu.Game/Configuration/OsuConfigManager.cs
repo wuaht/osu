@@ -248,6 +248,8 @@ namespace osu.Game.Configuration
             // slop! settings
             SetDefault(OsuSetting.SlopEditorSkin, string.Empty);
             SetDefault(OsuSetting.SlopEditorSkinInTestMode, false);
+            SetDefault(OsuSetting.SlopEditorBackupOnSave, true);
+            SetDefault(OsuSetting.SlopEditorAutosaveInterval, 5, 0, 60);
         }
 
         protected override bool CheckLookupContainsPrivateInformation(OsuSetting lookup)
@@ -500,5 +502,15 @@ namespace osu.Game.Configuration
         /// Whether the editor skin should also be used when test playing from the editor.
         /// </summary>
         SlopEditorSkinInTestMode,
+
+        /// <summary>
+        /// Whether a compressed copy of the previous beatmap file should be written to the backups folder on every editor save.
+        /// </summary>
+        SlopEditorBackupOnSave,
+
+        /// <summary>
+        /// The interval in minutes at which the editor automatically saves the beatmap. 0 disables autosaving.
+        /// </summary>
+        SlopEditorAutosaveInterval,
     }
 }

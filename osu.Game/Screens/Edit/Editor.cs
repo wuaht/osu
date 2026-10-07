@@ -14,6 +14,7 @@ using osu.Framework.Allocation;
 using osu.Framework.Audio;
 using osu.Framework.Audio.Track;
 using osu.Framework.Bindables;
+using osu.Framework.Platform;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Sprites;
@@ -103,6 +104,9 @@ namespace osu.Game.Screens.Edit
 
         [Resolved]
         private BeatmapManager beatmapManager { get; set; }
+
+        [Resolved]
+        private Storage storage { get; set; }
 
         [Resolved]
         private RulesetStore rulesets { get; set; }
@@ -257,6 +261,9 @@ namespace osu.Game.Screens.Edit
         [BackgroundDependencyLoader]
         private void load(OsuConfigManager config)
         {
+            backupOnSave = config.GetBindable<bool>(OsuSetting.SlopEditorBackupOnSave);
+            autosaveInterval = config.GetBindable<int>(OsuSetting.SlopEditorAutosaveInterval);
+
             var loadableBeatmap = Beatmap.Value;
 
             if (loadableBeatmap is DummyWorkingBeatmap)
@@ -501,6 +508,8 @@ namespace osu.Game.Screens.Edit
             base.LoadComplete();
             setUpClipboardActionAvailability();
 
+            lastSaveTime = Time.Current;
+
             Mode.Value = isNewBeatmap ? EditorScreenMode.SongSetup : EditorScreenMode.Compose;
             Mode.BindValueChanged(onModeChanged, true);
 
@@ -597,7 +606,9 @@ namespace osu.Game.Screens.Edit
         /// Saves the currently edited beatmap.
         /// </summary>
         /// <returns>Whether the save was successful.</returns>
-        internal bool Save()
+        internal bool Save() => performSave(false);
+
+        private bool performSave(bool isAutosave)
         {
             if (!canSave)
             {
@@ -605,8 +616,15 @@ namespace osu.Game.Screens.Edit
                 return false;
             }
 
+            // reset regardless of the outcome, so that a failing autosave isn't retried every frame.
+            lastSaveTime = Time.Current;
+
             try
             {
+                // keep a copy of the previous file before it gets replaced.
+                if (backupOnSave.Value)
+                    EditorBeatmapBackup.CreateBackup(storage, editorBeatmap.BeatmapInfo);
+
                 // save the loaded beatmap's data stream.
                 beatmapManager.Save(editorBeatmap.BeatmapInfo, editorBeatmap.PlayableBeatmap, editorBeatmap.BeatmapSkin, editorBeatmap.Storyboard);
             }
@@ -620,7 +638,7 @@ namespace osu.Game.Screens.Edit
             // no longer new after first user-triggered save.
             isNewBeatmap = false;
             updateLastSavedHash();
-            onScreenDisplay?.Display(new BeatmapEditorToast(ToastStrings.BeatmapSaved, editorBeatmap.BeatmapInfo.GetDisplayTitle()));
+            onScreenDisplay?.Display(new BeatmapEditorToast(isAutosave ? SlopSettingsStrings.BeatmapAutoSaved : ToastStrings.BeatmapSaved, editorBeatmap.BeatmapInfo.GetDisplayTitle()));
             Saved?.Invoke();
 
             // This triggers an update to the window title post-save (ie if the difficulty name changed).
@@ -634,6 +652,40 @@ namespace osu.Game.Screens.Edit
             clock.ProcessFrame();
 
             discardChangesMenuItem.Action.Disabled = !HasUnsavedChanges;
+
+            updateAutosave();
+        }
+
+        private Bindable<bool> backupOnSave;
+        private Bindable<int> autosaveInterval;
+
+        /// <summary>
+        /// The time of the last save attempt (or the editor being opened), in the game clock's time base.
+        /// </summary>
+        private double lastSaveTime;
+
+        private void updateAutosave()
+        {
+            if (autosaveInterval.Value <= 0)
+                return;
+
+            if (Time.Current - lastSaveTime < autosaveInterval.Value * 60_000d)
+                return;
+
+            // only autosave while the editor is in a state where a save would be safe and wanted:
+            // - new beatmaps are not autosaved, as exiting without saving is expected to discard them.
+            // - saving in the middle of an ongoing change (e.g. a drag) would save an intermediate state, so wait for it to complete.
+            // - mutation operations (e.g. external editing) block saving, and test play suspends the editor.
+            if (!canSave || isNewBeatmap || !this.IsCurrentScreen() || MutationTracker.InProgress.Value || changeHandler?.TransactionActive == true || editorBeatmap.TransactionActive)
+                return;
+
+            if (!HasUnsavedChanges)
+            {
+                lastSaveTime = Time.Current;
+                return;
+            }
+
+            attemptMutationOperation(() => performSave(true));
         }
 
         public bool OnPressed(KeyBindingPressEvent<PlatformAction> e)

@@ -46,6 +46,43 @@ namespace osu.Game.Localisation
         public static LocalisableString EditorSkinInTestModeDescription => new TranslatableString(getKey(@"editor_skin_in_test_mode_description"),
             @"When test playing a beatmap from the editor, use the editor skin instead of the regular skin.");
 
+        /// <summary>
+        /// "Backup on save"
+        /// </summary>
+        public static LocalisableString BackupOnSave => new TranslatableString(getKey(@"backup_on_save"), @"Backup on save");
+
+        /// <summary>
+        /// "Writes a compressed version of the previous file to the Backups folder on every save."
+        /// </summary>
+        public static LocalisableString BackupOnSaveDescription => new TranslatableString(getKey(@"backup_on_save_description"),
+            @"Writes a compressed version of the previous file to the Backups folder on every save.");
+
+        /// <summary>
+        /// "Autosave interval"
+        /// </summary>
+        public static LocalisableString AutosaveInterval => new TranslatableString(getKey(@"autosave_interval"), @"Autosave interval");
+
+        /// <summary>
+        /// "Automatically saves the beatmap with the given interval. Highly recommended to be used with "Backup on save". Set to 0 to disable."
+        /// </summary>
+        public static LocalisableString AutosaveIntervalDescription => new TranslatableString(getKey(@"autosave_interval_description"),
+            @"Automatically saves the beatmap with the given interval. Highly recommended to be used with ""Backup on save"". Set to 0 to disable.");
+
+        /// <summary>
+        /// "Off"
+        /// </summary>
+        public static LocalisableString AutosaveOff => new TranslatableString(getKey(@"autosave_off"), @"Off");
+
+        /// <summary>
+        /// "{0} min"
+        /// </summary>
+        public static LocalisableString AutosaveMinutes(int minutes) => new TranslatableString(getKey(@"autosave_minutes"), @"{0} min", minutes);
+
+        /// <summary>
+        /// "Beatmap saved (auto save)"
+        /// </summary>
+        public static LocalisableString BeatmapAutoSaved => new TranslatableString(getKey(@"beatmap_auto_saved"), @"Beatmap saved (auto save)");
+
         private static string getKey(string key) => $"{prefix}:{key}";
     }
 }
