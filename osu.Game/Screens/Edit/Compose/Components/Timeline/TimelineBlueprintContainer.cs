@@ -55,7 +55,9 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
             Anchor = Anchor.Centre;
             Origin = Anchor.Centre;
 
-            Height = 0.6f;
+            // selection (e.g. drag selection) is possible across the full height of the timeline.
+            // blueprints are vertically centred with a fixed size, so they are unaffected by this.
+            Height = 1;
         }
 
         [BackgroundDependencyLoader]

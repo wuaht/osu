@@ -29,28 +29,44 @@ namespace osu.Game.Screens.Edit.Components
         [BackgroundDependencyLoader]
         private void load(OsuColour colours, OverlayColourProvider colourProvider)
         {
-            Background.Colour = colourProvider.Background5;
+            Background.Colour = EditorPanelStyle.PanelBackground;
 
+            // laid out to fit the compact bottom bar: the timestamp on top, with progress and BPM left-aligned directly below it.
             Children = new Drawable[]
             {
-                new TimestampControl(),
-                bpm = new OsuSpriteText
+                new TimestampControl
                 {
-                    Colour = colours.Orange1,
-                    Font = OsuFont.Torus.With(size: 14, weight: FontWeight.SemiBold, fixedWidth: true),
-                    Spacing = new Vector2(-1, 0),
-                    Position = new Vector2(0, 4),
-                    Anchor = Anchor.CentreRight,
-                    Origin = Anchor.TopRight,
+                    Y = 1,
                 },
-                progress = new OsuSpriteText
+                new FillFlowContainer
                 {
-                    Colour = colours.Purple1,
-                    Font = OsuFont.Torus.With(size: 14, weight: FontWeight.SemiBold, fixedWidth: true),
-                    Spacing = new Vector2(-1, 0),
-                    Anchor = Anchor.CentreLeft,
-                    Position = new Vector2(2, 4),
-                }
+                    AutoSizeAxes = Axes.Both,
+                    Direction = FillDirection.Horizontal,
+                    Y = -1,
+                    Anchor = Anchor.BottomLeft,
+                    Origin = Anchor.BottomLeft,
+                    Children = new Drawable[]
+                    {
+                        new Container
+                        {
+                            // fixed width so that the BPM display doesn't shift around as the progress changes (e.g. from "9%" to "10%").
+                            Width = 30,
+                            AutoSizeAxes = Axes.Y,
+                            Child = progress = new OsuSpriteText
+                            {
+                                Colour = colours.Purple1,
+                                Font = OsuFont.Torus.With(size: 11, weight: FontWeight.SemiBold, fixedWidth: true),
+                                Spacing = new Vector2(-1, 0),
+                            },
+                        },
+                        bpm = new OsuSpriteText
+                        {
+                            Colour = colours.Orange1,
+                            Font = OsuFont.Torus.With(size: 11, weight: FontWeight.SemiBold, fixedWidth: true),
+                            Spacing = new Vector2(-1, 0),
+                        },
+                    }
+                },
             };
         }
 
@@ -106,8 +122,6 @@ namespace osu.Game.Screens.Edit.Components
                         RelativeSizeAxes = Axes.Both,
                         Padding = new MarginPadding
                         {
-                            Top = 4,
-                            Bottom = 1,
                             Horizontal = -2
                         },
                         Child = new Container
@@ -127,13 +141,13 @@ namespace osu.Game.Screens.Edit.Components
                         Anchor = Anchor.CentreLeft,
                         Origin = Anchor.CentreLeft,
                         Spacing = new Vector2(-2, 0),
-                        Font = OsuFont.Torus.With(size: 32, fixedWidth: true, weight: FontWeight.Light),
+                        Font = OsuFont.Torus.With(size: 20, fixedWidth: true, weight: FontWeight.Light),
                     },
                     inputTextBox = new TimestampTextBox
                     {
-                        Position = new Vector2(-2, 4),
-                        Width = 128,
-                        Height = 26,
+                        Position = new Vector2(-2, 0),
+                        Width = 100,
+                        Height = 20,
                         Alpha = 0,
                         CommitOnFocusLost = true,
                     },

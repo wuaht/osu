@@ -38,7 +38,7 @@ namespace osu.Game.Screens.Edit.Components
         [BackgroundDependencyLoader]
         private void load(OverlayColourProvider colourProvider, Editor? editor)
         {
-            Background.Colour = colourProvider.Background4;
+            Background.Colour = EditorPanelStyle.PanelBackground;
 
             Children = new Drawable[]
             {
@@ -46,7 +46,6 @@ namespace osu.Game.Screens.Edit.Components
                 {
                     Anchor = Anchor.CentreLeft,
                     Origin = Anchor.CentreLeft,
-                    Scale = new Vector2(1.2f),
                     IconScale = new Vector2(1.2f),
                     Icon = FontAwesome.Regular.PlayCircle,
                     Action = togglePause,
@@ -55,7 +54,7 @@ namespace osu.Game.Screens.Edit.Components
                 {
                     AutoSizeAxes = Axes.Y,
                     RelativeSizeAxes = Axes.X,
-                    Padding = new MarginPadding { Left = 45, },
+                    Padding = new MarginPadding { Left = 36, },
                     Anchor = Anchor.CentreRight,
                     Origin = Anchor.CentreRight,
                     Direction = FillDirection.Vertical,
@@ -64,12 +63,13 @@ namespace osu.Game.Screens.Edit.Components
                         new OsuSpriteText
                         {
                             Text = EditorStrings.PlaybackSpeed,
+                            Font = OsuFont.GetFont(size: 13),
                         },
                         new PlaybackTabControl
                         {
                             Current = tempoAdjustment,
                             RelativeSizeAxes = Axes.X,
-                            Height = 16,
+                            Height = 14,
                         },
                     }
                 }
@@ -168,19 +168,20 @@ namespace osu.Game.Screens.Edit.Components
 
                     Children = new Drawable[]
                     {
+                        // left-aligned within each tab, so that the first value lines up with the "playback speed" label above.
                         text = new OsuSpriteText
                         {
-                            Origin = Anchor.TopCentre,
-                            Anchor = Anchor.TopCentre,
+                            Origin = Anchor.TopLeft,
+                            Anchor = Anchor.TopLeft,
                             Text = $"{value:0%}",
-                            Font = OsuFont.GetFont(size: 14)
+                            Font = OsuFont.GetFont(size: 12)
                         },
                         textBold = new OsuSpriteText
                         {
-                            Origin = Anchor.TopCentre,
-                            Anchor = Anchor.TopCentre,
+                            Origin = Anchor.TopLeft,
+                            Anchor = Anchor.TopLeft,
                             Text = $"{value:0%}",
-                            Font = OsuFont.GetFont(size: 14, weight: FontWeight.Bold),
+                            Font = OsuFont.GetFont(size: 12, weight: FontWeight.Bold),
                             Alpha = 0,
                         },
                     };

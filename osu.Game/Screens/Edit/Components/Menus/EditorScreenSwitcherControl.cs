@@ -33,7 +33,7 @@ namespace osu.Game.Screens.Edit.Components.Menus
             AddInternal(new Box
             {
                 RelativeSizeAxes = Axes.Both,
-                Colour = colourProvider.Background2,
+                Colour = EditorPanelStyle.PanelAccent,
             });
         }
 
@@ -68,8 +68,8 @@ namespace osu.Game.Screens.Edit.Components.Menus
             [BackgroundDependencyLoader]
             private void load(OverlayColourProvider colourProvider)
             {
-                backgroundIdleColour = colourProvider.Background2;
-                backgroundHoverColour = colourProvider.Background1;
+                backgroundIdleColour = Color4.Transparent;
+                backgroundHoverColour = EditorPanelStyle.HoverHighlight;
             }
 
             protected override void LoadComplete()

@@ -13,7 +13,7 @@ using osu.Game.Screens.Edit.Components.Timelines.Summary.Visualisations;
 
 namespace osu.Game.Screens.Edit.Components.Timelines.Summary.Parts
 {
-    public partial class ControlPointVisualisation : PointVisualisation, IControlPointVisualisation, IHasTooltip
+    public partial class ControlPointVisualisation : LineVisualisation, IControlPointVisualisation, IHasTooltip
     {
         protected readonly ControlPoint Point;
 
@@ -21,7 +21,7 @@ namespace osu.Game.Screens.Edit.Components.Timelines.Summary.Parts
             : base(point.Time)
         {
             Point = point;
-            Alpha = 0.5f;
+            Alpha = 0.9f;
             Blending = BlendingParameters.Additive;
         }
 

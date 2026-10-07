@@ -164,7 +164,8 @@ namespace osu.Game.Rulesets.Edit
                         {
                             leftToolboxBackground = new Box
                             {
-                                Colour = colourProvider.Background5,
+                                // the left toolbox only contains buttons with their own backgrounds, so its background is kept invisible.
+                                Colour = Colour4.Transparent,
                                 RelativeSizeAxes = Axes.Both,
                             },
                             LeftToolbox = new ExpandingToolboxContainer(TOOLBOX_CONTRACTED_SIZE_LEFT, 200)
@@ -249,7 +250,7 @@ namespace osu.Game.Rulesets.Edit
                         {
                             rightToolboxBackground = new Box
                             {
-                                Colour = colourProvider.Background5,
+                                Colour = EditorPanelStyle.PanelBackground,
                                 RelativeSizeAxes = Axes.Both,
                             },
                             RightToolbox = new ExpandingToolboxContainer(TOOLBOX_CONTRACTED_SIZE_RIGHT, 250)

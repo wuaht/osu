@@ -379,7 +379,7 @@ namespace osu.Game.Screens.Edit
                     {
                         Name = "Screen container",
                         RelativeSizeAxes = Axes.Both,
-                        Padding = new MarginPadding { Top = 40, Bottom = 50 },
+                        Padding = new MarginPadding { Top = 40, Bottom = BottomBar.HEIGHT },
                         Child = screenContainer = new ScreenContainer
                         {
                             RelativeSizeAxes = Axes.Both,

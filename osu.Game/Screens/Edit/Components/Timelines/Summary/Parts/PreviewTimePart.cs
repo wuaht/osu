@@ -31,16 +31,11 @@ namespace osu.Game.Screens.Edit.Components.Timelines.Summary.Parts
             }, true);
         }
 
-        private partial class PreviewTimeVisualisation : PointVisualisation, IHasTooltip
+        private partial class PreviewTimeVisualisation : LineVisualisation, IHasTooltip
         {
             public PreviewTimeVisualisation(double time)
                 : base(time)
             {
-                Alpha = 0.8f;
-
-                // Display as a small circle on the middle line as to not clash with other displays.
-                RelativeSizeAxes = Axes.None;
-                Height = Width = 5;
             }
 
             [BackgroundDependencyLoader]
