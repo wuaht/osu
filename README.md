@@ -2,17 +2,13 @@
   <img width="500" alt="osu! logo" src="assets/lazer.png">
 </p>
 
-# osu!
+# slop!
 
-[![Build status](https://github.com/ppy/osu/actions/workflows/ci.yml/badge.svg?branch=master&event=push)](https://github.com/ppy/osu/actions/workflows/ci.yml)
-[![GitHub release](https://img.shields.io/github/release/ppy/osu.svg)](https://github.com/ppy/osu/releases/latest)
-[![CodeFactor](https://www.codefactor.io/repository/github/ppy/osu/badge)](https://www.codefactor.io/repository/github/ppy/osu)
-[![dev chat](https://discordapp.com/api/guilds/188630481301012481/widget.png?style=shield)](https://discord.gg/ppy)
-[![Crowdin](https://d322cqt584bo4o.cloudfront.net/osu-web/localized.svg)](https://crowdin.com/project/osu-web)
+An ai slop mapping(?) client. Slop is just a *click* away!
 
-A free-to-win rhythm game. Rhythm is just a *click* away!
+This is a **personal** osu! lazer fork primarily focused on the editor which implements some stable stuff + other features with the help of Claude Opus 5.5 (i'm not proud of it either ok i have huge skill issue I'm very sorry peppy).
 
-This is the future – and final – iteration of the [osu!](https://osu.ppy.sh) game client which marks the beginning of an open era! Currently known by and released under the release codename "*lazer*". As in sharper than cutting-edge.
+Below will be the normal readme.
 
 ## Status
 
@@ -28,7 +24,7 @@ A few resources are available as starting points to getting involved and underst
 
 If you are just looking to give the game a whirl, you can grab the latest release for your platform:
 
-### Latest release:
+### Latest release (not real):
 
 | [Windows 10+ (x64)](https://github.com/ppy/osu/releases/latest/download/install.exe) | macOS 12+ ([Intel](https://github.com/ppy/osu/releases/latest/download/osu.app.Intel.zip), [Apple Silicon](https://github.com/ppy/osu/releases/latest/download/osu.app.Apple.Silicon.zip)) | [Linux (x64)](https://github.com/ppy/osu/releases/latest/download/osu.AppImage) | [iOS 13.4+](https://osu.ppy.sh/home/testflight) | [Android 5+](https://github.com/ppy/osu/releases/latest/download/sh.ppy.osulazer.apk) |
 |--------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------| ------------- | ------------- | ------------- |
