@@ -21,7 +21,7 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
     {
         protected override LocalisableString Header => SlopSettingsStrings.EditorHeader;
 
-        public override IEnumerable<LocalisableString> FilterTerms => base.FilterTerms.Concat(new LocalisableString[] { "skin" });
+        public override IEnumerable<LocalisableString> FilterTerms => base.FilterTerms.Concat(new LocalisableString[] { "skin", "backup", "autosave" });
 
         /// <summary>
         /// Dropdown entry representing "use the regular gameplay skin".
@@ -67,6 +67,20 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                     Caption = SlopSettingsStrings.EditorSkinInTestMode,
                     HintText = SlopSettingsStrings.EditorSkinInTestModeDescription,
                     Current = config.GetBindable<bool>(OsuSetting.SlopEditorSkinInTestMode),
+                }),
+                new SettingsItemV2(new FormCheckBox
+                {
+                    Caption = SlopSettingsStrings.BackupOnSave,
+                    HintText = SlopSettingsStrings.BackupOnSaveDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorBackupOnSave),
+                }),
+                new SettingsItemV2(new FormSliderBar<int>
+                {
+                    Caption = SlopSettingsStrings.AutosaveInterval,
+                    HintText = SlopSettingsStrings.AutosaveIntervalDescription,
+                    Current = config.GetBindable<int>(OsuSetting.SlopEditorAutosaveInterval),
+                    KeyboardStep = 1,
+                    LabelFormat = minutes => minutes == 0 ? SlopSettingsStrings.AutosaveOff : SlopSettingsStrings.AutosaveMinutes(minutes),
                 }),
             };
         }
@@ -115,7 +129,7 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
         private partial class EditorSkinDropdown : FormDropdown<Live<SkinInfo>>
         {
             protected override LocalisableString GenerateItemText(Live<SkinInfo> item)
-                => item.ID == Guid.Empty ? SlopSettingsStrings.SameAsGameplaySkin : item.ToString();
+                => item.ID == Guid.Empty ? SlopSettingsStrings.SameAsGameplaySkin : item.ToString() ?? string.Empty;
         }
     }
 }
