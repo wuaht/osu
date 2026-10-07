@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using osu.Framework.Allocation;
+using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
 using osu.Game.Graphics;
 using osu.Game.Rulesets.Osu.Objects;
@@ -21,13 +22,15 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.HitCircles.Components
             CornerRadius = Size.X / 2;
             CornerExponent = 2;
 
-            InternalChild = new RingPiece();
+            // a thin, slightly translucent ring, to obstruct the selected objects as little as possible.
+            InternalChild = new RingPiece(7);
         }
 
         [BackgroundDependencyLoader]
         private void load(OsuColour colours)
         {
-            Colour = colours.Yellow;
+            // translucency is applied via the colour, as the alpha is used for showing / hiding the piece.
+            Colour = colours.Yellow.Opacity(0.85f);
         }
 
         public override void UpdateFrom(HitCircle hitObject)

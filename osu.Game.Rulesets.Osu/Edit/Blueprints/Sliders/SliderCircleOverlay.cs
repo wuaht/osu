@@ -2,9 +2,12 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using osu.Framework.Allocation;
+using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Primitives;
+using osu.Game.Configuration;
 using osu.Game.Rulesets.Osu.Edit.Blueprints.HitCircles.Components;
 using osu.Game.Rulesets.Osu.Objects;
 
@@ -20,11 +23,11 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
             {
                 var result = CirclePiece.ScreenSpaceDrawQuad.AABBFloat;
 
-                if (endDragMarkerContainer == null) return result;
+                // only account for the end drag marker if it's visible, so that the selection box fits the slider otherwise.
+                if (EndDragMarker == null || !showEndDragMarker.Value) return result;
 
-                var size = result.Size * 1.4f;
-                var location = result.TopLeft - result.Size * 0.2f;
-                return new RectangleF(location, size);
+                // use the actual area of the arc, so that the gap between the selection box and the arc matches the gap around other objects.
+                return RectangleF.Union(result, EndDragMarker.ScreenSpaceArcBounds);
             }
         }
 
@@ -47,15 +50,42 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
 
             if (position == SliderPosition.End)
             {
-                AddInternal(endDragMarkerContainer = new Container
+                // the outer container handles the visibility setting, while the inner one is shown / hidden alongside the circle piece.
+                AddInternal(endDragMarkerVisibilityContainer = new Container
                 {
-                    AutoSizeAxes = Axes.Both,
-                    Anchor = Anchor.CentreLeft,
-                    Origin = Anchor.CentreLeft,
-                    Padding = new MarginPadding(-2.5f),
-                    Child = EndDragMarker = new SliderEndDragMarker()
+                    RelativeSizeAxes = Axes.Both,
+                    Child = endDragMarkerContainer = new Container
+                    {
+                        AutoSizeAxes = Axes.Both,
+                        Anchor = Anchor.CentreLeft,
+                        Origin = Anchor.CentreLeft,
+                        Padding = new MarginPadding(SliderEndDragMarker.ARC_CENTRE_OFFSET - SliderEndDragMarker.PATH_RADIUS),
+                        Child = EndDragMarker = new SliderEndDragMarker()
+                    }
                 });
             }
+        }
+
+        private readonly Container? endDragMarkerVisibilityContainer;
+
+        private readonly Bindable<bool> showEndDragMarker = new Bindable<bool>();
+
+        [BackgroundDependencyLoader]
+        private void load(OsuConfigManager config)
+        {
+            config.BindWith(OsuSetting.SlopEditorShowSliderEndDragMarker, showEndDragMarker);
+        }
+
+        protected override void LoadComplete()
+        {
+            base.LoadComplete();
+
+            // when hidden, the marker is not present and therefore also doesn't receive input.
+            showEndDragMarker.BindValueChanged(show =>
+            {
+                if (endDragMarkerVisibilityContainer != null)
+                    endDragMarkerVisibilityContainer.Alpha = show.NewValue ? 1 : 0;
+            }, true);
         }
 
         protected override void Update()

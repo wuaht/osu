@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using osu.Framework.Allocation;
+using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
 using osu.Game.Graphics;
 using osu.Game.Rulesets.Osu.Objects;
@@ -42,7 +43,9 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders.Components
         [BackgroundDependencyLoader]
         private void load(OsuColour colours)
         {
-            body.BorderColour = colours.Yellow;
+            // a thinner, slightly translucent outline, to obstruct the selected slider as little as possible.
+            body.BorderColour = colours.Yellow.Opacity(0.85f);
+            body.BorderSize = 0.8f;
         }
 
         private int? lastVersion;

@@ -15,7 +15,9 @@ using osu.Framework.Graphics.Containers;
 using osu.Framework.Input;
 using osu.Framework.Input.Bindings;
 using osu.Framework.Input.Events;
+using osu.Game.Configuration;
 using osu.Game.Graphics.UserInterface;
+using osu.Game.Input;
 using osu.Game.Input.Bindings;
 using osu.Game.Rulesets.Edit;
 using osuTK;
@@ -27,9 +29,20 @@ namespace osu.Game.Screens.Edit.Compose.Components
     /// A container which provides a "blueprint" display of items.
     /// Includes selection and manipulation support via a <see cref="Components.SelectionHandler{T}"/>.
     /// </summary>
-    public abstract partial class BlueprintContainer<T> : CompositeDrawable, IKeyBindingHandler<PlatformAction>, IKeyBindingHandler<GlobalAction>
+    public abstract partial class BlueprintContainer<T> : CompositeDrawable, IKeyBindingHandler<PlatformAction>, IKeyBindingHandler<GlobalAction>, IRequestImmediateDrag
         where T : class
     {
+        [Resolved(CanBeNull = true)]
+        private Editor editor { get; set; }
+
+        [Resolved]
+        private OsuConfigManager config { get; set; }
+
+        /// <summary>
+        /// In the beatmap editor, moving objects can optionally start immediately without requiring a minimum mouse movement.
+        /// </summary>
+        public bool RequestsImmediateDrag => editor != null && config.Get<bool>(OsuSetting.SlopEditorImmediateDrag);
+
         protected DragBox DragBox { get; private set; }
 
         public SelectionBlueprintContainer SelectionBlueprints { get; private set; }

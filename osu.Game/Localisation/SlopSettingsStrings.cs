@@ -83,6 +83,50 @@ namespace osu.Game.Localisation
         /// </summary>
         public static LocalisableString BeatmapAutoSaved => new TranslatableString(getKey(@"beatmap_auto_saved"), @"Beatmap saved (auto save)");
 
+        /// <summary>
+        /// "Show selection box"
+        /// </summary>
+        public static LocalisableString ShowSelectionBox => new TranslatableString(getKey(@"show_selection_box"), @"Show selection box");
+
+        /// <summary>
+        /// "Shows a box with scale and rotation handles around the selected objects."
+        /// </summary>
+        public static LocalisableString ShowSelectionBoxDescription => new TranslatableString(getKey(@"show_selection_box_description"),
+            @"Shows a box with scale and rotation handles around the selected objects.");
+
+        /// <summary>
+        /// "Show selection box buttons"
+        /// </summary>
+        public static LocalisableString ShowSelectionBoxButtons => new TranslatableString(getKey(@"show_selection_box_buttons"), @"Show selection box buttons");
+
+        /// <summary>
+        /// "Shows rotate, flip and reverse buttons next to the selected objects. Their keyboard shortcuts work regardless."
+        /// </summary>
+        public static LocalisableString ShowSelectionBoxButtonsDescription => new TranslatableString(getKey(@"show_selection_box_buttons_description"),
+            @"Shows rotate, flip and reverse buttons next to the selected objects. Their keyboard shortcuts work regardless.");
+
+        /// <summary>
+        /// "Show slider length handle"
+        /// </summary>
+        public static LocalisableString ShowSliderEndDragMarker => new TranslatableString(getKey(@"show_slider_end_drag_marker"), @"Show slider length handle");
+
+        /// <summary>
+        /// "Shows the arc at the end of selected sliders, which can be dragged to adjust the slider's length."
+        /// </summary>
+        public static LocalisableString ShowSliderEndDragMarkerDescription => new TranslatableString(getKey(@"show_slider_end_drag_marker_description"),
+            @"Shows the arc at the end of selected sliders, which can be dragged to adjust the slider's length.");
+
+        /// <summary>
+        /// "Move objects without delay"
+        /// </summary>
+        public static LocalisableString ImmediateDrag => new TranslatableString(getKey(@"immediate_drag"), @"Move objects without delay");
+
+        /// <summary>
+        /// "Objects and slider anchors start moving as soon as the mouse moves, instead of only after the mouse has moved a few pixels. Allows very small adjustments."
+        /// </summary>
+        public static LocalisableString ImmediateDragDescription => new TranslatableString(getKey(@"immediate_drag_description"),
+            @"Objects and slider anchors start moving as soon as the mouse moves, instead of only after the mouse has moved a few pixels. Allows very small adjustments.");
+
         private static string getKey(string key) => $"{prefix}:{key}";
     }
 }

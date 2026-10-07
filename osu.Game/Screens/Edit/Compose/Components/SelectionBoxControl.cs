@@ -82,12 +82,20 @@ namespace osu.Game.Screens.Edit.Compose.Components
             UpdateHoverState();
         }
 
+        /// <summary>
+        /// The opacity of the control while it's not interacted with, so that it obstructs the playfield less.
+        /// </summary>
+        protected virtual float IdleAlpha => 0.5f;
+
         protected virtual void UpdateHoverState()
         {
             if (IsHeld)
                 Circle.FadeColour(Colours.GrayF, TRANSFORM_DURATION, Easing.OutQuint);
             else
                 Circle.FadeColour(IsHovered ? Colours.Red : Colours.YellowDark, TRANSFORM_DURATION, Easing.OutQuint);
+
+            // only the circle is faded (rather than the whole control), as the alpha of the control itself is used for showing / hiding it.
+            Circle.FadeTo(IsHeld || IsHovered ? 1 : IdleAlpha, TRANSFORM_DURATION, Easing.OutQuint);
 
             this.ScaleTo(IsHeld || IsHovered ? 1.5f : 1, TRANSFORM_DURATION, Easing.OutQuint);
         }

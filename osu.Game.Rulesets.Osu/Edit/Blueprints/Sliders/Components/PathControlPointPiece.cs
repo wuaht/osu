@@ -13,7 +13,9 @@ using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.UserInterface;
 using osu.Framework.Input.Events;
 using osu.Framework.Localisation;
+using osu.Game.Configuration;
 using osu.Game.Graphics;
+using osu.Game.Input;
 using osu.Game.Rulesets.Objects;
 using osu.Game.Rulesets.Objects.Types;
 using osu.Game.Rulesets.Osu.Objects;
@@ -27,7 +29,7 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders.Components
     /// A visualisation of a single <see cref="PathControlPoint"/> in an osu hit object with a path.
     /// </summary>
     /// <typeparam name="T">The type of <see cref="OsuHitObject"/> which this <see cref="PathControlPointPiece{T}"/> visualises.</typeparam>
-    public partial class PathControlPointPiece<T> : BlueprintPiece<T>, IHasTooltip
+    public partial class PathControlPointPiece<T> : BlueprintPiece<T>, IHasTooltip, IRequestImmediateDrag
         where T : OsuHitObject, IHasPath
     {
         public Action<PathControlPointPiece<T>, MouseButtonEvent> RequestSelection;
@@ -46,6 +48,11 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders.Components
         [Resolved]
         private OsuColour colours { get; set; }
 
+        [Resolved]
+        private OsuConfigManager config { get; set; }
+
+        public bool RequestsImmediateDrag => config.Get<bool>(OsuSetting.SlopEditorImmediateDrag);
+
         private IBindable<Vector2> hitObjectPosition;
         private IBindable<float> hitObjectScale;
         private IBindable<int> stackHeight;
@@ -62,17 +69,18 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders.Components
 
             InternalChildren = new[]
             {
+                // kept small (similar to osu!stable) so that the slider path remains visible. see ReceivePositionalInputAt for the input area.
                 circle = new FastCircle
                 {
                     Anchor = Anchor.Centre,
                     Origin = Anchor.Centre,
-                    Size = new Vector2(20),
+                    Size = new Vector2(8),
                 },
                 markerRing = new CircularProgress
                 {
                     Anchor = Anchor.Centre,
                     Origin = Anchor.Centre,
-                    Size = new Vector2(28),
+                    Size = new Vector2(12),
                     Alpha = 0,
                     InnerRadius = 0.1f,
                     Progress = 1
@@ -98,8 +106,15 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders.Components
             updateMarkerDisplay();
         }
 
+        /// <summary>
+        /// The radius of the area around the control point which receives input.
+        /// This is larger than the displayed circle, so that control points remain easy to grab despite being displayed small.
+        /// </summary>
+        private const float input_radius = 10;
+
         // The connecting path is excluded from positional input
-        public override bool ReceivePositionalInputAt(Vector2 screenSpacePos) => circle.ReceivePositionalInputAt(screenSpacePos);
+        public override bool ReceivePositionalInputAt(Vector2 screenSpacePos)
+            => Vector2.Distance(circle.ToLocalSpace(screenSpacePos), circle.DrawSize / 2) <= input_radius;
 
         protected override bool OnHover(HoverEvent e)
         {

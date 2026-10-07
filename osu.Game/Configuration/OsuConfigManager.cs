@@ -250,6 +250,10 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopEditorSkinInTestMode, false);
             SetDefault(OsuSetting.SlopEditorBackupOnSave, true);
             SetDefault(OsuSetting.SlopEditorAutosaveInterval, 5, 0, 60);
+            SetDefault(OsuSetting.SlopEditorShowSelectionBox, false);
+            SetDefault(OsuSetting.SlopEditorShowSelectionBoxButtons, false);
+            SetDefault(OsuSetting.SlopEditorShowSliderEndDragMarker, false);
+            SetDefault(OsuSetting.SlopEditorImmediateDrag, false);
         }
 
         protected override bool CheckLookupContainsPrivateInformation(OsuSetting lookup)
@@ -512,5 +516,26 @@ namespace osu.Game.Configuration
         /// The interval in minutes at which the editor automatically saves the beatmap. 0 disables autosaving.
         /// </summary>
         SlopEditorAutosaveInterval,
+
+        /// <summary>
+        /// Whether the selection box (border, selection count and drag handles) is shown around selected objects in the beatmap editor.
+        /// </summary>
+        SlopEditorShowSelectionBox,
+
+        /// <summary>
+        /// Whether the selection box buttons (rotate, flip, reverse) are shown in the beatmap editor.
+        /// </summary>
+        SlopEditorShowSelectionBoxButtons,
+
+        /// <summary>
+        /// Whether the arc for adjusting a slider's length is shown at the end of selected sliders in the beatmap editor.
+        /// </summary>
+        SlopEditorShowSliderEndDragMarker,
+
+        /// <summary>
+        /// Whether dragging objects and slider control points in the beatmap editor starts immediately,
+        /// rather than only after the mouse has moved a minimum distance.
+        /// </summary>
+        SlopEditorImmediateDrag,
     }
 }

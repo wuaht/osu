@@ -38,7 +38,7 @@ namespace osu.Game.Screens.Edit.Compose.Components
         [BackgroundDependencyLoader]
         private void load()
         {
-            Size = new Vector2(20);
+            Size = new Vector2(13);
             AddInternal(icon = new SpriteIcon
             {
                 RelativeSizeAxes = Axes.Both,
@@ -62,6 +62,7 @@ namespace osu.Game.Screens.Edit.Compose.Components
         {
             base.UpdateHoverState();
             icon.FadeColour(!IsHeld && IsHovered ? Color4.White : Color4.Black, TRANSFORM_DURATION, Easing.OutQuint);
+            icon.FadeTo(IsHeld || IsHovered ? 1 : IdleAlpha, TRANSFORM_DURATION, Easing.OutQuint);
         }
 
         protected override void OnHoverLost(HoverLostEvent e)

@@ -19,8 +19,22 @@ namespace osu.Game.Screens.Edit.Compose.Components
         [BackgroundDependencyLoader]
         private void load()
         {
-            Size = new Vector2(10);
+            Size = new Vector2(5);
         }
+
+        /// <summary>
+        /// The scale handles are small, so they are kept fully opaque to remain visible.
+        /// </summary>
+        protected override float IdleAlpha => 1;
+
+        /// <summary>
+        /// The radius of the area around the handle which receives input.
+        /// This is larger than the displayed handle, so that it remains easy to grab despite being displayed small.
+        /// </summary>
+        private const float input_radius = 5;
+
+        public override bool ReceivePositionalInputAt(Vector2 screenSpacePos)
+            => Vector2.Distance(ToLocalSpace(screenSpacePos), DrawSize / 2) <= input_radius;
 
         private Anchor originalAnchor;
 

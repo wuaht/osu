@@ -177,6 +177,7 @@ namespace osu.Game.Tests.Visual
 
                 LocalConfig.SetValue(OsuSetting.IntroSequence, IntroSequence.Circles);
                 LocalConfig.SetValue(OsuSetting.ShowFirstRunSetup, false);
+                SlopTestDefaults.ApplyUpstreamEditorBehaviour(LocalConfig);
 
                 API.Login("Rhythm Champion", "osu!");
                 ((DummyAPIAccess)API).AuthenticateSecondFactor("abcdefgh");

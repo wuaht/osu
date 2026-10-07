@@ -10,6 +10,7 @@ using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Input.Events;
+using osu.Game.Configuration;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Sprites;
 using osuTK;
@@ -22,7 +23,12 @@ namespace osu.Game.Screens.Edit.Compose.Components
     {
         public const float BORDER_RADIUS = 3;
 
-        private const float button_padding = 5;
+        /// <summary>
+        /// The thickness of the selection box's border, kept thin to obstruct the playfield as little as possible.
+        /// </summary>
+        private const float border_thickness = 1.5f;
+
+        private const float button_padding = 2;
 
         [Resolved]
         private SelectionRotationHandler? rotationHandler { get; set; }
@@ -122,12 +128,25 @@ namespace osu.Game.Screens.Edit.Compose.Components
         [Resolved]
         private OsuColour colours { get; set; } = null!;
 
-        [BackgroundDependencyLoader]
-        private void load()
+        private Container infoText = null!;
+        private Container border = null!;
+
+        private readonly Bindable<bool> showBox = new Bindable<bool>(true);
+        private readonly Bindable<bool> showButtons = new Bindable<bool>(true);
+
+        [BackgroundDependencyLoader(true)]
+        private void load(OsuConfigManager config, Editor? editor)
         {
+            // the visibility settings only apply to the beatmap editor (this is also used by the skin editor, which relies on the box for all operations).
+            if (editor != null)
+            {
+                config.BindWith(OsuSetting.SlopEditorShowSelectionBox, showBox);
+                config.BindWith(OsuSetting.SlopEditorShowSelectionBoxButtons, showButtons);
+            }
+
             InternalChildren = new Drawable[]
             {
-                new Container
+                infoText = new Container
                 {
                     Name = "info text",
                     AutoSizeAxes = Axes.Both,
@@ -147,10 +166,10 @@ namespace osu.Game.Screens.Edit.Compose.Components
                         }
                     }
                 },
-                new Container
+                border = new Container
                 {
                     Masking = true,
-                    BorderThickness = BORDER_RADIUS,
+                    BorderThickness = border_thickness,
                     BorderColour = colours.YellowDark,
                     RelativeSizeAxes = Axes.Both,
                     Children = new Drawable[]
@@ -168,12 +187,13 @@ namespace osu.Game.Screens.Edit.Compose.Components
                 {
                     RelativeSizeAxes = Axes.Both,
                     // ensures that the centres of all drag handles line up with the middle of the selection box border.
-                    Padding = new MarginPadding(BORDER_RADIUS / 2)
+                    Padding = new MarginPadding(border_thickness / 2)
                 },
                 buttons = new FillFlowContainer<SelectionBoxButton>
                 {
                     AutoSizeAxes = Axes.X,
-                    Height = 30,
+                    // fits the buttons including their enlarged size while hovered, while keeping them close to the box.
+                    Height = 20,
                     Direction = FillDirection.Horizontal,
                     Margin = new MarginPadding(button_padding),
                 }
@@ -197,6 +217,16 @@ namespace osu.Game.Screens.Edit.Compose.Components
                 recreateRotationHandles();
                 recreateButtons();
             }, true);
+
+            // hidden elements are not present, so they also don't receive input. keyboard shortcuts for the buttons keep working regardless.
+            showBox.BindValueChanged(show =>
+            {
+                infoText.Alpha = show.NewValue ? 1 : 0;
+                border.Alpha = show.NewValue ? 1 : 0;
+                dragHandles.Alpha = show.NewValue ? 1 : 0;
+            }, true);
+
+            showButtons.BindValueChanged(show => buttons.Alpha = show.NewValue ? 1 : 0, true);
         }
 
         protected override bool OnKeyDown(KeyDownEvent e)
