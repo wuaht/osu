@@ -1,16 +1,20 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Primitives;
 using osu.Framework.Graphics.UserInterface;
+using osu.Framework.Input;
 using osu.Framework.Input.Events;
 using osu.Framework.Utils;
 using osu.Game.Extensions;
+using osu.Game.Graphics.Cursor;
 using osu.Game.Graphics.UserInterface;
+using osu.Game.Localisation;
 using osu.Game.Rulesets.Edit;
 using osu.Game.Rulesets.Objects;
 using osu.Game.Rulesets.Objects.Types;
@@ -85,6 +89,133 @@ namespace osu.Game.Rulesets.Osu.Edit
                 EditorBeatmap.EndChange();
                 nudgeMovementActive = false;
             }
+        }
+
+        [Resolved]
+        private OsuHitObjectComposer composer { get; set; } = null!;
+
+        private InputManager inputManager = null!;
+
+        private OsuTooltipContainer.OsuTooltip scrollRotationTooltip = null!;
+
+        /// <summary>
+        /// Whether a scroll rotation gesture (ctrl+shift+scroll) is currently in progress.
+        /// All rotations performed during a single gesture are grouped into one change, so that they can be undone at once.
+        /// </summary>
+        private bool scrollRotationActive;
+
+        private float scrollRotationTotal;
+
+        private float rotationScrollAccumulation;
+
+        [BackgroundDependencyLoader]
+        private void load()
+        {
+            AddInternal(scrollRotationTooltip = new OsuTooltipContainer.OsuTooltip());
+        }
+
+        protected override void LoadComplete()
+        {
+            base.LoadComplete();
+
+            inputManager = GetContainingInputManager()!;
+        }
+
+        protected override bool OnScroll(ScrollEvent e)
+        {
+            if (!e.ControlPressed || !e.ShiftPressed || e.SuperPressed)
+                return base.OnScroll(e);
+
+            if (!RotationHandler.CanRotateAroundSelectionOrigin.Value || RotationHandler.OperationInProgress.Value)
+                return base.OnScroll(e);
+
+            float scrollComponent = e.ScrollDelta.X + e.ScrollDelta.Y;
+
+            // reset any leftover precise scroll accumulation when changing direction to keep things responsive.
+            if (Math.Sign(rotationScrollAccumulation) != Math.Sign(scrollComponent))
+                rotationScrollAccumulation = 0;
+
+            rotationScrollAccumulation += scrollComponent;
+
+            // precise scroll deltas (e.g. touchpads) are accumulated until a full step is reached.
+            int steps = (int)rotationScrollAccumulation;
+
+            if (steps == 0)
+                return true;
+
+            rotationScrollAccumulation -= steps;
+
+            if (!scrollRotationActive)
+            {
+                scrollRotationActive = true;
+                scrollRotationTotal = 0;
+                ChangeHandler?.BeginChange();
+            }
+
+            // scrolling up rotates clockwise (positive), scrolling down rotates counter-clockwise (negative).
+            float stepAngle = e.AltPressed ? 1 : 5;
+            float rotation = steps * stepAngle;
+
+            RotationHandler.Rotate(rotation);
+            scrollRotationTotal += rotation;
+
+            // display the total rotation of this gesture in the same range and format as rotating via the selection box handles.
+            float displayedRotation = ((scrollRotationTotal % 360) + 360 + 180) % 360 - 180;
+            if (MathF.Abs(displayedRotation) == 180)
+                displayedRotation = 180;
+
+            scrollRotationTooltip.SetContent(EditorStrings.RotationUnsnapped(displayedRotation));
+            scrollRotationTooltip.Show();
+            updateScrollRotationTooltipPosition();
+
+            return true;
+        }
+
+        protected override void Update()
+        {
+            base.Update();
+
+            if (scrollRotationActive)
+            {
+                var state = inputManager.CurrentState;
+
+                // the gesture ends as soon as either modifier is released, or any other mouse interaction starts.
+                if (!state.Keyboard.ControlPressed || !state.Keyboard.ShiftPressed || state.Mouse.Buttons.HasAnyButtonPressed)
+                    endScrollRotation();
+            }
+
+            if (scrollRotationTooltip.IsPresent)
+                updateScrollRotationTooltipPosition();
+        }
+
+        private void endScrollRotation()
+        {
+            if (!scrollRotationActive)
+                return;
+
+            scrollRotationActive = false;
+            scrollRotationTotal = 0;
+            rotationScrollAccumulation = 0;
+
+            ChangeHandler?.EndChange();
+            scrollRotationTooltip.Hide();
+        }
+
+        private void updateScrollRotationTooltipPosition()
+        {
+            Vector2 mousePosition = inputManager.CurrentState.Mouse.Position;
+
+            // this handler lives in (scaled) playfield space.
+            // counteract that scale so that the tooltip matches the size of regular tooltips shown elsewhere in the editor.
+            float scale = Vector2.Distance(composer.ToLocalSpace(ToScreenSpace(Vector2.Zero)), composer.ToLocalSpace(ToScreenSpace(Vector2.UnitX)));
+
+            if (scale <= 0 || !float.IsFinite(scale))
+                return;
+
+            scrollRotationTooltip.Scale = new Vector2(1 / scale);
+
+            // place the tooltip just below and to the right of the cursor, similar to regular tooltips.
+            scrollRotationTooltip.Move(ToLocalSpace(mousePosition) + new Vector2(16) / scale);
         }
 
         public override bool HandleMovement(MoveSelectionEvent<HitObject> moveEvent)
