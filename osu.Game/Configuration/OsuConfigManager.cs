@@ -244,6 +244,10 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.DashboardDisplayStyle, OverlayPanelDisplayStyle.Card);
 
             SetDefault(OsuSetting.PMFriendsOnly, false);
+
+            // slop! settings
+            SetDefault(OsuSetting.SlopEditorSkin, string.Empty);
+            SetDefault(OsuSetting.SlopEditorSkinInTestMode, false);
         }
 
         protected override bool CheckLookupContainsPrivateInformation(OsuSetting lookup)
@@ -485,5 +489,16 @@ namespace osu.Game.Configuration
         /// Blocks private messages, multiplayer room invites, and duel requests from people not on the user's friends list.
         /// </summary>
         PMFriendsOnly,
+
+        /// <summary>
+        /// The ID of the skin to use exclusively inside the beatmap editor.
+        /// An empty value means the regular gameplay skin is used.
+        /// </summary>
+        SlopEditorSkin,
+
+        /// <summary>
+        /// Whether the editor skin should also be used when test playing from the editor.
+        /// </summary>
+        SlopEditorSkinInTestMode,
     }
 }

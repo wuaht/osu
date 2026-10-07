@@ -56,6 +56,7 @@ using osu.Game.Screens.Edit.Setup;
 using osu.Game.Screens.Edit.Submission;
 using osu.Game.Screens.Edit.Timing;
 using osu.Game.Screens.Edit.Verify;
+using osu.Game.Skinning;
 using osu.Game.Screens.OnlinePlay;
 using osu.Game.Users;
 using WebCommonStrings = osu.Game.Resources.Localisation.Web.CommonStrings;
@@ -199,8 +200,20 @@ namespace osu.Game.Screens.Edit
 
         protected override bool InitialBackButtonVisibility => false;
 
+        /// <summary>
+        /// Provides the exclusive editor skin (if selected) to everything inside the editor.
+        /// </summary>
+        private EditorSkinSource editorSkinSource;
+
         protected override IReadOnlyDependencyContainer CreateChildDependencies(IReadOnlyDependencyContainer parent)
-            => dependencies = new DependencyContainer(base.CreateChildDependencies(parent));
+        {
+            dependencies = new DependencyContainer(base.CreateChildDependencies(parent));
+
+            editorSkinSource = new EditorSkinSource(parent.Get<SkinManager>(), parent.Get<OsuConfigManager>());
+            dependencies.CacheAs<ISkinSource>(editorSkinSource);
+
+            return dependencies;
+        }
 
         [Resolved]
         private IAPIProvider api { get; set; }
@@ -504,6 +517,8 @@ namespace osu.Game.Screens.Edit
 
             // redundant (should have happened via a `resetTrack()` call in `OnExiting()`), but done for safety
             musicController.TrackChanged -= onTrackChanged;
+
+            editorSkinSource?.Dispose();
         }
 
         private void onTrackChanged(WorkingBeatmap working, TrackChangeDirection direction) => clock.ChangeSource(working.Track);
