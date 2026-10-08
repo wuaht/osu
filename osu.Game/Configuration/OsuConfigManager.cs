@@ -249,6 +249,7 @@ namespace osu.Game.Configuration
             // slop! settings
             SetDefault(OsuSetting.SlopFrostedSliders, true);
             SetDefault(OsuSetting.SlopFrostedSlidersFrostiness, 0.5f, 0f, 1f, 0.01f);
+            SetDefault(OsuSetting.SlopFrostedSlidersBlur, 0.25f, 0f, 1f, 0.01f);
 
             SetDefault(OsuSetting.SlopEditorSkin, string.Empty);
             SetDefault(OsuSetting.SlopEditorSkinInTestMode, false);
@@ -507,9 +508,14 @@ namespace osu.Game.Configuration
         SlopFrostedSliders,
 
         /// <summary>
-        /// How frosted slider bodies are, from 0 to 1. Higher values make the body more transparent and blur the content behind it more.
+        /// How transparent frosted slider bodies are, from 0 to 1.
         /// </summary>
         SlopFrostedSlidersFrostiness,
+
+        /// <summary>
+        /// How strongly frosted slider bodies blur the content behind them, from 0 to 1.
+        /// </summary>
+        SlopFrostedSlidersBlur,
 
         /// <summary>
         /// The ID of the skin to use exclusively inside the beatmap editor.

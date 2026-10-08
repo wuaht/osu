@@ -37,6 +37,14 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                     KeyboardStep = 0.01f,
                     DisplayAsPercentage = true,
                 }),
+                new SettingsItemV2(new FormSliderBar<float>
+                {
+                    Caption = SlopSettingsStrings.FrostBlur,
+                    HintText = SlopSettingsStrings.FrostBlurDescription,
+                    Current = config.GetBindable<float>(OsuSetting.SlopFrostedSlidersBlur),
+                    KeyboardStep = 0.01f,
+                    DisplayAsPercentage = true,
+                }),
             };
         }
     }
