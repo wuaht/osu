@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.IO;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Extensions.Color4Extensions;
@@ -11,11 +12,13 @@ using osu.Framework.Graphics.Audio;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Input.Events;
+using osu.Framework.Logging;
 using osu.Game.Beatmaps;
 using osu.Game.Configuration;
 using osu.Game.Graphics;
 using osu.Game.Overlays;
 using osu.Game.Rulesets.Edit;
+using osu.Game.Screens.Edit.Timing;
 using osuTK;
 using osuTK.Input;
 
@@ -78,6 +81,24 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
         private float defaultTimelineZoom;
 
         private WaveformGraph waveform = null!;
+
+        /// <summary>
+        /// Used instead of <see cref="waveform"/> for all <see cref="EditorWaveformStyle"/>s except <see cref="EditorWaveformStyle.Default"/>.
+        /// </summary>
+        private EditorWaveformGraph styledWaveform = null!;
+
+        private Bindable<EditorWaveformStyle> waveformStyle = null!;
+
+        /// <summary>
+        /// Whether the audio of the current track has been passed to <see cref="styledWaveform"/>.
+        /// The analysis is only performed once a style requiring it is selected.
+        /// </summary>
+        private bool styledWaveformLoaded;
+
+        /// <summary>
+        /// Whether this timeline is part of the timing screen, where the waveform is always fully visible as it's essential for timing.
+        /// </summary>
+        private bool isTimingScreen;
 
         private TimelineTickDisplay ticks = null!;
 
@@ -147,6 +168,11 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
                             MidColour = colours.BlueDark,
                             HighColour = colours.BlueDarker,
                         },
+                        styledWaveform = new EditorWaveformGraph
+                        {
+                            RelativeSizeAxes = Axes.Both,
+                            Alpha = 0,
+                        },
                         centreMarker.CreateProxy(),
                         ticks.CreateProxy(),
                         userContent,
@@ -155,6 +181,7 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
             });
 
             waveformOpacity = config.GetBindable<float>(OsuSetting.EditorWaveformOpacity);
+            waveformStyle = config.GetBindable<EditorWaveformStyle>(OsuSetting.SlopEditorWaveformStyle);
             controlPointsVisible = config.GetBindable<bool>(OsuSetting.EditorTimelineShowTimingChanges);
             ticksVisible = config.GetBindable<bool>(OsuSetting.EditorTimelineShowTicks);
 
@@ -167,15 +194,62 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
         private void updateWaveform()
         {
             waveform.Waveform = beatmap.Value.Waveform;
+
+            styledWaveformLoaded = false;
+            updateWaveformStyle();
+
             Scheduler.AddOnce(applyVisualOffset, beatmap);
+        }
+
+        private void updateWaveformStyle()
+        {
+            styledWaveform.Style = waveformStyle.Value;
+
+            if (waveformStyle.Value != EditorWaveformStyle.Default && !styledWaveformLoaded)
+            {
+                styledWaveformLoaded = true;
+                styledWaveform.LoadAudio(getAudioStream(beatmap.Value));
+            }
+
+            updateWaveformOpacity();
+        }
+
+        private static Stream? getAudioStream(WorkingBeatmap working)
+        {
+            string? audioFile = working.Metadata?.AudioFile;
+
+            if (string.IsNullOrEmpty(audioFile))
+                return null;
+
+            string? path = working.BeatmapSetInfo?.GetPathForFile(audioFile);
+
+            if (path == null)
+                return null;
+
+            try
+            {
+                return working.GetStream(path);
+            }
+            catch (Exception e)
+            {
+                Logger.Error(e, "Failed to read audio for the waveform");
+                return null;
+            }
         }
 
         private void applyVisualOffset(IBindable<WorkingBeatmap> beatmap)
         {
             waveform.RelativePositionAxes = Axes.X;
 
+            // The styled waveform is positioned exactly like the default waveform, so that both are aligned identically to the audio.
+            styledWaveform.RelativePositionAxes = Axes.X;
+
             if (beatmap.Value.Track.Length > 0)
+            {
                 waveform.X = -(float)(Editor.WAVEFORM_VISUAL_OFFSET / beatmap.Value.Track.Length);
+                styledWaveform.X = waveform.X;
+                styledWaveform.TrackLength = beatmap.Value.Track.Length;
+            }
             else
             {
                 // sometimes this can be the case immediately after a track switch.
@@ -188,7 +262,10 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
         {
             base.LoadComplete();
 
+            isTimingScreen = this.FindClosestParent<TimingScreen>() != null;
+
             waveformOpacity.BindValueChanged(_ => updateWaveformOpacity(), true);
+            waveformStyle.BindValueChanged(_ => updateWaveformStyle());
 
             ticksVisible.BindValueChanged(visible => ticks.FadeTo(visible.NewValue ? 1 : 0, 200, Easing.OutQuint), true);
 
@@ -201,8 +278,14 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
             }, true);
         }
 
-        private void updateWaveformOpacity() =>
-            waveform.FadeTo(waveformOpacity.Value, 200, Easing.OutQuint);
+        private void updateWaveformOpacity()
+        {
+            bool useStyledWaveform = waveformStyle.Value != EditorWaveformStyle.Default;
+            float opacity = isTimingScreen ? 1 : waveformOpacity.Value;
+
+            waveform.FadeTo(useStyledWaveform ? 0 : opacity, 200, Easing.OutQuint);
+            styledWaveform.FadeTo(useStyledWaveform ? opacity : 0, 200, Easing.OutQuint);
+        }
 
         protected override void Update()
         {

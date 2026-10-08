@@ -21,6 +21,7 @@ using osu.Game.Overlays.Dashboard.Friends;
 using osu.Game.Overlays.Mods.Input;
 using osu.Game.Rulesets.Scoring;
 using osu.Game.Screens.Edit.Components;
+using osu.Game.Screens.Edit.Compose.Components.Timeline;
 using osu.Game.Screens.Edit.Compose.Components;
 using osu.Game.Screens.OnlinePlay.Lounge.Components;
 using osu.Game.Screens.Select;
@@ -264,6 +265,7 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopEditorAnchorShape, EditorAnchorShape.Square);
             SetDefault(OsuSetting.SlopEditorVisualSpacingSnap, true);
             SetDefault(OsuSetting.SlopEditorBlanketSnap, true);
+            SetDefault(OsuSetting.SlopEditorWaveformStyle, EditorWaveformStyle.Default);
         }
 
         protected override bool CheckLookupContainsPrivateInformation(OsuSetting lookup)
@@ -582,5 +584,10 @@ namespace osu.Game.Configuration
         /// Whether objects in the beatmap editor snap to the centres of circular arcs of visible sliders, so that they are perfectly blanketed.
         /// </summary>
         SlopEditorBlanketSnap,
+
+        /// <summary>
+        /// How the waveform is displayed in the timeline of the beatmap editor.
+        /// </summary>
+        SlopEditorWaveformStyle,
     }
 }
