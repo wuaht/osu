@@ -7,6 +7,7 @@ using osu.Framework.Allocation;
 using osu.Framework.Graphics;
 using osu.Framework.Localisation;
 using osu.Game.Configuration;
+using osu.Game.Graphics.Cursor;
 using osu.Game.Graphics.UserInterfaceV2;
 using osu.Game.Localisation;
 
@@ -16,7 +17,7 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
     {
         protected override LocalisableString Header => SlopSettingsStrings.GraphicsHeader;
 
-        public override IEnumerable<LocalisableString> FilterTerms => base.FilterTerms.Concat(new LocalisableString[] { "frosted", "frostiness", "blur", "slider", "cursor", "system" });
+        public override IEnumerable<LocalisableString> FilterTerms => base.FilterTerms.Concat(new LocalisableString[] { "frosted", "frostiness", "blur", "slider", "cursor", "system", "skin" });
 
         [BackgroundDependencyLoader]
         private void load(OsuConfigManager config)
@@ -45,11 +46,11 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                     KeyboardStep = 0.01f,
                     DisplayAsPercentage = true,
                 }),
-                new SettingsItemV2(new FormCheckBox
+                new SettingsItemV2(new FormEnumDropdown<MenuCursorStyle>
                 {
-                    Caption = SlopSettingsStrings.SystemCursor,
-                    HintText = SlopSettingsStrings.SystemCursorDescription,
-                    Current = config.GetBindable<bool>(OsuSetting.SlopSystemCursor),
+                    Caption = SlopSettingsStrings.MenuCursorStyle,
+                    HintText = SlopSettingsStrings.MenuCursorStyleDescription,
+                    Current = config.GetBindable<MenuCursorStyle>(OsuSetting.SlopMenuCursorStyle),
                 }),
             };
         }

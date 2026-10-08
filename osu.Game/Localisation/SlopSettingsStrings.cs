@@ -53,15 +53,30 @@ namespace osu.Game.Localisation
             @"How strongly frosted slider bodies blur the content behind them. Lower values keep the content more recognisable.");
 
         /// <summary>
-        /// "Use system cursor"
+        /// "Menu cursor"
         /// </summary>
-        public static LocalisableString SystemCursor => new TranslatableString(getKey(@"system_cursor"), @"Use system cursor");
+        public static LocalisableString MenuCursorStyle => new TranslatableString(getKey(@"menu_cursor_style"), @"Menu cursor");
 
         /// <summary>
-        /// "Replaces the cursor in menus and the editor with the system cursor, which follows the mouse without any delay. It still rotates while dragging and shrinks when clicking. The gameplay cursor is not affected."
+        /// "The cursor used in menus and the editor. "Skin" uses the cursor of the current legacy skin. "System" uses the system cursor, which follows the mouse without any delay, but still rotates while dragging and shrinks when clicking. The gameplay cursor is not affected."
         /// </summary>
-        public static LocalisableString SystemCursorDescription => new TranslatableString(getKey(@"system_cursor_description"),
-            @"Replaces the cursor in menus and the editor with the system cursor, which follows the mouse without any delay. It still rotates while dragging and shrinks when clicking. The gameplay cursor is not affected.");
+        public static LocalisableString MenuCursorStyleDescription => new TranslatableString(getKey(@"menu_cursor_style_description"),
+            @"The cursor used in menus and the editor. ""Skin"" uses the cursor of the current legacy skin. ""System"" uses the system cursor, which follows the mouse without any delay, but still rotates while dragging and shrinks when clicking. The gameplay cursor is not affected.");
+
+        /// <summary>
+        /// "osu!"
+        /// </summary>
+        public static LocalisableString MenuCursorStyleDefault => new TranslatableString(getKey(@"menu_cursor_style_default"), @"osu!");
+
+        /// <summary>
+        /// "Skin"
+        /// </summary>
+        public static LocalisableString MenuCursorStyleSkin => new TranslatableString(getKey(@"menu_cursor_style_skin"), @"Skin");
+
+        /// <summary>
+        /// "System"
+        /// </summary>
+        public static LocalisableString MenuCursorStyleSystem => new TranslatableString(getKey(@"menu_cursor_style_system"), @"System");
 
         /// <summary>
         /// "Editor"
