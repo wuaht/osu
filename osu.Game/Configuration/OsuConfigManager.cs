@@ -262,6 +262,8 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopEditorShowSliderEndDragMarker, false);
             SetDefault(OsuSetting.SlopEditorImmediateDrag, true);
             SetDefault(OsuSetting.SlopEditorAnchorShape, EditorAnchorShape.Square);
+            SetDefault(OsuSetting.SlopEditorVisualSpacingSnap, true);
+            SetDefault(OsuSetting.SlopEditorBlanketSnap, true);
         }
 
         protected override bool CheckLookupContainsPrivateInformation(OsuSetting lookup)
@@ -570,5 +572,15 @@ namespace osu.Game.Configuration
         /// The shape of slider control points and selection box handles in the beatmap editor.
         /// </summary>
         SlopEditorAnchorShape,
+
+        /// <summary>
+        /// Whether objects in the beatmap editor snap to positions which form an equilateral triangle with two other visible objects.
+        /// </summary>
+        SlopEditorVisualSpacingSnap,
+
+        /// <summary>
+        /// Whether objects in the beatmap editor snap to the centres of circular arcs of visible sliders, so that they are perfectly blanketed.
+        /// </summary>
+        SlopEditorBlanketSnap,
     }
 }

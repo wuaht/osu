@@ -12,12 +12,15 @@ namespace osu.Game.Tests
     {
         /// <summary>
         /// slop! hides some editor elements by default, which upstream tests rely on being visible.
+        /// It also adds snap points, which objects placed by upstream tests may unintentionally snap to.
         /// </summary>
         public static void ApplyUpstreamEditorBehaviour(OsuConfigManager config)
         {
             config.SetValue(OsuSetting.SlopEditorShowSelectionBox, true);
             config.SetValue(OsuSetting.SlopEditorShowSelectionBoxButtons, true);
             config.SetValue(OsuSetting.SlopEditorShowSliderEndDragMarker, true);
+            config.SetValue(OsuSetting.SlopEditorVisualSpacingSnap, false);
+            config.SetValue(OsuSetting.SlopEditorBlanketSnap, false);
         }
     }
 }
