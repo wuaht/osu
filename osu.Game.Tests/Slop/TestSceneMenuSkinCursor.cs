@@ -4,7 +4,6 @@
 using System.Linq;
 using NUnit.Framework;
 using osu.Framework.Allocation;
-using osu.Framework.Graphics;
 using osu.Framework.Testing;
 using osu.Game.Database;
 using osu.Game.Graphics.Cursor;
@@ -26,25 +25,20 @@ namespace osu.Game.Tests.Slop
         public void SetUpSteps()
         {
             AddStep("use argon skin", () => skins.CurrentSkinInfo.Value = ArgonSkin.CreateInfo().ToLiveUnmanaged());
-            AddStep("create cursor", () => Child = cursor = new MenuSkinCursor
-            {
-                Anchor = Anchor.Centre,
-                Origin = Anchor.Centre,
-            });
+            AddStep("create cursor", () => Child = cursor = new MenuSkinCursor());
             AddUntilStep("cursor available", () => cursor.Available.Value);
+            AddStep("show cursor", () => cursor.SetVisible(true));
         }
 
         [Test]
         public void TestGameplayCursorShownForAllSkins()
         {
-            AddAssert("shows osu! gameplay cursor", () => cursor.ChildrenOfType<OsuMenuCursor>().Any());
-            AddStep("expand", () => cursor.Expand());
-            AddStep("contract", () => cursor.Contract());
+            AddAssert("shows osu! gameplay cursor", () => cursor.ChildrenOfType<OsuCursorContainer>().Any());
+            AddUntilStep("shows cursor trail", () => cursor.ChildrenOfType<CursorTrail>().Any());
 
             AddStep("use classic skin", () => skins.CurrentSkinInfo.Value = skins.DefaultClassicSkin.SkinInfo);
             AddUntilStep("shows legacy cursor", () => cursor.ChildrenOfType<SkinnableCursor>().Any(c => c.GetType().Name == "LegacyCursor"));
-            AddStep("expand", () => cursor.Expand());
-            AddStep("contract", () => cursor.Contract());
+            AddUntilStep("shows legacy cursor trail", () => cursor.ChildrenOfType<CursorTrail>().Any(c => c.GetType().Name == "LegacyCursorTrail"));
 
             AddStep("use triangles skin", () => skins.CurrentSkinInfo.Value = TrianglesSkin.CreateInfo().ToLiveUnmanaged());
             AddUntilStep("no legacy cursor", () => !cursor.ChildrenOfType<SkinnableCursor>().Any(c => c.GetType().Name == "LegacyCursor"));

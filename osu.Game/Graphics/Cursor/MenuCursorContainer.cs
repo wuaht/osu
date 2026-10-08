@@ -60,6 +60,13 @@ namespace osu.Game.Graphics.Cursor
 
         private Bindable<MenuCursorStyle> cursorStyle = null!;
 
+        private MenuSkinCursor skinCursor = null!;
+
+        /// <summary>
+        /// Whether the gameplay cursor of the current skin is shown instead of the regular cursor.
+        /// </summary>
+        private bool showingSkinCursor => cursorStyle.Value == MenuCursorStyle.Skin && skinCursor.Available.Value;
+
         [BackgroundDependencyLoader]
         private void load(OsuConfigManager config, ScreenshotManager? screenshotManager, AudioManager audio)
         {
@@ -72,6 +79,7 @@ namespace osu.Game.Graphics.Cursor
             tapSample = audio.Samples.Get(@"UI/cursor-tap");
 
             Add(mouseInputDetector = new MouseInputDetector());
+            Add(skinCursor = new MenuSkinCursor());
         }
 
         [Resolved]
@@ -88,7 +96,8 @@ namespace osu.Game.Graphics.Cursor
             lastInputWasMouse.BindTo(mouseInputDetector.LastInputWasMouseSource);
             lastInputWasMouse.BindValueChanged(_ => updateState(), true);
 
-            cursorStyle.BindValueChanged(style => activeCursor.UseSkinCursor.Value = style.NewValue == MenuCursorStyle.Skin, true);
+            cursorStyle.BindValueChanged(_ => updateSkinCursor());
+            skinCursor.Available.BindValueChanged(_ => updateSkinCursor(), true);
 
             if (game != null)
             {
@@ -101,6 +110,12 @@ namespace osu.Game.Graphics.Cursor
         }
 
         protected override void UpdateState(ValueChangedEvent<Visibility> state) => updateState();
+
+        private void updateSkinCursor()
+        {
+            activeCursor.ReplacedBySkinCursor.Value = showingSkinCursor;
+            skinCursor.SetVisible(showingSkinCursor && visible);
+        }
 
         private void updateState()
         {
@@ -184,10 +199,9 @@ namespace osu.Game.Graphics.Cursor
 
         protected override bool OnMouseDown(MouseDownEvent e)
         {
-            if (State.Value == Visibility.Visible && activeCursor.ShowingSkinCursor)
+            if (State.Value == Visibility.Visible && showingSkinCursor)
             {
-                // skin cursors have their own animations, matching gameplay.
-                activeCursor.SkinCursor.Expand();
+                // the skin cursor handles mouse buttons itself, matching gameplay.
                 playTapSample();
             }
             else if (State.Value == Visibility.Visible)
@@ -214,10 +228,8 @@ namespace osu.Game.Graphics.Cursor
 
         protected override void OnMouseUp(MouseUpEvent e)
         {
-            if (!e.HasAnyButtonPressed && activeCursor.ShowingSkinCursor)
+            if (!e.HasAnyButtonPressed && showingSkinCursor)
             {
-                activeCursor.SkinCursor.Contract();
-
                 if (State.Value == Visibility.Visible)
                     playTapSample(0.8);
             }
@@ -241,6 +253,8 @@ namespace osu.Game.Graphics.Cursor
 
         protected override void PopIn()
         {
+            skinCursor.SetVisible(showingSkinCursor);
+
             activeCursor.FadeTo(1, 250, Easing.OutQuint);
             activeCursor.ScaleTo(1, 400, Easing.OutQuint);
 
@@ -250,6 +264,8 @@ namespace osu.Game.Graphics.Cursor
 
         protected override void PopOut()
         {
+            skinCursor.SetVisible(false);
+
             activeCursor.FadeTo(0, 250, Easing.OutQuint);
             activeCursor.ScaleTo(0.6f, 250, Easing.In);
 
@@ -285,16 +301,9 @@ namespace osu.Game.Graphics.Cursor
             public readonly BindableBool ReplacedBySystemCursor = new BindableBool();
 
             /// <summary>
-            /// Whether the cursor of the current skin should be shown instead of the regular cursor, if the skin provides one.
+            /// Whether the cursor is replaced by the gameplay cursor of the current skin (see <see cref="MenuSkinCursor"/>).
             /// </summary>
-            public readonly BindableBool UseSkinCursor = new BindableBool();
-
-            public MenuSkinCursor SkinCursor { get; private set; } = null!;
-
-            /// <summary>
-            /// Whether the cursor of the current skin is shown instead of the regular cursor.
-            /// </summary>
-            public bool ShowingSkinCursor => UseSkinCursor.Value && SkinCursor.Available.Value && !ReplacedBySystemCursor.Value;
+            public readonly BindableBool ReplacedBySkinCursor = new BindableBool();
 
             public Cursor()
             {
@@ -324,15 +333,10 @@ namespace osu.Game.Graphics.Cursor
                             },
                         }
                     },
-                    SkinCursor = new MenuSkinCursor(),
                 };
 
                 cursorScale = config.GetBindable<float>(OsuSetting.MenuCursorSize);
-                cursorScale.BindValueChanged(scale =>
-                {
-                    cursorContainer.Scale = new Vector2(scale.NewValue * base_scale);
-                    SkinCursor.Scale = new Vector2(scale.NewValue);
-                }, true);
+                cursorScale.BindValueChanged(scale => cursorContainer.Scale = new Vector2(scale.NewValue * base_scale), true);
             }
 
             protected override void LoadComplete()
@@ -340,18 +344,14 @@ namespace osu.Game.Graphics.Cursor
                 base.LoadComplete();
 
                 ReplacedBySystemCursor.BindValueChanged(_ => updateVisual());
-                UseSkinCursor.BindValueChanged(_ => updateVisual());
-                SkinCursor.Available.BindValueChanged(_ => updateVisual(), true);
+                ReplacedBySkinCursor.BindValueChanged(_ => updateVisual(), true);
             }
 
             private void updateVisual()
             {
-                bool showSkinCursor = ShowingSkinCursor;
+                cursorContainer.Alpha = ReplacedBySkinCursor.Value || ReplacedBySystemCursor.Value ? 0 : 1;
 
-                SkinCursor.Alpha = showSkinCursor ? 1 : 0;
-                cursorContainer.Alpha = showSkinCursor || ReplacedBySystemCursor.Value ? 0 : 1;
-
-                if (showSkinCursor)
+                if (ReplacedBySkinCursor.Value)
                 {
                     // the skin cursor has its own animations, so reset any state of the regular cursor animations.
                     ClearTransforms(targetMember: nameof(Scale));

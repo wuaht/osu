@@ -15,7 +15,6 @@ using osu.Game.Beatmaps;
 using osu.Game.Beatmaps.Legacy;
 using osu.Game.Configuration;
 using osu.Game.Graphics;
-using osu.Game.Graphics.Cursor;
 using osu.Game.Localisation;
 using osu.Game.Localisation.Osu;
 using osu.Game.Overlays.Settings;
@@ -281,7 +280,7 @@ namespace osu.Game.Rulesets.Osu
 
         public override RulesetSettingsSubsection CreateSettings() => new OsuSettingsSubsection(this);
 
-        public override IMenuCursor CreateMenuCursor() => new OsuMenuCursor();
+        public override VisibilityContainer CreateMenuCursor() => new OsuMenuCursor(this);
 
         public override ISkin? CreateSkinTransformer(ISkin skin, IBeatmap beatmap)
         {
