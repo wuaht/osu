@@ -234,6 +234,37 @@ namespace osu.Game.Localisation
         public static LocalisableString BlanketSnapDescription => new TranslatableString(getKey(@"blanket_snap_description"),
             @"Objects snap to the centre of curved slider sections (perfect curve), so that the slider perfectly wraps around them.");
 
+        /// <summary>
+        /// "Timeline waveform"
+        /// </summary>
+        public static LocalisableString WaveformStyle => new TranslatableString(getKey(@"waveform_style"), @"Timeline waveform");
+
+        /// <summary>
+        /// "How the waveform is displayed in the timeline at the top of the editor."
+        /// </summary>
+        public static LocalisableString WaveformStyleDescription => new TranslatableString(getKey(@"waveform_style_description"),
+            @"How the waveform is displayed in the timeline at the top of the editor.");
+
+        /// <summary>
+        /// "Default"
+        /// </summary>
+        public static LocalisableString WaveformStyleDefault => new TranslatableString(getKey(@"waveform_style_default"), @"Default");
+
+        /// <summary>
+        /// "Simple"
+        /// </summary>
+        public static LocalisableString WaveformStyleSimple => new TranslatableString(getKey(@"waveform_style_simple"), @"Simple");
+
+        /// <summary>
+        /// "Three-Band"
+        /// </summary>
+        public static LocalisableString WaveformStyleThreeBand => new TranslatableString(getKey(@"waveform_style_three_band"), @"Three-Band");
+
+        /// <summary>
+        /// "FL Studio / MiniMeters"
+        /// </summary>
+        public static LocalisableString WaveformStyleSpectral => new TranslatableString(getKey(@"waveform_style_spectral"), @"FL Studio / MiniMeters");
+
         private static string getKey(string key) => $"{prefix}:{key}";
     }
 }

@@ -13,6 +13,7 @@ using osu.Game.Database;
 using osu.Game.Graphics.UserInterfaceV2;
 using osu.Game.Localisation;
 using osu.Game.Screens.Edit.Components;
+using osu.Game.Screens.Edit.Compose.Components.Timeline;
 using osu.Game.Skinning;
 using Realms;
 
@@ -22,7 +23,7 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
     {
         protected override LocalisableString Header => SlopSettingsStrings.EditorHeader;
 
-        public override IEnumerable<LocalisableString> FilterTerms => base.FilterTerms.Concat(new LocalisableString[] { "skin", "backup", "autosave", "snap", "blanket", "triangle" });
+        public override IEnumerable<LocalisableString> FilterTerms => base.FilterTerms.Concat(new LocalisableString[] { "skin", "backup", "autosave", "snap", "blanket", "triangle", "waveform" });
 
         /// <summary>
         /// Dropdown entry representing "use the regular gameplay skin".
@@ -98,6 +99,12 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                     Caption = SlopSettingsStrings.ImmediateDrag,
                     HintText = SlopSettingsStrings.ImmediateDragDescription,
                     Current = config.GetBindable<bool>(OsuSetting.SlopEditorImmediateDrag),
+                }),
+                new SettingsItemV2(new FormEnumDropdown<EditorWaveformStyle>
+                {
+                    Caption = SlopSettingsStrings.WaveformStyle,
+                    HintText = SlopSettingsStrings.WaveformStyleDescription,
+                    Current = config.GetBindable<EditorWaveformStyle>(OsuSetting.SlopEditorWaveformStyle),
                 }),
                 new SettingsItemV2(new FormCheckBox
                 {
