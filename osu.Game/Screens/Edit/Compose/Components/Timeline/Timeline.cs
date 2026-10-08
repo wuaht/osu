@@ -2,7 +2,6 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
-using System.IO;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Extensions.Color4Extensions;
@@ -12,7 +11,6 @@ using osu.Framework.Graphics.Audio;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Input.Events;
-using osu.Framework.Logging;
 using osu.Game.Beatmaps;
 using osu.Game.Configuration;
 using osu.Game.Graphics;
@@ -79,6 +77,11 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
         /// The timeline zoom level at a 1x zoom scale.
         /// </summary>
         private float defaultTimelineZoom;
+
+        /// <summary>
+        /// The height of the waveform relative to the timeline, leaving room for the beat snap ticks to remain visible above and below it.
+        /// </summary>
+        private const float waveform_height = 0.7f;
 
         private WaveformGraph waveform = null!;
 
@@ -163,6 +166,9 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
                         waveform = new WaveformGraph
                         {
                             RelativeSizeAxes = Axes.Both,
+                            Height = waveform_height,
+                            Anchor = Anchor.CentreLeft,
+                            Origin = Anchor.CentreLeft,
                             BaseColour = colours.Blue.Opacity(0.2f),
                             LowColour = colours.BlueLighter,
                             MidColour = colours.BlueDark,
@@ -171,6 +177,9 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
                         styledWaveform = new EditorWaveformGraph
                         {
                             RelativeSizeAxes = Axes.Both,
+                            Height = waveform_height,
+                            Anchor = Anchor.CentreLeft,
+                            Origin = Anchor.CentreLeft,
                             Alpha = 0,
                         },
                         centreMarker.CreateProxy(),
@@ -208,33 +217,10 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
             if (waveformStyle.Value != EditorWaveformStyle.Default && !styledWaveformLoaded)
             {
                 styledWaveformLoaded = true;
-                styledWaveform.LoadAudio(getAudioStream(beatmap.Value));
+                styledWaveform.LoadTrack(beatmap.Value);
             }
 
             updateWaveformOpacity();
-        }
-
-        private static Stream? getAudioStream(WorkingBeatmap working)
-        {
-            string? audioFile = working.Metadata?.AudioFile;
-
-            if (string.IsNullOrEmpty(audioFile))
-                return null;
-
-            string? path = working.BeatmapSetInfo?.GetPathForFile(audioFile);
-
-            if (path == null)
-                return null;
-
-            try
-            {
-                return working.GetStream(path);
-            }
-            catch (Exception e)
-            {
-                Logger.Error(e, "Failed to read audio for the waveform");
-                return null;
-            }
         }
 
         private void applyVisualOffset(IBindable<WorkingBeatmap> beatmap)
