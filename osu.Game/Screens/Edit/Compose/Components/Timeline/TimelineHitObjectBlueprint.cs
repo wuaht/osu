@@ -26,6 +26,7 @@ using osu.Game.Rulesets.Objects.Types;
 using osu.Game.Skinning;
 using osuTK;
 using osuTK.Graphics;
+using osuTK.Input;
 
 namespace osu.Game.Screens.Edit.Compose.Components.Timeline
 {
@@ -50,6 +51,11 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
         private readonly ExtendableCircle circle;
         private readonly Border border;
 
+        /// <summary>
+        /// Outlines the selected node (head, repeat or tail) if a node is the <see cref="EditorBeatmap.SelectedHitObjectPart"/>.
+        /// </summary>
+        private readonly Container nodeHighlight;
+
         private readonly Container colouredComponents;
         private readonly Container sampleComponents;
         private readonly OsuSpriteText comboIndexText;
@@ -61,6 +67,12 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
 
         [Resolved]
         private OverlayColourProvider colourProvider { get; set; } = null!;
+
+        [Resolved]
+        private OsuColour colours { get; set; } = null!;
+
+        [Resolved]
+        private EditorBeatmap? editorBeatmap { get; set; }
 
         public TimelineHitObjectBlueprint(HitObject item)
             : base(item)
@@ -89,6 +101,23 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
                     RelativeSizeAxes = Axes.Both,
                     Anchor = Anchor.CentreLeft,
                     Origin = Anchor.CentreLeft,
+                },
+                nodeHighlight = new Container
+                {
+                    Anchor = Anchor.CentreLeft,
+                    Origin = Anchor.Centre,
+                    RelativePositionAxes = Axes.X,
+                    Size = new Vector2(circle_size),
+                    Masking = true,
+                    CornerRadius = circle_size / 2,
+                    BorderThickness = 4,
+                    Alpha = 0,
+                    Child = new Box
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Alpha = 0,
+                        AlwaysPresent = true,
+                    },
                 },
                 colouredComponents = new Container
                 {
@@ -123,7 +152,8 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
             {
                 colouredComponents.Add(new DragArea(item)
                 {
-                    OnDragHandled = e => OnDragHandled?.Invoke(e)
+                    OnDragHandled = e => OnDragHandled?.Invoke(e),
+                    Clicked = e => handlePartClick(e, true),
                 });
             }
 
@@ -140,6 +170,8 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
         protected override void LoadComplete()
         {
             base.LoadComplete();
+
+            nodeHighlight.BorderColour = colours.Red;
 
             switch (Item)
             {
@@ -226,7 +258,86 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
                 if (Item is IHasRepeats repeats)
                     updateRepeats(repeats);
             }
+
+            updatePartHighlight();
         }
+
+        #region Part selection (for hitsounding)
+
+        /// <summary>
+        /// Whether this hit object was the only selected object when the current click began.
+        /// Parts can only be selected on an already selected hit object, so that the click selecting the hit object itself doesn't also select a part.
+        /// </summary>
+        private bool wasSoleSelectionOnMouseDown;
+
+        private bool isSoleSelection => IsSelected && editorBeatmap?.SelectedHitObjects.Count == 1;
+
+        private SelectedHitObjectPart? selectedPart => editorBeatmap?.SelectedHitObjectPart.Value is SelectedHitObjectPart part && part.HitObject == Item && part.IsValid ? part : null;
+
+        private void updatePartHighlight()
+        {
+            var part = selectedPart;
+
+            border.PartHighlighted = part != null && part.NodeIndex == null;
+
+            if (part?.NodeIndex is int nodeIndex && Item is IHasRepeats repeats)
+            {
+                nodeHighlight.X = (float)nodeIndex / (repeats.RepeatCount + 1);
+                nodeHighlight.Alpha = 1;
+            }
+            else
+                nodeHighlight.Alpha = 0;
+        }
+
+        protected override bool OnMouseDown(MouseDownEvent e)
+        {
+            // this runs before the blueprint container handles the selection, so reflects the state before this click.
+            wasSoleSelectionOnMouseDown = e.Button == MouseButton.Left && isSoleSelection && !e.ControlPressed && !e.ShiftPressed && !e.AltPressed;
+
+            return base.OnMouseDown(e);
+        }
+
+        protected override bool OnClick(ClickEvent e)
+        {
+            handlePartClick(e, false);
+
+            // allow the blueprint container to handle the click as usual.
+            return false;
+        }
+
+        private void handlePartClick(ClickEvent e, bool dragAreaClicked)
+        {
+            if (Item is not IHasRepeats repeats || editorBeatmap == null)
+                return;
+
+            if (e.Button != MouseButton.Left || e.ControlPressed || e.ShiftPressed || e.AltPressed)
+                return;
+
+            // the drag area handles mouse down itself, so the blueprint container doesn't change the selection on clicks on it.
+            if (!isSoleSelection || (!dragAreaClicked && !wasSoleSelectionOnMouseDown))
+                return;
+
+            var part = getPartAt(e.ScreenSpaceMousePosition, repeats);
+
+            // clicking the selected part again selects the whole hit object.
+            editorBeatmap.SelectedHitObjectPart.Value = part == selectedPart ? null : part;
+        }
+
+        /// <summary>
+        /// Returns the node (head, repeat or tail) closest to the given position if it is within its circle, otherwise the body.
+        /// </summary>
+        private SelectedHitObjectPart getPartAt(Vector2 screenSpacePos, IHasRepeats repeats)
+        {
+            int spans = repeats.RepeatCount + 1;
+            float x = ToLocalSpace(screenSpacePos).X;
+
+            int nearestNode = DrawWidth > 0 ? Math.Clamp((int)Math.Round(x / DrawWidth * spans), 0, spans) : 0;
+            float distance = Math.Abs(x - (float)nearestNode / spans * DrawWidth);
+
+            return new SelectedHitObjectPart(Item, distance <= circle_size / 2 ? nearestNode : null);
+        }
+
+        #endregion
 
         private void updateRepeats(IHasRepeats repeats)
         {
@@ -331,6 +442,12 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
 
             public Action<DragEvent?>? OnDragHandled;
 
+            /// <summary>
+            /// Invoked when this area is clicked without dragging.
+            /// As this area handles mouse down, the blueprint itself doesn't receive such clicks.
+            /// </summary>
+            public Action<ClickEvent>? Clicked;
+
             public override bool HandlePositionalInput => hitObject != null;
 
             public DragArea(HitObject? hitObject)
@@ -389,6 +506,12 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
                 hasMouseDown = false;
                 updateState();
                 base.OnMouseUp(e);
+            }
+
+            protected override bool OnClick(ClickEvent e)
+            {
+                Clicked?.Invoke(e);
+                return true;
             }
 
             private void updateState()
@@ -506,15 +629,41 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
 
         public partial class Border : ExtendableCircle
         {
+            [Resolved]
+            private OsuColour colours { get; set; } = null!;
+
+            private bool partHighlighted;
+
+            /// <summary>
+            /// Whether the body is the <see cref="EditorBeatmap.SelectedHitObjectPart"/>, which is indicated by a different colour.
+            /// </summary>
+            public bool PartHighlighted
+            {
+                get => partHighlighted;
+                set
+                {
+                    if (partHighlighted == value)
+                        return;
+
+                    partHighlighted = value;
+
+                    if (IsLoaded)
+                        updateColour();
+                }
+            }
+
             [BackgroundDependencyLoader]
-            private void load(OsuColour colours)
+            private void load()
             {
                 Content.Child.Alpha = 0;
                 Content.Child.AlwaysPresent = true;
 
-                Content.BorderColour = colours.Yellow;
                 Content.EdgeEffect = new EdgeEffectParameters();
+
+                updateColour();
             }
+
+            private void updateColour() => Content.BorderColour = partHighlighted ? colours.Red : colours.Yellow;
         }
 
         /// <summary>

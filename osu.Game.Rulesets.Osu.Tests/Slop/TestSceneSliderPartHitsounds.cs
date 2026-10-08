@@ -11,6 +11,7 @@ using osu.Game.Rulesets.Objects.Types;
 using osu.Game.Rulesets.Osu.Objects;
 using osu.Game.Rulesets.Osu.Objects.Drawables;
 using osu.Game.Rulesets.Osu.Tests.Editor;
+using osu.Game.Screens.Edit.Compose.Components.Timeline;
 using osuTK;
 using osuTK.Input;
 
@@ -120,6 +121,67 @@ namespace osu.Game.Rulesets.Osu.Tests.Slop
 
             clickAt(() => slider.Path.PositionAt(1));
             AddAssert("tail selected", () => EditorBeatmap.SelectedHitObjectPart.Value?.NodeIndex, () => Is.EqualTo(3));
+        }
+
+        [Test]
+        public void TestSelectPartsInTimeline()
+        {
+            AddStep("add repeat", () =>
+            {
+                slider.RepeatCount = 1;
+                EditorBeatmap.Update(slider);
+            });
+            AddStep("seek to slider", () => EditorClock.Seek(slider.StartTime));
+
+            // the tail is covered by the area for dragging the slider's length.
+            clickTimelineAt(1);
+            AddAssert("tail selected", () => EditorBeatmap.SelectedHitObjectPart.Value?.NodeIndex, () => Is.EqualTo(2));
+
+            clickTimelineAt(0.5f);
+            AddAssert("repeat selected", () => EditorBeatmap.SelectedHitObjectPart.Value?.NodeIndex, () => Is.EqualTo(1));
+
+            AddStep("toggle whistle", () => InputManager.Key(Key.W));
+            AddAssert("repeat has whistle", () => hasSample(slider.NodeSamples[1], HitSampleInfo.HIT_WHISTLE));
+            AddAssert("other nodes have no whistle", () => !hasSample(slider.NodeSamples[0], HitSampleInfo.HIT_WHISTLE) && !hasSample(slider.NodeSamples[2], HitSampleInfo.HIT_WHISTLE));
+            AddAssert("body has no whistle", () => !hasSample(slider.Samples, HitSampleInfo.HIT_WHISTLE));
+
+            clickTimelineAt(0);
+            AddAssert("head selected", () => EditorBeatmap.SelectedHitObjectPart.Value?.NodeIndex, () => Is.EqualTo(0));
+
+            clickTimelineAt(0);
+            AddAssert("whole slider selected", () => EditorBeatmap.SelectedHitObjectPart.Value, () => Is.Null);
+
+            clickTimelineAt(0.25f);
+            AddAssert("body selected", () => EditorBeatmap.SelectedHitObjectPart.Value is { NodeIndex: null });
+
+            clickTimelineAt(0.25f);
+            AddAssert("whole slider selected", () => EditorBeatmap.SelectedHitObjectPart.Value, () => Is.Null);
+        }
+
+        [Test]
+        public void TestClickSelectingSliderInTimelineDoesNotSelectPart()
+        {
+            AddStep("seek to slider", () => EditorClock.Seek(slider.StartTime));
+            AddStep("deselect", () => EditorBeatmap.SelectedHitObjects.Clear());
+
+            clickTimelineAt(0);
+            AddAssert("slider selected", () => EditorBeatmap.SelectedHitObjects.Single(), () => Is.EqualTo(slider));
+            AddAssert("no part selected", () => EditorBeatmap.SelectedHitObjectPart.Value, () => Is.Null);
+        }
+
+        /// <summary>
+        /// Clicks the slider's blueprint in the timeline at a fraction of its length, making sure the click isn't treated as a double click.
+        /// </summary>
+        private void clickTimelineAt(float fraction)
+        {
+            AddUntilStep("wait to avoid double click", () => InputManager.Time.Current > lastClickTime + 500);
+            AddStep("click timeline", () =>
+            {
+                var blueprint = this.ChildrenOfType<TimelineHitObjectBlueprint>().Single(b => b.Item == slider);
+                InputManager.MoveMouseTo(blueprint.ToScreenSpace(new Vector2(blueprint.DrawWidth * fraction, blueprint.DrawHeight / 2)));
+                InputManager.Click(MouseButton.Left);
+                lastClickTime = InputManager.Time.Current;
+            });
         }
 
         private static bool hasSample(IEnumerable<HitSampleInfo> samples, string name) => samples.Any(s => s.Name == name);
