@@ -2,10 +2,8 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
 using osu.Framework.Allocation;
+using osu.Framework.Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Colour;
 using osu.Framework.Graphics.Primitives;
@@ -13,7 +11,7 @@ using osu.Framework.Graphics.Rendering;
 using osu.Framework.Graphics.Rendering.Vertices;
 using osu.Framework.Graphics.Shaders;
 using osu.Framework.Graphics.Textures;
-using osu.Framework.Logging;
+using osu.Game.Beatmaps;
 using osuTK;
 using osuTK.Graphics;
 
@@ -77,61 +75,32 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
 
         private EditorWaveformData? data;
 
-        private CancellationTokenSource? analysisCancellation;
+        /// <summary>
+        /// Incremented whenever new data is requested, so that results of previous requests are ignored.
+        /// </summary>
+        private int dataVersion;
 
         /// <summary>
-        /// Analyses the given audio file in the background and displays it once done.
+        /// Displays the track of the given beatmap once its analysis is available.
         /// </summary>
-        /// <param name="stream">The audio file, or <see langword="null"/> if there is none. Disposed when done.</param>
-        public void LoadAudio(Stream? stream)
+        public void LoadTrack(WorkingBeatmap beatmap)
         {
-            analysisCancellation?.Cancel();
-            analysisCancellation = new CancellationTokenSource();
-
-            var token = analysisCancellation.Token;
+            int version = ++dataVersion;
 
             data = null;
             Invalidate(Invalidation.DrawNode);
 
-            if (stream == null)
-                return;
-
-            // Not cancelled via the token directly, so that the stream is always disposed by the analysis.
-            Task.Run(() =>
+            EditorWaveformData.GetForTrack(beatmap).ContinueWith(t => Schedule(() =>
             {
-                EditorWaveformData? result;
-
-                try
-                {
-                    result = EditorWaveformData.Analyse(stream, token);
-                }
-                catch (OperationCanceledException)
-                {
+                if (version != dataVersion || !t.IsCompletedSuccessfully)
                     return;
-                }
 
-                Schedule(() =>
-                {
-                    if (token.IsCancellationRequested)
-                        return;
-
-                    data = result;
-                    Invalidate(Invalidation.DrawNode);
-                });
-            }).ContinueWith(t =>
-            {
-                if (t.IsFaulted)
-                    Logger.Error(t.Exception, "Failed to analyse the waveform");
-            }, TaskContinuationOptions.OnlyOnFaulted);
+                data = t.GetResultSafely();
+                Invalidate(Invalidation.DrawNode);
+            }));
         }
 
         protected override DrawNode CreateDrawNode() => new EditorWaveformDrawNode(this);
-
-        protected override void Dispose(bool isDisposing)
-        {
-            base.Dispose(isDisposing);
-            analysisCancellation?.Cancel();
-        }
 
         private class EditorWaveformDrawNode : DrawNode
         {

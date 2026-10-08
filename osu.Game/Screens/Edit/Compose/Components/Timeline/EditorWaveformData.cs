@@ -4,10 +4,14 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Threading;
+using System.Threading.Tasks;
 using ManagedBass;
 using osu.Framework.Audio.Callbacks;
+using osu.Framework.Audio.Track;
 using osu.Framework.Logging;
+using osu.Game.Beatmaps;
 
 namespace osu.Game.Screens.Edit.Compose.Components.Timeline
 {
@@ -141,6 +145,74 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
         }
 
         #region Analysis
+
+        /// <summary>
+        /// The analyses of tracks, keyed by their <see cref="WorkingBeatmap.Waveform"/> (which is replaced when the track changes),
+        /// so that all displays of a track share a single analysis.
+        /// </summary>
+        private static readonly ConditionalWeakTable<Waveform, Task<EditorWaveformData?>> analyses = new ConditionalWeakTable<Waveform, Task<EditorWaveformData?>>();
+
+        /// <summary>
+        /// Retrieves the analysis of the track of the given beatmap, starting it in the background if it hasn't been performed yet.
+        /// Must be called from the update thread, as the audio file is read from the beatmap.
+        /// </summary>
+        public static Task<EditorWaveformData?> GetForTrack(WorkingBeatmap beatmap)
+        {
+            var key = beatmap.Waveform;
+
+            // a missing waveform means there is no audio file.
+            if (key == null)
+                return Task.FromResult<EditorWaveformData?>(null);
+
+            lock (analyses)
+            {
+                if (analyses.TryGetValue(key, out var existing))
+                    return existing;
+
+                var stream = getAudioStream(beatmap);
+
+                var task = stream == null
+                    ? Task.FromResult<EditorWaveformData?>(null)
+                    : Task.Run(() =>
+                    {
+                        try
+                        {
+                            return Analyse(stream, CancellationToken.None);
+                        }
+                        catch (Exception e)
+                        {
+                            Logger.Error(e, "Failed to analyse the waveform");
+                            return null;
+                        }
+                    });
+
+                analyses.Add(key, task);
+                return task;
+            }
+        }
+
+        private static Stream? getAudioStream(WorkingBeatmap beatmap)
+        {
+            string? audioFile = beatmap.Metadata?.AudioFile;
+
+            if (string.IsNullOrEmpty(audioFile))
+                return null;
+
+            string? path = beatmap.BeatmapSetInfo?.GetPathForFile(audioFile);
+
+            if (path == null)
+                return null;
+
+            try
+            {
+                return beatmap.GetStream(path);
+            }
+            catch (Exception e)
+            {
+                Logger.Error(e, "Failed to read audio for the waveform");
+                return null;
+            }
+        }
 
         /// <summary>
         /// The number of samples processed at once by the backward pass of the band filters.
