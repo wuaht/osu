@@ -3,6 +3,7 @@
 
 using System;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,6 +17,8 @@ using osu.Game.Beatmaps;
 using osu.Game.Beatmaps.Formats;
 using osu.Game.IO;
 using osu.Game.Rulesets;
+using osu.Game.Rulesets.Difficulty.Preprocessing;
+using osu.Game.Rulesets.Difficulty.Skills;
 using Decoder = osu.Game.Beatmaps.Formats.Decoder;
 
 namespace osu.Game.Screens.Edit
@@ -25,6 +28,12 @@ namespace osu.Game.Screens.Edit
     /// </summary>
     public partial class EditorBeatmapDifficulty : Component
     {
+        /// <summary>
+        /// The length of the sections which <see cref="EditorBeatmapDifficultyInfo.Strains"/> are combined in, in milliseconds.
+        /// The same as the strain sections used by most difficulty calculations.
+        /// </summary>
+        public const double STRAIN_SECTION_LENGTH = 400;
+
         /// <summary>
         /// The delay after a change before recalculating, so that consecutive changes (e.g. while dragging objects) don't each cause a calculation.
         /// </summary>
@@ -114,9 +123,56 @@ namespace osu.Game.Screens.Edit
             beatmap.BeatmapInfo.Ruleset = rulesetInfo;
 
             var calculator = rulesetInfo.CreateInstance().CreateDifficultyCalculator(new FlatWorkingBeatmap(beatmap));
-            var attributes = calculator.Calculate(cancellationToken);
+            var attributes = calculator.CalculateWithSkills(out var skills, out var difficultyHitObjects, cancellationToken);
 
-            return new EditorBeatmapDifficultyInfo(attributes.StarRating, attributes.MaxCombo);
+            return new EditorBeatmapDifficultyInfo(attributes.StarRating, attributes.MaxCombo, calculateStrains(skills, difficultyHitObjects));
+        }
+
+        /// <summary>
+        /// Combines the difficulty of the processed objects of all skills into sections of <see cref="STRAIN_SECTION_LENGTH"/>, relative to the hardest section.
+        /// </summary>
+        /// <remarks>
+        /// Each skill is relative to its own hardest object, as the values of different skills have different scales.
+        /// A section takes the highest value of any skill at any object in it.
+        /// </remarks>
+        private static float[] calculateStrains(Skill[] skills, DifficultyHitObject[] difficultyHitObjects)
+        {
+            if (difficultyHitObjects.Length == 0)
+                return Array.Empty<float>();
+
+            double lastTime = difficultyHitObjects.Max(h => h.BaseObject.StartTime);
+
+            if (lastTime < 0)
+                return Array.Empty<float>();
+
+            float[] strains = new float[(int)(lastTime / STRAIN_SECTION_LENGTH) + 1];
+
+            foreach (var skill in skills)
+            {
+                var difficulties = skill.GetObjectDifficulties();
+                int count = Math.Min(difficulties.Count, difficultyHitObjects.Length);
+
+                double max = 0;
+
+                for (int i = 0; i < count; i++)
+                    max = Math.Max(max, difficulties[i]);
+
+                if (max <= 0 || !double.IsFinite(max))
+                    continue;
+
+                for (int i = 0; i < count; i++)
+                {
+                    double time = difficultyHitObjects[i].BaseObject.StartTime;
+
+                    if (time < 0 || !double.IsFinite(difficulties[i]))
+                        continue;
+
+                    int section = (int)(time / STRAIN_SECTION_LENGTH);
+                    strains[section] = Math.Max(strains[section], (float)(difficulties[i] / max));
+                }
+            }
+
+            return strains;
         }
 
         protected override void Dispose(bool isDisposing)
@@ -135,5 +191,9 @@ namespace osu.Game.Screens.Edit
     /// </summary>
     /// <param name="StarRating">The star rating.</param>
     /// <param name="MaxCombo">The maximum achievable combo.</param>
-    public record EditorBeatmapDifficultyInfo(double StarRating, int MaxCombo);
+    /// <param name="Strains">
+    /// The strain over time, in consecutive sections of <see cref="EditorBeatmapDifficulty.STRAIN_SECTION_LENGTH"/> starting at time 0,
+    /// relative to the hardest section (from 0 to 1).
+    /// </param>
+    public record EditorBeatmapDifficultyInfo(double StarRating, int MaxCombo, float[] Strains);
 }

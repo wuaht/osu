@@ -266,6 +266,7 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopEditorVisualSpacingSnap, true);
             SetDefault(OsuSetting.SlopEditorBlanketSnap, true);
             SetDefault(OsuSetting.SlopEditorLineSnap, true);
+            SetDefault(OsuSetting.SlopEditorShowDifficultyStrains, false);
             SetDefault(OsuSetting.SlopEditorWaveformStyle, EditorWaveformStyle.Default);
             SetDefault(OsuSetting.SlopEditorLoopMusic, false);
         }
@@ -601,5 +602,10 @@ namespace osu.Game.Configuration
         /// Whether objects in the beatmap editor snap to positions which continue straight lines of equally spaced visible objects.
         /// </summary>
         SlopEditorLineSnap,
+
+        /// <summary>
+        /// Whether the difficulty strain of the beatmap is displayed in the summary timeline at the bottom of the beatmap editor.
+        /// </summary>
+        SlopEditorShowDifficultyStrains,
     }
 }
