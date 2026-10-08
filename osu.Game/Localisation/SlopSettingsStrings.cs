@@ -235,6 +235,17 @@ namespace osu.Game.Localisation
             @"Objects snap to the centre of curved slider sections (perfect curve), so that the slider perfectly wraps around them.");
 
         /// <summary>
+        /// "Loop music"
+        /// </summary>
+        public static LocalisableString LoopMusic => new TranslatableString(getKey(@"loop_music"), @"Loop music");
+
+        /// <summary>
+        /// "When the end of the track is reached during playback in the editor, playback continues from the start."
+        /// </summary>
+        public static LocalisableString LoopMusicDescription => new TranslatableString(getKey(@"loop_music_description"),
+            @"When the end of the track is reached during playback in the editor, playback continues from the start.");
+
+        /// <summary>
         /// "Timeline waveform"
         /// </summary>
         public static LocalisableString WaveformStyle => new TranslatableString(getKey(@"waveform_style"), @"Timeline waveform");

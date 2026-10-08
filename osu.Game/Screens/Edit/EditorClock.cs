@@ -44,6 +44,11 @@ namespace osu.Game.Screens.Edit
 
         private bool playbackFinished;
 
+        /// <summary>
+        /// Whether playback continues from the start of the track when the end is reached, instead of stopping.
+        /// </summary>
+        public readonly BindableBool LoopPlayback = new BindableBool();
+
         public IBindable<bool> SeekingOrStopped => seekingOrStopped;
 
         private readonly Bindable<bool> seekingOrStopped = new Bindable<bool>(true);
@@ -282,6 +287,12 @@ namespace osu.Game.Screens.Edit
             Debug.Assert(underlyingClock.LoadState > LoadState.NotLoaded);
 
             playbackFinished = CurrentTime >= TrackLength;
+
+            if (playbackFinished && IsRunning && LoopPlayback.Value)
+            {
+                underlyingClock.Seek(0);
+                playbackFinished = false;
+            }
 
             if (playbackFinished)
             {

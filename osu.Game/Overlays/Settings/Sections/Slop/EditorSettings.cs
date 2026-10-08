@@ -120,6 +120,12 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                 }),
                 new SettingsItemV2(new FormCheckBox
                 {
+                    Caption = SlopSettingsStrings.LoopMusic,
+                    HintText = SlopSettingsStrings.LoopMusicDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorLoopMusic),
+                }),
+                new SettingsItemV2(new FormCheckBox
+                {
                     Caption = SlopSettingsStrings.BackupOnSave,
                     HintText = SlopSettingsStrings.BackupOnSaveDescription,
                     Current = config.GetBindable<bool>(OsuSetting.SlopEditorBackupOnSave),

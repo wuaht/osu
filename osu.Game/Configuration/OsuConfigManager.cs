@@ -266,6 +266,7 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopEditorVisualSpacingSnap, true);
             SetDefault(OsuSetting.SlopEditorBlanketSnap, true);
             SetDefault(OsuSetting.SlopEditorWaveformStyle, EditorWaveformStyle.Default);
+            SetDefault(OsuSetting.SlopEditorLoopMusic, false);
         }
 
         protected override bool CheckLookupContainsPrivateInformation(OsuSetting lookup)
@@ -589,5 +590,10 @@ namespace osu.Game.Configuration
         /// How the waveform is displayed in the timeline of the beatmap editor.
         /// </summary>
         SlopEditorWaveformStyle,
+
+        /// <summary>
+        /// Whether playback in the beatmap editor continues from the start of the track when the end is reached.
+        /// </summary>
+        SlopEditorLoopMusic,
     }
 }
