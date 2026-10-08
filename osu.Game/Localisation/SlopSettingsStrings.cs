@@ -235,6 +235,17 @@ namespace osu.Game.Localisation
             @"Objects snap to the centre of curved slider sections (perfect curve), so that the slider perfectly wraps around them.");
 
         /// <summary>
+        /// "Snap to straight lines"
+        /// </summary>
+        public static LocalisableString LineSnap => new TranslatableString(getKey(@"line_snap"), @"Snap to straight lines");
+
+        /// <summary>
+        /// "Objects snap to positions which continue a straight line of equally spaced visible objects."
+        /// </summary>
+        public static LocalisableString LineSnapDescription => new TranslatableString(getKey(@"line_snap_description"),
+            @"Objects snap to positions which continue a straight line of equally spaced visible objects.");
+
+        /// <summary>
         /// "Loop music"
         /// </summary>
         public static LocalisableString LoopMusic => new TranslatableString(getKey(@"loop_music"), @"Loop music");

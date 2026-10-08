@@ -265,6 +265,7 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopEditorAnchorShape, EditorAnchorShape.Square);
             SetDefault(OsuSetting.SlopEditorVisualSpacingSnap, true);
             SetDefault(OsuSetting.SlopEditorBlanketSnap, true);
+            SetDefault(OsuSetting.SlopEditorLineSnap, true);
             SetDefault(OsuSetting.SlopEditorWaveformStyle, EditorWaveformStyle.Default);
             SetDefault(OsuSetting.SlopEditorLoopMusic, false);
         }
@@ -595,5 +596,10 @@ namespace osu.Game.Configuration
         /// Whether playback in the beatmap editor continues from the start of the track when the end is reached.
         /// </summary>
         SlopEditorLoopMusic,
+
+        /// <summary>
+        /// Whether objects in the beatmap editor snap to positions which continue straight lines of equally spaced visible objects.
+        /// </summary>
+        SlopEditorLineSnap,
     }
 }

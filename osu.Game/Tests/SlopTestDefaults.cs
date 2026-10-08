@@ -21,6 +21,7 @@ namespace osu.Game.Tests
             config.SetValue(OsuSetting.SlopEditorShowSliderEndDragMarker, true);
             config.SetValue(OsuSetting.SlopEditorVisualSpacingSnap, false);
             config.SetValue(OsuSetting.SlopEditorBlanketSnap, false);
+            config.SetValue(OsuSetting.SlopEditorLineSnap, false);
         }
     }
 }
