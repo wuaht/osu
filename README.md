@@ -15,6 +15,8 @@ git clone -b slop https://github.com/wuaht/osu-framework ../osu-framework
 git clone -b slop https://github.com/wuaht/osu-resources ../osu-resources
 ```
 
+Releases are built and published with `./release-slop.ps1`. Install slop! with `slop-win-Setup.exe` from the [latest release](https://github.com/wuaht/osu/releases/latest); it updates itself from these releases and installs independently of osu!(lazer).
+
 Below will be the normal readme.
 
 ## Status
