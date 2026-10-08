@@ -10,7 +10,7 @@ namespace osu.Game.Localisation
         private const string prefix = @"osu.Game.Resources.Localisation.SlopSettings";
 
         /// <summary>
-        /// "slop!"
+        /// "ai slop"
         /// </summary>
         public static LocalisableString SlopSectionHeader => new TranslatableString(getKey(@"slop_section_header"), @"ai slop");
 
