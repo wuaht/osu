@@ -258,7 +258,7 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopEditorShowSelectionBox, false);
             SetDefault(OsuSetting.SlopEditorShowSelectionBoxButtons, false);
             SetDefault(OsuSetting.SlopEditorShowSliderEndDragMarker, false);
-            SetDefault(OsuSetting.SlopEditorImmediateDrag, false);
+            SetDefault(OsuSetting.SlopEditorImmediateDrag, true);
             SetDefault(OsuSetting.SlopEditorAnchorShape, EditorAnchorShape.Square);
         }
 
