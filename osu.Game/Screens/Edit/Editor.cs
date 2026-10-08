@@ -330,6 +330,10 @@ namespace osu.Game.Screens.Edit
                 dependencies.CacheAs<IEditorChangeHandler>(changeHandler);
             }
 
+            var beatmapDifficulty = new EditorBeatmapDifficulty();
+            AddInternal(beatmapDifficulty);
+            dependencies.Cache(beatmapDifficulty);
+
             beatDivisor.SetArbitraryDivisor(editorBeatmap.BeatmapInfo.BeatDivisor);
             beatDivisor.BindValueChanged(divisor => editorBeatmap.BeatmapInfo.BeatDivisor = divisor.NewValue);
 

@@ -253,10 +253,17 @@ namespace osu.Game.Rulesets.Edit
                             rightToolboxBackground = new FrostedPanelBackground(),
                             RightToolbox = new ExpandingToolboxContainer(TOOLBOX_CONTRACTED_SIZE_RIGHT, 250)
                             {
-                                Child = new EditorToolboxGroup("inspector")
+                                Children = new Drawable[]
                                 {
-                                    Child = CreateHitObjectInspector()
-                                },
+                                    new EditorToolboxGroup("beatmap")
+                                    {
+                                        Child = new BeatmapStatisticsInspector()
+                                    },
+                                    new EditorToolboxGroup("inspector")
+                                    {
+                                        Child = CreateHitObjectInspector()
+                                    },
+                                }
                             }
                         }
                     },
