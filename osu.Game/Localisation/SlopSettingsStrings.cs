@@ -25,10 +25,21 @@ namespace osu.Game.Localisation
         public static LocalisableString FrostedSliders => new TranslatableString(getKey(@"frosted_sliders"), @"Frosted sliders");
 
         /// <summary>
-        /// "Slider bodies of legacy skins blur the content behind them, like frosted glass. Hit circles become slightly translucent to match."
+        /// "Slider bodies of legacy and argon skins blur the content behind them, like frosted glass. Hit circles of legacy skins become slightly translucent to match."
         /// </summary>
         public static LocalisableString FrostedSlidersDescription => new TranslatableString(getKey(@"frosted_sliders_description"),
-            @"Slider bodies of legacy skins blur the content behind them, like frosted glass. Hit circles become slightly translucent to match.");
+            @"Slider bodies of legacy and argon skins blur the content behind them, like frosted glass. Hit circles of legacy skins become slightly translucent to match.");
+
+        /// <summary>
+        /// "Frostiness"
+        /// </summary>
+        public static LocalisableString Frostiness => new TranslatableString(getKey(@"frostiness"), @"Frostiness");
+
+        /// <summary>
+        /// "How frosted slider bodies are. Higher values make the body more transparent and blur the content behind it more."
+        /// </summary>
+        public static LocalisableString FrostinessDescription => new TranslatableString(getKey(@"frostiness_description"),
+            @"How frosted slider bodies are. Higher values make the body more transparent and blur the content behind it more.");
 
         /// <summary>
         /// "Editor"

@@ -248,6 +248,7 @@ namespace osu.Game.Configuration
 
             // slop! settings
             SetDefault(OsuSetting.SlopFrostedSliders, true);
+            SetDefault(OsuSetting.SlopFrostedSlidersFrostiness, 0.5f, 0f, 1f, 0.01f);
 
             SetDefault(OsuSetting.SlopEditorSkin, string.Empty);
             SetDefault(OsuSetting.SlopEditorSkinInTestMode, false);
@@ -501,9 +502,14 @@ namespace osu.Game.Configuration
         PMFriendsOnly,
 
         /// <summary>
-        /// Whether slider bodies of legacy skins blur the content behind them (frosted glass).
+        /// Whether slider bodies of legacy and argon skins blur the content behind them (frosted glass).
         /// </summary>
         SlopFrostedSliders,
+
+        /// <summary>
+        /// How frosted slider bodies are, from 0 to 1. Higher values make the body more transparent and blur the content behind it more.
+        /// </summary>
+        SlopFrostedSlidersFrostiness,
 
         /// <summary>
         /// The ID of the skin to use exclusively inside the beatmap editor.

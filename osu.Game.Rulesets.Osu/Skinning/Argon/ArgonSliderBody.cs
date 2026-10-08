@@ -8,7 +8,7 @@ using osuTK.Graphics;
 
 namespace osu.Game.Rulesets.Osu.Skinning.Argon
 {
-    public partial class ArgonSliderBody : PlaySliderBody
+    public partial class ArgonSliderBody : FrostedPlaySliderBody
     {
         // Eventually this would be a user setting.
         public float BodyAlpha { get; init; } = 1;
@@ -32,10 +32,13 @@ namespace osu.Game.Rulesets.Osu.Skinning.Argon
 
         protected override Color4 GetBodyAccentColour(ISkinSource skin, Color4 hitObjectAccentColour)
         {
-            return base.GetBodyAccentColour(skin, hitObjectAccentColour).Opacity(BodyAlpha);
+            // frosted slider bodies are more transparent to let the blurred backdrop show through.
+            float alpha = FrostedSliders.Value ? BodyAlpha * (0.85f - 0.55f * Frostiness.Value) : BodyAlpha;
+
+            return base.GetBodyAccentColour(skin, hitObjectAccentColour).Opacity(alpha);
         }
 
-        private partial class DrawableSliderPath : Default.DrawableSliderPath
+        private partial class DrawableSliderPath : FrostedDrawableSliderPath
         {
             protected override Color4 ColourAt(float position)
             {
