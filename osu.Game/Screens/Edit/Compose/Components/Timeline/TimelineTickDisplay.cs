@@ -7,6 +7,7 @@ using osu.Framework.Bindables;
 using osu.Framework.Caching;
 using osu.Framework.Extensions.ObjectExtensions;
 using osu.Framework.Graphics;
+using osu.Framework.Graphics.Shapes;
 using osu.Game.Beatmaps;
 using osu.Game.Configuration;
 using osu.Game.Graphics;
@@ -16,9 +17,23 @@ using osuTK;
 
 namespace osu.Game.Screens.Edit.Compose.Components.Timeline
 {
-    public partial class TimelineTickDisplay : TimelinePart<PointVisualisation>
+    public partial class TimelineTickDisplay : TimelinePart<Box>
     {
         public const float TICK_WIDTH = 3;
+
+        /// <summary>
+        /// The width of the beat snap ticks in screen pixels. Thinner than <see cref="TICK_WIDTH"/> so that it's easier to see whether objects are exactly on a tick.
+        /// </summary>
+        /// <remarks>
+        /// Ticks are drawn as boxes without edge smoothing, with their width rounded to whole screen pixels.
+        /// This way, each tick always covers the same number of pixels and doesn't flicker while the timeline moves.
+        /// </remarks>
+        private const float beat_tick_width = 1;
+
+        /// <summary>
+        /// The size of a screen pixel in local space, which tick widths are based on.
+        /// </summary>
+        private float pixelWidth = 1;
 
         // With current implementation every tick in the sub-tree should be visible, no need to check whether they are masked away.
         public override bool UpdateSubTreeMasking() => false;
@@ -84,6 +99,14 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
 
             if (timeline == null || DrawWidth <= 0) return;
 
+            float newPixelWidth = DrawWidth / ScreenSpaceDrawQuad.Width;
+
+            if (float.IsFinite(newPixelWidth) && newPixelWidth > 0 && newPixelWidth != pixelWidth)
+            {
+                pixelWidth = newPixelWidth;
+                tickCache.Invalidate();
+            }
+
             (float, float) newRange = (
                 (ToLocalSpace(timeline.ScreenSpaceDrawQuad.TopLeft).X - PointVisualisation.MAX_WIDTH * 2) / DrawWidth * Content.RelativeChildSize.X,
                 (ToLocalSpace(timeline.ScreenSpaceDrawQuad.TopRight).X + PointVisualisation.MAX_WIDTH * 2) / DrawWidth * Content.RelativeChildSize.X);
@@ -143,7 +166,7 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
                         var line = getNextUsableLine();
                         line.X = xPos;
 
-                        line.Width = TICK_WIDTH * size.X;
+                        line.Width = Math.Max(1, MathF.Round(beat_tick_width * size.X)) * pixelWidth;
                         line.Height = size.Y;
                         line.Colour = colour;
                     }
@@ -166,12 +189,14 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
 
             Drawable getNextUsableLine()
             {
-                PointVisualisation point;
+                Box point;
 
                 if (drawableIndex >= Count)
                 {
-                    Add(point = new PointVisualisation(0)
+                    Add(point = new Box
                     {
+                        RelativePositionAxes = Axes.Both,
+                        RelativeSizeAxes = Axes.Y,
                         Anchor = Anchor.CentreLeft,
                         Origin = Anchor.Centre,
                     });
