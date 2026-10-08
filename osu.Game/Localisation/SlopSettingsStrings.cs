@@ -53,6 +53,17 @@ namespace osu.Game.Localisation
             @"How strongly frosted slider bodies blur the content behind them. Lower values keep the content more recognisable.");
 
         /// <summary>
+        /// "Use system cursor"
+        /// </summary>
+        public static LocalisableString SystemCursor => new TranslatableString(getKey(@"system_cursor"), @"Use system cursor");
+
+        /// <summary>
+        /// "Replaces the cursor in menus and the editor with the system cursor, which follows the mouse without any delay. It still rotates while dragging and shrinks when clicking. The gameplay cursor is not affected."
+        /// </summary>
+        public static LocalisableString SystemCursorDescription => new TranslatableString(getKey(@"system_cursor_description"),
+            @"Replaces the cursor in menus and the editor with the system cursor, which follows the mouse without any delay. It still rotates while dragging and shrinks when clicking. The gameplay cursor is not affected.");
+
+        /// <summary>
         /// "Editor"
         /// </summary>
         public static LocalisableString EditorHeader => new TranslatableString(getKey(@"editor_header"), @"Editor");

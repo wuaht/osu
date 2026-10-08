@@ -40,18 +40,23 @@ namespace osu.Game.Graphics.Cursor
         [Resolved]
         private OsuConfigManager config { get; set; } = null!;
 
+        private readonly SystemCursorDisplay systemCursorDisplay;
+
         public GlobalCursorDisplay()
         {
             AddRangeInternal(new Drawable[]
             {
                 Content = new Container { RelativeSizeAxes = Axes.Both },
-                MenuCursor = new MenuCursorContainer { State = { Value = Visibility.Hidden } }
+                MenuCursor = new MenuCursorContainer { State = { Value = Visibility.Hidden } },
+                systemCursorDisplay = new SystemCursorDisplay(MenuCursor),
             });
         }
 
         protected override void LoadComplete()
         {
             base.LoadComplete();
+
+            systemCursorDisplay.Active.BindValueChanged(active => MenuCursor.AnimatedCursor.ReplacedBySystemCursor.Value = active.NewValue, true);
 
             inputManager = GetContainingInputManager()!;
             showDuringTouch = config.GetBindable<bool>(OsuSetting.GameplayCursorDuringTouch);
