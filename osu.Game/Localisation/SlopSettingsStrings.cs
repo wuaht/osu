@@ -36,10 +36,21 @@ namespace osu.Game.Localisation
         public static LocalisableString Frostiness => new TranslatableString(getKey(@"frostiness"), @"Frostiness");
 
         /// <summary>
-        /// "How frosted slider bodies are. Higher values make the body more transparent and blur the content behind it more."
+        /// "How transparent frosted slider bodies are. Higher values let more of the blurred content behind them show through."
         /// </summary>
         public static LocalisableString FrostinessDescription => new TranslatableString(getKey(@"frostiness_description"),
-            @"How frosted slider bodies are. Higher values make the body more transparent and blur the content behind it more.");
+            @"How transparent frosted slider bodies are. Higher values let more of the blurred content behind them show through.");
+
+        /// <summary>
+        /// "Frost blur"
+        /// </summary>
+        public static LocalisableString FrostBlur => new TranslatableString(getKey(@"frost_blur"), @"Frost blur");
+
+        /// <summary>
+        /// "How strongly frosted slider bodies blur the content behind them. Lower values keep the content more recognisable."
+        /// </summary>
+        public static LocalisableString FrostBlurDescription => new TranslatableString(getKey(@"frost_blur_description"),
+            @"How strongly frosted slider bodies blur the content behind them. Lower values keep the content more recognisable.");
 
         /// <summary>
         /// "Editor"

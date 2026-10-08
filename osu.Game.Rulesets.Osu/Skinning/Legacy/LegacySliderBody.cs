@@ -22,29 +22,44 @@ namespace osu.Game.Rulesets.Osu.Skinning.Legacy
             // legacy skins use a constant value for slider track alpha, regardless of the source colour.
             => (skin.GetConfig<OsuSkinColour, Color4>(OsuSkinColour.SliderTrackOverride)?.Value ?? hitObjectAccentColour).Opacity(getBodyAlpha());
 
+        private const float default_body_alpha = 0.7f;
+
         private float getBodyAlpha()
         {
             if (!FrostedSliders.Value)
-                return 0.7f;
+                return default_body_alpha;
 
             // frosted slider bodies are more transparent to let the blurred backdrop show through.
-            // this must stay above the mask cutoff of the path (the alpha of the shadow), or the backdrop disappears.
-            return 0.7f - 0.4f * Frostiness.Value;
+            return default_body_alpha - 0.6f * Frostiness.Value;
         }
 
         private partial class LegacyDrawableSliderPath : FrostedDrawableSliderPath
         {
+            private const float default_shadow_alpha = 0.25f;
+
+            /// <summary>
+            /// The alpha of the shadow at the edge of the body.
+            /// Scaled along with the alpha of the body, such that the shadow can always be told apart from the body (see <see cref="Update"/>).
+            /// </summary>
+            private float shadowAlpha => default_shadow_alpha * Math.Min(1, AccentColour.A / default_body_alpha);
+
             public LegacyDrawableSliderPath()
             {
                 BackdropTintStrength = 0.5f;
+            }
 
+            protected override void Update()
+            {
                 // Prevents the shadow at the edge of the body from blurring the backdrop.
-                MaskCutoff = 0.25f;
+                // The margin accounts for the precision of the path texture.
+                MaskCutoff = shadowAlpha + 0.02f;
+
+                base.Update();
             }
 
             protected override Color4 ColourAt(float position)
             {
-                Color4 shadow = new Color4(0, 0, 0, 0.25f);
+                Color4 shadow = new Color4(0, 0, 0, shadowAlpha);
                 Color4 outerColour = AccentColour.Darken(0.1f);
                 Color4 innerColour = lighten(AccentColour, 0.5f);
 

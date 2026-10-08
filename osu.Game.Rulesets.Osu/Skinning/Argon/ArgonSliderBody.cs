@@ -33,7 +33,7 @@ namespace osu.Game.Rulesets.Osu.Skinning.Argon
         protected override Color4 GetBodyAccentColour(ISkinSource skin, Color4 hitObjectAccentColour)
         {
             // frosted slider bodies are more transparent to let the blurred backdrop show through.
-            float alpha = FrostedSliders.Value ? BodyAlpha * (0.85f - 0.55f * Frostiness.Value) : BodyAlpha;
+            float alpha = FrostedSliders.Value ? BodyAlpha * (0.85f - 0.75f * Frostiness.Value) : BodyAlpha;
 
             return base.GetBodyAccentColour(skin, hitObjectAccentColour).Opacity(alpha);
         }
