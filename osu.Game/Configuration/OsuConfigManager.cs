@@ -30,11 +30,12 @@ using osu.Game.Users;
 
 namespace osu.Game.Configuration
 {
-    public class OsuConfigManager : IniConfigManager<OsuSetting>, IGameplaySettings
+    public partial class OsuConfigManager : IniConfigManager<OsuSetting>, IGameplaySettings
     {
         public OsuConfigManager(Storage storage)
             : base(storage)
         {
+            clientSettingsStorage = storage;
         }
 
         protected override void InitialiseDefaults()
