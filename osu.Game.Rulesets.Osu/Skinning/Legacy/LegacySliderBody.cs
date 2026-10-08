@@ -45,7 +45,7 @@ namespace osu.Game.Rulesets.Osu.Skinning.Legacy
 
             public LegacyDrawableSliderPath()
             {
-                BackdropTintStrength = 0.5f;
+                BackdropTintStrength = 0.75f;
             }
 
             protected override void Update()

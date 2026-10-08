@@ -40,6 +40,11 @@ namespace osu.Game.Rulesets.Osu.Skinning.Argon
 
         private partial class DrawableSliderPath : FrostedDrawableSliderPath
         {
+            public DrawableSliderPath()
+            {
+                BackdropTintStrength = 0.6f;
+            }
+
             protected override Color4 ColourAt(float position)
             {
                 if (CalculatedBorderPortion != 0f && position <= CalculatedBorderPortion)
