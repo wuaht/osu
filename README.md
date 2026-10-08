@@ -8,6 +8,8 @@ An ai slop mapping(?) client. Slop is just a *click* away!
 
 This is a **personal** osu! lazer fork primarily focused on the editor which implements some stable stuff + other features with the help of Claude Opus 5.5 (i'm not proud of it either ok i have huge skill issue I'm very sorry peppy).
 
+**Building slop! requires a local osu-framework checkout:** clone [wuaht/osu-framework](https://github.com/wuaht/osu-framework) (branch `slop`) next to this repository (`../osu-framework`), as slop! references it directly instead of the NuGet package (needed for features like frosted sliders).
+
 Below will be the normal readme.
 
 ## Status
