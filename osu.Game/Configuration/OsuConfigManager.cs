@@ -11,6 +11,7 @@ using osu.Framework.Extensions.LocalisationExtensions;
 using osu.Framework.Localisation;
 using osu.Framework.Platform;
 using osu.Game.Beatmaps.Drawables.Cards;
+using osu.Game.Graphics.Cursor;
 using osu.Game.Input;
 using osu.Game.Input.Bindings;
 using osu.Game.Localisation;
@@ -250,7 +251,7 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopFrostedSliders, true);
             SetDefault(OsuSetting.SlopFrostedSlidersFrostiness, 1f, 0f, 1f, 0.01f);
             SetDefault(OsuSetting.SlopFrostedSlidersBlur, 0.25f, 0f, 1f, 0.01f);
-            SetDefault(OsuSetting.SlopSystemCursor, false);
+            SetDefault(OsuSetting.SlopMenuCursorStyle, MenuCursorStyle.Default);
 
             SetDefault(OsuSetting.SlopEditorSkin, string.Empty);
             SetDefault(OsuSetting.SlopEditorSkinInTestMode, false);
@@ -519,9 +520,9 @@ namespace osu.Game.Configuration
         SlopFrostedSlidersBlur,
 
         /// <summary>
-        /// Whether the menu cursor is replaced by the system cursor, which mirrors the animations of the menu cursor.
+        /// The cursor used in menus and the editor.
         /// </summary>
-        SlopSystemCursor,
+        SlopMenuCursorStyle,
 
         /// <summary>
         /// The ID of the skin to use exclusively inside the beatmap editor.

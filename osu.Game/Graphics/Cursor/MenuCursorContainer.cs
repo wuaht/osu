@@ -58,10 +58,13 @@ namespace osu.Game.Graphics.Cursor
 
         private bool visible;
 
+        private Bindable<MenuCursorStyle> cursorStyle = null!;
+
         [BackgroundDependencyLoader]
         private void load(OsuConfigManager config, ScreenshotManager? screenshotManager, AudioManager audio)
         {
             cursorRotate = config.GetBindable<bool>(OsuSetting.CursorRotation);
+            cursorStyle = config.GetBindable<MenuCursorStyle>(OsuSetting.SlopMenuCursorStyle);
 
             if (screenshotManager != null)
                 screenshotCursorVisibility.BindTo(screenshotManager.CursorVisibility);
@@ -84,6 +87,8 @@ namespace osu.Game.Graphics.Cursor
 
             lastInputWasMouse.BindTo(mouseInputDetector.LastInputWasMouseSource);
             lastInputWasMouse.BindValueChanged(_ => updateState(), true);
+
+            cursorStyle.BindValueChanged(style => activeCursor.UseSkinCursor.Value = style.NewValue == MenuCursorStyle.Skin, true);
 
             if (game != null)
             {
@@ -179,7 +184,13 @@ namespace osu.Game.Graphics.Cursor
 
         protected override bool OnMouseDown(MouseDownEvent e)
         {
-            if (State.Value == Visibility.Visible)
+            if (State.Value == Visibility.Visible && activeCursor.ShowingSkinCursor)
+            {
+                // skin cursors have their own animations, matching gameplay.
+                activeCursor.SkinCursor.Expand();
+                playTapSample();
+            }
+            else if (State.Value == Visibility.Visible)
             {
                 // only trigger animation for main mouse buttons
                 activeCursor.Scale = new Vector2(1);
@@ -203,7 +214,14 @@ namespace osu.Game.Graphics.Cursor
 
         protected override void OnMouseUp(MouseUpEvent e)
         {
-            if (!e.HasAnyButtonPressed)
+            if (!e.HasAnyButtonPressed && activeCursor.ShowingSkinCursor)
+            {
+                activeCursor.SkinCursor.Contract();
+
+                if (State.Value == Visibility.Visible)
+                    playTapSample(0.8);
+            }
+            else if (!e.HasAnyButtonPressed)
             {
                 activeCursor.AdditiveLayer.FadeOutFromOne(500, Easing.OutQuint);
                 activeCursor.ScaleTo(1, 500, Easing.OutElastic);
@@ -266,6 +284,18 @@ namespace osu.Game.Graphics.Cursor
             /// </summary>
             public readonly BindableBool ReplacedBySystemCursor = new BindableBool();
 
+            /// <summary>
+            /// Whether the cursor of the current skin should be shown instead of the regular cursor, if the skin provides one.
+            /// </summary>
+            public readonly BindableBool UseSkinCursor = new BindableBool();
+
+            public MenuSkinCursor SkinCursor { get; private set; } = null!;
+
+            /// <summary>
+            /// Whether the cursor of the current skin is shown instead of the regular cursor.
+            /// </summary>
+            public bool ShowingSkinCursor => UseSkinCursor.Value && SkinCursor.Available.Value && !ReplacedBySystemCursor.Value;
+
             public Cursor()
             {
                 AutoSizeAxes = Axes.Both;
@@ -293,13 +323,45 @@ namespace osu.Game.Graphics.Cursor
                                 Texture = textures.Get(@"Cursor/menu-cursor-additive"),
                             },
                         }
-                    }
+                    },
+                    SkinCursor = new MenuSkinCursor(),
                 };
 
                 cursorScale = config.GetBindable<float>(OsuSetting.MenuCursorSize);
-                cursorScale.BindValueChanged(scale => cursorContainer.Scale = new Vector2(scale.NewValue * base_scale), true);
+                cursorScale.BindValueChanged(scale =>
+                {
+                    cursorContainer.Scale = new Vector2(scale.NewValue * base_scale);
+                    SkinCursor.Scale = new Vector2(scale.NewValue);
+                }, true);
+            }
 
-                ReplacedBySystemCursor.BindValueChanged(replaced => cursorContainer.Alpha = replaced.NewValue ? 0 : 1, true);
+            protected override void LoadComplete()
+            {
+                base.LoadComplete();
+
+                ReplacedBySystemCursor.BindValueChanged(_ => updateVisual());
+                UseSkinCursor.BindValueChanged(_ => updateVisual());
+                SkinCursor.Available.BindValueChanged(_ => updateVisual(), true);
+            }
+
+            private void updateVisual()
+            {
+                bool showSkinCursor = ShowingSkinCursor;
+
+                SkinCursor.Alpha = showSkinCursor ? 1 : 0;
+                cursorContainer.Alpha = showSkinCursor || ReplacedBySystemCursor.Value ? 0 : 1;
+
+                if (showSkinCursor)
+                {
+                    // the skin cursor has its own animations, so reset any state of the regular cursor animations.
+                    ClearTransforms(targetMember: nameof(Scale));
+                    ClearTransforms(targetMember: nameof(Rotation));
+                    AdditiveLayer.ClearTransforms();
+
+                    Scale = Vector2.One;
+                    Rotation = 0;
+                    AdditiveLayer.Alpha = 0;
+                }
             }
         }
 

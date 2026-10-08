@@ -32,7 +32,7 @@ namespace osu.Game.Graphics.Cursor
 
         private readonly MenuCursorContainer menuCursor;
 
-        private Bindable<bool> setting = null!;
+        private Bindable<MenuCursorStyle> cursorStyle = null!;
 
         private IWindow? window;
 
@@ -52,7 +52,7 @@ namespace osu.Game.Graphics.Cursor
         [BackgroundDependencyLoader]
         private void load(OsuConfigManager config, GameHost host, OsuColour colours)
         {
-            setting = config.GetBindable<bool>(OsuSetting.SlopSystemCursor);
+            cursorStyle = config.GetBindable<MenuCursorStyle>(OsuSetting.SlopMenuCursorStyle);
             window = host.Window;
 
             highlightColour = new Vector3(colours.Pink.R, colours.Pink.G, colours.Pink.B);
@@ -62,10 +62,10 @@ namespace osu.Game.Graphics.Cursor
         {
             base.LoadComplete();
 
-            setting.BindValueChanged(enabled =>
+            cursorStyle.BindValueChanged(style =>
             {
                 // Only desktop windows support custom system cursors.
-                active.Value = enabled.NewValue && window != null && RuntimeInfo.IsDesktop;
+                active.Value = style.NewValue == MenuCursorStyle.System && window != null && RuntimeInfo.IsDesktop;
 
                 if (active.Value)
                 {
