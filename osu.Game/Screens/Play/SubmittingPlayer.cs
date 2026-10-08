@@ -4,6 +4,7 @@
 #nullable disable
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -148,10 +149,22 @@ namespace osu.Game.Screens.Play
                         ? "Cannot start play"
                         : "Score will not be submitted";
 
-                    if (string.IsNullOrEmpty(exception.Message))
-                        notifications?.Post(new ScoreSubmissionFailureNotification(whatWillHappen, "Failed to retrieve a score submission token."));
+                    string reason = string.IsNullOrEmpty(exception.Message)
+                        ? "Failed to retrieve a score submission token."
+                        : getUserFacingAPIError(exception);
+
+                    // Unofficial builds (such as slop!) are rejected on every play, so the same failure is only shown once per session.
+                    // Failures which prevent playing are always shown, as the user would otherwise not know why gameplay was exited.
+                    bool firstOccurrence;
+
+                    // Failures are reported from the API thread.
+                    lock (notifiedTokenFailures)
+                        firstOccurrence = notifiedTokenFailures.Add(reason);
+
+                    if (shouldExit || firstOccurrence)
+                        notifications?.Post(new ScoreSubmissionFailureNotification(whatWillHappen, reason));
                     else
-                        notifications?.Post(new ScoreSubmissionFailureNotification(whatWillHappen, getUserFacingAPIError(exception)));
+                        Logger.Log($"{whatWillHappen}: {reason}");
                 }
 
                 if (shouldExit)
@@ -338,6 +351,11 @@ namespace osu.Game.Screens.Play
             api.Queue(request);
             return scoreSubmissionSource.Task;
         }
+
+        /// <summary>
+        /// The reasons of token retrieval failures which the user has already been notified about in this session.
+        /// </summary>
+        private static readonly HashSet<string> notifiedTokenFailures = new HashSet<string>();
 
         private static string getUserFacingAPIError(Exception exception)
         {
