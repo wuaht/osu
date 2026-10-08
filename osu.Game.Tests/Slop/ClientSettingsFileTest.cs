@@ -4,6 +4,7 @@
 using System;
 using System.IO;
 using NUnit.Framework;
+using osu.Framework.Configuration;
 using osu.Framework.Testing;
 using osu.Game.Configuration;
 
@@ -14,6 +15,7 @@ namespace osu.Game.Tests.Slop
     public class ClientSettingsFileTest
     {
         private const string shared_filename = @"game.ini";
+        private const string client_filename = OsuConfigManager.CLIENT_SETTINGS_PREFIX + shared_filename;
 
         private TemporaryNativeStorage storage = null!;
 
@@ -24,86 +26,56 @@ namespace osu.Game.Tests.Slop
         public void TearDown() => storage.Dispose();
 
         [Test]
-        public void TestClientSettingsAreSavedSeparately()
+        public void TestSharedSettingsAreCopiedOnFirstStart()
         {
-            using (var config = new OsuConfigManager(storage))
-            {
-                config.SetValue(OsuSetting.SlopEditorBlanketSnap, false);
-                config.SetValue(OsuSetting.ShowFpsDisplay, true);
-                Assert.That(config.Save(), Is.True);
-            }
-
-            string shared = read(shared_filename);
-            string client = read(OsuConfigManager.CLIENT_SETTINGS_FILENAME);
-
-            Assert.That(shared, Does.Contain($"{OsuSetting.ShowFpsDisplay} = True"));
-            Assert.That(shared, Does.Not.Contain("Slop"));
-
-            Assert.That(client, Does.Contain($"{OsuSetting.SlopEditorBlanketSnap} = False"));
-            Assert.That(client, Does.Not.Contain(OsuSetting.ShowFpsDisplay.ToString()));
-        }
-
-        [Test]
-        public void TestSettingsRoundTrip()
-        {
-            using (var config = new OsuConfigManager(storage))
-            {
-                config.SetValue(OsuSetting.SlopEditorBlanketSnap, false);
-                config.SetValue(OsuSetting.ShowFpsDisplay, true);
-            }
-
-            using (var config = new OsuConfigManager(storage))
-            {
-                Assert.That(config.Get<bool>(OsuSetting.SlopEditorBlanketSnap), Is.False);
-                Assert.That(config.Get<bool>(OsuSetting.ShowFpsDisplay), Is.True);
-            }
-        }
-
-        [Test]
-        public void TestClientSettingsSurviveSharedFileBeingRewritten()
-        {
-            using (var config = new OsuConfigManager(storage))
-                config.SetValue(OsuSetting.SlopEditorBlanketSnap, false);
-
-            // the official release only writes the settings it knows about.
             write(shared_filename, $"{OsuSetting.ShowFpsDisplay} = True");
 
             using (var config = new OsuConfigManager(storage))
             {
-                Assert.That(config.Get<bool>(OsuSetting.SlopEditorBlanketSnap), Is.False);
                 Assert.That(config.Get<bool>(OsuSetting.ShowFpsDisplay), Is.True);
-            }
-        }
-
-        [Test]
-        public void TestClientSettingsAreMovedOutOfSharedFile()
-        {
-            // client settings were previously stored in game.ini.
-            write(shared_filename, $"{OsuSetting.SlopEditorBlanketSnap} = False\n{OsuSetting.ShowFpsDisplay} = True");
-
-            using (var config = new OsuConfigManager(storage))
-            {
-                Assert.That(config.Get<bool>(OsuSetting.SlopEditorBlanketSnap), Is.False);
                 Assert.That(config.Save(), Is.True);
             }
 
-            Assert.That(read(shared_filename), Does.Not.Contain("Slop"));
-            Assert.That(read(shared_filename), Does.Contain($"{OsuSetting.ShowFpsDisplay} = True"));
-            Assert.That(read(OsuConfigManager.CLIENT_SETTINGS_FILENAME), Does.Contain($"{OsuSetting.SlopEditorBlanketSnap} = False"));
+            Assert.That(read(client_filename), Does.Contain($"{OsuSetting.ShowFpsDisplay} = True"));
         }
 
         [Test]
-        public void TestClientSettingsFileTakesPrecedence()
+        public void TestSettingsAreNotSavedToSharedFile()
         {
-            write(shared_filename, $"{OsuSetting.SlopEditorBlanketSnap} = False");
-            write(OsuConfigManager.CLIENT_SETTINGS_FILENAME, $"{OsuSetting.SlopEditorBlanketSnap} = True");
+            write(shared_filename, $"{OsuSetting.ShowFpsDisplay} = False");
 
             using (var config = new OsuConfigManager(storage))
-                Assert.That(config.Get<bool>(OsuSetting.SlopEditorBlanketSnap), Is.True);
+            {
+                config.SetValue(OsuSetting.SlopEditorBlanketSnap, false);
+                config.SetValue(OsuSetting.ShowFpsDisplay, true);
+                Assert.That(config.Save(), Is.True);
+            }
+
+            Assert.That(read(shared_filename), Is.EqualTo($"{OsuSetting.ShowFpsDisplay} = False"));
+
+            string client = read(client_filename);
+            Assert.That(client, Does.Contain($"{OsuSetting.SlopEditorBlanketSnap} = False"));
+            Assert.That(client, Does.Contain($"{OsuSetting.ShowFpsDisplay} = True"));
         }
 
         [Test]
-        public void TestDevelopmentConfigUsesSeparateClientSettingsFile()
+        public void TestSharedSettingsAreIgnoredAfterFirstStart()
+        {
+            using (var config = new OsuConfigManager(storage))
+                config.SetValue(OsuSetting.SlopEditorBlanketSnap, false);
+
+            // the official release changes its own settings afterwards.
+            write(shared_filename, $"{OsuSetting.ShowFpsDisplay} = True");
+
+            using (var config = new OsuConfigManager(storage))
+            {
+                Assert.That(config.Get<bool>(OsuSetting.ShowFpsDisplay), Is.False);
+                Assert.That(config.Get<bool>(OsuSetting.SlopEditorBlanketSnap), Is.False);
+            }
+        }
+
+        [Test]
+        public void TestDevelopmentConfigUsesSeparateFiles()
         {
             using (var config = new DevelopmentOsuConfigManager(storage))
             {
@@ -111,12 +83,34 @@ namespace osu.Game.Tests.Slop
                 Assert.That(config.Save(), Is.True);
             }
 
-            Assert.That(storage.Exists("slop.dev.ini"), Is.True);
-            Assert.That(storage.Exists(OsuConfigManager.CLIENT_SETTINGS_FILENAME), Is.False);
-            Assert.That(read("game.dev.ini"), Does.Not.Contain("Slop"));
+            Assert.That(storage.Exists("slop.game.dev.ini"), Is.True);
+            Assert.That(storage.Exists("game.dev.ini"), Is.False);
+            Assert.That(storage.Exists(client_filename), Is.False);
         }
 
-        private string read(string filename) => File.ReadAllText(storage.GetFullPath(filename));
+        [Test]
+        public void TestFrameworkSettingsAreCopiedOnFirstStart()
+        {
+            write("framework.ini", $"{FrameworkSetting.VolumeMusic} = 0.5");
+
+            using (var config = new FrameworkConfigManager(storage, filenamePrefix: OsuConfigManager.CLIENT_SETTINGS_PREFIX))
+            {
+                Assert.That(config.Get<double>(FrameworkSetting.VolumeMusic), Is.EqualTo(0.5));
+
+                config.SetValue(FrameworkSetting.VolumeMusic, 0.25);
+                Assert.That(config.Save(), Is.True);
+            }
+
+            Assert.That(read("framework.ini"), Is.EqualTo($"{FrameworkSetting.VolumeMusic} = 0.5"));
+            Assert.That(read("slop.framework.ini"), Does.Contain($"{FrameworkSetting.VolumeMusic} = 0.25"));
+
+            write("framework.ini", $"{FrameworkSetting.VolumeMusic} = 1");
+
+            using (var config = new FrameworkConfigManager(storage, filenamePrefix: OsuConfigManager.CLIENT_SETTINGS_PREFIX))
+                Assert.That(config.Get<double>(FrameworkSetting.VolumeMusic), Is.EqualTo(0.25));
+        }
+
+        private string read(string filename) => File.ReadAllText(storage.GetFullPath(filename)).TrimEnd();
 
         private void write(string filename, string content) => File.WriteAllText(storage.GetFullPath(filename, true), content);
     }
