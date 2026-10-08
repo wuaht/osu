@@ -1090,6 +1090,15 @@ namespace osu.Game
             if (API is APIAccess api)
                 api.PostNotification = n => Notifications.Post(n);
 
+            if (Dependencies.Get<RealmAccess>().UsesSeparateDatabase)
+            {
+                waitForReady(() => Notifications, _ => Notifications.Post(new SimpleNotification
+                {
+                    Text = SlopNotificationsStrings.SeparateDatabaseInUse,
+                    Icon = FontAwesome.Solid.Database,
+                }));
+            }
+
             ScreenFooter.BackReceptor backReceptor;
 
             Dependencies.CacheAs(idleTracker = new GameIdleTracker(6000));

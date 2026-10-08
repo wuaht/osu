@@ -11,6 +11,7 @@ using osu.Framework.Development;
 using osu.Framework.Logging;
 using osu.Framework.Platform;
 using osu.Game;
+using osu.Game.Database;
 using osu.Game.IPC;
 using osu.Game.Tournament;
 using SDL;
@@ -141,13 +142,40 @@ namespace osu.Desktop
                     host.Run(new TournamentGame());
                 else
                 {
-                    host.Run(new OsuGameDesktop(args)
+                    try
                     {
-                        IsFirstRun = isFirstRun,
-                        EnableWebSocketServer = Environment.GetEnvironmentVariable("OSU_WEBSOCKET_SERVER") == "1",
-                    });
+                        host.Run(new OsuGameDesktop(args)
+                        {
+                            IsFirstRun = isFirstRun,
+                            EnableWebSocketServer = Environment.GetEnvironmentVariable("OSU_WEBSOCKET_SERVER") == "1",
+                        });
+                    }
+                    catch (Exception e) when (findInnerException<DatabaseTooNewException>(e) is DatabaseTooNewException tooNew)
+                    {
+                        unsafe
+                        {
+                            SDL3.SDL_ShowSimpleMessageBox(SDL_MessageBoxFlags.SDL_MESSAGEBOX_ERROR, "Please update this client"u8, tooNew.Message, null);
+                        }
+                    }
                 }
             }
+        }
+
+        private static T? findInnerException<T>(Exception? exception)
+            where T : Exception
+        {
+            while (exception != null)
+            {
+                if (exception is T found)
+                    return found;
+
+                if (exception is AggregateException aggregate && aggregate.InnerExceptions.Count == 1)
+                    exception = aggregate.InnerExceptions[0];
+                else
+                    exception = exception.InnerException;
+            }
+
+            return null;
         }
 
         private static bool trySendIPCMessage(IIpcHost host, string cwd, string[] args)

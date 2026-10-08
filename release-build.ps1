@@ -9,13 +9,15 @@
 #   ./release-slop.ps1 -SkipUpload        # only build the installer locally (in .slop-release/)
 #   ./release-slop.ps1 -Version 2026.1008.1
 #   ./release-slop.ps1 -Force             # skip the checks for uncommitted / unpushed changes
+#   ./release-slop.ps1 -OfficialSchemaVersion 52   # don't look up the realm schema version of the latest official release
 #
 # Requirements: .NET SDK, GitHub CLI (gh, logged in), and the osu-framework / osu-resources checkouts next to this repository.
 
 param(
     [string]$Version,
     [switch]$SkipUpload,
-    [switch]$Force
+    [switch]$Force,
+    [int]$OfficialSchemaVersion
 )
 
 $ErrorActionPreference = 'Stop'
@@ -106,6 +108,41 @@ if ($existingTags -contains $Version) { throw "A release for version $Version al
 
 Write-Host "Releasing slop! $Version" -ForegroundColor Green
 
+# --- Official database compatibility ---
+
+# The client shares its data folder with official osu!(lazer). If it uses a newer realm schema version than the latest official release,
+# it uses a separate copy of the database, so that the official release can still open the shared one (see osu.Game/Database/OfficialDatabaseCompatibility.cs).
+
+function Get-SchemaVersion([string]$source, [string]$content)
+{
+    $match = [regex]::Match($content, 'private const int schema_version = (\d+);')
+    if (-not $match.Success) { throw "Could not find the realm schema version in $source." }
+    [int]$match.Groups[1].Value
+}
+
+if (-not $OfficialSchemaVersion)
+{
+    if (-not (Get-Command gh -ErrorAction SilentlyContinue)) { throw "The GitHub CLI is required to look up the latest official release. Alternatively, use -OfficialSchemaVersion." }
+
+    $officialTag = gh release list --repo ppy/osu --exclude-pre-releases --exclude-drafts --limit 1 --json tagName --jq '.[0].tagName'
+    if ($LASTEXITCODE -ne 0 -or -not $officialTag) { throw "Failed to look up the latest official release. Alternatively, use -OfficialSchemaVersion." }
+
+    Invoke-Checked "Fetch official release $officialTag" { git fetch upstream "refs/tags/${officialTag}:refs/tags/$officialTag" --quiet }
+
+    $officialRealmAccess = git show "${officialTag}:osu.Game/Database/RealmAccess.cs" | Out-String
+    if ($LASTEXITCODE -ne 0) { throw "Failed to read RealmAccess.cs of $officialTag." }
+
+    $OfficialSchemaVersion = Get-SchemaVersion $officialTag $officialRealmAccess
+}
+
+$clientSchemaVersion = Get-SchemaVersion 'osu.Game/Database/RealmAccess.cs' (Get-Content -Raw (Join-Path $root 'osu.Game/Database/RealmAccess.cs'))
+
+Write-Host "Realm schema version: $clientSchemaVersion (latest official release: $OfficialSchemaVersion)" -ForegroundColor Green
+if ($clientSchemaVersion -gt $OfficialSchemaVersion)
+{
+    Write-Host "This build will use a separate database (client_$clientSchemaVersion.realm) until official osu!(lazer) supports schema version $clientSchemaVersion." -ForegroundColor Yellow
+}
+
 # --- Velopack CLI ---
 
 # The CLI should match the major / minor version of the Velopack library used by the game.
@@ -134,7 +171,8 @@ Invoke-Checked 'Publish osu.Desktop' {
         --self-contained true `
         --output $publishDir `
         "-p:Version=$Version" `
-        "-p:FileVersion=$Version"
+        "-p:FileVersion=$Version" `
+        "-p:OfficialRealmSchemaVersion=$OfficialSchemaVersion"
 }
 
 $token = $null
