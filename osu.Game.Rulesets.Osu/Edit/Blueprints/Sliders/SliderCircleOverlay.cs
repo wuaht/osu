@@ -10,6 +10,7 @@ using osu.Framework.Graphics.Primitives;
 using osu.Game.Configuration;
 using osu.Game.Rulesets.Osu.Edit.Blueprints.HitCircles.Components;
 using osu.Game.Rulesets.Osu.Objects;
+using osuTK;
 
 namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
 {
@@ -105,6 +106,27 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
                 var diff = slider.Path.PositionAt(1) - slider.Path.PositionAt(0.99f);
                 endDragMarkerContainer.Rotation = float.RadiansToDegrees(MathF.Atan2(diff.Y, diff.X));
             }
+        }
+
+        /// <summary>
+        /// Whether a slider node at this position is selected for hitsounding, which is displayed in red.
+        /// </summary>
+        public bool PartHighlighted
+        {
+            get => CirclePiece.PartHighlighted;
+            set => CirclePiece.PartHighlighted = value;
+        }
+
+        /// <summary>
+        /// Returns the distance between <paramref name="screenSpacePos"/> and the centre of the circle, relative to the circle's radius
+        /// (i.e. values of at most 1 are within the circle).
+        /// </summary>
+        public float GetRelativeDistanceToCircle(Vector2 screenSpacePos)
+        {
+            var quad = CirclePiece.ScreenSpaceDrawQuad;
+            float radius = Math.Max(1, quad.Width / 2);
+
+            return Vector2.Distance(quad.Centre, screenSpacePos) / radius;
         }
 
         public override void Hide()

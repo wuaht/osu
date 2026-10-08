@@ -2,10 +2,13 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using osu.Framework.Allocation;
+using osu.Framework.Bindables;
 using osu.Framework.Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Input.Events;
 using osu.Framework.Utils;
+using osu.Game.Configuration;
+using osu.Game.Screens.Edit.Components;
 using osuTK;
 using osuTK.Input;
 
@@ -16,10 +19,21 @@ namespace osu.Game.Screens.Edit.Compose.Components
         [Resolved]
         private SelectionScaleHandler? scaleHandler { get; set; }
 
+        private readonly Bindable<EditorAnchorShape> anchorShape = new Bindable<EditorAnchorShape>();
+
         [BackgroundDependencyLoader]
-        private void load()
+        private void load(OsuConfigManager config)
         {
             Size = new Vector2(5);
+
+            config.BindWith(OsuSetting.SlopEditorAnchorShape, anchorShape);
+        }
+
+        protected override void LoadComplete()
+        {
+            base.LoadComplete();
+
+            anchorShape.BindValueChanged(shape => Circle.Shape = shape.NewValue, true);
         }
 
         /// <summary>

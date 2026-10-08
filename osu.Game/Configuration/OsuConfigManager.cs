@@ -19,6 +19,7 @@ using osu.Game.Overlays;
 using osu.Game.Overlays.Dashboard.Friends;
 using osu.Game.Overlays.Mods.Input;
 using osu.Game.Rulesets.Scoring;
+using osu.Game.Screens.Edit.Components;
 using osu.Game.Screens.Edit.Compose.Components;
 using osu.Game.Screens.OnlinePlay.Lounge.Components;
 using osu.Game.Screens.Select;
@@ -254,6 +255,7 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopEditorShowSelectionBoxButtons, false);
             SetDefault(OsuSetting.SlopEditorShowSliderEndDragMarker, false);
             SetDefault(OsuSetting.SlopEditorImmediateDrag, false);
+            SetDefault(OsuSetting.SlopEditorAnchorShape, EditorAnchorShape.Circle);
         }
 
         protected override bool CheckLookupContainsPrivateInformation(OsuSetting lookup)
@@ -537,5 +539,10 @@ namespace osu.Game.Configuration
         /// rather than only after the mouse has moved a minimum distance.
         /// </summary>
         SlopEditorImmediateDrag,
+
+        /// <summary>
+        /// The shape of slider control points and selection box handles in the beatmap editor.
+        /// </summary>
+        SlopEditorAnchorShape,
     }
 }

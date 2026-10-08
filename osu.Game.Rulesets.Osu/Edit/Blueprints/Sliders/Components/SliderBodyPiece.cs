@@ -40,13 +40,38 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders.Components
             };
         }
 
+        [Resolved]
+        private OsuColour colours { get; set; } = null!;
+
+        private bool partHighlighted;
+
+        /// <summary>
+        /// Whether the slider body is a selected part of the slider (selected for hitsounding), which is displayed in red.
+        /// </summary>
+        public bool PartHighlighted
+        {
+            get => partHighlighted;
+            set
+            {
+                if (partHighlighted == value)
+                    return;
+
+                partHighlighted = value;
+
+                if (IsLoaded)
+                    updateBorderColour();
+            }
+        }
+
         [BackgroundDependencyLoader]
-        private void load(OsuColour colours)
+        private void load()
         {
             // a thinner, slightly translucent outline, to obstruct the selected slider as little as possible.
-            body.BorderColour = colours.Yellow.Opacity(0.85f);
+            updateBorderColour();
             body.BorderSize = 0.8f;
         }
+
+        private void updateBorderColour() => body.BorderColour = (partHighlighted ? colours.Red : colours.Yellow).Opacity(0.85f);
 
         private int? lastVersion;
 

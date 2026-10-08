@@ -288,9 +288,19 @@ namespace osu.Game.Rulesets.Edit
 
             EditorBeatmap.SelectedHitObjects.CollectionChanged += selectionChanged;
 
+            // the hitsound states should reflect the selected part of a hit object (e.g. a slider node) if there is one.
+            selectedHitObjectPart.BindTo(EditorBeatmap.SelectedHitObjectPart);
+            selectedHitObjectPart.BindValueChanged(_ =>
+            {
+                if (EditorBeatmap.SelectedHitObjects.Any())
+                    Scheduler.AddOnce(UpdateTernaryStates);
+            });
+
             // bring in updates from selection changes
             EditorBeatmap.HitObjectUpdated += hitObjectUpdated;
         }
+
+        private readonly Bindable<SelectedHitObjectPart> selectedHitObjectPart = new Bindable<SelectedHitObjectPart>();
 
         /// <summary>
         /// Houses all content relevant to the playfield.

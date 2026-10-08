@@ -67,6 +67,12 @@ namespace osu.Game.Screens.Edit
         public readonly BindableList<HitObject> SelectedHitObjects = new BindableList<HitObject>();
 
         /// <summary>
+        /// The selected part of the single selected hit object (e.g. a slider node), which hitsound changes are limited to.
+        /// Null if the whole selection should be affected. Reset whenever <see cref="SelectedHitObjects"/> changes.
+        /// </summary>
+        public readonly Bindable<SelectedHitObjectPart> SelectedHitObjectPart = new Bindable<SelectedHitObjectPart>();
+
+        /// <summary>
         /// The current placement. Null if there's no active placement.
         /// </summary>
         public readonly Bindable<HitObject> PlacementObject = new Bindable<HitObject>();
@@ -116,6 +122,9 @@ namespace osu.Game.Screens.Edit
 
             foreach (var obj in HitObjects)
                 trackStartTime(obj);
+
+            // a selected part is only meaningful for the selection it was made in.
+            SelectedHitObjects.BindCollectionChanged((_, _) => SelectedHitObjectPart.Value = null);
 
             Breaks = new BindableList<BreakPeriod>(playableBeatmap.Breaks);
             Breaks.BindCollectionChanged((_, _) =>
