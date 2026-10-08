@@ -1,6 +1,7 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using osu.Framework.Graphics;
 using osu.Game.Graphics.Sprites;
 using osu.Framework.Allocation;
@@ -17,6 +18,19 @@ namespace osu.Game.Screens.Edit.Components
 {
     public partial class TimeInfoContainer : BottomBarContainer
     {
+        /// <summary>
+        /// The horizontal space between the timestamp and the progress / BPM display.
+        /// </summary>
+        private const float stats_spacing = 8;
+
+        /// <summary>
+        /// The distance from the right edge of this container to the visible start of the summary timeline's centre line (its padding minus the radius of the end circle).
+        /// The contents are centred between the left edge and that point.
+        /// </summary>
+        private const float summary_timeline_line_offset = 2.5f;
+
+        private TimestampControl timestamp = null!;
+        private FillFlowContainer stats = null!;
         private OsuSpriteText bpm = null!;
         private OsuSpriteText progress = null!;
 
@@ -31,41 +45,39 @@ namespace osu.Game.Screens.Edit.Components
         {
             Background.Colour = EditorPanelStyle.PanelBackground;
 
-            // laid out to fit the compact bottom bar: the timestamp on top, with progress and BPM left-aligned directly below it.
+            // the contents are centred manually (see UpdateAfterChildren()).
+            ContentPadding = new MarginPadding();
+
+            // laid out like osu!stable: the timestamp, with progress and BPM left-aligned below each other next to it.
             Children = new Drawable[]
             {
-                new TimestampControl
-                {
-                    Y = 1,
-                },
-                new FillFlowContainer
+                stats = new FillFlowContainer
                 {
                     AutoSizeAxes = Axes.Both,
-                    Direction = FillDirection.Horizontal,
-                    Y = -1,
-                    Anchor = Anchor.BottomLeft,
-                    Origin = Anchor.BottomLeft,
+                    Direction = FillDirection.Vertical,
+                    Anchor = Anchor.CentreLeft,
+                    Origin = Anchor.CentreLeft,
                     Children = new Drawable[]
                     {
-                        new Container
+                        progress = new OsuSpriteText
                         {
-                            // fixed width so that the BPM display doesn't shift around as the progress changes (e.g. from "9%" to "10%").
-                            Width = 30,
-                            AutoSizeAxes = Axes.Y,
-                            Child = progress = new OsuSpriteText
-                            {
-                                Colour = colours.Purple1,
-                                Font = OsuFont.Torus.With(size: 11, weight: FontWeight.SemiBold, fixedWidth: true),
-                                Spacing = new Vector2(-1, 0),
-                            },
+                            Colour = colours.Purple1,
+                            Font = OsuFont.Torus.With(size: 12, weight: FontWeight.SemiBold, fixedWidth: true),
+                            Spacing = new Vector2(-1, 0),
                         },
                         bpm = new OsuSpriteText
                         {
                             Colour = colours.Orange1,
-                            Font = OsuFont.Torus.With(size: 11, weight: FontWeight.SemiBold, fixedWidth: true),
+                            Font = OsuFont.Torus.With(size: 12, weight: FontWeight.SemiBold, fixedWidth: true),
                             Spacing = new Vector2(-1, 0),
                         },
                     }
+                },
+                // after the progress and BPM display, so that the text box for entering a timestamp is displayed above it.
+                timestamp = new TimestampControl
+                {
+                    Anchor = Anchor.CentreLeft,
+                    Origin = Anchor.CentreLeft,
                 },
             };
         }
@@ -93,6 +105,17 @@ namespace osu.Game.Screens.Edit.Components
             }
         }
 
+        protected override void UpdateAfterChildren()
+        {
+            base.UpdateAfterChildren();
+
+            // based on the width of the displayed time rather than the whole control, so that the text box for entering a timestamp doesn't move the display.
+            float contentWidth = timestamp.TimeWidth + stats_spacing + stats.DrawWidth;
+
+            timestamp.X = Math.Max(0, (DrawWidth + summary_timeline_line_offset - contentWidth) / 2);
+            stats.X = timestamp.X + timestamp.TimeWidth + stats_spacing;
+        }
+
         private partial class TimestampControl : OsuClickableContainer
         {
             private Container hoverLayer = null!;
@@ -104,6 +127,11 @@ namespace osu.Game.Screens.Edit.Components
 
             [Resolved]
             private EditorClock editorClock { get; set; } = null!;
+
+            /// <summary>
+            /// The width of the displayed time.
+            /// </summary>
+            public float TimeWidth => trackTimer.DrawWidth;
 
             public TimestampControl()
                 : base(HoverSampleSet.Button)
@@ -140,14 +168,15 @@ namespace osu.Game.Screens.Edit.Components
                     {
                         Anchor = Anchor.CentreLeft,
                         Origin = Anchor.CentreLeft,
-                        Spacing = new Vector2(-2, 0),
-                        Font = OsuFont.Torus.With(size: 20, fixedWidth: true, weight: FontWeight.Light),
+                        // about as tall as the progress and BPM display next to it.
+                        Spacing = new Vector2(-2.6f, 0),
+                        Font = OsuFont.Torus.With(size: 26, fixedWidth: true, weight: FontWeight.Light),
                     },
                     inputTextBox = new TimestampTextBox
                     {
                         Position = new Vector2(-2, 0),
-                        Width = 100,
-                        Height = 20,
+                        Width = 130,
+                        Height = 26,
                         Alpha = 0,
                         CommitOnFocusLost = true,
                     },
