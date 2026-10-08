@@ -30,6 +30,7 @@ using osu.Game.Rulesets.Objects.Drawables;
 using osu.Game.Rulesets.UI;
 using osu.Game.Rulesets.UI.Scrolling;
 using osu.Game.Screens.Edit;
+using osu.Game.Screens.Edit.Components;
 using osu.Game.Screens.Edit.Components.RadioButtons;
 using osu.Game.Screens.Edit.Components.TernaryButtons;
 using osu.Game.Screens.Edit.Compose;
@@ -84,7 +85,7 @@ namespace osu.Game.Rulesets.Edit
         protected InputManager InputManager { get; private set; } = null!;
 
         private Box leftToolboxBackground = null!;
-        private Box rightToolboxBackground = null!;
+        private Drawable rightToolboxBackground = null!;
 
         private EditorRadioButtonCollection toolboxCollection = null!;
         private FillFlowContainer togglesCollection = null!;
@@ -248,11 +249,8 @@ namespace osu.Game.Rulesets.Edit
                         AutoSizeAxes = Axes.X,
                         Children = new Drawable[]
                         {
-                            rightToolboxBackground = new Box
-                            {
-                                Colour = EditorPanelStyle.PanelBackground,
-                                RelativeSizeAxes = Axes.Both,
-                            },
+                            // frosted instead of dark, such that the background stays visible while the text on top stays readable.
+                            rightToolboxBackground = new FrostedPanelBackground(),
                             RightToolbox = new ExpandingToolboxContainer(TOOLBOX_CONTRACTED_SIZE_RIGHT, 250)
                             {
                                 Child = new EditorToolboxGroup("inspector")

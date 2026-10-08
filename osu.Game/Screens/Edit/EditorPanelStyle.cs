@@ -17,6 +17,17 @@ namespace osu.Game.Screens.Edit
         public static Color4 PanelBackground => Color4.Black.Opacity(0.5f);
 
         /// <summary>
+        /// The darkening applied on top of the blurred backdrop of frosted panels (see <see cref="Components.FrostedPanelBackground"/>).
+        /// Lighter than <see cref="PanelBackground"/>, as the blur already helps to keep text readable.
+        /// </summary>
+        public static Color4 FrostedPanelTint => Color4.Black.Opacity(0.3f);
+
+        /// <summary>
+        /// The strength of the blur of frosted panels.
+        /// </summary>
+        public const float FROSTED_PANEL_BLUR_SIGMA = 15;
+
+        /// <summary>
         /// A subtle additional layer to visually separate areas within a panel.
         /// </summary>
         public static Color4 PanelAccent => Color4.Black.Opacity(0.2f);
