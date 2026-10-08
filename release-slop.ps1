@@ -108,13 +108,15 @@ Write-Host "Releasing slop! $Version" -ForegroundColor Green
 
 # --- Velopack CLI ---
 
-# The CLI should match the version of the Velopack library used by the game.
+# The CLI should match the major / minor version of the Velopack library used by the game.
 $velopackVersion = ([xml](Get-Content (Join-Path $root 'osu.Desktop/osu.Desktop.csproj'))).Project.ItemGroup.PackageReference |
     Where-Object { $_.Include -eq 'Velopack' } |
     Select-Object -ExpandProperty Version -First 1
 
+function Get-MajorMinor([string]$v) { ($v -split '\.')[0..1] -join '.' }
+
 $installedVpk = dotnet tool list -g | Select-String -Pattern '^vpk\s+(\S+)'
-if (-not $installedVpk -or $installedVpk.Matches[0].Groups[1].Value -ne $velopackVersion)
+if (-not $installedVpk -or (Get-MajorMinor $installedVpk.Matches[0].Groups[1].Value) -ne (Get-MajorMinor $velopackVersion))
 {
     if ($installedVpk) { Invoke-Checked 'Remove mismatching vpk' { dotnet tool uninstall -g vpk } }
     Invoke-Checked "Install vpk $velopackVersion" { dotnet tool install -g vpk --version $velopackVersion }
