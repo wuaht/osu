@@ -22,7 +22,7 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
     {
         protected override LocalisableString Header => SlopSettingsStrings.EditorHeader;
 
-        public override IEnumerable<LocalisableString> FilterTerms => base.FilterTerms.Concat(new LocalisableString[] { "skin", "backup", "autosave" });
+        public override IEnumerable<LocalisableString> FilterTerms => base.FilterTerms.Concat(new LocalisableString[] { "skin", "backup", "autosave", "snap", "blanket", "triangle" });
 
         /// <summary>
         /// Dropdown entry representing "use the regular gameplay skin".
@@ -98,6 +98,18 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                     Caption = SlopSettingsStrings.ImmediateDrag,
                     HintText = SlopSettingsStrings.ImmediateDragDescription,
                     Current = config.GetBindable<bool>(OsuSetting.SlopEditorImmediateDrag),
+                }),
+                new SettingsItemV2(new FormCheckBox
+                {
+                    Caption = SlopSettingsStrings.VisualSpacingSnap,
+                    HintText = SlopSettingsStrings.VisualSpacingSnapDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorVisualSpacingSnap),
+                }),
+                new SettingsItemV2(new FormCheckBox
+                {
+                    Caption = SlopSettingsStrings.BlanketSnap,
+                    HintText = SlopSettingsStrings.BlanketSnapDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorBlanketSnap),
                 }),
                 new SettingsItemV2(new FormCheckBox
                 {

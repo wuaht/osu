@@ -18,6 +18,7 @@ using osu.Framework.Graphics.Sprites;
 using osu.Framework.Input.Events;
 using osu.Framework.Utils;
 using osu.Game.Beatmaps;
+using osu.Game.Configuration;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Cursor;
 using osu.Game.Graphics.UserInterface;
@@ -89,14 +90,25 @@ namespace osu.Game.Rulesets.Osu.Edit
         [Cached]
         protected readonly FreehandSliderToolboxGroup FreehandSliderToolboxGroup = new FreehandSliderToolboxGroup();
 
+        private Bindable<bool> visualSpacingSnap;
+        private Bindable<bool> blanketSnap;
+
+        private PatternSnapGuideOverlay patternSnapGuides;
+
         [BackgroundDependencyLoader]
-        private void load()
+        private void load(OsuConfigManager config)
         {
+            visualSpacingSnap = config.GetBindable<bool>(OsuSetting.SlopEditorVisualSpacingSnap);
+            blanketSnap = config.GetBindable<bool>(OsuSetting.SlopEditorBlanketSnap);
+
             AddInternal(DistanceSnapProvider);
             DistanceSnapProvider.AttachToToolbox(RightToolbox);
 
             // Give a bit of breathing room around the playfield content.
             PlayfieldContentContainer.Padding = new MarginPadding(10);
+
+            // above the playfield, so that guide lines aren't hidden behind slider bodies.
+            PlayfieldContentContainer.Add(patternSnapGuides = new PatternSnapGuideOverlay());
 
             LayerBelowRuleset.Add(
                 distanceSnapGridContainer = new Container
@@ -242,6 +254,16 @@ namespace osu.Game.Rulesets.Osu.Edit
             }
         }
 
+        protected override void UpdateAfterChildren()
+        {
+            base.UpdateAfterChildren();
+
+            // done after children are updated, as the placement blueprint snaps in its update.
+            patternSnapGuides.Display(getDisplayedPatternSnapPoints(), Playfield);
+
+            currentFrame++;
+        }
+
         [CanBeNull]
         public SnapResult TrySnapToNearbyObjects(Vector2 screenSpacePosition, double? fallbackTime = null)
         {
@@ -335,9 +357,144 @@ namespace osu.Game.Rulesets.Osu.Edit
                 }
             }
 
+            if (snapToPatterns(screenSpacePosition, playfield, snapRadius, out snapResult))
+                return true;
+
             snapResult = null;
             return false;
         }
+
+        #region Pattern snapping
+
+        /// <summary>
+        /// Incremented every frame, to invalidate the per-frame state of pattern snapping.
+        /// </summary>
+        private long currentFrame;
+
+        private long patternSnapFrame = -1;
+
+        /// <summary>
+        /// The pattern snap points of the current frame along with their screen space positions, or <c>null</c> if not yet calculated in this frame.
+        /// </summary>
+        private List<(PatternSnapPoint point, Vector2 screenSpacePosition)> patternSnapPoints;
+
+        /// <summary>
+        /// The pattern snap points which snapping was last performed to.
+        /// Kept until snapping is performed again, so that guide lines remain visible while the mouse doesn't move.
+        /// </summary>
+        private readonly List<PatternSnapPoint> snappedPatternSnapPoints = new List<PatternSnapPoint>();
+
+        private bool snapToPatterns(Vector2 screenSpacePosition, Playfield playfield, float snapRadius, out SnapResult snapResult)
+        {
+            snapResult = null;
+
+            // the first snap of a frame replaces the previous frame's results.
+            if (patternSnapFrame != currentFrame)
+            {
+                patternSnapFrame = currentFrame;
+                patternSnapPoints = null;
+                snappedPatternSnapPoints.Clear();
+            }
+
+            patternSnapPoints ??= calculatePatternSnapPoints(playfield);
+
+            PatternSnapPoint closestPoint = null;
+            Vector2 closestPosition = default;
+            float closestDistance = snapRadius;
+
+            foreach (var (point, pointScreenSpacePosition) in patternSnapPoints)
+            {
+                float distance = Vector2.Distance(pointScreenSpacePosition, screenSpacePosition);
+
+                if (distance < closestDistance)
+                {
+                    closestPoint = point;
+                    closestPosition = pointScreenSpacePosition;
+                    closestDistance = distance;
+                }
+            }
+
+            if (closestPoint == null)
+                return false;
+
+            if (!snappedPatternSnapPoints.Contains(closestPoint))
+                snappedPatternSnapPoints.Add(closestPoint);
+
+            snapResult = new SnapResult(closestPosition, null, playfield);
+            return true;
+        }
+
+        private List<(PatternSnapPoint, Vector2)> calculatePatternSnapPoints(Playfield playfield)
+        {
+            var points = new List<PatternSnapPoint>();
+
+            if (!visualSpacingSnap.Value && !blanketSnap.Value)
+                return new List<(PatternSnapPoint, Vector2)>();
+
+            var placementObject = BlueprintContainer.CurrentHitObjectPlacement?.HitObject;
+
+            // same objects as considered by regular object snapping.
+            var objects = BlueprintContainer.SelectionBlueprints.AliveChildren
+                                            .Where(b => !b.IsSelected && b.Item is OsuHitObject && b.Item != placementObject && b.Item != EditorBeatmap.PlacementObject.Value)
+                                            .Select(b => (OsuHitObject)b.Item)
+                                            .ToList();
+
+            if (visualSpacingSnap.Value)
+                PatternSnapping.AddVisualSpacingSnapPoints(objects, points);
+
+            if (blanketSnap.Value)
+                PatternSnapping.AddBlanketSnapPoints(objects, points);
+
+            return points.Select(p => (p, playfield.GamefieldToScreenSpace(p.Position))).ToList();
+        }
+
+        /// <summary>
+        /// Returns the pattern snap points which an object that is currently being moved or placed is snapped to.
+        /// </summary>
+        private IReadOnlyList<PatternSnapPoint> getDisplayedPatternSnapPoints()
+        {
+            if (snappedPatternSnapPoints.Count == 0)
+                return Array.Empty<PatternSnapPoint>();
+
+            var placementObject = BlueprintContainer.CurrentHitObjectPlacement?.HitObject as OsuHitObject;
+
+            bool interacting = InputManager.CurrentState.Mouse.Buttons.HasAnyButtonPressed || (placementObject != null && CursorInPlacementArea);
+
+            if (!interacting)
+                return Array.Empty<PatternSnapPoint>();
+
+            // a snap result may have been discarded (e.g. in favour of grid snap), so only display points which an object is actually located at.
+            var objects = EditorBeatmap.SelectedHitObjects.OfType<OsuHitObject>();
+
+            if (placementObject != null)
+                objects = objects.Append(placementObject);
+
+            var positions = objects.SelectMany(getSnappablePositions).ToList();
+
+            return snappedPatternSnapPoints.Where(p => positions.Any(pos => Vector2.Distance(pos, p.Position) < 1)).ToList();
+        }
+
+        private static IEnumerable<Vector2> getSnappablePositions(OsuHitObject hitObject)
+        {
+            // snap results ignore stacking, but movement is based on the stacked position, so both are considered.
+            yield return hitObject.Position;
+            yield return hitObject.StackedPosition;
+
+            if (hitObject is Slider slider)
+            {
+                foreach (var controlPoint in slider.Path.ControlPoints)
+                {
+                    yield return slider.Position + controlPoint.Position;
+                    yield return slider.StackedPosition + controlPoint.Position;
+                }
+
+                Vector2 tail = slider.Path.PositionAt(1);
+                yield return slider.Position + tail;
+                yield return slider.StackedPosition + tail;
+            }
+        }
+
+        #endregion
 
         private void updateDistanceSnapGrid()
         {

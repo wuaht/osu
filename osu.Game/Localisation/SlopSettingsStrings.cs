@@ -212,6 +212,28 @@ namespace osu.Game.Localisation
         /// </summary>
         public static LocalisableString AnchorShapeSquare => new TranslatableString(getKey(@"anchor_shape_square"), @"Square");
 
+        /// <summary>
+        /// "Snap to visual spacing"
+        /// </summary>
+        public static LocalisableString VisualSpacingSnap => new TranslatableString(getKey(@"visual_spacing_snap"), @"Snap to visual spacing");
+
+        /// <summary>
+        /// "Objects snap to positions which form an equilateral triangle with two other visible objects."
+        /// </summary>
+        public static LocalisableString VisualSpacingSnapDescription => new TranslatableString(getKey(@"visual_spacing_snap_description"),
+            @"Objects snap to positions which form an equilateral triangle with two other visible objects.");
+
+        /// <summary>
+        /// "Snap to blankets"
+        /// </summary>
+        public static LocalisableString BlanketSnap => new TranslatableString(getKey(@"blanket_snap"), @"Snap to blankets");
+
+        /// <summary>
+        /// "Objects snap to the centre of curved slider sections (perfect curve), so that the slider perfectly wraps around them."
+        /// </summary>
+        public static LocalisableString BlanketSnapDescription => new TranslatableString(getKey(@"blanket_snap_description"),
+            @"Objects snap to the centre of curved slider sections (perfect curve), so that the slider perfectly wraps around them.");
+
         private static string getKey(string key) => $"{prefix}:{key}";
     }
 }
