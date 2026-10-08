@@ -354,6 +354,10 @@ namespace osu.Game
             dependencies.Cache(beatmapCache = new BeatmapLookupCache());
             base.Content.Add(beatmapCache);
 
+            var beatmapOwnerStore = new BeatmapOwnerStore(Storage);
+            dependencies.Cache(beatmapOwnerStore);
+            base.Content.Add(beatmapOwnerStore);
+
             dependencies.CacheAs<IRulesetConfigCache>(rulesetConfigCache = new RulesetConfigCache(realm, RulesetStore));
 
             var powerStatus = CreateBatteryInfo();
