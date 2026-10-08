@@ -67,6 +67,7 @@ namespace osu.Game.Screens.Select
         private OsuSpriteText keyCountText = null!;
         private OsuSpriteText difficultyText = null!;
         private OsuSpriteText authorText = null!;
+        private BeatmapOwnerLookup ownerLookup = null!;
         private FillFlowContainer mainFill = null!;
 
         private Box backgroundBorder = null!;
@@ -97,6 +98,7 @@ namespace osu.Game.Screens.Select
 
             Content.Children = new Drawable[]
             {
+                ownerLookup = new BeatmapOwnerLookup(),
                 beatmapBackground = new PanelSetBackground(),
                 new FillFlowContainer
                 {
@@ -212,6 +214,8 @@ namespace osu.Game.Screens.Select
             ruleset.BindValueChanged(_ => updateKeyCount());
             mods.BindValueChanged(_ => updateKeyCount(), true);
 
+            ownerLookup.Owners.BindValueChanged(_ => updateAuthorText());
+
             Selected.BindValueChanged(s =>
             {
                 Expanded.Value = s.NewValue;
@@ -236,7 +240,8 @@ namespace osu.Game.Screens.Select
 
             localRank.Beatmap = beatmap;
             difficultyText.Text = beatmap.DifficultyName;
-            authorText.Text = BeatmapsetsStrings.ShowDetailsMappedBy(beatmap.Metadata.Author.Username);
+            ownerLookup.BeatmapOnlineID = beatmap.OnlineID;
+            updateAuthorText();
 
             computeStarRating();
             spreadDisplay.Beatmap.Value = beatmap;
@@ -256,6 +261,15 @@ namespace osu.Game.Screens.Select
             spreadDisplay.Beatmap.Value = null;
 
             starDifficultyCancellationSource?.Cancel();
+        }
+
+        private void updateAuthorText()
+        {
+            if (Item == null)
+                return;
+
+            var owners = ownerLookup.Owners.Value;
+            authorText.Text = BeatmapsetsStrings.ShowDetailsMappedBy(owners != null ? BeatmapOwnerLookup.FormatUsernames(owners) : beatmap.Metadata.Author.Username);
         }
 
         private void computeStarRating()

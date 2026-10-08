@@ -42,6 +42,7 @@ namespace osu.Game.Screens.Select
         private PanelLocalRankDisplay localRank = null!;
         private OsuSpriteText difficultyText = null!;
         private OsuSpriteText authorText = null!;
+        private BeatmapOwnerLookup ownerLookup = null!;
         private FillFlowContainer mainFill = null!;
 
         private IBindable<StarDifficulty>? starDifficultyBindable;
@@ -98,6 +99,7 @@ namespace osu.Game.Screens.Select
                     RelativeSizeAxes = Axes.Both,
                     Colour = ColourInfo.GradientHorizontal(colourProvider.Background3, colourProvider.Background4),
                 },
+                ownerLookup = new BeatmapOwnerLookup(),
                 backgroundDifficultyTint = new Box
                 {
                     RelativeSizeAxes = Axes.Both,
@@ -198,6 +200,8 @@ namespace osu.Game.Screens.Select
 
             ruleset.BindValueChanged(_ => updateKeyCount());
             mods.BindValueChanged(_ => updateKeyCount(), true);
+
+            ownerLookup.Owners.BindValueChanged(_ => updateAuthorText());
         }
 
         protected override void PrepareForUse()
@@ -208,7 +212,8 @@ namespace osu.Game.Screens.Select
 
             localRank.Beatmap = beatmap;
             difficultyText.Text = beatmap.DifficultyName;
-            authorText.Text = BeatmapsetsStrings.ShowDetailsMappedBy(beatmap.Metadata.Author.Username);
+            ownerLookup.BeatmapOnlineID = beatmap.OnlineID;
+            updateAuthorText();
 
             computeStarRating();
             updateKeyCount();
@@ -232,6 +237,15 @@ namespace osu.Game.Screens.Select
             starDifficultyBindable = null;
 
             starDifficultyCancellationSource?.Cancel();
+        }
+
+        private void updateAuthorText()
+        {
+            if (Item == null)
+                return;
+
+            var owners = ownerLookup.Owners.Value;
+            authorText.Text = BeatmapsetsStrings.ShowDetailsMappedBy(owners != null ? BeatmapOwnerLookup.FormatUsernames(owners) : beatmap.Metadata.Author.Username);
         }
 
         private void computeStarRating()

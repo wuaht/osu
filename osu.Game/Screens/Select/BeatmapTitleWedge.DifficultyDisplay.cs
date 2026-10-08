@@ -20,10 +20,12 @@ using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.Sprites;
 using osu.Game.Localisation;
 using osu.Game.Online;
+using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Online.Chat;
 using osu.Game.Overlays;
 using osu.Game.Rulesets;
 using osu.Game.Rulesets.Mods;
+using osu.Game.Users;
 using osuTK.Graphics;
 
 namespace osu.Game.Screens.Select
@@ -52,8 +54,8 @@ namespace osu.Game.Screens.Select
             private FillFlowContainer nameLine = null!;
             private OsuSpriteText difficultyText = null!;
             private OsuSpriteText mappedByText = null!;
-            private OsuHoverContainer mapperLink = null!;
-            private OsuSpriteText mapperText = null!;
+            private FillFlowContainer mapperFlow = null!;
+            private BeatmapOwnerLookup ownerLookup = null!;
 
             private GridContainer ratingAndNameContainer = null!;
             private DifficultyStatisticsDisplay countStatisticsDisplay = null!;
@@ -76,6 +78,7 @@ namespace osu.Game.Screens.Select
 
                 InternalChildren = new Drawable[]
                 {
+                    ownerLookup = new BeatmapOwnerLookup(),
                     new WedgeBackground(),
                     new FillFlowContainer
                     {
@@ -132,16 +135,12 @@ namespace osu.Game.Screens.Select
                                                     Text = " mapped by ",
                                                     Font = OsuFont.Style.Body,
                                                 },
-                                                mapperLink = new MapperLinkContainer
+                                                mapperFlow = new FillFlowContainer
                                                 {
                                                     AutoSizeAxes = Axes.Both,
                                                     Anchor = Anchor.BottomLeft,
                                                     Origin = Anchor.BottomLeft,
-                                                    Child = mapperText = new TruncatingSpriteText
-                                                    {
-                                                        Shadow = true,
-                                                        Font = OsuFont.Style.Body.With(weight: FontWeight.SemiBold),
-                                                    },
+                                                    Direction = FillDirection.Horizontal,
                                                 },
                                             },
                                         },
@@ -213,6 +212,7 @@ namespace osu.Game.Screens.Select
                 // and it's what you'd want to do anyway for performance reasons.
                 beatmap.BindValueChanged(_ => Scheduler.AddOnce(updateDisplay));
                 ruleset.BindValueChanged(_ => Scheduler.AddOnce(updateDisplay));
+                ownerLookup.Owners.BindValueChanged(_ => updateMapper());
 
                 mods.BindValueChanged(m =>
                 {
@@ -247,15 +247,65 @@ namespace osu.Game.Screens.Select
                 {
                     ratingAndNameContainer.FadeIn(300, Easing.OutQuint);
                     difficultyText.Text = beatmap.Value.BeatmapInfo.DifficultyName;
-                    mapperLink.Action = () => linkHandler?.HandleLink(new LinkDetails(LinkAction.OpenUserProfile, beatmap.Value.Metadata.Author));
-                    mapperText.Text = beatmap.Value.Metadata.Author.Username;
                 }
+
+                ownerLookup.BeatmapOnlineID = beatmap.IsDefault ? -1 : beatmap.Value.BeatmapInfo.OnlineID;
+                updateMapper();
 
                 starRatingDisplay.Current = (Bindable<StarDifficulty>)difficultyCache.GetBindableDifficulty(beatmap.Value.BeatmapInfo, cancellationSource.Token, SongSelect.DIFFICULTY_CALCULATION_DEBOUNCE);
 
                 updateCountStatistics(cancellationSource.Token);
                 updateDifficultyStatistics();
             }
+
+            private void updateMapper()
+            {
+                mapperFlow.Clear();
+
+                if (beatmap.IsDefault)
+                    return;
+
+                var owners = ownerLookup.Owners.Value;
+
+                if (owners == null)
+                {
+                    mapperFlow.Add(createMapperLink(beatmap.Value.Metadata.Author, beatmap.Value.Metadata.Author.Username));
+                    return;
+                }
+
+                for (int i = 0; i < owners.Length; i++)
+                {
+                    var owner = owners[i];
+
+                    mapperFlow.Add(createMapperLink(new APIUser { Id = owner.Id, Username = owner.Username }, owner.Username));
+
+                    if (i < owners.Length - 1)
+                    {
+                        mapperFlow.Add(new OsuSpriteText
+                        {
+                            Anchor = Anchor.BottomLeft,
+                            Origin = Anchor.BottomLeft,
+                            Text = BeatmapOwnerLookup.GetConnector(i, owners.Length),
+                            Font = OsuFont.Style.Body,
+                            Colour = mappedByText.Colour,
+                        });
+                    }
+                }
+            }
+
+            private Drawable createMapperLink(IUser user, string username) => new MapperLinkContainer
+            {
+                AutoSizeAxes = Axes.Both,
+                Anchor = Anchor.BottomLeft,
+                Origin = Anchor.BottomLeft,
+                Action = () => linkHandler?.HandleLink(new LinkDetails(LinkAction.OpenUserProfile, user)),
+                Child = new OsuSpriteText
+                {
+                    Shadow = true,
+                    Text = username,
+                    Font = OsuFont.Style.Body.With(weight: FontWeight.SemiBold),
+                },
+            };
 
             private void updateCountStatistics(CancellationToken cancellationToken)
             {
@@ -303,13 +353,16 @@ namespace osu.Game.Screens.Select
             {
                 base.Update();
 
-                difficultyText.MaxWidth = Math.Max(nameLine.DrawWidth - mappedByText.DrawWidth - mapperText.DrawWidth - 20, 0);
+                difficultyText.MaxWidth = Math.Max(nameLine.DrawWidth - mappedByText.DrawWidth - mapperFlow.DrawWidth - 20, 0);
 
                 // Use difficulty colour until it gets too dark to be visible against dark backgrounds.
                 Color4 col = starRatingDisplay.ForegroundTextColour;
 
                 difficultyText.Colour = col;
                 mappedByText.Colour = col;
+
+                foreach (var connector in mapperFlow.OfType<OsuSpriteText>())
+                    connector.Colour = col;
                 countStatisticsDisplay.AccentColour = col;
                 difficultyStatisticsDisplay.AccentColour = col;
             }
