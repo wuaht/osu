@@ -8,14 +8,14 @@ An ai slop mapping(?) client. Slop is just a *click* away!
 
 This is a **personal** osu! lazer fork primarily focused on the editor which implements some stable stuff + other features with the help of Claude Opus 5.5 (i'm not proud of it either ok i have huge skill issue I'm very sorry peppy).
 
-**Building slop! requires local osu-framework and osu-resources checkouts:** clone [wuaht/osu-framework](https://github.com/wuaht/osu-framework) and [wuaht/osu-resources](https://github.com/wuaht/osu-resources) (both on branch `slop`) next to this repository (`../osu-framework` and `../osu-resources`), as slop! references them directly instead of the NuGet packages (needed for features like frosted sliders and custom assets).
+Building this client requires local osu-framework and osu-resources checkouts:** clone [wuaht/osu-framework](https://github.com/wuaht/osu-framework) and [wuaht/osu-resources](https://github.com/wuaht/osu-resources) (both on branch `slop`) next to this repository (`../osu-framework` and `../osu-resources`), as it references them directly instead of the NuGet packages (needed for features like frosted sliders and custom assets).
 
 ```shell
 git clone -b slop https://github.com/wuaht/osu-framework ../osu-framework
 git clone -b slop https://github.com/wuaht/osu-resources ../osu-resources
 ```
 
-Releases are built and published with `./release-slop.ps1`. Install slop! with `slop-win-Setup.exe` from the [latest release](https://github.com/wuaht/osu/releases/latest); it updates itself from these releases and installs independently of osu!(lazer).
+Releases are built and published with `./release-build.ps1`. Install the client with `slop-win-Setup.exe` from the [latest release](https://github.com/wuaht/osu/releases/latest); it updates itself from these releases and installs independently of osu!(lazer). <- hopefully
 
 Below will be the normal readme.
 
