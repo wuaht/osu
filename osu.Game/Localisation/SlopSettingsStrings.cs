@@ -246,6 +246,17 @@ namespace osu.Game.Localisation
             @"Objects snap to positions which continue a straight line of equally spaced visible objects.");
 
         /// <summary>
+        /// "Show difficulty strains"
+        /// </summary>
+        public static LocalisableString ShowDifficultyStrains => new TranslatableString(getKey(@"show_difficulty_strains"), @"Show difficulty strains");
+
+        /// <summary>
+        /// "Displays a graph of the difficulty strain over time in the timeline at the bottom of the editor."
+        /// </summary>
+        public static LocalisableString ShowDifficultyStrainsDescription => new TranslatableString(getKey(@"show_difficulty_strains_description"),
+            @"Displays a graph of the difficulty strain over time in the timeline at the bottom of the editor.");
+
+        /// <summary>
         /// "Loop music"
         /// </summary>
         public static LocalisableString LoopMusic => new TranslatableString(getKey(@"loop_music"), @"Loop music");

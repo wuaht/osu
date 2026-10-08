@@ -148,6 +148,34 @@ namespace osu.Game.Rulesets.Difficulty
         }
 
         /// <summary>
+        /// Calculates the difficulty of the beatmap with no mods applied, additionally providing the skills used for the calculation and the objects they processed.
+        /// The difficulty of each processed object is available via <see cref="Skill.GetObjectDifficulties"/>, in the order of <paramref name="difficultyHitObjects"/>.
+        /// </summary>
+        /// <param name="skills">The skills used for the calculation.</param>
+        /// <param name="difficultyHitObjects">The objects processed by the skills.</param>
+        /// <param name="cancellationToken">The cancellation token.</param>
+        /// <returns>A structure describing the difficulty of the beatmap.</returns>
+        public DifficultyAttributes CalculateWithSkills(out Skill[] skills, out DifficultyHitObject[] difficultyHitObjects, CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            preProcess(Array.Empty<Mod>(), cancellationToken);
+
+            skills = CreateSkills(Beatmap, playableMods);
+            difficultyHitObjects = Beatmap.HitObjects.Any() ? getDifficultyHitObjects().ToArray() : Array.Empty<DifficultyHitObject>();
+
+            foreach (var hitObject in difficultyHitObjects)
+            {
+                foreach (var skill in skills)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    skill.Process(hitObject);
+                }
+            }
+
+            return CreateDifficultyAttributes(Beatmap, playableMods, skills);
+        }
+
+        /// <summary>
         /// Calculates the difficulty of the beatmap using all mod combinations applicable to the beatmap.
         /// </summary>
         /// <remarks>

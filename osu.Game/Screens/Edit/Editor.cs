@@ -241,6 +241,7 @@ namespace osu.Game.Screens.Edit
         private Bindable<bool> editorTimelineShowTicks;
         private Bindable<bool> editorContractSidebars;
         private Bindable<bool> editorLoopMusic;
+        private Bindable<bool> editorShowDifficultyStrains;
 
         /// <summary>
         /// This controls the opacity of components like the timelines, sidebars, etc.
@@ -363,6 +364,7 @@ namespace osu.Game.Screens.Edit
             editorTimelineShowBreaks = config.GetBindable<bool>(OsuSetting.EditorTimelineShowBreaks);
             editorTimelineShowTicks = config.GetBindable<bool>(OsuSetting.EditorTimelineShowTicks);
             editorContractSidebars = config.GetBindable<bool>(OsuSetting.EditorContractSidebars);
+            editorShowDifficultyStrains = config.GetBindable<bool>(OsuSetting.SlopEditorShowDifficultyStrains);
 
             // These two settings don't work together. Make them mutually exclusive to let the user know.
             editorAutoSeekOnPlacement.BindValueChanged(enabled =>
@@ -443,6 +445,10 @@ namespace osu.Game.Screens.Edit
                                                     new ToggleMenuItem(EditorStrings.TimelineShowBreaks)
                                                     {
                                                         State = { BindTarget = editorTimelineShowBreaks }
+                                                    },
+                                                    new ToggleMenuItem(SlopSettingsStrings.ShowDifficultyStrains)
+                                                    {
+                                                        State = { BindTarget = editorShowDifficultyStrains }
                                                     },
                                                 ]
                                             },

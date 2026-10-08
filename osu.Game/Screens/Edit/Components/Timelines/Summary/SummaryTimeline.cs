@@ -75,6 +75,14 @@ namespace osu.Game.Screens.Edit.Components.Timelines.Summary
                     RelativeSizeAxes = Axes.Both,
                     Height = 0.5f
                 },
+                // in the lower half like osu!stable, below the bookmarks.
+                new StrainPart
+                {
+                    Anchor = Anchor.BottomLeft,
+                    Origin = Anchor.BottomLeft,
+                    RelativeSizeAxes = Axes.Both,
+                    Height = 0.5f
+                },
                 new BookmarkPart
                 {
                     Anchor = Anchor.Centre,
