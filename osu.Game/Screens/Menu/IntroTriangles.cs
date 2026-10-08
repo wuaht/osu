@@ -245,7 +245,9 @@ namespace osu.Game.Screens.Menu
 
                     using (BeginDelayedSequence(logo_2))
                     {
-                        lazerLogo.FadeOut().OnComplete(_ =>
+                        // Scheduled, as this completes immediately if loading took longer than the intro (e.g. while shaders are compiled),
+                        // and modifying the hierarchy within the sequence above breaks its transform timing.
+                        lazerLogo.FadeOut().OnComplete(_ => Schedule(() =>
                         {
                             logoContainerSecondary.Remove(lazerLogo, true);
 
@@ -256,7 +258,7 @@ namespace osu.Game.Screens.Menu
                             game.Add(new GameWideFlash());
 
                             LoadMenu();
-                        });
+                        }));
                     }
                 }
             }
