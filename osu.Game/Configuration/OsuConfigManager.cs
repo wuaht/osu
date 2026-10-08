@@ -259,7 +259,7 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopEditorShowSelectionBoxButtons, false);
             SetDefault(OsuSetting.SlopEditorShowSliderEndDragMarker, false);
             SetDefault(OsuSetting.SlopEditorImmediateDrag, false);
-            SetDefault(OsuSetting.SlopEditorAnchorShape, EditorAnchorShape.Circle);
+            SetDefault(OsuSetting.SlopEditorAnchorShape, EditorAnchorShape.Square);
         }
 
         protected override bool CheckLookupContainsPrivateInformation(OsuSetting lookup)
