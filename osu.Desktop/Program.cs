@@ -11,6 +11,7 @@ using osu.Framework.Development;
 using osu.Framework.Logging;
 using osu.Framework.Platform;
 using osu.Game;
+using osu.Game.Configuration;
 using osu.Game.Database;
 using osu.Game.IPC;
 using osu.Game.Tournament;
@@ -107,6 +108,8 @@ namespace osu.Desktop
             {
                 IPCPipeName = !tournamentClient ? OsuGame.IPC_PIPE_NAME : null,
                 FriendlyGameName = OsuGameBase.GAME_NAME,
+                // keeps the framework settings separate from an official osu!(lazer) installation using the same data folder.
+                ConfigFilenamePrefix = OsuConfigManager.CLIENT_SETTINGS_PREFIX,
             };
 
             using (DesktopGameHost host = Host.GetSuitableDesktopHost(gameName, hostOptions))

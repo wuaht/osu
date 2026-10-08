@@ -33,9 +33,8 @@ namespace osu.Game.Configuration
     public partial class OsuConfigManager : IniConfigManager<OsuSetting>, IGameplaySettings
     {
         public OsuConfigManager(Storage storage)
-            : base(storage)
+            : base(storage, null, CLIENT_SETTINGS_PREFIX)
         {
-            clientSettingsStorage = storage;
         }
 
         protected override void InitialiseDefaults()
