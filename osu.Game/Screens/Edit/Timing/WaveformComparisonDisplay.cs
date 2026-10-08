@@ -55,6 +55,11 @@ namespace osu.Game.Screens.Edit.Timing
 
         private LockedOverlay lockedOverlay = null!;
 
+        /// <summary>
+        /// Marks the time of the beats. One screen pixel wide, so that it's easy to see whether the waveform is exactly on the beat.
+        /// </summary>
+        private Box centreLine = null!;
+
         public WaveformComparisonDisplay()
         {
             RelativeSizeAxes = Axes.Both;
@@ -78,13 +83,12 @@ namespace osu.Game.Screens.Edit.Timing
                 });
             }
 
-            AddInternal(new Circle
+            AddInternal(centreLine = new Box
             {
                 Anchor = Anchor.Centre,
                 Origin = Anchor.Centre,
                 Colour = Color4.White,
                 RelativeSizeAxes = Axes.Y,
-                Width = 3,
             });
 
             AddInternal(lockedOverlay = new LockedOverlay());
@@ -168,6 +172,10 @@ namespace osu.Game.Screens.Edit.Timing
         protected override void Update()
         {
             base.Update();
+
+            // A box without edge smoothing which is exactly one pixel wide always covers exactly one pixel column.
+            if (ScreenSpaceDrawQuad.Width > 0)
+                centreLine.Width = DrawWidth / ScreenSpaceDrawQuad.Width;
 
             if (!IsHovered && !displayLocked.Value)
             {
