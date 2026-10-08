@@ -92,6 +92,7 @@ namespace osu.Game.Rulesets.Osu.Edit
 
         private Bindable<bool> visualSpacingSnap;
         private Bindable<bool> blanketSnap;
+        private Bindable<bool> lineSnap;
 
         private PatternSnapGuideOverlay patternSnapGuides;
 
@@ -100,6 +101,7 @@ namespace osu.Game.Rulesets.Osu.Edit
         {
             visualSpacingSnap = config.GetBindable<bool>(OsuSetting.SlopEditorVisualSpacingSnap);
             blanketSnap = config.GetBindable<bool>(OsuSetting.SlopEditorBlanketSnap);
+            lineSnap = config.GetBindable<bool>(OsuSetting.SlopEditorLineSnap);
 
             AddInternal(DistanceSnapProvider);
             DistanceSnapProvider.AttachToToolbox(RightToolbox);
@@ -428,7 +430,7 @@ namespace osu.Game.Rulesets.Osu.Edit
         {
             var points = new List<PatternSnapPoint>();
 
-            if (!visualSpacingSnap.Value && !blanketSnap.Value)
+            if (!visualSpacingSnap.Value && !blanketSnap.Value && !lineSnap.Value)
                 return new List<(PatternSnapPoint, Vector2)>();
 
             var placementObject = BlueprintContainer.CurrentHitObjectPlacement?.HitObject;
@@ -444,6 +446,9 @@ namespace osu.Game.Rulesets.Osu.Edit
 
             if (blanketSnap.Value)
                 PatternSnapping.AddBlanketSnapPoints(objects, points);
+
+            if (lineSnap.Value)
+                PatternSnapping.AddLineSnapPoints(objects, points);
 
             return points.Select(p => (p, playfield.GamefieldToScreenSpace(p.Position))).ToList();
         }

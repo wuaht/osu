@@ -133,6 +133,81 @@ namespace osu.Game.Rulesets.Osu.Tests.Slop
                 new PathControlPoint(new Vector2(200, 0)))), Is.Empty);
         }
 
+        [Test]
+        public void TestLineContinuesInBothDirections()
+        {
+            var points = lines(new HitCircle { Position = new Vector2(200, 200) }, new HitCircle { Position = new Vector2(280, 240) });
+
+            // both continuations and the midpoint.
+            Assert.That(points, Has.Count.EqualTo(3));
+            assertContains(points.Select(p => p.Position), new Vector2(360, 280));
+            assertContains(points.Select(p => p.Position), new Vector2(120, 160));
+            assertContains(points.Select(p => p.Position), new Vector2(240, 220));
+        }
+
+        [Test]
+        public void TestLineGapIsFilled()
+        {
+            // the second object of a line is missing.
+            var points = lines(
+                new HitCircle { Position = new Vector2(100, 100) },
+                new HitCircle { Position = new Vector2(260, 180) },
+                new HitCircle { Position = new Vector2(340, 220) });
+
+            var gap = points.Single(p => Precision.AlmostEquals(p.Position, new Vector2(180, 140), 0.01f));
+
+            // the guide lines contain the whole line.
+            Assert.That(gap.Line, Is.EqualTo(new[] { new Vector2(100, 100), new Vector2(180, 140), new Vector2(260, 180), new Vector2(340, 220) })
+                                    .Or.EqualTo(new[] { new Vector2(340, 220), new Vector2(260, 180), new Vector2(180, 140), new Vector2(100, 100) }));
+        }
+
+
+        [Test]
+        public void TestLineOfMoreThanTwoObjects()
+        {
+            var points = lines(
+                new HitCircle { Position = new Vector2(100, 100) },
+                new HitCircle { Position = new Vector2(180, 140) },
+                new HitCircle { Position = new Vector2(260, 180) });
+
+            // positions of existing objects and multiples of the spacing are not snap points, but the two midpoints are.
+            Assert.That(points, Has.Count.EqualTo(4));
+            assertContains(points.Select(p => p.Position), new Vector2(140, 120));
+            assertContains(points.Select(p => p.Position), new Vector2(220, 160));
+
+            var forward = points.Single(p => Precision.AlmostEquals(p.Position, new Vector2(340, 220), 0.01f));
+            var backward = points.Single(p => Precision.AlmostEquals(p.Position, new Vector2(20, 60), 0.01f));
+
+            // all objects of the line are part of the guide lines.
+            Assert.That(forward.Line, Is.EqualTo(new[] { new Vector2(100, 100), new Vector2(180, 140), new Vector2(260, 180), new Vector2(340, 220) }));
+            Assert.That(backward.Line, Is.EqualTo(new[] { new Vector2(260, 180), new Vector2(180, 140), new Vector2(100, 100), new Vector2(20, 60) }));
+        }
+
+        [Test]
+        public void TestLineRequiresSpacing()
+        {
+            // stacked objects.
+            Assert.That(lines(new HitCircle { Position = new Vector2(200, 200) }, new HitCircle { Position = new Vector2(210, 200) }), Is.Empty);
+
+            // objects too far apart.
+            Assert.That(lines(new HitCircle { Position = new Vector2(50, 200) }, new HitCircle { Position = new Vector2(450, 200) }), Is.Empty);
+        }
+
+        [Test]
+        public void TestLineIgnoresHeadAndTailOfSameSlider()
+        {
+            var slider = createSlider(new Vector2(100, 200), new PathControlPoint(Vector2.Zero, PathType.LINEAR), new PathControlPoint(new Vector2(150, 0)));
+
+            Assert.That(lines(slider), Is.Empty);
+        }
+
+        private static List<LineSnapPoint> lines(params OsuHitObject[] objects)
+        {
+            var output = new List<PatternSnapPoint>();
+            PatternSnapping.AddLineSnapPoints(objects, output);
+            return output.Cast<LineSnapPoint>().ToList();
+        }
+
         private static List<Vector2> visualSpacing(params OsuHitObject[] objects)
         {
             var output = new List<PatternSnapPoint>();
