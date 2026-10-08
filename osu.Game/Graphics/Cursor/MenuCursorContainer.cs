@@ -42,6 +42,11 @@ namespace osu.Game.Graphics.Cursor
 
         private Cursor activeCursor = null!;
 
+        /// <summary>
+        /// The cursor drawable, which runs all cursor animations.
+        /// </summary>
+        public Cursor AnimatedCursor => activeCursor;
+
         private DragRotationState dragRotationState;
         private Vector2 positionMouseDown;
         private Vector2 lastMovePosition;
@@ -255,6 +260,12 @@ namespace osu.Game.Graphics.Cursor
 
             public Sprite AdditiveLayer = null!;
 
+            /// <summary>
+            /// Whether the cursor is replaced by the system cursor (see <see cref="SystemCursorDisplay"/>).
+            /// The cursor is then invisible, but keeps running its animations, which are mirrored onto the system cursor.
+            /// </summary>
+            public readonly BindableBool ReplacedBySystemCursor = new BindableBool();
+
             public Cursor()
             {
                 AutoSizeAxes = Axes.Both;
@@ -287,6 +298,8 @@ namespace osu.Game.Graphics.Cursor
 
                 cursorScale = config.GetBindable<float>(OsuSetting.MenuCursorSize);
                 cursorScale.BindValueChanged(scale => cursorContainer.Scale = new Vector2(scale.NewValue * base_scale), true);
+
+                ReplacedBySystemCursor.BindValueChanged(replaced => cursorContainer.Alpha = replaced.NewValue ? 0 : 1, true);
             }
         }
 

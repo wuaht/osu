@@ -250,6 +250,7 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopFrostedSliders, true);
             SetDefault(OsuSetting.SlopFrostedSlidersFrostiness, 1f, 0f, 1f, 0.01f);
             SetDefault(OsuSetting.SlopFrostedSlidersBlur, 0.25f, 0f, 1f, 0.01f);
+            SetDefault(OsuSetting.SlopSystemCursor, false);
 
             SetDefault(OsuSetting.SlopEditorSkin, string.Empty);
             SetDefault(OsuSetting.SlopEditorSkinInTestMode, false);
@@ -516,6 +517,11 @@ namespace osu.Game.Configuration
         /// How strongly frosted slider bodies blur the content behind them, from 0 to 1.
         /// </summary>
         SlopFrostedSlidersBlur,
+
+        /// <summary>
+        /// Whether the menu cursor is replaced by the system cursor, which mirrors the animations of the menu cursor.
+        /// </summary>
+        SlopSystemCursor,
 
         /// <summary>
         /// The ID of the skin to use exclusively inside the beatmap editor.
