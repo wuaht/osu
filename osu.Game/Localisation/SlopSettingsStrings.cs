@@ -58,10 +58,10 @@ namespace osu.Game.Localisation
         public static LocalisableString MenuCursorStyle => new TranslatableString(getKey(@"menu_cursor_style"), @"Menu cursor");
 
         /// <summary>
-        /// "The cursor used in menus and the editor. "Skin" uses the cursor of the current legacy skin. "System" uses the system cursor, which follows the mouse without any delay, but still rotates while dragging and shrinks when clicking. The gameplay cursor is not affected."
+        /// "The cursor used in menus and the editor. "Skin" uses the gameplay cursor of the current skin. "System" uses the system cursor, which follows the mouse without any delay, but still rotates while dragging and shrinks when clicking. The gameplay cursor is not affected."
         /// </summary>
         public static LocalisableString MenuCursorStyleDescription => new TranslatableString(getKey(@"menu_cursor_style_description"),
-            @"The cursor used in menus and the editor. ""Skin"" uses the cursor of the current legacy skin. ""System"" uses the system cursor, which follows the mouse without any delay, but still rotates while dragging and shrinks when clicking. The gameplay cursor is not affected.");
+            @"The cursor used in menus and the editor. ""Skin"" uses the gameplay cursor of the current skin. ""System"" uses the system cursor, which follows the mouse without any delay, but still rotates while dragging and shrinks when clicking. The gameplay cursor is not affected.");
 
         /// <summary>
         /// "osu!"

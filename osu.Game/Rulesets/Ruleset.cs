@@ -17,6 +17,7 @@ using osu.Framework.Utils;
 using osu.Game.Beatmaps;
 using osu.Game.Beatmaps.Legacy;
 using osu.Game.Configuration;
+using osu.Game.Graphics.Cursor;
 using osu.Game.Extensions;
 using osu.Game.Localisation;
 using osu.Game.Overlays.Settings;
@@ -229,6 +230,12 @@ namespace osu.Game.Rulesets
         /// <param name="beatmap">The current beatmap.</param>
         /// <returns>A skin with a transformer applied, or null if no transformation is provided by this ruleset.</returns>
         public virtual ISkin? CreateSkinTransformer(ISkin skin, IBeatmap beatmap) => null;
+
+        /// <summary>
+        /// Creates the gameplay cursor of this ruleset for display in menus, which is looked up through the skin transformer of this ruleset.
+        /// </summary>
+        /// <returns>The cursor, or null if this ruleset does not have a gameplay cursor.</returns>
+        public virtual IMenuCursor? CreateMenuCursor() => null;
 
         protected Ruleset()
         {

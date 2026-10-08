@@ -15,6 +15,7 @@ using osu.Game.Beatmaps;
 using osu.Game.Beatmaps.Legacy;
 using osu.Game.Configuration;
 using osu.Game.Graphics;
+using osu.Game.Graphics.Cursor;
 using osu.Game.Localisation;
 using osu.Game.Localisation.Osu;
 using osu.Game.Overlays.Settings;
@@ -37,6 +38,7 @@ using osu.Game.Rulesets.Osu.Skinning.Default;
 using osu.Game.Rulesets.Osu.Skinning.Legacy;
 using osu.Game.Rulesets.Osu.Statistics;
 using osu.Game.Rulesets.Osu.UI;
+using osu.Game.Rulesets.Osu.UI.Cursor;
 using osu.Game.Rulesets.Replays.Types;
 using osu.Game.Rulesets.Scoring;
 using osu.Game.Rulesets.Scoring.Legacy;
@@ -278,6 +280,8 @@ namespace osu.Game.Rulesets.Osu
         public override string PlayingVerb => "Clicking circles";
 
         public override RulesetSettingsSubsection CreateSettings() => new OsuSettingsSubsection(this);
+
+        public override IMenuCursor CreateMenuCursor() => new OsuMenuCursor();
 
         public override ISkin? CreateSkinTransformer(ISkin skin, IBeatmap beatmap)
         {
