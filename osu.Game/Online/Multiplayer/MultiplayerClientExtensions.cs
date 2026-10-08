@@ -3,6 +3,7 @@
 
 using System;
 using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using osu.Framework.Bindables;
@@ -15,6 +16,11 @@ namespace osu.Game.Online.Multiplayer
 {
     public static class MultiplayerClientExtensions
     {
+        /// <summary>
+        /// Whether the user has been notified that the server does not support realtime functionality for this build.
+        /// </summary>
+        private static int unsupportedVersionNotified;
+
         public static void FireAndForget(this Task task, Action? onSuccess = null, Action<Exception>? onError = null) =>
             task.ContinueWith(t =>
             {
@@ -32,6 +38,14 @@ namespace osu.Game.Online.Multiplayer
 
                     if (exception.GetHubExceptionMessage() is string message)
                     {
+                        // The server rejects every realtime call of unofficial builds (such as slop!) with the same message.
+                        // As realtime calls happen frequently (e.g. on every activity change), only notify the user once.
+                        if (isUnsupportedVersionMessage(message) && Interlocked.Exchange(ref unsupportedVersionNotified, 1) == 1)
+                        {
+                            Logger.Log(message);
+                            return;
+                        }
+
                         // Hub exceptions generally contain something we can show the user directly.
                         Logger.Log(message, level: LogLevel.Important);
                         return;
@@ -81,6 +95,9 @@ namespace osu.Game.Online.Multiplayer
                 connected.UnbindAll();
             }).FireAndForget();
         }
+
+        private static bool isUnsupportedVersionMessage(string message) =>
+            message.Contains(@"not supported on this version of the game", StringComparison.OrdinalIgnoreCase);
 
         public static string? GetHubExceptionMessage(this Exception exception)
         {
