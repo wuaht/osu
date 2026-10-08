@@ -240,6 +240,7 @@ namespace osu.Game.Screens.Edit
         private Bindable<bool> editorTimelineShowBreaks;
         private Bindable<bool> editorTimelineShowTicks;
         private Bindable<bool> editorContractSidebars;
+        private Bindable<bool> editorLoopMusic;
 
         /// <summary>
         /// This controls the opacity of components like the timelines, sidebars, etc.
@@ -306,6 +307,7 @@ namespace osu.Game.Screens.Edit
             // Todo: should probably be done at a DrawableRuleset level to share logic with Player.
             clock = new EditorClock(playableBeatmap, beatDivisor);
             clock.ChangeSource(loadableBeatmap.Track);
+            clock.LoopPlayback.BindTo(editorLoopMusic = config.GetBindable<bool>(OsuSetting.SlopEditorLoopMusic));
 
             dependencies.CacheAs(clock);
             AddInternal(clock);
@@ -462,6 +464,11 @@ namespace osu.Game.Screens.Edit
                                             new ToggleMenuItem(EditorStrings.ContractSidebars)
                                             {
                                                 State = { BindTarget = editorContractSidebars }
+                                            },
+                                            new OsuMenuItemSpacer(),
+                                            new ToggleMenuItem(SlopSettingsStrings.LoopMusic)
+                                            {
+                                                State = { BindTarget = editorLoopMusic }
                                             },
                                         }
                                     },
