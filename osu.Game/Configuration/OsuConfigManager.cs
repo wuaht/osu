@@ -248,7 +248,7 @@ namespace osu.Game.Configuration
 
             // slop! settings
             SetDefault(OsuSetting.SlopFrostedSliders, true);
-            SetDefault(OsuSetting.SlopFrostedSlidersFrostiness, 0.5f, 0f, 1f, 0.01f);
+            SetDefault(OsuSetting.SlopFrostedSlidersFrostiness, 1f, 0f, 1f, 0.01f);
             SetDefault(OsuSetting.SlopFrostedSlidersBlur, 0.25f, 0f, 1f, 0.01f);
 
             SetDefault(OsuSetting.SlopEditorSkin, string.Empty);
