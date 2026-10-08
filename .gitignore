@@ -349,3 +349,6 @@ FodyWeavers.xsd
 osu.Game/osu.Game.csproj
 osu.sln
 osu.Desktop.slnf
+
+# slop! release builds (see release-slop.ps1)
+/.slop-release/
