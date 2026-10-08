@@ -248,7 +248,7 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.PMFriendsOnly, false);
 
             // slop! settings
-            SetDefault(OsuSetting.SlopFrostedSliders, true);
+            SetDefault(OsuSetting.SlopFrostedSliders, false);
             SetDefault(OsuSetting.SlopFrostedSlidersFrostiness, 1f, 0f, 1f, 0.01f);
             SetDefault(OsuSetting.SlopFrostedSlidersBlur, 0.25f, 0f, 1f, 0.01f);
             SetDefault(OsuSetting.SlopMenuCursorStyle, MenuCursorStyle.Default);
