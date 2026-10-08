@@ -1120,7 +1120,12 @@ namespace osu.Game
                             Children = new Drawable[]
                             {
                                 backReceptor = new ScreenFooter.BackReceptor(),
-                                ScreenStack = new OsuScreenStack { RelativeSizeAxes = Axes.Both },
+                                // Allows drawables such as frosted slider bodies to blur the screen contents behind them.
+                                new OnDemandBackbufferProvider
+                                {
+                                    RelativeSizeAxes = Axes.Both,
+                                    Child = ScreenStack = new OsuScreenStack { RelativeSizeAxes = Axes.Both },
+                                },
                                 logoContainer = new Container { RelativeSizeAxes = Axes.Both },
                                 // TODO: what is this? why is this?
                                 // TODO: this is being screen scaled even though it's probably AN OVERLAY.

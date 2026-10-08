@@ -247,6 +247,8 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.PMFriendsOnly, false);
 
             // slop! settings
+            SetDefault(OsuSetting.SlopFrostedSliders, true);
+
             SetDefault(OsuSetting.SlopEditorSkin, string.Empty);
             SetDefault(OsuSetting.SlopEditorSkinInTestMode, false);
             SetDefault(OsuSetting.SlopEditorBackupOnSave, true);
@@ -497,6 +499,11 @@ namespace osu.Game.Configuration
         /// Blocks private messages, multiplayer room invites, and duel requests from people not on the user's friends list.
         /// </summary>
         PMFriendsOnly,
+
+        /// <summary>
+        /// Whether slider bodies of legacy skins blur the content behind them (frosted glass).
+        /// </summary>
+        SlopFrostedSliders,
 
         /// <summary>
         /// The ID of the skin to use exclusively inside the beatmap editor.

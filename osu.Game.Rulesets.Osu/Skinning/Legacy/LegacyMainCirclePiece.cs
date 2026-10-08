@@ -8,6 +8,7 @@ using osu.Framework.Extensions.ObjectExtensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Sprites;
+using osu.Game.Configuration;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Sprites;
 using osu.Game.Rulesets.Objects.Drawables;
@@ -49,6 +50,9 @@ namespace osu.Game.Rulesets.Osu.Skinning.Legacy
 
         [Resolved]
         private OsuRulesetConfigManager? osuConfig { get; set; }
+
+        [Resolved(canBeNull: true)]
+        private OsuConfigManager? gameConfig { get; set; }
 
         public LegacyMainCirclePiece(string? priorityLookupPrefix = null, bool hasNumber = true)
         {
@@ -92,6 +96,9 @@ namespace osu.Game.Rulesets.Osu.Skinning.Legacy
                 {
                     Anchor = Anchor.Centre,
                     Origin = Anchor.Centre,
+                    // With frosted sliders, circles are made translucent to match the slider bodies.
+                    // Circles which are part of a slider are more translucent, as the frosted body is visible behind them.
+                    Alpha = gameConfig?.Get<bool>(OsuSetting.SlopFrostedSliders) == true ? (priorityLookupPrefix == null ? 0.75f : 0.5f) : 1,
                 },
                 OverlayLayer = new Container
                 {
