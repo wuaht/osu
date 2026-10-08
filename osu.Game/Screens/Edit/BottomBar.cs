@@ -45,8 +45,9 @@ namespace osu.Game.Screens.Edit
                     RelativeSizeAxes = Axes.Both,
                     ColumnDimensions = new[]
                     {
-                        // the outer columns are sized to fit their contents (the timestamp and the playback speed label), so that the summary timeline gets the remaining space.
-                        new Dimension(GridSizeMode.Absolute, 120),
+                        // the outer columns are sized to fit their contents (the timestamp with progress and BPM, and the playback speed label), so that the summary timeline gets the remaining space.
+                        // the first column fits the timestamp along with BPMs of up to four digits.
+                        new Dimension(GridSizeMode.Absolute, 168),
                         new Dimension(),
                         new Dimension(GridSizeMode.Absolute, 205),
                         new Dimension(GridSizeMode.Absolute, HitObjectComposer.TOOLBOX_CONTRACTED_SIZE_RIGHT),
