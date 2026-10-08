@@ -2,17 +2,32 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using osu.Framework.Allocation;
+using osu.Framework.Bindables;
 using osu.Framework.Extensions.Color4Extensions;
+using osu.Game.Configuration;
 using osu.Game.Rulesets.Osu.Objects;
 using osu.Game.Rulesets.Osu.Skinning.Default;
 using osu.Game.Skinning;
 using osu.Game.Utils;
+using osuTK;
 using osuTK.Graphics;
 
 namespace osu.Game.Rulesets.Osu.Skinning.Legacy
 {
     public partial class LegacySliderBody : PlaySliderBody
     {
+        private readonly Bindable<bool> frostedSliders = new Bindable<bool>();
+
+        [BackgroundDependencyLoader(permitNulls: true)]
+        private void load(ISkinSource skin, OsuConfigManager? config)
+        {
+            config?.BindWith(OsuSetting.SlopFrostedSliders, frostedSliders);
+
+            // The body accent colour depends on whether sliders are frosted.
+            frostedSliders.BindValueChanged(_ => AccentColour = GetBodyAccentColour(skin, AccentColourBindable.Value), true);
+        }
+
         protected override DrawableSliderPath CreateSliderPath() => new LegacyDrawableSliderPath();
 
         protected override Color4 GetBorderColour(ISkinSource skin)
@@ -20,10 +35,28 @@ namespace osu.Game.Rulesets.Osu.Skinning.Legacy
 
         protected override Color4 GetBodyAccentColour(ISkinSource skin, Color4 hitObjectAccentColour)
             // legacy skins use a constant value for slider track alpha, regardless of the source colour.
-            => (skin.GetConfig<OsuSkinColour, Color4>(OsuSkinColour.SliderTrackOverride)?.Value ?? hitObjectAccentColour).Opacity(0.7f);
+            // frosted slider bodies are slightly more transparent, as the blurred backdrop already makes them stand out.
+            => (skin.GetConfig<OsuSkinColour, Color4>(OsuSkinColour.SliderTrackOverride)?.Value ?? hitObjectAccentColour).Opacity(frostedSliders.Value ? 0.6f : 0.7f);
 
         private partial class LegacyDrawableSliderPath : DrawableSliderPath
         {
+            private readonly Bindable<bool> frostedSliders = new Bindable<bool>();
+
+            public LegacyDrawableSliderPath()
+            {
+                BackdropTintStrength = 0.5f;
+
+                // Prevents the shadow at the edge of the body from blurring the backdrop.
+                MaskCutoff = 0.25f;
+            }
+
+            [BackgroundDependencyLoader(permitNulls: true)]
+            private void load(OsuConfigManager? config)
+            {
+                config?.BindWith(OsuSetting.SlopFrostedSliders, frostedSliders);
+                frostedSliders.BindValueChanged(frosted => BlurSigma = frosted.NewValue ? new Vector2(16) : Vector2.Zero, true);
+            }
+
             protected override Color4 ColourAt(float position)
             {
                 Color4 shadow = new Color4(0, 0, 0, 0.25f);

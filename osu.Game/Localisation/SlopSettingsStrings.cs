@@ -15,6 +15,22 @@ namespace osu.Game.Localisation
         public static LocalisableString SlopSectionHeader => new TranslatableString(getKey(@"slop_section_header"), @"ai slop");
 
         /// <summary>
+        /// "Graphics"
+        /// </summary>
+        public static LocalisableString GraphicsHeader => new TranslatableString(getKey(@"graphics_header"), @"Graphics");
+
+        /// <summary>
+        /// "Frosted sliders"
+        /// </summary>
+        public static LocalisableString FrostedSliders => new TranslatableString(getKey(@"frosted_sliders"), @"Frosted sliders");
+
+        /// <summary>
+        /// "Slider bodies of legacy skins blur the content behind them, like frosted glass. Hit circles become slightly translucent to match."
+        /// </summary>
+        public static LocalisableString FrostedSlidersDescription => new TranslatableString(getKey(@"frosted_sliders_description"),
+            @"Slider bodies of legacy skins blur the content behind them, like frosted glass. Hit circles become slightly translucent to match.");
+
+        /// <summary>
         /// "Editor"
         /// </summary>
         public static LocalisableString EditorHeader => new TranslatableString(getKey(@"editor_header"), @"Editor");
