@@ -90,6 +90,13 @@ namespace osu.Game.Database
 
         public void Cleanup()
         {
+            // The files are shared with the official release's database, which may still use files that are unused in the separate copy.
+            if (realm.UsesSeparateDatabase)
+            {
+                Logger.Log(@"Skipping realm file store cleanup, as a separate database is in use");
+                return;
+            }
+
             Logger.Log(@"Beginning realm file store cleanup");
 
             int totalFiles = 0;

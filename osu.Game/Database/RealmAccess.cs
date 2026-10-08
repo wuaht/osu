@@ -52,6 +52,12 @@ namespace osu.Game.Database
         /// </summary>
         public readonly string Filename;
 
+        /// <summary>
+        /// Whether a separate copy of the database is used, as the latest official release doesn't support this schema version yet.
+        /// See <see cref="OfficialDatabaseCompatibility"/>.
+        /// </summary>
+        public readonly bool UsesSeparateDatabase;
+
         private readonly SynchronizationContext? updateThreadSyncContext;
 
         /// <summary>
@@ -217,6 +223,9 @@ namespace osu.Game.Database
 #if DEBUG
             if (!DebugUtils.IsNUnitRunning)
                 applyFilenameSchemaSuffix(ref Filename);
+#else
+            if (!DebugUtils.IsNUnitRunning)
+                Filename = OfficialDatabaseCompatibility.GetDatabaseFilename(storage, Filename, schema_version, OfficialDatabaseCompatibility.OfficialSchemaVersion, out UsesSeparateDatabase);
 #endif
 
             // `prepareFirstRealmAccess()` triggers the first `getRealmInstance` call, which will implicitly run realm migrations and bring the schema up-to-date.
@@ -350,11 +359,9 @@ namespace osu.Game.Database
                 // This is the best way we can detect a schema version downgrade.
                 if (e.Message.StartsWith(@"Provided schema version", StringComparison.Ordinal))
                 {
-                    Logger.Error(e, "Your local database is too new to work with this version of osu!. Please close osu! and install the latest release to recover your data.");
-
-                    // If a newer version database already exists, don't create another backup. We can presume that the first backup is the one we care about.
-                    if (!storage.Exists(newerVersionFilename))
-                        createBackup(newerVersionFilename);
+                    // Rather than backing up and starting with an empty database, leave the database untouched and ask the user to update.
+                    // This happens when an official release which shares the data folder is ahead of this client.
+                    throw new DatabaseTooNewException(Filename, e);
                 }
                 else
                 {

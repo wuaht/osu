@@ -49,4 +49,11 @@
     <ProjectReference Include="..\..\osu-resources\osu.Game.Resources\osu.Game.Resources.csproj" />
     <ProjectReference Include="..\..\osu-framework\osu.Framework\osu.Framework.csproj" />
   </ItemGroup>
+  <ItemGroup Label="Official database compatibility" Condition="'$(OfficialRealmSchemaVersion)' != ''">
+    <!-- The realm schema version of the latest official osu!(lazer) release, passed by release-build.ps1. See OfficialDatabaseCompatibility. -->
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>OfficialRealmSchemaVersion</_Parameter1>
+      <_Parameter2>$(OfficialRealmSchemaVersion)</_Parameter2>
+    </AssemblyAttribute>
+  </ItemGroup>
 </Project>
