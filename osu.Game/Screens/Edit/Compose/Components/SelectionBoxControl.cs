@@ -7,9 +7,9 @@ using System;
 using osu.Framework.Allocation;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
-using osu.Framework.Graphics.Shapes;
 using osu.Framework.Input.Events;
 using osu.Game.Graphics;
+using osu.Game.Screens.Edit.Components;
 
 namespace osu.Game.Screens.Edit.Compose.Components
 {
@@ -24,7 +24,10 @@ namespace osu.Game.Screens.Edit.Compose.Components
         public event Action OperationStarted;
         public event Action OperationEnded;
 
-        protected Circle Circle { get; private set; }
+        /// <summary>
+        /// The background shape of this control. Displayed as a circle unless changed via <see cref="EditorAnchorShapeContainer.Shape"/>.
+        /// </summary>
+        protected EditorAnchorShapeContainer Circle { get; private set; }
 
         /// <summary>
         /// Whether the user is currently holding the control with mouse.
@@ -41,7 +44,7 @@ namespace osu.Game.Screens.Edit.Compose.Components
 
             InternalChildren = new Drawable[]
             {
-                Circle = new Circle
+                Circle = new EditorAnchorShapeContainer
                 {
                     RelativeSizeAxes = Axes.Both,
                     Anchor = Anchor.Centre,

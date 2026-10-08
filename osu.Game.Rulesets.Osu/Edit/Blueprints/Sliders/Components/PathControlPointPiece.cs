@@ -19,6 +19,7 @@ using osu.Game.Input;
 using osu.Game.Rulesets.Objects;
 using osu.Game.Rulesets.Objects.Types;
 using osu.Game.Rulesets.Osu.Objects;
+using osu.Game.Screens.Edit.Components;
 using osuTK;
 using osuTK.Graphics;
 using osuTK.Input;
@@ -34,6 +35,11 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders.Components
     {
         public Action<PathControlPointPiece<T>, MouseButtonEvent> RequestSelection;
 
+        /// <summary>
+        /// Invoked when this control point is clicked. The click is not propagated further, so this allows the slider to react to it.
+        /// </summary>
+        public Action<ClickEvent> Clicked;
+
         public Action<PathControlPoint> DragStarted;
         public Action<DragEvent> DragInProgress;
         public Action DragEnded;
@@ -42,8 +48,10 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders.Components
         public readonly PathControlPoint ControlPoint;
 
         private readonly T hitObject;
-        private readonly FastCircle circle;
-        private readonly Drawable markerRing;
+        private readonly EditorAnchorShapeContainer circle;
+        private readonly EditorAnchorShapeContainer markerRing;
+
+        private readonly Bindable<EditorAnchorShape> anchorShape = new Bindable<EditorAnchorShape>();
 
         [Resolved]
         private OsuColour colours { get; set; }
@@ -70,20 +78,20 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders.Components
             InternalChildren = new[]
             {
                 // kept small (similar to osu!stable) so that the slider path remains visible. see ReceivePositionalInputAt for the input area.
-                circle = new FastCircle
+                circle = new EditorAnchorShapeContainer
                 {
                     Anchor = Anchor.Centre,
                     Origin = Anchor.Centre,
                     Size = new Vector2(8),
                 },
-                markerRing = new CircularProgress
+                // shown around selected control points.
+                markerRing = new EditorAnchorShapeContainer(outline: true)
                 {
                     Anchor = Anchor.Centre,
                     Origin = Anchor.Centre,
                     Size = new Vector2(12),
+                    BorderThickness = 1,
                     Alpha = 0,
-                    InnerRadius = 0.1f,
-                    Progress = 1
                 }
             };
         }
@@ -91,6 +99,13 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders.Components
         protected override void LoadComplete()
         {
             base.LoadComplete();
+
+            config.BindWith(OsuSetting.SlopEditorAnchorShape, anchorShape);
+            anchorShape.BindValueChanged(shape =>
+            {
+                circle.Shape = shape.NewValue;
+                markerRing.Shape = shape.NewValue;
+            }, true);
 
             hitObjectPosition = hitObject.PositionBindable.GetBoundCopy();
             hitObjectPosition.BindValueChanged(_ => updateMarkerDisplay());
@@ -173,7 +188,11 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders.Components
             keepSelection = false;
         }
 
-        protected override bool OnClick(ClickEvent e) => RequestSelection != null;
+        protected override bool OnClick(ClickEvent e)
+        {
+            Clicked?.Invoke(e);
+            return RequestSelection != null;
+        }
 
         protected override bool OnDragStart(DragStartEvent e)
         {

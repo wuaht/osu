@@ -71,7 +71,7 @@ namespace osu.Game.Rulesets.Edit
 
                                 // Never remove a sample bank.
                                 // These are basically radio buttons, not toggles.
-                                if (EditorBeatmap.SelectedHitObjects.All(h => h.Samples.Where(o => o.Name == HitSampleInfo.HIT_NORMAL).All(s => s.Bank == bankName)))
+                                if (EditorBeatmap.SelectedHitObjects.All(h => getPrimarySamples(h).Where(o => o.Name == HitSampleInfo.HIT_NORMAL).All(s => s.Bank == bankName)))
                                     bindable.Value = TernaryState.True;
                             }
 
@@ -278,15 +278,51 @@ namespace osu.Game.Rulesets.Edit
         }
 
         private IEnumerable<IList<HitSampleInfo>> enumerateAllSamples(HitObject hitObject)
+            => enumerateSampleTargets(hitObject).Select(nodeIndex => getSamples(hitObject, nodeIndex));
+
+        /// <summary>
+        /// Enumerates the sample lists of <paramref name="hitObject"/> which hitsound changes should apply to,
+        /// as indices into <see cref="IHasRepeats.NodeSamples"/>, with <c>null</c> representing <see cref="HitObject.Samples"/>.
+        /// </summary>
+        /// <remarks>
+        /// If a part of the hit object is selected (see <see cref="Screens.Edit.EditorBeatmap.SelectedHitObjectPart"/>), only that part is returned.
+        /// Otherwise, the hit object's samples and all of its node samples are returned.
+        /// </remarks>
+        private IEnumerable<int?> enumerateSampleTargets(HitObject hitObject)
         {
-            yield return hitObject.Samples;
+            var selectedPart = EditorBeatmap.SelectedHitObjectPart.Value;
+
+            if (selectedPart != null && selectedPart.HitObject == hitObject && selectedPart.IsValid)
+            {
+                yield return selectedPart.NodeIndex;
+
+                yield break;
+            }
+
+            yield return null;
 
             if (hitObject is IHasRepeats withRepeats)
             {
-                foreach (var node in withRepeats.NodeSamples)
-                    yield return node;
+                for (int i = 0; i < withRepeats.NodeSamples.Count; i++)
+                    yield return i;
             }
         }
+
+        private static IList<HitSampleInfo> getSamples(HitObject hitObject, int? nodeIndex)
+            => nodeIndex == null ? hitObject.Samples : ((IHasRepeats)hitObject).NodeSamples[nodeIndex.Value];
+
+        private static void setSamples(HitObject hitObject, int? nodeIndex, IList<HitSampleInfo> samples)
+        {
+            if (nodeIndex == null)
+                hitObject.Samples = samples;
+            else
+                ((IHasRepeats)hitObject).NodeSamples[nodeIndex.Value] = samples;
+        }
+
+        /// <summary>
+        /// The samples representing the hit object's primary sample settings: the selected part if one is selected, otherwise <see cref="HitObject.Samples"/>.
+        /// </summary>
+        private IList<HitSampleInfo> getPrimarySamples(HitObject hitObject) => getSamples(hitObject, enumerateSampleTargets(hitObject).First());
 
         #endregion
 
@@ -423,17 +459,7 @@ namespace osu.Game.Rulesets.Edit
         public void SetSampleBank(string bankName)
         {
             bool hasRelevantBank(HitObject hitObject)
-            {
-                bool result = hitObject.Samples.Where(o => o.Name == HitSampleInfo.HIT_NORMAL).All(s => s.Bank == bankName);
-
-                if (hitObject is IHasRepeats hasRepeats)
-                {
-                    foreach (var node in hasRepeats.NodeSamples)
-                        result &= node.Where(o => o.Name == HitSampleInfo.HIT_NORMAL).All(s => s.Bank == bankName);
-                }
-
-                return result;
-            }
+                => enumerateAllSamples(hitObject).All(samples => samples.Where(o => o.Name == HitSampleInfo.HIT_NORMAL).All(s => s.Bank == bankName));
 
             if (EditorBeatmap.SelectedHitObjects.All(hasRelevantBank))
                 return;
@@ -443,12 +469,11 @@ namespace osu.Game.Rulesets.Edit
                 if (hasRelevantBank(h))
                     return;
 
-                h.Samples = h.Samples.Select(s => s.Name == HitSampleInfo.HIT_NORMAL || s.EditorAutoBank ? s.With(newBank: bankName) : s).ToList();
-
-                if (h is IHasRepeats hasRepeats)
+                foreach (int? target in enumerateSampleTargets(h).ToArray())
                 {
-                    for (int i = 0; i < hasRepeats.NodeSamples.Count; ++i)
-                        hasRepeats.NodeSamples[i] = hasRepeats.NodeSamples[i].Select(s => s.Name == HitSampleInfo.HIT_NORMAL || s.EditorAutoBank ? s.With(newBank: bankName) : s).ToList();
+                    setSamples(h, target, getSamples(h, target)
+                                          .Select(s => s.Name == HitSampleInfo.HIT_NORMAL || s.EditorAutoBank ? s.With(newBank: bankName) : s)
+                                          .ToList());
                 }
             });
         }
@@ -475,39 +500,22 @@ namespace osu.Game.Rulesets.Edit
                 if (hasRelevantBank(h))
                     return;
 
-                string normalBank = h.Samples.FirstOrDefault(s => s.Name == HitSampleInfo.HIT_NORMAL)?.Bank ?? HitSampleInfo.BANK_SOFT;
-                h.Samples = h.Samples.Select(s =>
-                                 s.Name != HitSampleInfo.HIT_NORMAL
-                                     ? bankName == HIT_BANK_AUTO ? s.With(newBank: normalBank, newEditorAutoBank: true) : s.With(newBank: bankName, newEditorAutoBank: false)
-                                     : s)
-                             .ToList();
-
-                if (h is IHasRepeats hasRepeats)
+                foreach (int? target in enumerateSampleTargets(h).ToArray())
                 {
-                    for (int i = 0; i < hasRepeats.NodeSamples.Count; ++i)
-                    {
-                        normalBank = hasRepeats.NodeSamples[i].FirstOrDefault(s => s.Name == HitSampleInfo.HIT_NORMAL)?.Bank ?? HitSampleInfo.BANK_SOFT;
-                        hasRepeats.NodeSamples[i] = hasRepeats.NodeSamples[i].Select(s =>
-                            s.Name != HitSampleInfo.HIT_NORMAL
-                                ? bankName == HIT_BANK_AUTO ? s.With(newBank: normalBank, newEditorAutoBank: true) : s.With(newBank: bankName, newEditorAutoBank: false)
-                                : s).ToList();
-                    }
+                    var samples = getSamples(h, target);
+                    string normalBank = samples.FirstOrDefault(s => s.Name == HitSampleInfo.HIT_NORMAL)?.Bank ?? HitSampleInfo.BANK_SOFT;
+
+                    setSamples(h, target, samples.Select(s =>
+                                                     s.Name != HitSampleInfo.HIT_NORMAL
+                                                         ? bankName == HIT_BANK_AUTO ? s.With(newBank: normalBank, newEditorAutoBank: true) : s.With(newBank: bankName, newEditorAutoBank: false)
+                                                         : s)
+                                                 .ToList());
                 }
             });
         }
 
         private bool hasRelevantSample(HitObject hitObject, string sampleName)
-        {
-            bool result = hitObject.Samples.Any(s => s.Name == sampleName);
-
-            if (hitObject is IHasRepeats hasRepeats)
-            {
-                foreach (var node in hasRepeats.NodeSamples)
-                    result &= node.Any(s => s.Name == sampleName);
-            }
-
-            return result;
-        }
+            => enumerateAllSamples(hitObject).All(samples => samples.Any(s => s.Name == sampleName));
 
         /// <summary>
         /// Adds a hit sample to all selected <see cref="HitObject"/>s.
@@ -523,40 +531,37 @@ namespace osu.Game.Rulesets.Edit
 
             EditorBeatmap.PerformOnSelection(h =>
             {
-                string? forcedBank = null;
-                // if the selected object(s) only have normal samples, check whether the user has preselected a singular non-auto bank using `SelectionAdditionBankStates`.
-                // other scenarios are already handled by `CreateHitSampleInfo()`:
-                // - if the selected object(s) already have addition samples, `CreateHitSampleInfo()` will copy the bank from said addition samples.
-                // - if the selected object(s) do not have addition samples but the user has preselected auto bank, `CreateHitSampleInfo()` will use the auto bank anyway.
-                if (h.Samples.All(s => s.Name == HitSampleInfo.HIT_NORMAL))
-                    forcedBank = selectionAdditionBankStates.SingleOrDefault(kv => kv.Value.Value == TernaryState.True).Key;
-
-                // Make sure there isn't already an existing sample
-                if (h.Samples.All(s => s.Name != sampleName))
+                foreach (int? target in enumerateSampleTargets(h).ToArray())
                 {
+                    var samples = getSamples(h, target);
+
+                    // Make sure there isn't already an existing sample
+                    if (samples.Any(s => s.Name == sampleName))
+                        continue;
+
                     var hitSample = h.CreateHitSampleInfo(sampleName);
 
-                    if (forcedBank != null && forcedBank != HIT_BANK_AUTO)
-                        hitSample = hitSample.With(newBank: forcedBank, newEditorAutoBank: false);
-
-                    h.Samples.Add(hitSample);
-                }
-
-                if (h is IHasRepeats hasRepeats)
-                {
-                    foreach (var node in hasRepeats.NodeSamples)
+                    if (target == null)
                     {
-                        if (node.Any(s => s.Name == sampleName))
-                            continue;
+                        string? forcedBank = null;
+                        // if the selected object(s) only have normal samples, check whether the user has preselected a singular non-auto bank using `SelectionAdditionBankStates`.
+                        // other scenarios are already handled by `CreateHitSampleInfo()`:
+                        // - if the selected object(s) already have addition samples, `CreateHitSampleInfo()` will copy the bank from said addition samples.
+                        // - if the selected object(s) do not have addition samples but the user has preselected auto bank, `CreateHitSampleInfo()` will use the auto bank anyway.
+                        if (samples.All(s => s.Name == HitSampleInfo.HIT_NORMAL))
+                            forcedBank = selectionAdditionBankStates.SingleOrDefault(kv => kv.Value.Value == TernaryState.True).Key;
 
-                        var hitSample = h.CreateHitSampleInfo(sampleName);
-
-                        HitSampleInfo? existingAddition = node.FirstOrDefault(s => s.Name != HitSampleInfo.HIT_NORMAL);
+                        if (forcedBank != null && forcedBank != HIT_BANK_AUTO)
+                            hitSample = hitSample.With(newBank: forcedBank, newEditorAutoBank: false);
+                    }
+                    else
+                    {
+                        HitSampleInfo? existingAddition = samples.FirstOrDefault(s => s.Name != HitSampleInfo.HIT_NORMAL);
                         if (existingAddition != null)
                             hitSample = hitSample.With(newBank: existingAddition.Bank, newEditorAutoBank: existingAddition.EditorAutoBank);
-
-                        node.Add(hitSample);
                     }
+
+                    samples.Add(hitSample);
                 }
             });
         }
@@ -572,12 +577,12 @@ namespace osu.Game.Rulesets.Edit
 
             EditorBeatmap.PerformOnSelection(h =>
             {
-                h.SamplesBindable.RemoveAll(s => s.Name == sampleName);
-
-                if (h is IHasRepeats hasRepeats)
+                foreach (int? target in enumerateSampleTargets(h).ToArray())
                 {
-                    for (int i = 0; i < hasRepeats.NodeSamples.Count; ++i)
-                        hasRepeats.NodeSamples[i] = hasRepeats.NodeSamples[i].Where(s => s.Name != sampleName).ToList();
+                    if (target == null)
+                        h.SamplesBindable.RemoveAll(s => s.Name == sampleName);
+                    else
+                        setSamples(h, target, getSamples(h, target).Where(s => s.Name != sampleName).ToList());
                 }
             });
         }

@@ -157,7 +157,97 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
 
             if (showHitMarkers.Value)
                 DrawableObject.SuppressHitAnimations();
+
+            updatePartHighlight();
         }
+
+        #region Part selection (for hitsounding)
+
+        /// <summary>
+        /// Whether this slider was the only selected object when the current click began.
+        /// Parts can only be selected on an already selected slider, so that the click selecting the slider itself doesn't also select a part.
+        /// </summary>
+        private bool wasSoleSelectionOnMouseDown;
+
+        private SelectedHitObjectPart? selectedPart => editorBeatmap?.SelectedHitObjectPart.Value is SelectedHitObjectPart part && part.HitObject == HitObject && part.IsValid ? part : null;
+
+        private void updatePartHighlight()
+        {
+            var part = selectedPart;
+
+            // nodes with an even index are located at the slider's head, nodes with an odd index at the end of its path.
+            HeadOverlay.PartHighlighted = part?.NodeIndex % 2 == 0;
+            TailOverlay.PartHighlighted = part?.NodeIndex % 2 == 1;
+            BodyPiece.PartHighlighted = part != null && part.NodeIndex == null;
+        }
+
+        private bool isControlPointHovered => ControlPointVisualiser?.Pieces.Any(p => p.IsHovered) == true;
+
+        protected override bool OnClick(ClickEvent e)
+        {
+            handlePartClick(e, false);
+
+            // allow the blueprint container to handle the click as usual.
+            return false;
+        }
+
+        private void handlePartClick(ClickEvent e, bool controlPointClicked)
+        {
+            if (e.Button != MouseButton.Left || e.ControlPressed || e.ShiftPressed || e.AltPressed)
+                return;
+
+            if (!IsSelected || selectedObjects.Count != 1 || editorBeatmap == null)
+                return;
+
+            // control points handle mouse down themselves (so OnMouseDown isn't invoked for clicks on them),
+            // but they are only displayed while this slider is the sole selection, so the slider was already selected before such a click.
+            if (!controlPointClicked && !wasSoleSelectionOnMouseDown)
+                return;
+
+            var part = getNextPart(e.ScreenSpaceMousePosition, out bool bodyClicked);
+
+            // control points along the body are clicked for editing the path, which shouldn't toggle the body selection.
+            if (controlPointClicked && bodyClicked)
+                return;
+
+            editorBeatmap.SelectedHitObjectPart.Value = part;
+        }
+
+        /// <summary>
+        /// Determines the part to select when clicking at the given position.
+        /// Repeated clicks on the same position cycle through all nodes located there, followed by the whole slider (no part).
+        /// </summary>
+        private SelectedHitObjectPart? getNextPart(Vector2 screenSpacePos, out bool bodyClicked)
+        {
+            var current = selectedPart;
+
+            float headDistance = HeadOverlay.GetRelativeDistanceToCircle(screenSpacePos);
+            float tailDistance = TailOverlay.GetRelativeDistanceToCircle(screenSpacePos);
+
+            bodyClicked = Math.Min(headDistance, tailDistance) > 1;
+
+            if (bodyClicked)
+                return current != null && current.NodeIndex == null ? null : new SelectedHitObjectPart(HitObject, null);
+
+            // nodes with an even index are located at the slider's head, nodes with an odd index at the end of its path.
+            int firstNodeAtPosition = headDistance <= tailDistance ? 0 : 1;
+            int[] nodesAtPosition = Enumerable.Range(0, HitObject.NodeSamples.Count).Where(i => i % 2 == firstNodeAtPosition).ToArray();
+
+            if (nodesAtPosition.Length == 0)
+                return null;
+
+            int currentIndex = current?.NodeIndex == null ? -1 : Array.IndexOf(nodesAtPosition, current.NodeIndex.Value);
+
+            if (currentIndex < 0)
+                return new SelectedHitObjectPart(HitObject, nodesAtPosition[0]);
+
+            if (currentIndex + 1 < nodesAtPosition.Length)
+                return new SelectedHitObjectPart(HitObject, nodesAtPosition[currentIndex + 1]);
+
+            return null;
+        }
+
+        #endregion
 
         protected override bool OnHover(HoverEvent e)
         {
@@ -198,7 +288,8 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
                     AddInternal(ControlPointVisualiser = new PathControlPointVisualiser<Slider>(HitObject, true)
                     {
                         RemoveControlPointsRequested = removeControlPoints,
-                        SplitControlPointsRequested = splitControlPoints
+                        SplitControlPointsRequested = splitControlPoints,
+                        ControlPointClicked = e => handlePartClick(e, true),
                     });
                 }
             }
@@ -211,6 +302,10 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
 
         protected override bool OnMouseDown(MouseDownEvent e)
         {
+            // this runs before the blueprint container handles the selection, so reflects the state before this click.
+            wasSoleSelectionOnMouseDown = e.Button == MouseButton.Left && IsSelected && selectedObjects.Count == 1
+                                          && !e.ControlPressed && !e.ShiftPressed && !e.AltPressed && !isControlPointHovered;
+
             switch (e.Button)
             {
                 case MouseButton.Right:

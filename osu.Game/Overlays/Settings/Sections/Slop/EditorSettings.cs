@@ -12,6 +12,7 @@ using osu.Game.Configuration;
 using osu.Game.Database;
 using osu.Game.Graphics.UserInterfaceV2;
 using osu.Game.Localisation;
+using osu.Game.Screens.Edit.Components;
 using osu.Game.Skinning;
 using Realms;
 
@@ -79,6 +80,12 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                     Caption = SlopSettingsStrings.ShowSelectionBoxButtons,
                     HintText = SlopSettingsStrings.ShowSelectionBoxButtonsDescription,
                     Current = config.GetBindable<bool>(OsuSetting.SlopEditorShowSelectionBoxButtons),
+                }),
+                new SettingsItemV2(new FormEnumDropdown<EditorAnchorShape>
+                {
+                    Caption = SlopSettingsStrings.AnchorShape,
+                    HintText = SlopSettingsStrings.AnchorShapeDescription,
+                    Current = config.GetBindable<EditorAnchorShape>(OsuSetting.SlopEditorAnchorShape),
                 }),
                 new SettingsItemV2(new FormCheckBox
                 {

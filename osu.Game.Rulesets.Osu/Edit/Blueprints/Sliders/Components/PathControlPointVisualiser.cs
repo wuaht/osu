@@ -49,6 +49,11 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders.Components
         public Action<List<PathControlPoint>> RemoveControlPointsRequested;
         public Action<List<PathControlPoint>> SplitControlPointsRequested;
 
+        /// <summary>
+        /// Invoked when any control point is clicked.
+        /// </summary>
+        public Action<ClickEvent> ControlPointClicked;
+
         [Resolved(CanBeNull = true)]
         [CanBeNull]
         private OsuHitObjectComposer positionSnapProvider { get; set; }
@@ -217,6 +222,8 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders.Components
                         {
                             if (allowSelection)
                                 d.RequestSelection = selectionRequested;
+
+                            d.Clicked = clickEvent => ControlPointClicked?.Invoke(clickEvent);
 
                             d.ControlPoint.Changed += controlPointChanged;
                             d.DragStarted = DragStarted;

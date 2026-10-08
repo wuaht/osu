@@ -127,6 +127,27 @@ namespace osu.Game.Localisation
         public static LocalisableString ImmediateDragDescription => new TranslatableString(getKey(@"immediate_drag_description"),
             @"Objects and slider anchors start moving as soon as the mouse moves, instead of only after the mouse has moved a few pixels. Allows very small adjustments.");
 
+        /// <summary>
+        /// "Anchor shape"
+        /// </summary>
+        public static LocalisableString AnchorShape => new TranslatableString(getKey(@"anchor_shape"), @"Anchor shape");
+
+        /// <summary>
+        /// "The shape of slider anchors and the handles of the selection box."
+        /// </summary>
+        public static LocalisableString AnchorShapeDescription => new TranslatableString(getKey(@"anchor_shape_description"),
+            @"The shape of slider anchors and the handles of the selection box.");
+
+        /// <summary>
+        /// "Circle"
+        /// </summary>
+        public static LocalisableString AnchorShapeCircle => new TranslatableString(getKey(@"anchor_shape_circle"), @"Circle");
+
+        /// <summary>
+        /// "Square"
+        /// </summary>
+        public static LocalisableString AnchorShapeSquare => new TranslatableString(getKey(@"anchor_shape_square"), @"Square");
+
         private static string getKey(string key) => $"{prefix}:{key}";
     }
 }
