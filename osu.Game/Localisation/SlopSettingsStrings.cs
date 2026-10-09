@@ -257,6 +257,17 @@ namespace osu.Game.Localisation
             @"Displays a graph of the difficulty strain over time in the timeline at the bottom of the editor.");
 
         /// <summary>
+        /// "Highlight offscreen objects"
+        /// </summary>
+        public static LocalisableString ShowOffscreenObjects => new TranslatableString(getKey(@"show_offscreen_objects"), @"Highlight offscreen objects");
+
+        /// <summary>
+        /// "Outlines circles and sliders in red which go offscreen on a 4:3 screen, including any part of a slider's body. Offscreen objects aren't allowed in ranked beatmaps."
+        /// </summary>
+        public static LocalisableString ShowOffscreenObjectsDescription => new TranslatableString(getKey(@"show_offscreen_objects_description"),
+            @"Outlines circles and sliders in red which go offscreen on a 4:3 screen, including any part of a slider's body. Offscreen objects aren't allowed in ranked beatmaps.");
+
+        /// <summary>
         /// "Loop music"
         /// </summary>
         public static LocalisableString LoopMusic => new TranslatableString(getKey(@"loop_music"), @"Loop music");

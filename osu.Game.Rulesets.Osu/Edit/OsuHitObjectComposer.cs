@@ -111,6 +111,7 @@ namespace osu.Game.Rulesets.Osu.Edit
 
             // above the playfield, so that guide lines aren't hidden behind slider bodies.
             PlayfieldContentContainer.Add(patternSnapGuides = new PatternSnapGuideOverlay());
+            PlayfieldContentContainer.Add(new OffscreenObjectOverlay(Playfield));
 
             LayerBelowRuleset.Add(
                 distanceSnapGridContainer = new Container
