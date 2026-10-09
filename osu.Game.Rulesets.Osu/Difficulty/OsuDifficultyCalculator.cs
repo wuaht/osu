@@ -166,6 +166,17 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             return objects;
         }
 
+        /// <summary>
+        /// Like osu!stable and McOsu, strain graphs display aim (including sliders) and speed, each contributing according to its difficulty.
+        /// </summary>
+        public override IEnumerable<(Skill Skill, double Weight)> GetStrainGraphSkills(Skill[] skills, DifficultyAttributes attributes)
+        {
+            var osuAttributes = (OsuDifficultyAttributes)attributes;
+
+            yield return (skills.OfType<Aim>().First(a => a.IncludeSliders), osuAttributes.AimDifficulty);
+            yield return (skills.OfType<Speed>().First(), osuAttributes.SpeedDifficulty);
+        }
+
         protected override Skill[] CreateSkills(IBeatmap beatmap, Mod[] mods)
         {
             var skills = new List<Skill>

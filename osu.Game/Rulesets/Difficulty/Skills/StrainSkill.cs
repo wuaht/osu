@@ -110,6 +110,15 @@ namespace osu.Game.Rulesets.Difficulty.Skills
         protected abstract double CalculateInitialStrain(double time, DifficultyHitObject current);
 
         /// <summary>
+        /// Retrieves the strain at a point in time between the last processed object and <paramref name="next"/>, which must not be processed yet.
+        /// This is the strain of the processed objects, decayed until <paramref name="time"/>.
+        /// </summary>
+        /// <param name="time">The time to retrieve the strain at.</param>
+        /// <param name="next">The object following the last processed object.</param>
+        /// <returns>The strain.</returns>
+        public double GetStrainBefore(double time, DifficultyHitObject next) => CalculateInitialStrain(time, next);
+
+        /// <summary>
         /// Returns a live enumerable of the peak strains for each <see cref="SectionLength"/> section of the beatmap,
         /// including the peak of the current section.
         /// </summary>

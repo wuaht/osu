@@ -153,9 +153,13 @@ namespace osu.Game.Rulesets.Difficulty
         /// </summary>
         /// <param name="skills">The skills used for the calculation.</param>
         /// <param name="difficultyHitObjects">The objects processed by the skills.</param>
+        /// <param name="beforeProcessing">
+        /// Invoked with the skills before each object is processed by them, e.g. to retrieve the strain between the previous object and this one.
+        /// </param>
         /// <param name="cancellationToken">The cancellation token.</param>
         /// <returns>A structure describing the difficulty of the beatmap.</returns>
-        public DifficultyAttributes CalculateWithSkills(out Skill[] skills, out DifficultyHitObject[] difficultyHitObjects, CancellationToken cancellationToken = default)
+        public DifficultyAttributes CalculateWithSkills(out Skill[] skills, out DifficultyHitObject[] difficultyHitObjects, Action<Skill[], DifficultyHitObject> beforeProcessing = null,
+                                                        CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
             preProcess(Array.Empty<Mod>(), cancellationToken);
@@ -165,6 +169,8 @@ namespace osu.Game.Rulesets.Difficulty
 
             foreach (var hitObject in difficultyHitObjects)
             {
+                beforeProcessing?.Invoke(skills, hitObject);
+
                 foreach (var skill in skills)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
@@ -174,6 +180,15 @@ namespace osu.Game.Rulesets.Difficulty
 
             return CreateDifficultyAttributes(Beatmap, playableMods, skills);
         }
+
+        /// <summary>
+        /// Returns the skills which are displayed in strain graphs, along with how much each contributes to the graph.
+        /// By default, every kind of skill contributes equally.
+        /// </summary>
+        /// <param name="skills">The skills used for calculating the difficulty (see <see cref="CalculateWithSkills"/>).</param>
+        /// <param name="attributes">The calculated difficulty.</param>
+        public virtual IEnumerable<(Skill Skill, double Weight)> GetStrainGraphSkills(Skill[] skills, DifficultyAttributes attributes)
+            => skills.GroupBy(s => s.GetType()).Select(g => (g.First(), 1.0));
 
         /// <summary>
         /// Calculates the difficulty of the beatmap using all mod combinations applicable to the beatmap.
