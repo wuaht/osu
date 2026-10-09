@@ -267,6 +267,7 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopEditorBlanketSnap, true);
             SetDefault(OsuSetting.SlopEditorLineSnap, true);
             SetDefault(OsuSetting.SlopEditorShowDifficultyStrains, false);
+            SetDefault(OsuSetting.SlopEditorShowOffscreenObjects, false);
             SetDefault(OsuSetting.SlopEditorWaveformStyle, EditorWaveformStyle.Default);
             SetDefault(OsuSetting.SlopEditorLoopMusic, false);
         }
@@ -607,5 +608,10 @@ namespace osu.Game.Configuration
         /// Whether the difficulty strain of the beatmap is displayed in the summary timeline at the bottom of the beatmap editor.
         /// </summary>
         SlopEditorShowDifficultyStrains,
+
+        /// <summary>
+        /// Whether objects which go offscreen on 4:3 aspect ratio are outlined in the beatmap editor.
+        /// </summary>
+        SlopEditorShowOffscreenObjects,
     }
 }

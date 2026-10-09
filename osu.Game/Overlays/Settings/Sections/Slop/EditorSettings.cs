@@ -126,6 +126,12 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                 }),
                 new SettingsItemV2(new FormCheckBox
                 {
+                    Caption = SlopSettingsStrings.ShowOffscreenObjects,
+                    HintText = SlopSettingsStrings.ShowOffscreenObjectsDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorShowOffscreenObjects),
+                }),
+                new SettingsItemV2(new FormCheckBox
+                {
                     Caption = SlopSettingsStrings.ShowDifficultyStrains,
                     HintText = SlopSettingsStrings.ShowDifficultyStrainsDescription,
                     Current = config.GetBindable<bool>(OsuSetting.SlopEditorShowDifficultyStrains),
