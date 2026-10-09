@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -29,8 +30,8 @@ namespace osu.Game.Screens.Edit
     public partial class EditorBeatmapDifficulty : Component
     {
         /// <summary>
-        /// The length of the sections which <see cref="EditorBeatmapDifficultyInfo.Strains"/> are combined in, in milliseconds.
-        /// The same as the strain sections used by most difficulty calculations.
+        /// The length of the sections of <see cref="EditorBeatmapDifficultyInfo.Strains"/>, in milliseconds.
+        /// The same as the strain sections of difficulty calculation, osu!stable and McOsu.
         /// </summary>
         public const double STRAIN_SECTION_LENGTH = 400;
 
@@ -123,56 +124,130 @@ namespace osu.Game.Screens.Edit
             beatmap.BeatmapInfo.Ruleset = rulesetInfo;
 
             var calculator = rulesetInfo.CreateInstance().CreateDifficultyCalculator(new FlatWorkingBeatmap(beatmap));
-            var attributes = calculator.CalculateWithSkills(out var skills, out var difficultyHitObjects, cancellationToken);
+            var sampler = new StrainSampler();
+            var attributes = calculator.CalculateWithSkills(out var skills, out var difficultyHitObjects, sampler.SampleBefore, cancellationToken);
+            var graphSkills = calculator.GetStrainGraphSkills(skills, attributes).ToArray();
 
-            return new EditorBeatmapDifficultyInfo(attributes.StarRating, attributes.MaxCombo, calculateStrains(skills, difficultyHitObjects));
+            float[] strains = sampler.CreateStrains(graphSkills, difficultyHitObjects, out double strainsStartTime);
+
+            return new EditorBeatmapDifficultyInfo(attributes.StarRating, attributes.MaxCombo, strains, strainsStartTime);
         }
 
         /// <summary>
-        /// Combines the difficulty of the processed objects of all skills into sections of <see cref="STRAIN_SECTION_LENGTH"/>, relative to the hardest section.
+        /// Collects the strain of skills over time, in sections of <see cref="STRAIN_SECTION_LENGTH"/> (like McOsu).
         /// </summary>
         /// <remarks>
-        /// Each skill is relative to its own hardest object, as the values of different skills have different scales.
-        /// A section takes the highest value of any skill at any object in it.
+        /// The sections are aligned like in difficulty calculation: the first one ends at the first multiple of <see cref="STRAIN_SECTION_LENGTH"/> at or after the first object.
+        /// Each section takes the highest strain of its objects and the strain of the previous object decayed until the start of the section,
+        /// so that sections without objects (e.g. during long sliders) don't drop to zero.
+        /// Skills which don't provide a decaying strain only contribute the difficulty of their objects.
         /// </remarks>
-        private static float[] calculateStrains(Skill[] skills, DifficultyHitObject[] difficultyHitObjects)
+        private class StrainSampler
         {
-            if (difficultyHitObjects.Length == 0)
-                return Array.Empty<float>();
+            /// <summary>
+            /// The decayed strain at the start of sections, for each skill.
+            /// </summary>
+            private readonly Dictionary<Skill, List<(int Section, double Strain)>> decayedStrains = new Dictionary<Skill, List<(int, double)>>();
 
-            double lastTime = difficultyHitObjects.Max(h => h.BaseObject.StartTime);
+            private double firstSectionEnd;
+            private double nextSectionEnd;
+            private bool started;
 
-            if (lastTime < 0)
-                return Array.Empty<float>();
-
-            float[] strains = new float[(int)(lastTime / STRAIN_SECTION_LENGTH) + 1];
-
-            foreach (var skill in skills)
+            public void SampleBefore(Skill[] skills, DifficultyHitObject next)
             {
-                var difficulties = skill.GetObjectDifficulties();
-                int count = Math.Min(difficulties.Count, difficultyHitObjects.Length);
-
-                double max = 0;
-
-                for (int i = 0; i < count; i++)
-                    max = Math.Max(max, difficulties[i]);
-
-                if (max <= 0 || !double.IsFinite(max))
-                    continue;
-
-                for (int i = 0; i < count; i++)
+                if (!started)
                 {
-                    double time = difficultyHitObjects[i].BaseObject.StartTime;
+                    started = true;
+                    firstSectionEnd = nextSectionEnd = Math.Ceiling(next.StartTime / STRAIN_SECTION_LENGTH) * STRAIN_SECTION_LENGTH;
+                    return;
+                }
 
-                    if (time < 0 || !double.IsFinite(difficulties[i]))
-                        continue;
+                while (next.StartTime > nextSectionEnd)
+                {
+                    // a new section starts at the end of the current one.
+                    int section = sectionEndingAt(nextSectionEnd + STRAIN_SECTION_LENGTH);
 
-                    int section = (int)(time / STRAIN_SECTION_LENGTH);
-                    strains[section] = Math.Max(strains[section], (float)(difficulties[i] / max));
+                    foreach (var skill in skills)
+                    {
+                        double? strain = skill switch
+                        {
+                            StrainSkill strainSkill => strainSkill.GetStrainBefore(nextSectionEnd, next),
+                            VariableLengthStrainSkill variableLengthStrainSkill => variableLengthStrainSkill.GetStrainBefore(nextSectionEnd, next),
+                            _ => null,
+                        };
+
+                        if (strain == null)
+                            continue;
+
+                        if (!decayedStrains.TryGetValue(skill, out var list))
+                            decayedStrains[skill] = list = new List<(int, double)>();
+
+                        list.Add((section, strain.Value));
+                    }
+
+                    nextSectionEnd += STRAIN_SECTION_LENGTH;
                 }
             }
 
-            return strains;
+            /// <summary>
+            /// The index of the section which ends at or after the given time.
+            /// </summary>
+            private int sectionEndingAt(double time) => Math.Max(0, (int)Math.Ceiling((time - firstSectionEnd) / STRAIN_SECTION_LENGTH - 1e-9));
+
+            /// <summary>
+            /// Combines the strains of the given skills, relative to the hardest section.
+            /// Each skill is relative to its own hardest section, as the values of different skills have different scales.
+            /// </summary>
+            /// <param name="graphSkills">The skills to combine, along with how much each contributes.</param>
+            /// <param name="difficultyHitObjects">The processed objects.</param>
+            /// <param name="startTime">The start time of the first section.</param>
+            public float[] CreateStrains((Skill Skill, double Weight)[] graphSkills, DifficultyHitObject[] difficultyHitObjects, out double startTime)
+            {
+                startTime = firstSectionEnd - STRAIN_SECTION_LENGTH;
+
+                if (difficultyHitObjects.Length == 0)
+                    return Array.Empty<float>();
+
+                int sectionCount = sectionEndingAt(difficultyHitObjects.Max(h => h.StartTime)) + 1;
+                double[] combined = new double[sectionCount];
+
+                foreach (var (skill, weight) in graphSkills)
+                {
+                    if (weight <= 0 || !double.IsFinite(weight))
+                        continue;
+
+                    double[] sections = new double[sectionCount];
+
+                    var difficulties = skill.GetObjectDifficulties();
+
+                    for (int i = 0; i < Math.Min(difficulties.Count, difficultyHitObjects.Length); i++)
+                        add(sectionEndingAt(difficultyHitObjects[i].StartTime), difficulties[i]);
+
+                    if (decayedStrains.TryGetValue(skill, out var decayed))
+                    {
+                        foreach (var (section, strain) in decayed)
+                            add(section, strain);
+                    }
+
+                    double max = sections.Max();
+
+                    if (max <= 0)
+                        continue;
+
+                    for (int i = 0; i < sectionCount; i++)
+                        combined[i] += sections[i] / max * weight;
+
+                    void add(int section, double strain)
+                    {
+                        if (section < sectionCount && double.IsFinite(strain))
+                            sections[section] = Math.Max(sections[section], strain);
+                    }
+                }
+
+                double highest = combined.Max();
+
+                return combined.Select(c => highest > 0 ? (float)(c / highest) : 0).ToArray();
+            }
         }
 
         protected override void Dispose(bool isDisposing)
@@ -192,8 +267,9 @@ namespace osu.Game.Screens.Edit
     /// <param name="StarRating">The star rating.</param>
     /// <param name="MaxCombo">The maximum achievable combo.</param>
     /// <param name="Strains">
-    /// The strain over time, in consecutive sections of <see cref="EditorBeatmapDifficulty.STRAIN_SECTION_LENGTH"/> starting at time 0,
+    /// The strain over time, in consecutive sections of <see cref="EditorBeatmapDifficulty.STRAIN_SECTION_LENGTH"/> starting at <paramref name="StrainsStartTime"/>,
     /// relative to the hardest section (from 0 to 1).
     /// </param>
-    public record EditorBeatmapDifficultyInfo(double StarRating, int MaxCombo, float[] Strains);
+    /// <param name="StrainsStartTime">The start time of the first section of <paramref name="Strains"/>.</param>
+    public record EditorBeatmapDifficultyInfo(double StarRating, int MaxCombo, float[] Strains, double StrainsStartTime);
 }
