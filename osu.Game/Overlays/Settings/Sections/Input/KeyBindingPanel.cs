@@ -39,7 +39,10 @@ namespace osu.Game.Overlays.Settings.Sections.Input
                 }
             });
 
-            foreach (var ruleset in rulesets.AvailableRulesets)
+            // rulesets without gameplay variants use the key bindings of another ruleset.
+            var rulesetsWithKeyBindings = rulesets.AvailableRulesets.Where(r => r.CreateInstance().GameplayVariants.Any()).ToList();
+
+            foreach (var ruleset in rulesetsWithKeyBindings)
                 AddSection(new RulesetBindingsSection(ruleset));
 
             AddSection(new GlobalKeyBindingsSection(OsuIcon.Beatmap, InputSettingsStrings.SongSelectSection)
@@ -52,7 +55,7 @@ namespace osu.Game.Overlays.Settings.Sections.Input
 
             List<KeyBindingsSubsection> rulesetEditorVariants = new List<KeyBindingsSubsection>();
 
-            foreach (var ruleset in rulesets.AvailableRulesets)
+            foreach (var ruleset in rulesetsWithKeyBindings)
                 rulesetEditorVariants.Add(new RulesetEditorBindingsSubsection(ruleset));
 
             AddSection(new GlobalKeyBindingsSection(OsuIcon.EditorSelect, InputSettingsStrings.EditorSection)

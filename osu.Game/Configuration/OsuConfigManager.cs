@@ -271,6 +271,18 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopEditorWaveformStyle, EditorWaveformStyle.Default);
             SetDefault(OsuSetting.SlopEditorLoopMusic, false);
 
+            // defaults of McOsu's FPoSu.
+            SetDefault(OsuSetting.SlopFposuMouseDpi, 400, 50, 32000);
+            SetDefault(OsuSetting.SlopFposuCmPer360, 30f, 1f, 200f, 0.1f);
+            SetDefault(OsuSetting.SlopFposuFov, 103f, 20f, 150f, 1f);
+            SetDefault(OsuSetting.SlopFposuDistance, 0.5f, 0.1f, 2f, 0.01f);
+            SetDefault(OsuSetting.SlopFposuCurved, true);
+            SetDefault(OsuSetting.SlopFposuInvertHorizontal, false);
+            SetDefault(OsuSetting.SlopFposuInvertVertical, false);
+            SetDefault(OsuSetting.SlopFposuAbsoluteMode, false);
+            SetDefault(OsuSetting.SlopFposuBackgroundCube, true);
+            SetDefault(OsuSetting.SlopFposuSkybox, true);
+
             SetDefault(OsuSetting.SlopActiveOfflineProfile, string.Empty);
             SetDefault(OsuSetting.SlopOfflineProfilesIncludeUnranked, false);
         }
@@ -616,6 +628,56 @@ namespace osu.Game.Configuration
         /// Whether objects which go offscreen on 4:3 aspect ratio are outlined in the beatmap editor.
         /// </summary>
         SlopEditorShowOffscreenObjects,
+
+        /// <summary>
+        /// The DPI (counts per inch) of the mouse, used for the sensitivity of the FPoSu ruleset.
+        /// </summary>
+        SlopFposuMouseDpi,
+
+        /// <summary>
+        /// The distance in centimetres the mouse has to be moved for a full turn in the FPoSu ruleset.
+        /// </summary>
+        SlopFposuCmPer360,
+
+        /// <summary>
+        /// The horizontal field of view in degrees in the FPoSu ruleset.
+        /// </summary>
+        SlopFposuFov,
+
+        /// <summary>
+        /// The distance of the playfield screen from the camera in the FPoSu ruleset.
+        /// </summary>
+        SlopFposuDistance,
+
+        /// <summary>
+        /// Whether the playfield screen is curved around the camera in the FPoSu ruleset.
+        /// </summary>
+        SlopFposuCurved,
+
+        /// <summary>
+        /// Whether horizontal mouse movement is inverted in the FPoSu ruleset.
+        /// </summary>
+        SlopFposuInvertHorizontal,
+
+        /// <summary>
+        /// Whether vertical mouse movement is inverted in the FPoSu ruleset.
+        /// </summary>
+        SlopFposuInvertVertical,
+
+        /// <summary>
+        /// Whether the camera looks at the cursor (e.g. for tablets) instead of being turned by mouse movement in the FPoSu ruleset.
+        /// </summary>
+        SlopFposuAbsoluteMode,
+
+        /// <summary>
+        /// Whether a grid cube is displayed around the camera in the FPoSu ruleset.
+        /// </summary>
+        SlopFposuBackgroundCube,
+
+        /// <summary>
+        /// Whether a skybox is displayed around the camera in the FPoSu ruleset, instead of the background cube.
+        /// </summary>
+        SlopFposuSkybox,
 
         /// <summary>
         /// The ID of the offline profile which is the local user while not logged in, or empty to play as a guest.

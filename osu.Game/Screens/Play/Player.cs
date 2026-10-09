@@ -475,6 +475,30 @@ namespace osu.Game.Screens.Play
 
         private Drawable createOverlayComponents()
         {
+            BreakOverlay = new BreakOverlay(ScoreProcessor)
+            {
+                Clock = DrawableRuleset.FrameStableClock,
+                ProcessCustomClock = false,
+                BreakTracker = breakTracker,
+            };
+
+            SkipIntroOverlay = CreateSkipOverlay(DrawableRuleset.GameplayStartTime).With(o =>
+            {
+                o.RequestSkip = RequestIntroSkip;
+            });
+
+            skipOutroOverlay = new SkipOverlay(GameplayState.Storyboard.LatestEventTime ?? 0)
+            {
+                RequestSkip = () => progressToResults(false),
+                Alpha = 0
+            };
+
+            // rulesets may display the break and skip overlays as part of the gameplay (e.g. when displaying it in 3D).
+            var rulesetOverlayContainer = DrawableRuleset.BreakAndSkipOverlayContainer;
+
+            if (rulesetOverlayContainer != null)
+                rulesetOverlayContainer.AddRange(new Drawable[] { BreakOverlay, SkipIntroOverlay, skipOutroOverlay });
+
             var container = new Container
             {
                 RelativeSizeAxes = Axes.Both,
@@ -499,23 +523,11 @@ namespace osu.Game.Screens.Play
                         Anchor = Anchor.Centre,
                         Origin = Anchor.Centre
                     },
-                    BreakOverlay = new BreakOverlay(ScoreProcessor)
-                    {
-                        Clock = DrawableRuleset.FrameStableClock,
-                        ProcessCustomClock = false,
-                        BreakTracker = breakTracker,
-                    },
+                    rulesetOverlayContainer == null ? BreakOverlay : new Container(),
                     // display the cursor above some HUD elements.
                     DrawableRuleset.Cursor?.CreateProxy() ?? new Container(),
-                    SkipIntroOverlay = CreateSkipOverlay(DrawableRuleset.GameplayStartTime).With(o =>
-                    {
-                        o.RequestSkip = RequestIntroSkip;
-                    }),
-                    skipOutroOverlay = new SkipOverlay(GameplayState.Storyboard.LatestEventTime ?? 0)
-                    {
-                        RequestSkip = () => progressToResults(false),
-                        Alpha = 0
-                    },
+                    rulesetOverlayContainer == null ? SkipIntroOverlay : new Container(),
+                    rulesetOverlayContainer == null ? skipOutroOverlay : new Container(),
                     DrawableRuleset.ResumeOverlay?.CreateProxy() ?? new Container(),
                     PauseOverlay = new PauseOverlay
                     {

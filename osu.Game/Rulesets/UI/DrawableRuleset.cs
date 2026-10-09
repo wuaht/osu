@@ -557,6 +557,12 @@ namespace osu.Game.Rulesets.UI
         public virtual bool AllowGameplayOverlays => true;
 
         /// <summary>
+        /// A container to display the break and skip overlays in, instead of above the ruleset.
+        /// This allows rulesets to display them as part of the gameplay, e.g. when displaying it in 3D.
+        /// </summary>
+        public virtual Container BreakAndSkipOverlayContainer => null;
+
+        /// <summary>
         /// On mobile devices, this specifies whether this ruleset requires the device to be in portrait orientation.
         /// </summary>
         public virtual bool RequiresPortraitOrientation => false;
