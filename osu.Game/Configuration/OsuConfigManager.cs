@@ -285,6 +285,8 @@ namespace osu.Game.Configuration
 
             SetDefault(OsuSetting.SlopActiveOfflineProfile, string.Empty);
             SetDefault(OsuSetting.SlopOfflineProfilesIncludeUnranked, false);
+
+            SetDefault(OsuSetting.SlopFileSelectorRecentDirectories, string.Empty);
         }
 
         protected override bool CheckLookupContainsPrivateInformation(OsuSetting lookup)
@@ -688,5 +690,10 @@ namespace osu.Game.Configuration
         /// Whether scores on unranked beatmaps count for the performance, ranked score and grades of offline profiles.
         /// </summary>
         SlopOfflineProfilesIncludeUnranked,
+
+        /// <summary>
+        /// The directories which files were recently selected in, most recent first, separated by <see cref="Graphics.UserInterfaceV2.FileSelection.RecentDirectories.SEPARATOR"/>.
+        /// </summary>
+        SlopFileSelectorRecentDirectories,
     }
 }

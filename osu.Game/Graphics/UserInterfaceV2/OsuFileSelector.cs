@@ -10,11 +10,13 @@ using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Graphics.UserInterface;
 using osu.Framework.Localisation;
+using osu.Game.Configuration;
 using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.Sprites;
 using osu.Game.Graphics.UserInterfaceV2.FileSelection;
 using osu.Game.Overlays;
 using osu.Game.Utils;
+using osuTK;
 
 namespace osu.Game.Graphics.UserInterfaceV2
 {
@@ -38,6 +40,25 @@ namespace osu.Game.Graphics.UserInterfaceV2
             });
 
             hiddenToggleBackground.Colour = colourProvider.Background4;
+
+            // like the navigation pane of file explorers.
+            TopLevelContent.Padding = new MarginPadding { Left = FileSelectorSidePanel.WIDTH };
+            AddInternal(new FileSelectorSidePanel());
+        }
+
+        [Resolved]
+        private OsuConfigManager? config { get; set; }
+
+        protected override void LoadComplete()
+        {
+            base.LoadComplete();
+
+            // only files selected by the user, not the initially selected one.
+            CurrentFile.BindValueChanged(file =>
+            {
+                if (config != null && file.NewValue?.Directory is DirectoryInfo directory)
+                    RecentDirectories.Add(config, directory);
+            });
         }
 
         protected override ScrollContainer<Drawable> CreateScrollContainer() => new OsuScrollContainer
@@ -78,26 +99,85 @@ namespace osu.Game.Graphics.UserInterfaceV2
 
         protected partial class OsuDirectoryListingFile : DirectoryListingFile
         {
+            /// <summary>
+            /// The size of the previews of images.
+            /// </summary>
+            private const int thumbnail_size = 40;
+
+            private readonly bool isImage;
+
+            private Container thumbnail = null!;
+            private SpriteIcon fallbackIcon = null!;
+
             public OsuDirectoryListingFile(FileInfo file)
                 : base(file)
             {
+                isImage = SupportedExtensions.IMAGE_EXTENSIONS.Contains(file.Extension.ToLowerInvariant());
             }
 
             [BackgroundDependencyLoader]
             private void load(OverlayColourProvider colourProvider)
             {
                 Flow.AutoSizeAxes = Axes.X;
-                Flow.Height = OsuDirectorySelector.ITEM_HEIGHT;
+                Flow.Height = isImage ? thumbnail_size : OsuDirectorySelector.ITEM_HEIGHT;
+
+                if (isImage)
+                {
+                    // a preview instead of the icon, which is only loaded once it is displayed (as directories may contain many images).
+                    Flow.Insert(-1, thumbnail = new Container
+                    {
+                        Size = new Vector2(thumbnail_size),
+                        Margin = new MarginPadding { Right = 5 },
+                        Children = new Drawable[]
+                        {
+                            fallbackIcon = new SpriteIcon
+                            {
+                                Anchor = Anchor.Centre,
+                                Origin = Anchor.Centre,
+                                Size = new Vector2(FONT_SIZE),
+                                Icon = FontAwesome.Regular.FileImage,
+                            },
+                            new DelayedLoadWrapper(() => new FileThumbnail(File, thumbnail_size)
+                            {
+                                RelativeSizeAxes = Axes.Both,
+                                Anchor = Anchor.Centre,
+                                Origin = Anchor.Centre,
+                            }, 0)
+                            {
+                                RelativeSizeAxes = Axes.Both,
+                            },
+                        }
+                    });
+
+                    foreach (var child in Flow)
+                    {
+                        child.Anchor = Anchor.CentreLeft;
+                        child.Origin = Anchor.CentreLeft;
+                    }
+                }
 
                 AddInternal(new BackgroundLayer());
 
-                Colour = colourProvider.Light3;
+                if (isImage)
+                {
+                    // the preview keeps its colours.
+                    foreach (var child in Flow.Where(c => c != thumbnail))
+                        child.Colour = colourProvider.Light3;
+
+                    fallbackIcon.Colour = colourProvider.Light3;
+                }
+                else
+                    Colour = colourProvider.Light3;
             }
 
             protected override IconUsage? Icon
             {
                 get
                 {
+                    // images have a preview instead.
+                    if (isImage)
+                        return null;
+
                     string extension = File.Extension.ToLowerInvariant();
 
                     if (SupportedExtensions.VIDEO_EXTENSIONS.Contains(extension))
