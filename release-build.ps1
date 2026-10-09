@@ -94,17 +94,29 @@ if (-not $SkipUpload)
     $existingTags = @(gh release list --repo $repoName --limit 1000 --json tagName --jq '.[].tagName')
 }
 
+# The last version is stored locally, so that each run of this script uses the next number.
+$lastVersionFile = Join-Path $outputDir 'last-version.txt'
+
 if (-not $Version)
 {
-    # Same scheme as official releases: year.monthday.n
+    # Same scheme as official releases: year.monthday.n, where n counts up with each run on the same day.
     $now = Get-Date
     $prefix = '{0}.{1}{2:00}' -f $now.Year, $now.Month, $now.Day
     $n = 0
-    while ($existingTags -contains "$prefix.$n") { $n++ }
+
+    if (Test-Path $lastVersionFile)
+    {
+        $lastVersion = (Get-Content -Raw $lastVersionFile).Trim()
+        if ($lastVersion -match "^$([regex]::Escape($prefix))\.(\d+)$") { $n = [int]$Matches[1] + 1 }
+    }
+
     $Version = "$prefix.$n"
 }
 
 if ($existingTags -contains $Version) { throw "A release for version $Version already exists." }
+
+New-Item -ItemType Directory -Force $outputDir | Out-Null
+Set-Content -Path $lastVersionFile -Encoding utf8 -Value $Version
 
 Write-Host "Releasing slop! $Version" -ForegroundColor Green
 
