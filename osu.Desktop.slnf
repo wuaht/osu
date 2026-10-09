@@ -12,6 +12,7 @@
                                       "osu.Game.Rulesets.Osu\\osu.Game.Rulesets.Osu.csproj",
                                       "osu.Game.Rulesets.Taiko.Tests\\osu.Game.Rulesets.Taiko.Tests.csproj",
                                       "osu.Game.Rulesets.Taiko\\osu.Game.Rulesets.Taiko.csproj",
+                                      "osu.Game.Rulesets.Fposu\\osu.Game.Rulesets.Fposu.csproj",
                                       "osu.Game.Tests\\osu.Game.Tests.csproj",
                                       "osu.Game.Tournament.Tests\\osu.Game.Tournament.Tests.csproj",
                                       "osu.Game.Tournament\\osu.Game.Tournament.csproj",

@@ -268,6 +268,108 @@ namespace osu.Game.Localisation
             @"Outlines circles and sliders in red which go offscreen on a 4:3 screen, including any part of a slider's body. Offscreen objects aren't allowed in ranked beatmaps.");
 
         /// <summary>
+        /// "FPoSu"
+        /// </summary>
+        public static LocalisableString FposuHeader => new TranslatableString(getKey(@"fposu_header"), @"FPoSu");
+
+        /// <summary>
+        /// "Mouse DPI"
+        /// </summary>
+        public static LocalisableString FposuMouseDpi => new TranslatableString(getKey(@"fposu_mouse_dpi"), @"Mouse DPI");
+
+        /// <summary>
+        /// "The DPI your mouse is set to. Together with cm/360, this determines the sensitivity like in first person shooters."
+        /// </summary>
+        public static LocalisableString FposuMouseDpiDescription => new TranslatableString(getKey(@"fposu_mouse_dpi_description"),
+            @"The DPI your mouse is set to. Together with cm/360, this determines the sensitivity like in first person shooters.");
+
+        /// <summary>
+        /// "cm/360"
+        /// </summary>
+        public static LocalisableString FposuCmPer360 => new TranslatableString(getKey(@"fposu_cm_per_360"), @"cm/360");
+
+        /// <summary>
+        /// "How many centimetres the mouse has to be moved for a full turn."
+        /// </summary>
+        public static LocalisableString FposuCmPer360Description => new TranslatableString(getKey(@"fposu_cm_per_360_description"),
+            @"How many centimetres the mouse has to be moved for a full turn.");
+
+        /// <summary>
+        /// "Field of view"
+        /// </summary>
+        public static LocalisableString FposuFov => new TranslatableString(getKey(@"fposu_fov"), @"Field of view");
+
+        /// <summary>
+        /// "The horizontal field of view in degrees."
+        /// </summary>
+        public static LocalisableString FposuFovDescription => new TranslatableString(getKey(@"fposu_fov_description"), @"The horizontal field of view in degrees.");
+
+        /// <summary>
+        /// "Distance"
+        /// </summary>
+        public static LocalisableString FposuDistance => new TranslatableString(getKey(@"fposu_distance"), @"Distance");
+
+        /// <summary>
+        /// "How far away the playfield is. Lower values make it appear larger."
+        /// </summary>
+        public static LocalisableString FposuDistanceDescription => new TranslatableString(getKey(@"fposu_distance_description"),
+            @"How far away the playfield is. Lower values make it appear larger.");
+
+        /// <summary>
+        /// "Curved playfield"
+        /// </summary>
+        public static LocalisableString FposuCurved => new TranslatableString(getKey(@"fposu_curved"), @"Curved playfield");
+
+        /// <summary>
+        /// "Curves the playfield around you, so that every part of it is equally far away."
+        /// </summary>
+        public static LocalisableString FposuCurvedDescription => new TranslatableString(getKey(@"fposu_curved_description"),
+            @"Curves the playfield around you, so that every part of it is equally far away.");
+
+        /// <summary>
+        /// "Invert horizontal mouse movement"
+        /// </summary>
+        public static LocalisableString FposuInvertHorizontal => new TranslatableString(getKey(@"fposu_invert_horizontal"), @"Invert horizontal mouse movement");
+
+        /// <summary>
+        /// "Invert vertical mouse movement"
+        /// </summary>
+        public static LocalisableString FposuInvertVertical => new TranslatableString(getKey(@"fposu_invert_vertical"), @"Invert vertical mouse movement");
+
+        /// <summary>
+        /// "Absolute mode"
+        /// </summary>
+        public static LocalisableString FposuAbsoluteMode => new TranslatableString(getKey(@"fposu_absolute_mode"), @"Absolute mode");
+
+        /// <summary>
+        /// "The camera looks at the cursor instead of being turned by mouse movement. Useful for tablets."
+        /// </summary>
+        public static LocalisableString FposuAbsoluteModeDescription => new TranslatableString(getKey(@"fposu_absolute_mode_description"),
+            @"The camera looks at the cursor instead of being turned by mouse movement. Useful for tablets.");
+
+        /// <summary>
+        /// "Background cube"
+        /// </summary>
+        public static LocalisableString FposuBackgroundCube => new TranslatableString(getKey(@"fposu_background_cube"), @"Background cube");
+
+        /// <summary>
+        /// "Skybox"
+        /// </summary>
+        public static LocalisableString FposuSkybox => new TranslatableString(getKey(@"fposu_skybox"), @"Skybox");
+
+        /// <summary>
+        /// "Displays a sky around you instead of the background cube. Skins can provide their own as skybox.png, a cubemap in the horizontal cross layout."
+        /// </summary>
+        public static LocalisableString FposuSkyboxDescription => new TranslatableString(getKey(@"fposu_skybox_description"),
+            @"Displays a sky around you instead of the background cube. Skins can provide their own as skybox.png, a cubemap in the horizontal cross layout.");
+
+        /// <summary>
+        /// "Displays a grid around you, which helps with orientation."
+        /// </summary>
+        public static LocalisableString FposuBackgroundCubeDescription => new TranslatableString(getKey(@"fposu_background_cube_description"),
+            @"Displays a grid around you, which helps with orientation.");
+
+        /// <summary>
         /// "Loop music"
         /// </summary>
         public static LocalisableString LoopMusic => new TranslatableString(getKey(@"loop_music"), @"Loop music");

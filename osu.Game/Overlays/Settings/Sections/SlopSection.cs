@@ -26,6 +26,7 @@ namespace osu.Game.Overlays.Settings.Sections
             {
                 new GraphicsSettings(),
                 new EditorSettings(),
+                new FposuSettings(),
                 new OfflineProfileSettings(),
             };
         }
