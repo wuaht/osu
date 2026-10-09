@@ -352,6 +352,8 @@ namespace osu.Game.Screens.Edit
             var bookmarkController = new BookmarkController();
             AddInternal(bookmarkController);
 
+            AddInternal(new EditorVolumeMuting());
+
             OsuMenuItem undoMenuItem;
             OsuMenuItem redoMenuItem;
 
