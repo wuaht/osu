@@ -323,7 +323,9 @@ namespace osu.Game.Online.API.Requests.Responses
 
         public int OnlineID => Id;
 
-        public bool Equals(APIUser other) => this.MatchesOnlineID(other);
+        // users without an online ID (offline profiles) are only equal to themselves.
+        // otherwise bindables wouldn't notify about changes to such users, as they check the new value for equality to itself.
+        public bool Equals(APIUser other) => ReferenceEquals(this, other) || this.MatchesOnlineID(other);
 
 #pragma warning disable 649
         private class Country

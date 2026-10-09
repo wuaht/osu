@@ -56,13 +56,38 @@ namespace osu.Game.Online.API
         private static APIUser createGuestUser() => new GuestUser();
 
         /// <summary>
+        /// The user of the active offline profile, which is the local user instead of a guest while not logged in.
+        /// </summary>
+        private APIUser? offlineProfileUser;
+
+        private APIUser createLoggedOutUser() => offlineProfileUser ?? createGuestUser();
+
+        /// <summary>
+        /// Whether the local user is a guest or an offline profile, i.e. not logged in (or attempting to).
+        /// </summary>
+        public bool HasLoggedOutUser => isLoggedOutUser(localUser.Value);
+
+        // offline profiles are guest users as well.
+        private static bool isLoggedOutUser(APIUser user) => user is GuestUser;
+
+        public void SetOfflineProfileUser(APIUser? user)
+        {
+            offlineProfileUser = user;
+
+            // while logged in (or attempting to), the logged in user stays the local user.
+            if (isLoggedOutUser(localUser.Value))
+                localUser.Value = createLoggedOutUser();
+        }
+
+        /// <summary>
         /// Show a placeholder user if saved credentials are available.
         /// This is useful for storing local scores and showing a placeholder username after starting the game,
         /// until a valid connection has been established.
         /// </summary>
         public void SetPlaceholderLocalUser(string username)
         {
-            if (!localUser.IsDefault)
+            // also replaces an offline profile, as these are only used while not logged in.
+            if (!isLoggedOutUser(localUser.Value))
                 return;
 
             localUser.Value = new APIUser
@@ -90,7 +115,7 @@ namespace osu.Game.Online.API
             // Scheduled prior to state change such that the state changed event is invoked with the correct user and their friends present
             Schedule(() =>
             {
-                localUser.Value = createGuestUser();
+                localUser.Value = createLoggedOutUser();
                 configSupporter.Value = false;
                 friends.Clear();
                 blocks.Clear();

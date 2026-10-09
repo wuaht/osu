@@ -44,6 +44,26 @@ namespace osu.Game.Online
 
         private readonly IBindable<APIState> apiState = new Bindable<APIState>();
 
+        private bool showContentWhileOffline;
+
+        /// <summary>
+        /// Whether the content is displayed even while not logged in, e.g. because it is available locally.
+        /// </summary>
+        public bool ShowContentWhileOffline
+        {
+            get => showContentWhileOffline;
+            set
+            {
+                if (showContentWhileOffline == value)
+                    return;
+
+                showContentWhileOffline = value;
+
+                if (IsLoaded)
+                    onlineStateChanged(new ValueChangedEvent<APIState>(apiState.Value, apiState.Value));
+            }
+        }
+
         [BackgroundDependencyLoader]
         private void load(IAPIProvider api)
         {
@@ -63,6 +83,14 @@ namespace osu.Game.Online
 
         private void onlineStateChanged(ValueChangedEvent<APIState> state) => Schedule(() =>
         {
+            if (showContentWhileOffline)
+            {
+                PopContentIn(Content);
+                placeholder.FadeOut(transform_duration / 2, Easing.OutQuint);
+                LoadingSpinner.Hide();
+                return;
+            }
+
             switch (state.NewValue)
             {
                 case APIState.Offline:

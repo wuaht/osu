@@ -15,7 +15,11 @@ using osu.Game.Graphics.Sprites;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Localisation;
 using osu.Game.Online.API;
+using osu.Game.Online.API.Requests.Responses;
+using osu.Game.Online.OfflineProfiles;
+using osu.Game.Overlays.OfflineProfiles;
 using osu.Game.Overlays.Settings;
+using osu.Game.Overlays.Settings.Sections.Slop;
 using osu.Game.Users;
 using osuTK;
 
@@ -39,6 +43,14 @@ namespace osu.Game.Overlays.Login
 
         private readonly IBindable<APIState> apiState = new Bindable<APIState>();
         private readonly Bindable<UserStatus> configUserStatus = new Bindable<UserStatus>();
+        private readonly IBindable<APIUser> localUser = new Bindable<APIUser>();
+        private readonly IBindable<OfflineProfile?> activeOfflineProfile = new Bindable<OfflineProfile?>();
+
+        [Resolved]
+        private OfflineProfileManager? offlineProfiles { get; set; }
+
+        [Resolved]
+        private SettingsOverlay? settings { get; set; }
 
         [Resolved]
         private IAPIProvider api { get; set; } = null!;
@@ -73,6 +85,22 @@ namespace osu.Game.Overlays.Login
 
             apiState.BindTo(api.State);
             apiState.BindValueChanged(onlineStateChanged, true);
+
+            // changes to the active offline profile (its username, avatar etc.) are reflected by the local user.
+            localUser.BindTo(api.LocalUser);
+            localUser.BindValueChanged(_ => Scheduler.AddOnce(updateOfflineContent));
+
+            if (offlineProfiles != null)
+            {
+                activeOfflineProfile.BindTo(offlineProfiles.ActiveProfile);
+                activeOfflineProfile.BindValueChanged(_ => Scheduler.AddOnce(updateOfflineContent));
+            }
+        }
+
+        private void updateOfflineContent()
+        {
+            if (apiState.Value == APIState.Offline)
+                showOfflineContent();
         }
 
         private void onlineStateChanged(ValueChangedEvent<APIState> state) => Schedule(() =>
@@ -82,10 +110,7 @@ namespace osu.Game.Overlays.Login
             switch (state.NewValue)
             {
                 case APIState.Offline:
-                    Child = form = new LoginForm
-                    {
-                        RequestHide = RequestHide
-                    };
+                    showOfflineContent();
                     break;
 
                 case APIState.RequiresSecondFactorAuth:
@@ -207,6 +232,93 @@ namespace osu.Game.Overlays.Login
             if (form != null)
                 ScheduleAfterChildren(() => GetContainingFocusManager()?.ChangeFocus(form));
         });
+
+        /// <summary>
+        /// Shows the active offline profile like a logged in user, or the login form along with the selection of offline profiles.
+        /// </summary>
+        private void showOfflineContent()
+        {
+            form = null;
+
+            var profile = offlineProfiles?.ActiveProfile.Value;
+
+            if (profile == null)
+            {
+                Child = new FillFlowContainer
+                {
+                    RelativeSizeAxes = Axes.X,
+                    AutoSizeAxes = Axes.Y,
+                    Direction = FillDirection.Vertical,
+                    Children = new Drawable[]
+                    {
+                        form = new LoginForm
+                        {
+                            RequestHide = RequestHide
+                        },
+                        new OfflineProfilePanel
+                        {
+                            RequestHide = RequestHide
+                        },
+                    }
+                };
+
+                return;
+            }
+
+            Child = new FillFlowContainer
+            {
+                RelativeSizeAxes = Axes.X,
+                AutoSizeAxes = Axes.Y,
+                Direction = FillDirection.Vertical,
+                Spacing = new Vector2(0f, SettingsSection.ITEM_SPACING),
+                Children = new Drawable[]
+                {
+                    new FillFlowContainer
+                    {
+                        RelativeSizeAxes = Axes.X,
+                        AutoSizeAxes = Axes.Y,
+                        Padding = new MarginPadding { Horizontal = SettingsPanel.CONTENT_MARGINS },
+                        Direction = FillDirection.Vertical,
+                        Spacing = new Vector2(0f, SettingsSection.ITEM_SPACING),
+                        Children = new Drawable[]
+                        {
+                            new OsuSpriteText
+                            {
+                                Anchor = Anchor.TopCentre,
+                                Origin = Anchor.TopCentre,
+                                Text = OfflineProfileStrings.SignedInOffline,
+                                Font = OsuFont.GetFont(size: 18, weight: FontWeight.Bold),
+                            },
+                            new OfflineProfileRankPanel(profile)
+                            {
+                                RelativeSizeAxes = Axes.X,
+                                Action = RequestHide
+                            },
+                            new OfflineProfileDropdown
+                            {
+                                Caption = OfflineProfileStrings.PlayAs,
+                                HintText = OfflineProfileStrings.PlayAsDescription,
+                            },
+                        },
+                    },
+                    new SettingsButton
+                    {
+                        Text = OfflineProfileStrings.ManageProfiles,
+                        Action = () =>
+                        {
+                            RequestHide?.Invoke();
+                            settings?.ShowAtControl<OfflineProfileSettings>();
+                        },
+                    },
+                    // signing out of the profile shows the login form again.
+                    new DangerousSettingsButton
+                    {
+                        Text = LoginPanelStrings.SignOut,
+                        Action = () => offlineProfiles?.SetActiveProfile(null),
+                    },
+                },
+            };
+        }
 
         private void updateDropdownCurrent(UserStatus? status)
         {

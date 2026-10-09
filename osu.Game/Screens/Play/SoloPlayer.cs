@@ -10,6 +10,7 @@ using osu.Framework.Allocation;
 using osu.Game.Beatmaps;
 using osu.Game.Extensions;
 using osu.Game.Online.API;
+using osu.Game.Online.OfflineProfiles;
 using osu.Game.Online.Rooms;
 using osu.Game.Online.Solo;
 using osu.Game.Scoring;
@@ -29,9 +30,13 @@ namespace osu.Game.Screens.Play
         }
 
         [BackgroundDependencyLoader]
-        private void load()
+        private void load([CanBeNull] OfflineProfileManager offlineProfiles)
         {
             AddInternal(leaderboardProvider);
+
+            // counted like the play count of osu! accounts, which includes failed and aborted plays.
+            if (offlineProfiles != null)
+                OnGameplayStarted += () => offlineProfiles.RecordPlay(Ruleset.Value);
         }
 
         protected override APIRequest<APIScoreToken> CreateTokenRequest()

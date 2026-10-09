@@ -4,8 +4,10 @@
 using System;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
+using osu.Framework.Extensions;
 using osu.Framework.Extensions.ObjectExtensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
@@ -13,6 +15,7 @@ using osu.Framework.Graphics.Cursor;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.UserInterface;
 using osu.Framework.Input.Events;
+using osu.Framework.Logging;
 using osu.Game.Extensions;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Containers;
@@ -23,8 +26,10 @@ using osu.Game.Online;
 using osu.Game.Online.API;
 using osu.Game.Online.API.Requests;
 using osu.Game.Online.API.Requests.Responses;
+using osu.Game.Online.OfflineProfiles;
 using osu.Game.Overlays.Profile;
 using osu.Game.Overlays.Profile.Sections;
+using osu.Game.Overlays.Profile.Sections.Offline;
 using osu.Game.Rulesets;
 using osu.Game.Users;
 using osuTK;
@@ -52,6 +57,14 @@ namespace osu.Game.Overlays
 
         [Resolved]
         private RulesetStore rulesets { get; set; } = null!;
+
+        [Resolved]
+        private OfflineProfileManager? offlineProfiles { get; set; }
+
+        [Resolved]
+        private IBindable<RulesetInfo> gameRuleset { get; set; } = null!;
+
+        private CancellationTokenSource? offlineStatisticsCancellation;
 
         public UserProfileOverlay()
             : base(OverlayColourScheme.Pink)
@@ -100,6 +113,17 @@ namespace osu.Game.Overlays
         private void fetchAndSetContent()
         {
             Debug.Assert(user != null);
+
+            offlineStatisticsCancellation?.Cancel();
+
+            // offline profiles are always refreshed, as their statistics are calculated locally and may have changed.
+            if (OfflineProfileUser.IsOfflineProfileID(user.OnlineID))
+            {
+                showOfflineProfile(user.OnlineID);
+                return;
+            }
+
+            onlineViewContainer.ShowContentWhileOffline = false;
 
             bool sameUser = user.OnlineID == Header.User.Value?.User.Id;
             if (sameUser && ruleset?.MatchesOnlineID(Header.User.Value?.Ruleset) == true)
@@ -167,6 +191,88 @@ namespace osu.Game.Overlays
                         tabs.AddItem(sec);
                     }
                 }
+            }
+
+            loadingLayer.Hide();
+        }
+
+        /// <summary>
+        /// Shows an offline profile, whose statistics are calculated from its local scores.
+        /// </summary>
+        private void showOfflineProfile(int userId)
+        {
+            userReq?.Cancel();
+            lastSection = null;
+            sectionsContainer?.ExpandableHeader = null;
+
+            var profile = offlineProfiles?.GetProfileByUserID(userId);
+
+            onlineViewContainer.ShowContentWhileOffline = true;
+
+            changeOverlayColours(OverlayColourScheme.Pink.GetHue());
+            recreateBaseContent();
+
+            if (profile == null)
+            {
+                loadingLayer.Hide();
+                return;
+            }
+
+            // unlike osu! accounts, offline profiles have statistics in all rulesets. without a requested ruleset, the one currently played is shown.
+            var actualRuleset = rulesets.GetRuleset(ruleset?.ShortName ?? gameRuleset.Value.ShortName) ?? rulesets.GetRuleset(@"osu").AsNonNull();
+
+            loadingLayer.Show();
+
+            var cancellation = offlineStatisticsCancellation = new CancellationTokenSource();
+
+            offlineProfiles!.CalculateRankingAsync(actualRuleset, cancellation.Token).ContinueWith(task => Schedule(() =>
+            {
+                if (cancellation.IsCancellationRequested)
+                    return;
+
+                var entry = task.IsCompletedSuccessfully ? task.GetResultSafely().GetEntry(profile) : null;
+
+                if (entry == null)
+                {
+                    if (task.Exception != null)
+                        Logger.Error(task.Exception, $"Failed to calculate the statistics of offline profile {profile.Username}");
+
+                    loadingLayer.Hide();
+                    return;
+                }
+
+                offlineProfileLoadComplete(profile, actualRuleset, entry.Statistics, task.GetResultSafely());
+            }), CancellationToken.None);
+        }
+
+        private void offlineProfileLoadComplete(OfflineProfile profile, RulesetInfo profileRuleset, OfflineProfileStatistics statistics, OfflineProfileRanking ranking)
+        {
+            Debug.Assert(sectionsContainer != null && tabs != null);
+
+            var profileUser = profile.CreateUser();
+            profileUser.Statistics = statistics.Statistics;
+            // the default ruleset is the most played one.
+            profileUser.PlayMode = profile.PlayCounts.Where(kvp => kvp.Value > 0 && rulesets.GetRuleset(kvp.Key) != null)
+                                          .OrderByDescending(kvp => kvp.Value)
+                                          .Select(kvp => kvp.Key)
+                                          .FirstOrDefault() ?? @"osu";
+
+            var userProfile = new UserProfileData(profileUser, profileRuleset);
+            Header.User.Value = userProfile;
+
+            sections = new ProfileSection[]
+            {
+                new OfflineRanksSection(statistics),
+                new OfflineHistoricalSection(statistics),
+                new OfflineRankingSection(ranking, profileRuleset),
+            };
+
+            foreach (var section in sections)
+            {
+                section.User.Value = userProfile;
+
+                sectionsContainer.Add(section);
+                tabs.AddItem(section);
             }
 
             loadingLayer.Hide();

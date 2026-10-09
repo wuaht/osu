@@ -270,6 +270,9 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopEditorShowOffscreenObjects, false);
             SetDefault(OsuSetting.SlopEditorWaveformStyle, EditorWaveformStyle.Default);
             SetDefault(OsuSetting.SlopEditorLoopMusic, false);
+
+            SetDefault(OsuSetting.SlopActiveOfflineProfile, string.Empty);
+            SetDefault(OsuSetting.SlopOfflineProfilesIncludeUnranked, false);
         }
 
         protected override bool CheckLookupContainsPrivateInformation(OsuSetting lookup)
@@ -613,5 +616,15 @@ namespace osu.Game.Configuration
         /// Whether objects which go offscreen on 4:3 aspect ratio are outlined in the beatmap editor.
         /// </summary>
         SlopEditorShowOffscreenObjects,
+
+        /// <summary>
+        /// The ID of the offline profile which is the local user while not logged in, or empty to play as a guest.
+        /// </summary>
+        SlopActiveOfflineProfile,
+
+        /// <summary>
+        /// Whether scores on unranked beatmaps count for the performance, ranked score and grades of offline profiles.
+        /// </summary>
+        SlopOfflineProfilesIncludeUnranked,
     }
 }

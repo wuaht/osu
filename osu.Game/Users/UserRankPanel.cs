@@ -31,6 +31,11 @@ namespace osu.Game.Users
         private ProfileValueDisplay countryRankDisplay = null!;
         private LoadingLayer loadingLayer = null!;
 
+        /// <summary>
+        /// The flag, team logo and supporter icon.
+        /// </summary>
+        protected FillFlowContainer Details { get; private set; } = null!;
+
         public UserRankPanel(APIUser user)
             : base(user)
         {
@@ -50,6 +55,11 @@ namespace osu.Game.Users
         [Resolved]
         private IBindable<RulesetInfo> ruleset { get; set; } = null!;
 
+        /// <summary>
+        /// Returns the statistics which are displayed, or <c>null</c> if they aren't available yet.
+        /// </summary>
+        protected virtual UserStatistics? GetStatistics(RulesetInfo ruleset) => statisticsProvider?.GetStatisticsFor(ruleset);
+
         protected override void LoadComplete()
         {
             base.LoadComplete();
@@ -57,18 +67,18 @@ namespace osu.Game.Users
             if (statisticsProvider != null)
                 statisticsProvider.StatisticsUpdated += onStatisticsUpdated;
 
-            ruleset.BindValueChanged(_ => updateDisplay(), true);
+            ruleset.BindValueChanged(_ => UpdateDisplay(), true);
         }
 
         private void onStatisticsUpdated(UserStatisticsUpdate update)
         {
             if (update.Ruleset.Equals(ruleset.Value))
-                updateDisplay();
+                UpdateDisplay();
         }
 
-        private void updateDisplay()
+        protected void UpdateDisplay()
         {
-            var statistics = statisticsProvider?.GetStatisticsFor(ruleset.Value);
+            var statistics = GetStatistics(ruleset.Value);
 
             loadingLayer.State.Value = statistics == null ? Visibility.Visible : Visibility.Hidden;
 
@@ -82,8 +92,6 @@ namespace osu.Game.Users
 
         protected override Drawable CreateLayout()
         {
-            FillFlowContainer details;
-
             var layout = new Container
             {
                 RelativeSizeAxes = Axes.X,
@@ -147,7 +155,7 @@ namespace osu.Game.Users
                                             {
                                                 new Drawable[]
                                                 {
-                                                    details = new FillFlowContainer
+                                                    Details = new FillFlowContainer
                                                     {
                                                         AutoSizeAxes = Axes.Both,
                                                         Direction = FillDirection.Horizontal,
@@ -206,7 +214,7 @@ namespace osu.Game.Users
 
             if (User.IsSupporter)
             {
-                details.Add(new SupporterIcon
+                Details.Add(new SupporterIcon
                 {
                     Height = 26,
                     SupportLevel = User.SupportLevel

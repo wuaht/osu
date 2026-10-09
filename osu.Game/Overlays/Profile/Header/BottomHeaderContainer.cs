@@ -15,6 +15,7 @@ using osu.Game.Graphics;
 using osu.Game.Graphics.Containers;
 using osu.Game.Online.API;
 using osu.Game.Online.API.Requests.Responses;
+using osu.Game.Online.OfflineProfiles;
 using osu.Game.Resources.Localisation.Web;
 using osuTK;
 using osuTK.Graphics;
@@ -123,13 +124,17 @@ namespace osu.Game.Overlays.Profile.Header
                 addSpacer(topLinkContainer);
             }
 
-            topLinkContainer.AddText("Contributed ");
-            topLinkContainer.AddLink("forum post".ToQuantity(user.PostCount, "#,##0"), $"{api.Endpoints.WebsiteUrl}/users/{user.Id}/posts", creationParameters: embolden);
+            // offline profiles don't exist on the website.
+            if (!OfflineProfileUser.IsOfflineProfileID(user.Id))
+            {
+                topLinkContainer.AddText("Contributed ");
+                topLinkContainer.AddLink("forum post".ToQuantity(user.PostCount, "#,##0"), $"{api.Endpoints.WebsiteUrl}/users/{user.Id}/posts", creationParameters: embolden);
 
-            addSpacer(topLinkContainer);
+                addSpacer(topLinkContainer);
 
-            topLinkContainer.AddText("Posted ");
-            topLinkContainer.AddLink("comment".ToQuantity(user.CommentsCount, "#,##0"), $"{api.Endpoints.WebsiteUrl}/comments?user_id={user.Id}", creationParameters: embolden);
+                topLinkContainer.AddText("Posted ");
+                topLinkContainer.AddLink("comment".ToQuantity(user.CommentsCount, "#,##0"), $"{api.Endpoints.WebsiteUrl}/comments?user_id={user.Id}", creationParameters: embolden);
+            }
 
             string websiteWithoutProtocol = user.Website;
 

@@ -13,6 +13,12 @@ namespace osu.Game.Online.API
         IBindableList<APIRelation> Blocks { get; }
         IBindableList<int> FavouriteBeatmapSets { get; }
 
+        /// <summary>
+        /// Sets the user which is the local user while not logged in, instead of a guest (used for offline profiles).
+        /// </summary>
+        /// <param name="user">The user, or <c>null</c> to use a guest.</param>
+        void SetOfflineProfileUser(APIUser? user);
+
         void UpdateFriends();
         void UpdateBlocks();
         void UpdateFavouriteBeatmapSets();
