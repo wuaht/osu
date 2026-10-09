@@ -8,6 +8,7 @@ using osu.Game.Beatmaps;
 using osu.Game.Models;
 using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Online.Leaderboards;
+using osu.Game.Online.OfflineProfiles;
 using osu.Game.Rulesets.Scoring;
 using Realms;
 
@@ -82,13 +83,31 @@ namespace osu.Game.Scoring
         /// as well as scores of unknown provenance (with default user ID of 1, see <see cref="APIUser.OnlineID"/>),
         /// will be treated as if they belong to the local user.
         /// This may not be necessarily considered fully correct in some circumstances, but in most cases it is the desired effect.
+        /// Offline profiles are an exception, as their scores only belong to the respective profile (see <see cref="IsScoreOfLocalUser"/>).
         /// </remarks>
         public static IQueryable<ScoreInfo> GetAllLocalScoresForUser(this Realm realm, int? userId)
         {
+            const string user_id = $@"{nameof(ScoreInfo.User)}.{nameof(RealmUser.OnlineID)}";
+
+            string ownership = userId != null && OfflineProfileUser.IsOfflineProfileID(userId.Value)
+                ? $@"{user_id} == $0"
+                : $@"({user_id} == $0 || ({user_id} <= 1 && {user_id} > $1))";
+
             return realm.All<ScoreInfo>()
-                        .Filter($@"({nameof(ScoreInfo.User)}.{nameof(RealmUser.OnlineID)} == $0 || {nameof(ScoreInfo.User)}.{nameof(RealmUser.OnlineID)} <= 1)"
+                        .Filter(ownership
                                 + $@" && {nameof(ScoreInfo.BeatmapInfo)}.{nameof(BeatmapInfo.Hash)} == {nameof(ScoreInfo.BeatmapHash)}"
-                                + $@" && {nameof(ScoreInfo.DeletePending)} == false", userId);
+                                + $@" && {nameof(ScoreInfo.DeletePending)} == false", userId, OfflineProfile.FIRST_USER_ID);
+        }
+
+        /// <summary>
+        /// Whether a score with the given user ID belongs to the local user with the given user ID, matching <see cref="GetAllLocalScoresForUser"/>.
+        /// </summary>
+        public static bool IsScoreOfLocalUser(int scoreUserId, int localUserId)
+        {
+            if (OfflineProfileUser.IsOfflineProfileID(localUserId))
+                return scoreUserId == localUserId;
+
+            return scoreUserId == localUserId || (scoreUserId <= 1 && !OfflineProfileUser.IsOfflineProfileID(scoreUserId));
         }
     }
 }

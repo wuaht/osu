@@ -19,6 +19,7 @@ using osu.Framework.Localisation;
 using osu.Framework.Screens;
 using osu.Game.Graphics.Containers;
 using osu.Game.Online.API;
+using osu.Game.Online.OfflineProfiles;
 using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Online.Chat;
 using osu.Game.Resources.Localisation.Web;
@@ -167,7 +168,8 @@ namespace osu.Game.Users
                     new OsuMenuItem(ContextMenuStrings.ViewProfile, MenuItemType.Highlighted, ViewProfile)
                 };
 
-                if (User.Equals(api.LocalUser.Value))
+                // offline profiles only exist locally.
+                if (User.Equals(api.LocalUser.Value) || OfflineProfileUser.IsOfflineProfileID(User.Id))
                     return items.ToArray();
 
                 items.Add(new OsuMenuItem(UsersStrings.CardSendMessage, MenuItemType.Standard, () =>

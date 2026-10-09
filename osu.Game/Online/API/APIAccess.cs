@@ -327,7 +327,7 @@ namespace osu.Game.Online.API
         /// <returns>Whether the connection attempt was successful.</returns>
         private void attemptConnect()
         {
-            if (LocalUser.IsDefault)
+            if (localUserState.HasLoggedOutUser)
                 Scheduler.Add(localUserState.SetPlaceholderLocalUser, ProvidedUsername, false);
 
             // save the username at this point, if the user requested for it to be.
@@ -715,7 +715,7 @@ namespace osu.Game.Online.API
         }
     }
 
-    internal class GuestUser : APIUser
+    public class GuestUser : APIUser
     {
         public GuestUser()
         {

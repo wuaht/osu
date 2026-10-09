@@ -15,6 +15,7 @@ using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.Sprites;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Online.API;
+using osu.Game.Online.OfflineProfiles;
 using osu.Game.Overlays.Profile.Header.Components;
 using osu.Game.Users;
 using osu.Game.Users.Drawables;
@@ -246,6 +247,8 @@ namespace osu.Game.Overlays.Profile.Header
             avatar.User = user;
             usernameText.Text = user?.Username ?? string.Empty;
             openUserExternally.Link = $@"{api.Endpoints.WebsiteUrl}/users/{user?.Id ?? 0}";
+            // offline profiles don't exist on the website.
+            openUserExternally.Alpha = user != null && OfflineProfileUser.IsOfflineProfileID(user.Id) ? 0 : 1;
             userFlag.CountryCode = user?.CountryCode ?? default;
             userCountryText.Text = (user?.CountryCode ?? default).GetDescription();
             userCountryContainer.Action = () => rankingsOverlay?.ShowCountry(user?.CountryCode ?? default);

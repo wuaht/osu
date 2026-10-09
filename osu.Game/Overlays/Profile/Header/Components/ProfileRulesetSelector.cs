@@ -7,6 +7,7 @@ using osu.Framework.Bindables;
 using osu.Framework.Extensions.ObjectExtensions;
 using osu.Framework.Graphics.UserInterface;
 using osu.Game.Extensions;
+using osu.Game.Online.OfflineProfiles;
 using osu.Game.Rulesets;
 
 namespace osu.Game.Overlays.Profile.Header.Components
@@ -17,6 +18,9 @@ namespace osu.Game.Overlays.Profile.Header.Components
         private UserProfileOverlay? profileOverlay { get; set; }
 
         public readonly Bindable<UserProfileData?> User = new Bindable<UserProfileData?>();
+
+        // offline profiles have statistics in all rulesets, so all are added and those which aren't available online are only shown for offline profiles.
+        protected override bool LegacyOnly => false;
 
         protected override void LoadComplete()
         {
@@ -32,7 +36,14 @@ namespace osu.Game.Overlays.Profile.Header.Components
 
         private void updateState(UserProfileData? user)
         {
-            Current.Value = Items.SingleOrDefault(ruleset => user?.Ruleset.MatchesOnlineID(ruleset) == true);
+            bool isOfflineProfile = user != null && OfflineProfileUser.IsOfflineProfileID(user.User.Id);
+
+            foreach (var tabItem in TabContainer)
+                tabItem.Alpha = isOfflineProfile || tabItem.Value.IsLegacyRuleset() ? 1 : 0;
+
+            Current.Value = isOfflineProfile
+                ? Items.SingleOrDefault(ruleset => ruleset.ShortName == user!.Ruleset.ShortName)
+                : Items.SingleOrDefault(ruleset => user?.Ruleset.MatchesOnlineID(ruleset) == true);
             SetDefaultRuleset(Rulesets.GetRuleset(user?.User.PlayMode ?? @"osu").AsNonNull());
         }
 

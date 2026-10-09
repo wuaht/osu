@@ -250,6 +250,10 @@ namespace osu.Game.Online.API
             IBindableList<APIRelation> ILocalUserState.Blocks => Blocks;
             IBindableList<int> ILocalUserState.FavouriteBeatmapSets => FavouriteBeatmapSets;
 
+            public void SetOfflineProfileUser(APIUser? user)
+            {
+            }
+
             public void UpdateFriends()
             {
             }

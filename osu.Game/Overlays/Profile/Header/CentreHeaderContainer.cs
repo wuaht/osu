@@ -7,6 +7,7 @@ using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Game.Online.API.Requests.Responses;
+using osu.Game.Online.OfflineProfiles;
 using osu.Game.Overlays.Profile.Header.Components;
 using osuTK;
 
@@ -17,6 +18,8 @@ namespace osu.Game.Overlays.Profile.Header
         public readonly Bindable<UserProfileData?> User = new Bindable<UserProfileData?>();
 
         private LevelBadge levelBadge = null!;
+
+        private FillFlowContainer onlineButtons = null!;
 
         public CentreHeaderContainer()
         {
@@ -33,7 +36,7 @@ namespace osu.Game.Overlays.Profile.Header
                     RelativeSizeAxes = Axes.Both,
                     Colour = colourProvider.Background3
                 },
-                new FillFlowContainer
+                onlineButtons = new FillFlowContainer
                 {
                     AutoSizeAxes = Axes.X,
                     RelativeSizeAxes = Axes.Y,
@@ -103,6 +106,9 @@ namespace osu.Game.Overlays.Profile.Header
         private void updateDisplay(APIUser? user)
         {
             levelBadge.LevelInfo.Value = user?.Statistics?.Level;
+
+            // followers, messages etc. aren't available for offline profiles.
+            onlineButtons.Alpha = user != null && OfflineProfileUser.IsOfflineProfileID(user.Id) ? 0 : 1;
         }
     }
 }

@@ -35,6 +35,16 @@ namespace osu.Game.Overlays.Profile.Sections.Ranks
 
         protected readonly SoloScoreInfo Score;
 
+        /// <summary>
+        /// The ruleset of the score, for scores in rulesets which can't be looked up by <see cref="SoloScoreInfo.RulesetID"/> (local scores in rulesets which aren't available online).
+        /// </summary>
+        public RulesetInfo? Ruleset { get; init; }
+
+        /// <summary>
+        /// Whether the performance is shown regardless of the status of the beatmap (local scores on unranked beatmaps whose performance counts).
+        /// </summary>
+        public bool ShowPerformanceOnAnyBeatmap { get; init; }
+
         [Resolved]
         private OsuColour colours { get; set; } = null!;
 
@@ -52,7 +62,7 @@ namespace osu.Game.Overlays.Profile.Sections.Ranks
         [BackgroundDependencyLoader]
         private void load(RulesetStore rulesets)
         {
-            var ruleset = rulesets.GetRuleset(Score.RulesetID)?.CreateInstance() ?? throw new InvalidOperationException($"Ruleset with ID of {Score.RulesetID} not found locally");
+            var ruleset = (Ruleset ?? rulesets.GetRuleset(Score.RulesetID))?.CreateInstance() ?? throw new InvalidOperationException($"Ruleset with ID of {Score.RulesetID} not found locally");
 
             AddInternal(new ProfileItemContainer
             {
@@ -219,7 +229,7 @@ namespace osu.Game.Overlays.Profile.Sections.Ranks
             var font = OsuFont.GetFont(weight: FontWeight.Bold);
 
             // cross-reference: https://github.com/ppy/osu-web/blob/a6afee076f4f68bb56dea0cb8f18db63651763a7/resources/js/profile-page/play-detail.tsx#L118-L133
-            if (Score.Beatmap?.Status.GrantsPerformancePoints() != true)
+            if (!ShowPerformanceOnAnyBeatmap && Score.Beatmap?.Status.GrantsPerformancePoints() != true)
             {
                 if (Score.Beatmap?.Status == BeatmapOnlineStatus.Loved)
                 {

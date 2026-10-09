@@ -3,12 +3,14 @@
 
 #nullable disable
 
+using JetBrains.Annotations;
 using osu.Framework.Allocation;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Graphics.Textures;
 using osu.Game.Graphics;
 using osu.Game.Online.API.Requests.Responses;
+using osu.Game.Online.OfflineProfiles;
 
 namespace osu.Game.Users.Drawables
 {
@@ -32,9 +34,12 @@ namespace osu.Game.Users.Drawables
         }
 
         [BackgroundDependencyLoader]
-        private void load(LargeTextureStore textures, OnlineAssetCachingStore onlineTextures)
+        private void load(LargeTextureStore textures, OnlineAssetCachingStore onlineTextures, [CanBeNull] OfflineProfileManager offlineProfiles)
         {
-            if (user != null && user.OnlineID > 1)
+            // offline profiles have local avatars.
+            if (user != null && OfflineProfileUser.IsOfflineProfileID(user.OnlineID))
+                Texture = offlineProfiles?.GetAvatar(user.OnlineID);
+            else if (user != null && user.OnlineID > 1)
                 // TODO: The fallback here should not need to exist. Users should be looked up and populated via UserLookupCache or otherwise
                 // in remaining cases where this is required (chat tabs, local leaderboard), at which point this should be removed.
                 Texture = onlineTextures.Get((user as APIUser)?.AvatarUrl ?? $@"https://a.ppy.sh/{user.OnlineID}");
