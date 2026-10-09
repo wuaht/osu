@@ -36,6 +36,10 @@ namespace osu.Game.Graphics.UserInterfaceV2
             });
 
             hiddenToggleBackground.Colour = colourProvider.Background4;
+
+            // like the navigation pane of file explorers.
+            TopLevelContent.Padding = new MarginPadding { Left = FileSelectorSidePanel.WIDTH };
+            AddInternal(new FileSelectorSidePanel());
         }
 
         protected override ScrollContainer<Drawable> CreateScrollContainer() => new OsuScrollContainer
