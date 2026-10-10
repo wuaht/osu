@@ -26,6 +26,14 @@ namespace osu.Game.Beatmaps
         void Process(BeatmapSetInfo beatmapSet, MetadataLookupScope lookupScope = MetadataLookupScope.LocalCacheFirst);
 
         /// <summary>
+        /// Run processing on a beatmap set immediately after one of its difficulties was saved locally.
+        /// Implementations may limit processing to the saved difficulty.
+        /// </summary>
+        /// <param name="beatmapSet">The managed beatmap set to update. A transaction will be opened to apply changes.</param>
+        /// <param name="savedBeatmap">The managed difficulty which was saved.</param>
+        void ProcessSaved(BeatmapSetInfo beatmapSet, BeatmapInfo savedBeatmap) => Process(beatmapSet, MetadataLookupScope.None);
+
+        /// <summary>
         /// Runs a subset of processing focused on updating any cached beatmap object counts.
         /// </summary>
         /// <param name="beatmapInfo">The managed beatmap to update. A transaction will be opened to apply changes.</param>

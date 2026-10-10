@@ -42,6 +42,17 @@ namespace osu.Game.Beatmaps
         }
 
         public void Process(BeatmapSetInfo beatmapSet, MetadataLookupScope lookupScope = MetadataLookupScope.LocalCacheFirst)
+            => process(beatmapSet, lookupScope, null);
+
+        /// <summary>
+        /// Processes a beatmap set after a single difficulty of it was saved.
+        /// Only the saved difficulty is recalculated, as the star ratings and statistics of the other difficulties only depend on their own (unchanged) files.
+        /// Recalculating every difficulty of large sets made saving in the editor lag noticeably.
+        /// </summary>
+        public void ProcessSaved(BeatmapSetInfo beatmapSet, BeatmapInfo savedBeatmap)
+            => process(beatmapSet, MetadataLookupScope.None, savedBeatmap);
+
+        private void process(BeatmapSetInfo beatmapSet, MetadataLookupScope lookupScope, BeatmapInfo? onlyBeatmap)
         {
             beatmapSet.Realm!.Write(_ =>
             {
@@ -53,6 +64,9 @@ namespace osu.Game.Beatmaps
 
                 foreach (BeatmapInfo beatmap in beatmapSet.Beatmaps)
                 {
+                    if (onlyBeatmap != null && !beatmap.Equals(onlyBeatmap))
+                        continue;
+
                     var working = workingBeatmapCache.GetWorkingBeatmap(beatmap);
 
                     difficultyCache.Invalidate(beatmap, working.BeatmapInfo);

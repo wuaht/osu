@@ -352,6 +352,7 @@ namespace osu.Game
             base.Content.Add(new BeatmapOnlineChangeIngest(beatmapUpdater, realm, metadataClient));
 
             BeatmapManager.ProcessBeatmap = (beatmapSet, scope) => beatmapUpdater.Process(beatmapSet, scope);
+            BeatmapManager.ProcessSavedBeatmap = beatmapUpdater.ProcessSaved;
 
             dependencies.Cache(userCache = new UserLookupCache());
             base.Content.Add(userCache);

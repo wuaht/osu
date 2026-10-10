@@ -50,6 +50,11 @@ namespace osu.Game.Beatmaps
 
         public ProcessBeatmapDelegate? ProcessBeatmap { private get; set; }
 
+        /// <summary>
+        /// Processes a beatmap set after one of its difficulties was saved. Falls back to <see cref="ProcessBeatmap"/> if not set.
+        /// </summary>
+        public Action<BeatmapSetInfo, BeatmapInfo>? ProcessSavedBeatmap { private get; set; }
+
         public override bool PauseImports
         {
             get => base.PauseImports;
@@ -585,7 +590,12 @@ namespace osu.Game.Beatmaps
 
                 // do not look up metadata.
                 // this is a locally-modified set now, so looking up metadata is busy work at best and harmful at worst.
-                ProcessBeatmap?.Invoke(liveBeatmapSet, MetadataLookupScope.None);
+                var savedBeatmap = liveBeatmapSet.Beatmaps.Single(b => b.ID == beatmapInfo.ID);
+
+                if (ProcessSavedBeatmap != null)
+                    ProcessSavedBeatmap(liveBeatmapSet, savedBeatmap);
+                else
+                    ProcessBeatmap?.Invoke(liveBeatmapSet, MetadataLookupScope.None);
             });
 
             Debug.Assert(beatmapInfo.BeatmapSet != null);
