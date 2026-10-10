@@ -1,7 +1,9 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,6 +15,7 @@ using osu.Game.Extensions;
 using osu.Game.Online.API;
 using osu.Game.Online.API.Requests;
 using osu.Game.Online.API.Requests.Responses;
+using osu.Game.Online.BeatmapMirrors;
 using Realms;
 
 namespace osu.Game.Screens.Select
@@ -38,8 +41,25 @@ namespace osu.Game.Screens.Select
         [Resolved]
         private RealmAccess realm { get; set; } = null!;
 
+        [Resolved]
+        private BeatmapMirrorProvider? mirrors { get; set; }
+
+        /// <summary>
+        /// How long a beatmap set isn't looked up on a beatmap mirror again after a successful lookup, to not hit the mirrors' rate limits.
+        /// </summary>
+        private static readonly TimeSpan mirror_lookup_cooldown = TimeSpan.FromMinutes(5);
+
+        /// <summary>
+        /// The times of the last successful beatmap mirror lookups, keyed by the online ID of the looked up beatmap set.
+        /// Only accessed from the update thread.
+        /// </summary>
+        private readonly Dictionary<int, DateTimeOffset> lastMirrorLookups = new Dictionary<int, DateTimeOffset>();
+
         public Task<APIBeatmapSet?> GetBeatmapSetAsync(int id, CancellationToken token = default)
         {
+            if (mirrors?.IsActive == true)
+                return getBeatmapSetFromMirrorAsync(id, token);
+
             var request = new GetBeatmapSetRequest(id);
             var tcs = new TaskCompletionSource<APIBeatmapSet?>();
 
@@ -60,7 +80,7 @@ namespace osu.Game.Screens.Select
                     return;
                 }
 
-                await realm.WriteAsync(r => updateRealmBeatmapSet(r, onlineBeatmapSet)).ConfigureAwait(true);
+                await realm.WriteAsync(r => updateRealmBeatmapSet(r, onlineBeatmapSet, true)).ConfigureAwait(true);
                 tcs.SetResult(onlineBeatmapSet);
             };
             request.Failure += tcs.SetException;
@@ -68,7 +88,55 @@ namespace osu.Game.Screens.Select
             return tcs.Task;
         }
 
-        private static void updateRealmBeatmapSet(Realm r, APIBeatmapSet onlineBeatmapSet)
+        /// <summary>
+        /// Looks up the beatmap set on a beatmap mirror to update the local beatmaps, which notably allows detecting available updates without logging in.
+        /// </summary>
+        /// <returns>
+        /// Always <c>null</c>. The mirror's beatmap set isn't returned, as mirrors don't provide all data the displays of online information expect
+        /// (e.g. the genre or user-specific data), and the official servers aren't used while mirrors are.
+        /// </returns>
+        private Task<APIBeatmapSet?> getBeatmapSetFromMirrorAsync(int id, CancellationToken token)
+        {
+            Debug.Assert(mirrors != null);
+
+            if (lastMirrorLookups.TryGetValue(id, out var lastLookup) && DateTimeOffset.Now - lastLookup < mirror_lookup_cooldown)
+                return Task.FromResult<APIBeatmapSet?>(null);
+
+            var tcs = new TaskCompletionSource<APIBeatmapSet?>();
+
+            var lookup = mirrors.PerformLookup(
+                mirror => new GetMirrorBeatmapSetRequest(mirror, id),
+                async onlineBeatmapSet =>
+                {
+                    lastMirrorLookups[id] = DateTimeOffset.Now;
+
+                    try
+                    {
+                        // see the comments in `GetBeatmapSetAsync()` regarding the realm write in the success callback.
+                        // mirrors don't provide reliable user tag data, so the tags are left alone.
+                        await realm.WriteAsync(r => updateRealmBeatmapSet(r, onlineBeatmapSet, false)).ConfigureAwait(true);
+                        tcs.TrySetResult(null);
+                    }
+                    catch (Exception e)
+                    {
+                        tcs.TrySetException(e);
+                    }
+                },
+                e => tcs.TrySetException(e));
+
+            token.Register(() =>
+            {
+                lookup.Cancel();
+                tcs.TrySetCanceled(token);
+            });
+
+            return tcs.Task;
+        }
+
+        /// <param name="r">The realm to write to.</param>
+        /// <param name="onlineBeatmapSet">The beatmap set returned by the online lookup.</param>
+        /// <param name="updateUserTags">Whether to update the user tags of the beatmaps.</param>
+        private static void updateRealmBeatmapSet(Realm r, APIBeatmapSet onlineBeatmapSet, bool updateUserTags)
         {
             var onlineBeatmaps = onlineBeatmapSet.Beatmaps.ToDictionary(b => b.OnlineID);
 
@@ -88,6 +156,16 @@ namespace osu.Game.Screens.Select
 
                 foreach (var dbBeatmap in dbBeatmapSet.Beatmaps)
                 {
+                    // beatmaps imported while connected to the development server had their online IDs reset (as it doesn't have the official beatmaps).
+                    // restore them if the content exactly matches the online version, as the ID is required for looking up e.g. the beatmap owners.
+                    if (dbBeatmap.OnlineID <= 0)
+                    {
+                        var matchingBeatmap = onlineBeatmapSet.Beatmaps.FirstOrDefault(b => b.MD5Hash == dbBeatmap.MD5Hash);
+
+                        if (matchingBeatmap != null && dbBeatmapSet.Beatmaps.All(b => b.OnlineID != matchingBeatmap.OnlineID))
+                            dbBeatmap.OnlineID = matchingBeatmap.OnlineID;
+                    }
+
                     if (onlineBeatmaps.TryGetValue(dbBeatmap.OnlineID, out var onlineBeatmap))
                     {
                         // compare `BeatmapUpdaterMetadataLookup`
@@ -99,6 +177,9 @@ namespace osu.Game.Screens.Select
 
                         if (dbBeatmap.MatchesOnlineVersion && dbBeatmap.Status != onlineBeatmap.Status)
                             dbBeatmap.Status = onlineBeatmap.Status;
+
+                        if (!updateUserTags)
+                            continue;
 
                         HashSet<string> userTags = onlineBeatmap.GetTopUserTags(confirmedOnly: true)
                                                                 .Select(t => t.Tag.Name)

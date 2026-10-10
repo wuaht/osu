@@ -50,6 +50,7 @@ using osu.Game.IO;
 using osu.Game.Localisation;
 using osu.Game.Online;
 using osu.Game.Online.API;
+using osu.Game.Online.BeatmapMirrors;
 using osu.Game.Online.Chat;
 using osu.Game.Online.Leaderboards;
 using osu.Game.Online.Metadata;
@@ -156,6 +157,8 @@ namespace osu.Game
         protected BeatmapManager BeatmapManager { get; private set; }
 
         protected BeatmapModelDownloader BeatmapDownloader { get; private set; }
+
+        protected BeatmapMirrorProvider BeatmapMirrors { get; private set; }
 
         protected ScoreManager ScoreManager { get; private set; }
 
@@ -333,7 +336,8 @@ namespace osu.Game
             dependencies.Cache(BeatmapManager = new BeatmapManager(Storage, realm, API, Audio, Resources, Host, defaultBeatmap, difficultyCache, performOnlineLookups: true));
             dependencies.CacheAs<IWorkingBeatmapCache>(BeatmapManager);
 
-            dependencies.Cache(BeatmapDownloader = new BeatmapModelDownloader(BeatmapManager, API));
+            dependencies.Cache(BeatmapMirrors = new BeatmapMirrorProvider(API, LocalConfig));
+            dependencies.Cache(BeatmapDownloader = new BeatmapModelDownloader(BeatmapManager, API, BeatmapMirrors));
             dependencies.Cache(ScoreDownloader = new ScoreModelDownloader(ScoreManager, API));
 
             // Add after all the above cache operations as it depends on them.

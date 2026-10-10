@@ -109,8 +109,8 @@ namespace osu.Game.Screens.Select
                     return;
             }
 
-            // nothing more can be retrieved until the user logs in.
-            if (ownerStore.HasLoadedFromDisk && apiState.Value != APIState.Online)
+            // nothing more can be retrieved until the user logs in (or a beatmap mirror can be used).
+            if (ownerStore.HasLoadedFromDisk && !ownerStore.CanLookUpOnline)
                 return;
 
             lookupCancellationSource?.Cancel();

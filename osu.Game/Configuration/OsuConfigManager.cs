@@ -15,6 +15,7 @@ using osu.Game.Graphics.Cursor;
 using osu.Game.Input;
 using osu.Game.Input.Bindings;
 using osu.Game.Localisation;
+using osu.Game.Online.BeatmapMirrors;
 using osu.Game.Online.Leaderboards;
 using osu.Game.Overlays;
 using osu.Game.Overlays.Dashboard.Friends;
@@ -287,6 +288,8 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopOfflineProfilesIncludeUnranked, false);
 
             SetDefault(OsuSetting.SlopFileSelectorRecentDirectories, string.Empty);
+
+            SetDefault(OsuSetting.SlopBeatmapMirror, BeatmapMirror.Mino);
         }
 
         protected override bool CheckLookupContainsPrivateInformation(OsuSetting lookup)
@@ -695,5 +698,10 @@ namespace osu.Game.Configuration
         /// The directories which files were recently selected in, most recent first, separated by <see cref="Graphics.UserInterfaceV2.FileSelection.RecentDirectories.SEPARATOR"/>.
         /// </summary>
         SlopFileSelectorRecentDirectories,
+
+        /// <summary>
+        /// The <see cref="Online.BeatmapMirrors.BeatmapMirror"/> which beatmaps are downloaded from while not logged in or while connected to the development server.
+        /// </summary>
+        SlopBeatmapMirror,
     }
 }

@@ -14,12 +14,14 @@ using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Effects;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Localisation;
+using osu.Framework.Logging;
 using osu.Framework.Threading;
 using osu.Game.Beatmaps.Drawables.Cards;
 using osu.Game.Configuration;
 using osu.Game.Online.API;
 using osu.Game.Online.API.Requests;
 using osu.Game.Online.API.Requests.Responses;
+using osu.Game.Online.BeatmapMirrors;
 using osu.Game.Resources.Localisation.Web;
 using osuTK;
 using osuTK.Graphics;
@@ -69,8 +71,25 @@ namespace osu.Game.Overlays.BeatmapListing
         private SearchBeatmapSetsRequest getSetsRequest;
         private SearchBeatmapSetsResponse lastResponse;
 
+        private BeatmapMirrorLookup<List<APIBeatmapSet>> mirrorSearch;
+        private bool mirrorPageFetched;
+
+        /// <summary>
+        /// The index of the next page to request from the beatmap mirror.
+        /// This may run ahead of <see cref="CurrentPage"/>, as pages without any results matching the filters are skipped.
+        /// </summary>
+        private int nextMirrorPage;
+
+        /// <summary>
+        /// The maximum number of consecutive mirror pages without results matching the filters to skip before giving up.
+        /// </summary>
+        private const int max_skipped_mirror_pages = 10;
+
         [Resolved]
         private IAPIProvider api { get; set; }
+
+        [Resolved(CanBeNull = true)]
+        private BeatmapMirrorProvider mirrors { get; set; }
 
         private IBindable<APIUser> apiUser;
 
@@ -197,10 +216,10 @@ namespace osu.Game.Overlays.BeatmapListing
                 return;
 
             // there may already be an active request.
-            if (getSetsRequest != null)
+            if (getSetsRequest != null || mirrorSearch != null)
                 return;
 
-            if (lastResponse != null)
+            if (lastResponse != null || mirrorPageFetched)
                 CurrentPage++;
 
             performRequest();
@@ -214,7 +233,8 @@ namespace osu.Game.Overlays.BeatmapListing
 
             resetSearch();
 
-            if (!api.IsLoggedIn)
+            // beatmap mirrors can be searched without logging in.
+            if (!api.IsLoggedIn && mirrors == null)
                 return;
 
             queryChangedDebounce = Scheduler.AddDelayed(() =>
@@ -226,6 +246,12 @@ namespace osu.Game.Overlays.BeatmapListing
 
         private void performRequest()
         {
+            if (mirrors?.IsActive == true)
+            {
+                performMirrorRequest();
+                return;
+            }
+
             getSetsRequest = new SearchBeatmapSetsRequest(
                 searchControl.Query.Value,
                 searchControl.Ruleset.Value,
@@ -249,36 +275,128 @@ namespace osu.Game.Overlays.BeatmapListing
                 if (sets.Count == 0 || response.Cursor == null)
                     noMoreResults = true;
 
-                if (CurrentPage == 0)
-                    searchControl.BeatmapSet = sets.FirstOrDefault();
-
                 lastResponse = response;
                 getSetsRequest = null;
 
-                // check if a non-supporter used supporter-only filters
-                if (!api.LocalUser.Value.IsSupporter)
-                {
-                    List<LocalisableString> filters = new List<LocalisableString>();
-
-                    if (searchControl.Played.Value != SearchPlayed.Any)
-                        filters.Add(BeatmapsStrings.ListingSearchFiltersPlayed);
-
-                    if (searchControl.Ranks.Any())
-                        filters.Add(BeatmapsStrings.ListingSearchFiltersRank);
-
-                    if (filters.Any())
-                    {
-                        var supporterOnlyFilters = SearchResult.SupporterOnlyFilters(filters);
-                        SearchFinished?.Invoke(supporterOnlyFilters);
-                        return;
-                    }
-                }
-
-                var resultsReturned = SearchResult.ResultsReturned(sets);
-                SearchFinished?.Invoke(resultsReturned);
+                finishSearch(sets);
             };
 
             api.Queue(getSetsRequest);
+        }
+
+        /// <summary>
+        /// Searches the beatmap mirror instead of the official servers.
+        /// </summary>
+        /// <remarks>
+        /// Mirrors only support the query, ruleset, category and (in case of osu.direct) sorting.
+        /// Explicit content, extra, genre and language filters are applied to the returned results instead.
+        /// </remarks>
+        private void performMirrorRequest()
+        {
+            var category = searchControl.Category.Value;
+
+            if (!SearchMirrorBeatmapSetsRequest.SupportsCategory(category))
+            {
+                mirrorPageFetched = true;
+                noMoreResults = true;
+                finishSearch(new List<APIBeatmapSet>());
+                return;
+            }
+
+            performMirrorPageRequest(0);
+        }
+
+        private void performMirrorPageRequest(int skippedPages)
+        {
+            string query = searchControl.Query.Value;
+            int rulesetId = searchControl.Ruleset.Value.OnlineID;
+            var statuses = SearchMirrorBeatmapSetsRequest.GetStatuses(searchControl.Category.Value);
+            var sortCriteria = sortControl.Current.Value;
+            var sortDirection = sortControl.SortDirection.Value;
+            int page = nextMirrorPage++;
+
+            mirrorSearch = mirrors.PerformLookup(
+                mirror => new SearchMirrorBeatmapSetsRequest(mirror, query, rulesetId, statuses, sortCriteria, sortDirection, page),
+                results =>
+                {
+                    // a partial page means that there are no further results.
+                    // this has to be checked before filtering, as the filters may remove results from full pages too.
+                    if (results.Count < SearchMirrorBeatmapSetsRequest.PAGE_SIZE)
+                        noMoreResults = true;
+
+                    var sets = results.Where(matchesMirrorFilters).ToList();
+
+                    // the filters may have removed every result of this page while later pages still contain matching ones.
+                    // as the overlay can only fetch further pages by scrolling, those pages are fetched right away instead of showing no results.
+                    if (sets.Count == 0 && !noMoreResults && skippedPages < max_skipped_mirror_pages)
+                    {
+                        performMirrorPageRequest(skippedPages + 1);
+                        return;
+                    }
+
+                    mirrorSearch = null;
+                    mirrorPageFetched = true;
+
+                    finishSearch(sets);
+                },
+                e =>
+                {
+                    mirrorSearch = null;
+                    mirrorPageFetched = true;
+                    noMoreResults = true;
+
+                    Logger.Log($@"Beatmap mirror search failed: {e.Message}", LoggingTarget.Network);
+                    finishSearch(new List<APIBeatmapSet>());
+                });
+        }
+
+        private bool matchesMirrorFilters(APIBeatmapSet set)
+        {
+            if (searchControl.ExplicitContent.Value == SearchExplicit.Hide && set.HasExplicitContent)
+                return false;
+
+            if (searchControl.Extra.Contains(SearchExtra.Video) && !set.HasVideo)
+                return false;
+
+            if (searchControl.Extra.Contains(SearchExtra.Storyboard) && !set.HasStoryboard)
+                return false;
+
+            // not every mirror returns the genre and language (their IDs are 0 then), so sets without them aren't filtered out.
+            if (searchControl.Genre.Value != SearchGenre.Any && set.Genre.Id != 0 && set.Genre.Id != (int)searchControl.Genre.Value)
+                return false;
+
+            if (searchControl.Language.Value != SearchLanguage.Any && set.Language.Id != 0 && set.Language.Id != (int)searchControl.Language.Value)
+                return false;
+
+            return true;
+        }
+
+        private void finishSearch(List<APIBeatmapSet> sets)
+        {
+            if (CurrentPage == 0)
+                searchControl.BeatmapSet = sets.FirstOrDefault();
+
+            // check if a non-supporter used supporter-only filters
+            if (!api.LocalUser.Value.IsSupporter)
+            {
+                List<LocalisableString> filters = new List<LocalisableString>();
+
+                if (searchControl.Played.Value != SearchPlayed.Any)
+                    filters.Add(BeatmapsStrings.ListingSearchFiltersPlayed);
+
+                if (searchControl.Ranks.Any())
+                    filters.Add(BeatmapsStrings.ListingSearchFiltersRank);
+
+                if (filters.Any())
+                {
+                    var supporterOnlyFilters = SearchResult.SupporterOnlyFilters(filters);
+                    SearchFinished?.Invoke(supporterOnlyFilters);
+                    return;
+                }
+            }
+
+            var resultsReturned = SearchResult.ResultsReturned(sets);
+            SearchFinished?.Invoke(resultsReturned);
         }
 
         private void resetSearch()
@@ -290,6 +408,11 @@ namespace osu.Game.Overlays.BeatmapListing
 
             getSetsRequest?.Cancel();
             getSetsRequest = null;
+
+            mirrorSearch?.Cancel();
+            mirrorSearch = null;
+            mirrorPageFetched = false;
+            nextMirrorPage = 0;
 
             queryChangedDebounce?.Cancel();
         }

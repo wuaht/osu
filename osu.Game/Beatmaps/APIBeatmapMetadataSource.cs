@@ -4,6 +4,7 @@
 using System;
 using System.Diagnostics;
 using osu.Game.Database;
+using osu.Game.Online;
 using osu.Game.Online.API;
 using osu.Game.Online.API.Requests;
 
@@ -21,7 +22,10 @@ namespace osu.Game.Beatmaps
             this.api = api;
         }
 
-        public bool Available => api.State.Value == APIState.Online;
+        /// <remarks>
+        /// The development server doesn't have the official beatmaps, so looking them up there would reset their online IDs.
+        /// </remarks>
+        public bool Available => api.State.Value == APIState.Online && api.Endpoints is not DevelopmentEndpointConfiguration;
 
         public bool TryLookup(BeatmapInfo beatmapInfo, out OnlineBeatmapMetadata? onlineMetadata)
         {

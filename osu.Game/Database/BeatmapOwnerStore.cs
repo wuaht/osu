@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
@@ -12,7 +13,9 @@ using osu.Framework.Graphics;
 using osu.Framework.Logging;
 using osu.Framework.Platform;
 using osu.Game.Online.API;
+using osu.Game.Online;
 using osu.Game.Online.API.Requests.Responses;
+using osu.Game.Online.BeatmapMirrors;
 using SQLitePCL;
 
 namespace osu.Game.Database
@@ -31,6 +34,16 @@ namespace osu.Game.Database
         /// The duration after which stored owners are requested again, to pick up username changes and owner changes.
         /// </summary>
         public static readonly TimeSpan REFRESH_INTERVAL = TimeSpan.FromDays(7);
+
+        /// <summary>
+        /// The duration after which beatmaps a mirror failed to provide the owners of are requested again.
+        /// </summary>
+        private static readonly TimeSpan mirror_failure_cooldown = TimeSpan.FromMinutes(5);
+
+        /// <summary>
+        /// The mirrors which provide the owners of beatmap difficulties.
+        /// </summary>
+        private static readonly BeatmapMirror[] owner_mirrors = { BeatmapMirror.Mino };
 
         private const string database_name = @"beatmap-owners.db";
 
@@ -57,10 +70,24 @@ namespace osu.Game.Database
         [Resolved]
         private BeatmapLookupCache beatmapLookupCache { get; set; } = null!;
 
+        [Resolved(CanBeNull = true)]
+        private BeatmapMirrorProvider? mirrors { get; set; }
+
+        /// <summary>
+        /// The last time a mirror failed to provide the owners of a beatmap, keyed by beatmap ID.
+        /// </summary>
+        private readonly ConcurrentDictionary<int, DateTimeOffset> mirrorFailures = new ConcurrentDictionary<int, DateTimeOffset>();
+
         /// <summary>
         /// Whether the database has been opened, i.e. <see cref="GetStored"/> is able to return stored entries.
         /// </summary>
         public bool HasLoadedFromDisk => initialiseTask.IsCompleted;
+
+        /// <summary>
+        /// Whether owners can currently be requested online, either from the official servers or from a beatmap mirror.
+        /// The development server is never used, as it doesn't have the official beatmap owners.
+        /// </summary>
+        public bool CanLookUpOnline => mirrors?.IsActive == true || (api.State.Value == APIState.Online && api.Endpoints is not DevelopmentEndpointConfiguration);
 
         public BeatmapOwnerStore(Storage storage)
         {
@@ -99,12 +126,15 @@ namespace osu.Game.Database
 
             var stored = GetStored(beatmapId);
 
-            if (stored?.IsStale == false || api.State.Value != APIState.Online)
+            if (stored?.IsStale == false || !CanLookUpOnline)
                 return stored;
 
-            var beatmap = await beatmapLookupCache.GetBeatmapAsync(beatmapId, token).ConfigureAwait(false);
+            var beatmap = mirrors?.IsActive == true
+                ? await getBeatmapFromMirrorAsync(beatmapId, token).ConfigureAwait(false)
+                : await beatmapLookupCache.GetBeatmapAsync(beatmapId, token).ConfigureAwait(false);
 
-            if (beatmap == null || beatmap.OnlineID != beatmapId)
+            // an empty owner list means the source didn't provide them (every beatmap has at least one owner).
+            if (beatmap == null || beatmap.OnlineID != beatmapId || beatmap.BeatmapOwners.Length == 0)
                 return stored;
 
             var entry = new Entry
@@ -117,6 +147,39 @@ namespace osu.Game.Database
             write(beatmapId, entry);
 
             return entry;
+        }
+
+        /// <summary>
+        /// Looks up the beatmap on a beatmap mirror, which allows displaying the owners without logging in.
+        /// </summary>
+        /// <returns>The beatmap, or <see langword="null"/> if the lookup failed.</returns>
+        private async Task<APIBeatmap?> getBeatmapFromMirrorAsync(int beatmapId, CancellationToken token)
+        {
+            Debug.Assert(mirrors != null);
+
+            if (mirrorFailures.TryGetValue(beatmapId, out var lastFailure) && DateTimeOffset.Now - lastFailure < mirror_failure_cooldown)
+                return null;
+
+            var tcs = new TaskCompletionSource<APIBeatmap?>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            var lookup = mirrors.PerformLookup(
+                mirror => new GetMirrorBeatmapRequest(mirror, beatmapId),
+                beatmap => tcs.TrySetResult(beatmap),
+                _ =>
+                {
+                    mirrorFailures[beatmapId] = DateTimeOffset.Now;
+                    tcs.TrySetResult(null);
+                },
+                owner_mirrors);
+
+            await using (token.Register(() =>
+                         {
+                             lookup.Cancel();
+                             tcs.TrySetResult(null);
+                         }))
+            {
+                return await tcs.Task.ConfigureAwait(false);
+            }
         }
 
         private void initialise()
@@ -192,12 +255,51 @@ CREATE TABLE IF NOT EXISTS `beatmap_owners` (
                     cmd.ExecuteNonQuery();
                 }
 
+                migrate(db);
+
                 return db;
             }
             catch
             {
                 db.Dispose();
                 throw;
+            }
+        }
+
+        /// <summary>
+        /// The current version of the stored data, tracked through SQLite's <c>user_version</c>.
+        /// </summary>
+        /// <remarks>
+        /// Version 1 drops all entries stored by previous versions, as those may have been requested from the development server,
+        /// which doesn't have the official beatmap owners (it returns placeholder owners instead).
+        /// </remarks>
+        private const int data_version = 1;
+
+        private static void migrate(SqliteConnection db)
+        {
+            long version;
+
+            using (var cmd = db.CreateCommand())
+            {
+                cmd.CommandText = @"PRAGMA user_version";
+                version = (long)(cmd.ExecuteScalar() ?? 0L);
+            }
+
+            if (version >= data_version)
+                return;
+
+            using (var transaction = db.BeginTransaction())
+            using (var cmd = db.CreateCommand())
+            {
+                cmd.Transaction = transaction;
+
+                if (version < 1)
+                    cmd.CommandText = @"DELETE FROM `beatmap_owners`;";
+
+                cmd.CommandText += $@"PRAGMA user_version = {data_version};";
+                cmd.ExecuteNonQuery();
+
+                transaction.Commit();
             }
         }
 

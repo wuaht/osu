@@ -28,6 +28,7 @@ namespace osu.Game.Overlays.Settings.Sections
                 new EditorSettings(),
                 new FposuSettings(),
                 new OfflineProfileSettings(),
+                new OnlineSettings(),
             };
         }
 

@@ -47,7 +47,8 @@ namespace osu.Game.Overlays
         private BeatmapListingFilterControl filterControl => Header.FilterControl;
 
         public BeatmapListingOverlay()
-            : base(OverlayColourScheme.Blue)
+            // beatmaps can be searched through a beatmap mirror without logging in.
+            : base(OverlayColourScheme.Blue, requiresSignIn: false)
         {
         }
 

@@ -4,13 +4,21 @@
 using osu.Game.Database;
 using osu.Game.Online.API;
 using osu.Game.Online.API.Requests;
+using osu.Game.Online.BeatmapMirrors;
 
 namespace osu.Game.Beatmaps
 {
     public class BeatmapModelDownloader : ModelDownloader<BeatmapSetInfo, IBeatmapSetInfo>
     {
-        protected override ArchiveDownloadRequest<IBeatmapSetInfo> CreateDownloadRequest(IBeatmapSetInfo set, bool minimiseDownloadSize) =>
-            new DownloadBeatmapSetRequest(set, minimiseDownloadSize);
+        private readonly BeatmapMirrorProvider? mirrors;
+
+        protected override ArchiveDownloadRequest<IBeatmapSetInfo> CreateDownloadRequest(IBeatmapSetInfo set, bool minimiseDownloadSize)
+        {
+            if (mirrors?.IsActive == true)
+                return mirrors.CreateDownloadRequest(set, minimiseDownloadSize);
+
+            return new DownloadBeatmapSetRequest(set, minimiseDownloadSize);
+        }
 
         public override ArchiveDownloadRequest<IBeatmapSetInfo>? GetExistingDownload(IBeatmapSetInfo model)
             => CurrentDownloads.Find(r => r.Model.OnlineID == model.OnlineID);
@@ -19,9 +27,13 @@ namespace osu.Game.Beatmaps
 
         public void DownloadAsUpdate(BeatmapSetInfo originalModel, bool withoutVideo) => Download(originalModel, withoutVideo, originalModel);
 
-        public BeatmapModelDownloader(IModelImporter<BeatmapSetInfo> beatmapImporter, IAPIProvider api)
+        /// <param name="beatmapImporter">The importer for downloaded beatmap sets.</param>
+        /// <param name="api">The API to perform the downloads with.</param>
+        /// <param name="mirrors">Provides the beatmap mirror to download from while the official servers can't be used. If <c>null</c>, the official servers are always used.</param>
+        public BeatmapModelDownloader(IModelImporter<BeatmapSetInfo> beatmapImporter, IAPIProvider api, BeatmapMirrorProvider? mirrors = null)
             : base(beatmapImporter, api)
         {
+            this.mirrors = mirrors;
         }
     }
 }
