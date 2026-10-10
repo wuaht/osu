@@ -58,6 +58,7 @@ namespace osu.Game.Rulesets.Osu.Tests.Slop
 
             // as for upstream tests (see SlopTestDefaults), which may run afterwards.
             AddStep("disable slider blanket snapping", () => config.SetValue(OsuSetting.SlopEditorSliderBlanketSnap, false));
+            AddStep("disable blanket snapping", () => config.SetValue(OsuSetting.SlopEditorBlanketSnap, false));
         }
 
         [TestCase(true)]
@@ -71,6 +72,38 @@ namespace osu.Game.Rulesets.Osu.Tests.Slop
 
             AddAssert("arcs share their centre", () => Precision.AlmostEquals(arcCentre(inner), arcCentre(outer), 0.1f));
             AddAssert("radii unchanged", () => Precision.AlmostEquals(arcRadius(inner), 50, 0.1f) && Precision.AlmostEquals(arcRadius(outer), 120, 0.1f));
+        }
+
+        [Test]
+        public void TestSliderSnapsAroundCircle()
+        {
+            HitCircle circle = null!;
+
+            AddStep("enable only blanket snapping", () =>
+            {
+                config.SetValue(OsuSetting.SlopEditorBlanketSnap, true);
+                config.SetValue(OsuSetting.SlopEditorSliderBlanketSnap, false);
+            });
+
+            AddStep("add circle", () => EditorBeatmap.Add(circle = new HitCircle { StartTime = 250, Position = new Vector2(380, 120) }));
+            AddStep("select slider", () => EditorBeatmap.SelectedHitObjects.Add(outer));
+            dragArcCentreNextTo(() => outer, () => circle.Position);
+
+            AddAssert("slider blankets circle", () => Precision.AlmostEquals(arcCentre(outer), circle.Position, 0.1f));
+            AddAssert("radius unchanged", () => Precision.AlmostEquals(arcRadius(outer), 120, 0.1f));
+        }
+
+        [Test]
+        public void TestSliderDoesNotSnapAroundCircleWhenDisabled()
+        {
+            HitCircle circle = null!;
+
+            AddStep("disable blanket snapping", () => config.SetValue(OsuSetting.SlopEditorBlanketSnap, false));
+            AddStep("add circle", () => EditorBeatmap.Add(circle = new HitCircle { StartTime = 250, Position = new Vector2(380, 120) }));
+            AddStep("select slider", () => EditorBeatmap.SelectedHitObjects.Add(outer));
+            dragArcCentreNextTo(() => outer, () => circle.Position);
+
+            AddAssert("slider doesn't blanket circle", () => Precision.AlmostEquals(arcCentre(outer), circle.Position, 0.1f), () => Is.False);
         }
 
         [Test]
