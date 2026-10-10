@@ -54,6 +54,7 @@ using osu.Game.Screens.Edit.Compose.Components.Timeline;
 using osu.Game.Screens.Edit.Design;
 using osu.Game.Screens.Edit.GameplayTest;
 using osu.Game.Screens.Edit.Hitsounding;
+using osu.Game.Screens.Edit.Nominators;
 using osu.Game.Screens.Edit.Setup;
 using osu.Game.Screens.Edit.Submission;
 using osu.Game.Screens.Edit.Timing;
@@ -858,6 +859,10 @@ namespace osu.Game.Screens.Edit
                     screenSwitcher.SelectItem(EditorScreenMode.Verify);
                     return true;
 
+                case GlobalAction.EditorNominatorsMode:
+                    screenSwitcher.SelectItem(EditorScreenMode.Nominators);
+                    return true;
+
                 case GlobalAction.EditorTestGameplay:
                     bottomBar.TestGameplayButton.TriggerClick();
                     return true;
@@ -1241,6 +1246,10 @@ namespace osu.Game.Screens.Edit
 
                     case EditorScreenMode.Verify:
                         currentScreen = new VerifyScreen();
+                        break;
+
+                    case EditorScreenMode.Nominators:
+                        currentScreen = new NominatorsScreen();
                         break;
 
                     default:
