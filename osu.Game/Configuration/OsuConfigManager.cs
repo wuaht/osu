@@ -276,6 +276,7 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopEditorShowOffscreenObjects, false);
             SetDefault(OsuSetting.SlopEditorWaveformStyle, EditorWaveformStyle.Default);
             SetDefault(OsuSetting.SlopEditorLoopMusic, false);
+            SetDefault(OsuSetting.SlopHitsoundEditorFrostedLanes, false);
 
             // defaults of McOsu's FPoSu.
             SetDefault(OsuSetting.SlopFposuMouseDpi, 400, 50, 32000);
@@ -633,6 +634,11 @@ namespace osu.Game.Configuration
         /// Whether playback in the beatmap editor continues from the start of the track when the end is reached.
         /// </summary>
         SlopEditorLoopMusic,
+
+        /// <summary>
+        /// Whether the lanes of the hitsound editor have a frosted glass background, instead of an opaque one.
+        /// </summary>
+        SlopHitsoundEditorFrostedLanes,
 
         /// <summary>
         /// Whether objects in the beatmap editor snap to positions which continue straight lines of equally spaced visible objects.

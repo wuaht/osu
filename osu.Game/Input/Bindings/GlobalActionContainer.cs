@@ -132,6 +132,7 @@ namespace osu.Game.Input.Bindings
             new KeyBinding(new[] { InputKey.F3 }, GlobalAction.EditorTimingMode),
             new KeyBinding(new[] { InputKey.F4 }, GlobalAction.EditorSetupMode),
             new KeyBinding(new[] { InputKey.Control, InputKey.Shift, InputKey.A }, GlobalAction.EditorVerifyMode),
+            new KeyBinding(new[] { InputKey.Control, InputKey.Shift, InputKey.H }, GlobalAction.EditorHitsoundMode),
             new KeyBinding(new[] { InputKey.Number1 }, GlobalAction.EditorSelectTool),
             new KeyBinding(new[] { InputKey.Q }, GlobalAction.EditorToggleNewCombo),
             new KeyBinding(new[] { InputKey.W }, GlobalAction.EditorToggleWhistleSound),
@@ -675,6 +676,9 @@ namespace osu.Game.Input.Bindings
 
         [LocalisableDescription(typeof(SlopEditorStrings), nameof(SlopEditorStrings.MuteEffects))]
         EditorMuteEffects,
+
+        [LocalisableDescription(typeof(SlopHitsoundEditorStrings), nameof(SlopHitsoundEditorStrings.HitsoundEditorMode))]
+        EditorHitsoundMode,
     }
 
     public enum GlobalActionCategory

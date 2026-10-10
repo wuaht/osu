@@ -39,7 +39,9 @@ namespace osu.Game.Overlays.Volume
 
                 var hoveredDrawables = GetContainingInputManager()?.HoveredDrawables;
 
-                if (hoveredDrawables?.Any(d => d is IBlockGlobalAltScrollVolume) == true)
+                // hover only propagates up to the first drawable which handles it (e.g. a hit object on the editor timeline),
+                // so the ancestors of hovered drawables have to be checked as well.
+                if (hoveredDrawables?.Any(blocksGlobalAltScrollVolume) == true)
                     return false;
             }
 
@@ -48,6 +50,17 @@ namespace osu.Game.Overlays.Volume
 
             // forward any unhandled mouse scroll events to the volume control.
             return volumeOverlay?.Adjust(GlobalAction.IncreaseVolume, e.ScrollDelta.Y, e.IsPrecise) ?? false;
+        }
+
+        private static bool blocksGlobalAltScrollVolume(Drawable drawable)
+        {
+            for (Drawable? d = drawable; d != null; d = d.Parent)
+            {
+                if (d is IBlockGlobalAltScrollVolume)
+                    return true;
+            }
+
+            return false;
         }
     }
 }

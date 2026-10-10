@@ -23,7 +23,7 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
     {
         protected override LocalisableString Header => SlopSettingsStrings.EditorHeader;
 
-        public override IEnumerable<LocalisableString> FilterTerms => base.FilterTerms.Concat(new LocalisableString[] { "skin", "backup", "autosave", "snap", "blanket", "triangle", "waveform" });
+        public override IEnumerable<LocalisableString> FilterTerms => base.FilterTerms.Concat(new LocalisableString[] { "skin", "backup", "autosave", "snap", "blanket", "triangle", "waveform", "hitsound", "frosted" });
 
         /// <summary>
         /// Dropdown entry representing "use the regular gameplay skin".
@@ -105,6 +105,12 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                     Caption = SlopSettingsStrings.WaveformStyle,
                     HintText = SlopSettingsStrings.WaveformStyleDescription,
                     Current = config.GetBindable<EditorWaveformStyle>(OsuSetting.SlopEditorWaveformStyle),
+                }),
+                new SettingsItemV2(new FormCheckBox
+                {
+                    Caption = SlopSettingsStrings.FrostedHitsoundLanes,
+                    HintText = SlopSettingsStrings.FrostedHitsoundLanesDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopHitsoundEditorFrostedLanes),
                 }),
                 new SettingsItemV2(new FormCheckBox
                 {

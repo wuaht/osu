@@ -436,6 +436,17 @@ namespace osu.Game.Localisation
             @"When the end of the track is reached during playback in the editor, playback continues from the start.");
 
         /// <summary>
+        /// "Frosted hitsound editor lanes"
+        /// </summary>
+        public static LocalisableString FrostedHitsoundLanes => new TranslatableString(getKey(@"frosted_hitsound_lanes"), @"Frosted hitsound editor lanes");
+
+        /// <summary>
+        /// "The lanes of the hitsound editor have a frosted glass background, through which the background of the beatmap shows."
+        /// </summary>
+        public static LocalisableString FrostedHitsoundLanesDescription => new TranslatableString(getKey(@"frosted_hitsound_lanes_description"),
+            @"The lanes of the hitsound editor have a frosted glass background, through which the background of the beatmap shows.");
+
+        /// <summary>
         /// "Timeline waveform"
         /// </summary>
         public static LocalisableString WaveformStyle => new TranslatableString(getKey(@"waveform_style"), @"Timeline waveform");

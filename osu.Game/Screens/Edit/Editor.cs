@@ -53,6 +53,7 @@ using osu.Game.Screens.Edit.Compose;
 using osu.Game.Screens.Edit.Compose.Components.Timeline;
 using osu.Game.Screens.Edit.Design;
 using osu.Game.Screens.Edit.GameplayTest;
+using osu.Game.Screens.Edit.Hitsounding;
 using osu.Game.Screens.Edit.Setup;
 using osu.Game.Screens.Edit.Submission;
 using osu.Game.Screens.Edit.Timing;
@@ -849,6 +850,10 @@ namespace osu.Game.Screens.Edit
                     screenSwitcher.SelectItem(EditorScreenMode.SongSetup);
                     return true;
 
+                case GlobalAction.EditorHitsoundMode:
+                    screenSwitcher.SelectItem(EditorScreenMode.Hitsound);
+                    return true;
+
                 case GlobalAction.EditorVerifyMode:
                     screenSwitcher.SelectItem(EditorScreenMode.Verify);
                     return true;
@@ -1228,6 +1233,10 @@ namespace osu.Game.Screens.Edit
 
                     case EditorScreenMode.Timing:
                         currentScreen = new TimingScreen();
+                        break;
+
+                    case EditorScreenMode.Hitsound:
+                        currentScreen = new HitsoundScreen();
                         break;
 
                     case EditorScreenMode.Verify:
