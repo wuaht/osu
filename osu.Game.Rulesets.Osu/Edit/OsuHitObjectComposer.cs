@@ -400,9 +400,11 @@ namespace osu.Game.Rulesets.Osu.Edit
         private readonly List<PatternSnapPoint> snappedPatternSnapPoints = new List<PatternSnapPoint>();
 
         /// <summary>
-        /// The circular arcs of sliders in the current frame which arcs of moved sliders can be snapped to, or <c>null</c> if not yet calculated in this frame.
+        /// The positions in the current frame which arcs of moved sliders can be snapped to, or <c>null</c> if not yet calculated in this frame.
+        /// These are the centres of arcs of other sliders (<see cref="sliderBlanketSnap"/>), and the positions of circles and slider ends (<see cref="blanketSnap"/>),
+        /// with the arc at that position if there is one.
         /// </summary>
-        private List<(BlanketSnapPoint arc, Vector2 screenSpacePosition)> sliderArcSnapPoints;
+        private List<(Vector2 position, CircularArcProperties? arc, Vector2 screenSpacePosition)> sliderArcSnapPoints;
 
         /// <summary>
         /// The first snap of a frame replaces the previous frame's results.
@@ -421,53 +423,87 @@ namespace osu.Game.Rulesets.Osu.Edit
         /// <summary>
         /// Snaps the centre of a circular arc of a slider which is being moved to the centres of circular arcs of other sliders,
         /// so that one slider blankets the other, regardless of the radii and lengths of the arcs.
+        /// The centre is also snapped to circles and slider ends, so that the slider blankets them.
         /// </summary>
         /// <param name="screenSpaceArcCentre">The centre of the arc in screen space.</param>
         /// <param name="arc">The arc which is snapped.</param>
         [CanBeNull]
         public SnapResult TrySnapSliderArc(Vector2 screenSpaceArcCentre, CircularArcProperties arc)
         {
-            if (!sliderBlanketSnap.Value)
+            if (!sliderBlanketSnap.Value && !blanketSnap.Value)
                 return null;
 
             beginPatternSnapFrame();
 
             var playfield = PlayfieldAtScreenSpacePosition(screenSpaceArcCentre);
 
-            // unlike for blanket snapping of objects, the centres may be outside of the playfield (e.g. of large arcs), as the sliders themselves aren't.
-            sliderArcSnapPoints ??= getPatternSnapObjects().OfType<Slider>()
-                                                           .SelectMany(PatternSnapping.GetArcs)
-                                                           .Select(a => (new BlanketSnapPoint(a.Centre, a), playfield.GamefieldToScreenSpace(a.Centre)))
-                                                           .ToList();
+            sliderArcSnapPoints ??= calculateSliderArcSnapPoints(playfield);
 
             float snapRadius = playfield.GamefieldToScreenSpace(new Vector2(OsuHitObject.OBJECT_RADIUS * 0.10f)).X - playfield.GamefieldToScreenSpace(Vector2.Zero).X;
 
-            BlanketSnapPoint closest = null;
+            (Vector2 position, CircularArcProperties? arc)? closest = null;
             Vector2 closestPosition = default;
             float closestDistance = snapRadius;
 
-            foreach (var (point, pointScreenSpacePosition) in sliderArcSnapPoints)
+            foreach (var (position, pointArc, pointScreenSpacePosition) in sliderArcSnapPoints)
             {
                 float distance = Vector2.Distance(pointScreenSpacePosition, screenSpaceArcCentre);
 
                 if (distance < closestDistance)
                 {
-                    closest = point;
+                    closest = (position, pointArc);
                     closestPosition = pointScreenSpacePosition;
                     closestDistance = distance;
                 }
             }
 
-            if (closest == null)
+            if (closest is not { } found)
                 return null;
 
-            var snappedArc = new CircularArcProperties(arc.ThetaStart, arc.ThetaRange, arc.Direction, arc.Radius, closest.Position);
-            var snapPoint = new SliderBlanketSnapPoint(closest.Position, closest.Arc, snappedArc);
+            var (closestCentre, closestArc) = found;
+
+            var snappedArc = new CircularArcProperties(arc.ThetaStart, arc.ThetaRange, arc.Direction, arc.Radius, closestCentre);
+
+            PatternSnapPoint snapPoint = closestArc is CircularArcProperties otherArc
+                ? new SliderBlanketSnapPoint(closestCentre, otherArc, snappedArc)
+                : new BlanketSnapPoint(closestCentre, snappedArc);
 
             if (!snappedPatternSnapPoints.Contains(snapPoint))
                 snappedPatternSnapPoints.Add(snapPoint);
 
             return new SnapResult(closestPosition, null, playfield);
+        }
+
+        private List<(Vector2, CircularArcProperties?, Vector2)> calculateSliderArcSnapPoints(Playfield playfield)
+        {
+            var points = new List<(Vector2 position, CircularArcProperties? arc)>();
+
+            foreach (var hitObject in getPatternSnapObjects())
+            {
+                switch (hitObject)
+                {
+                    case Slider slider:
+                        // unlike for blanket snapping of objects, the centres may be outside of the playfield (e.g. of large arcs), as the sliders themselves aren't.
+                        if (sliderBlanketSnap.Value)
+                            points.AddRange(PatternSnapping.GetArcs(slider).Select(a => (a.Centre, (CircularArcProperties?)a)));
+
+                        if (blanketSnap.Value)
+                        {
+                            points.Add((slider.Position, null));
+                            points.Add((slider.EndPosition, null));
+                        }
+
+                        break;
+
+                    case HitCircle circle:
+                        if (blanketSnap.Value)
+                            points.Add((circle.Position, null));
+
+                        break;
+                }
+            }
+
+            return points.Select(p => (p.position, p.arc, playfield.GamefieldToScreenSpace(p.position))).ToList();
         }
 
         private bool snapToPatterns(Vector2 screenSpacePosition, Playfield playfield, float snapRadius, out SnapResult snapResult)
