@@ -93,6 +93,7 @@ namespace osu.Game.Rulesets.Osu.Edit
         private Bindable<bool> visualSpacingSnap;
         private Bindable<bool> blanketSnap;
         private Bindable<bool> lineSnap;
+        private Bindable<bool> sliderBlanketSnap;
 
         private PatternSnapGuideOverlay patternSnapGuides;
 
@@ -102,6 +103,7 @@ namespace osu.Game.Rulesets.Osu.Edit
             visualSpacingSnap = config.GetBindable<bool>(OsuSetting.SlopEditorVisualSpacingSnap);
             blanketSnap = config.GetBindable<bool>(OsuSetting.SlopEditorBlanketSnap);
             lineSnap = config.GetBindable<bool>(OsuSetting.SlopEditorLineSnap);
+            sliderBlanketSnap = config.GetBindable<bool>(OsuSetting.SlopEditorSliderBlanketSnap);
 
             AddInternal(DistanceSnapProvider);
             DistanceSnapProvider.AttachToToolbox(RightToolbox);
@@ -112,6 +114,7 @@ namespace osu.Game.Rulesets.Osu.Edit
             // above the playfield, so that guide lines aren't hidden behind slider bodies.
             PlayfieldContentContainer.Add(patternSnapGuides = new PatternSnapGuideOverlay());
             PlayfieldContentContainer.Add(new OffscreenObjectOverlay(Playfield));
+            PlayfieldContentContainer.Add(new SnapTargetAnchorOverlay(Playfield, () => EditorBeatmap.SelectedHitObjects.OfType<Slider>()));
 
             LayerBelowRuleset.Add(
                 distanceSnapGridContainer = new Container
@@ -341,6 +344,15 @@ namespace osu.Game.Rulesets.Osu.Edit
 
                 var snapPositions = b.ScreenSpaceSnapPoints;
 
+                // control points of sliders which objects can be snapped to.
+                if (b.Item is Slider slider && slider.Path.ControlPoints.Any(p => p.IsSnapTarget))
+                {
+                    snapPositions = snapPositions.Concat(slider.Path.ControlPoints
+                                                               .Where(p => p.IsSnapTarget)
+                                                               .Select(p => playfield.GamefieldToScreenSpace(slider.StackedPosition + p.Position)))
+                                                 .ToArray();
+                }
+
                 if (!snapPositions.Any())
                     continue;
 
@@ -387,17 +399,82 @@ namespace osu.Game.Rulesets.Osu.Edit
         /// </summary>
         private readonly List<PatternSnapPoint> snappedPatternSnapPoints = new List<PatternSnapPoint>();
 
+        /// <summary>
+        /// The circular arcs of sliders in the current frame which arcs of moved sliders can be snapped to, or <c>null</c> if not yet calculated in this frame.
+        /// </summary>
+        private List<(BlanketSnapPoint arc, Vector2 screenSpacePosition)> sliderArcSnapPoints;
+
+        /// <summary>
+        /// The first snap of a frame replaces the previous frame's results.
+        /// </summary>
+        private void beginPatternSnapFrame()
+        {
+            if (patternSnapFrame == currentFrame)
+                return;
+
+            patternSnapFrame = currentFrame;
+            patternSnapPoints = null;
+            sliderArcSnapPoints = null;
+            snappedPatternSnapPoints.Clear();
+        }
+
+        /// <summary>
+        /// Snaps the centre of a circular arc of a slider which is being moved to the centres of circular arcs of other sliders,
+        /// so that one slider blankets the other, regardless of the radii and lengths of the arcs.
+        /// </summary>
+        /// <param name="screenSpaceArcCentre">The centre of the arc in screen space.</param>
+        /// <param name="arc">The arc which is snapped.</param>
+        [CanBeNull]
+        public SnapResult TrySnapSliderArc(Vector2 screenSpaceArcCentre, CircularArcProperties arc)
+        {
+            if (!sliderBlanketSnap.Value)
+                return null;
+
+            beginPatternSnapFrame();
+
+            var playfield = PlayfieldAtScreenSpacePosition(screenSpaceArcCentre);
+
+            // unlike for blanket snapping of objects, the centres may be outside of the playfield (e.g. of large arcs), as the sliders themselves aren't.
+            sliderArcSnapPoints ??= getPatternSnapObjects().OfType<Slider>()
+                                                           .SelectMany(PatternSnapping.GetArcs)
+                                                           .Select(a => (new BlanketSnapPoint(a.Centre, a), playfield.GamefieldToScreenSpace(a.Centre)))
+                                                           .ToList();
+
+            float snapRadius = playfield.GamefieldToScreenSpace(new Vector2(OsuHitObject.OBJECT_RADIUS * 0.10f)).X - playfield.GamefieldToScreenSpace(Vector2.Zero).X;
+
+            BlanketSnapPoint closest = null;
+            Vector2 closestPosition = default;
+            float closestDistance = snapRadius;
+
+            foreach (var (point, pointScreenSpacePosition) in sliderArcSnapPoints)
+            {
+                float distance = Vector2.Distance(pointScreenSpacePosition, screenSpaceArcCentre);
+
+                if (distance < closestDistance)
+                {
+                    closest = point;
+                    closestPosition = pointScreenSpacePosition;
+                    closestDistance = distance;
+                }
+            }
+
+            if (closest == null)
+                return null;
+
+            var snappedArc = new CircularArcProperties(arc.ThetaStart, arc.ThetaRange, arc.Direction, arc.Radius, closest.Position);
+            var snapPoint = new SliderBlanketSnapPoint(closest.Position, closest.Arc, snappedArc);
+
+            if (!snappedPatternSnapPoints.Contains(snapPoint))
+                snappedPatternSnapPoints.Add(snapPoint);
+
+            return new SnapResult(closestPosition, null, playfield);
+        }
+
         private bool snapToPatterns(Vector2 screenSpacePosition, Playfield playfield, float snapRadius, out SnapResult snapResult)
         {
             snapResult = null;
 
-            // the first snap of a frame replaces the previous frame's results.
-            if (patternSnapFrame != currentFrame)
-            {
-                patternSnapFrame = currentFrame;
-                patternSnapPoints = null;
-                snappedPatternSnapPoints.Clear();
-            }
+            beginPatternSnapFrame();
 
             patternSnapPoints ??= calculatePatternSnapPoints(playfield);
 
@@ -434,13 +511,7 @@ namespace osu.Game.Rulesets.Osu.Edit
             if (!visualSpacingSnap.Value && !blanketSnap.Value && !lineSnap.Value)
                 return new List<(PatternSnapPoint, Vector2)>();
 
-            var placementObject = BlueprintContainer.CurrentHitObjectPlacement?.HitObject;
-
-            // same objects as considered by regular object snapping.
-            var objects = BlueprintContainer.SelectionBlueprints.AliveChildren
-                                            .Where(b => !b.IsSelected && b.Item is OsuHitObject && b.Item != placementObject && b.Item != EditorBeatmap.PlacementObject.Value)
-                                            .Select(b => (OsuHitObject)b.Item)
-                                            .ToList();
+            var objects = getPatternSnapObjects();
 
             if (visualSpacingSnap.Value)
                 PatternSnapping.AddVisualSpacingSnapPoints(objects, points);
@@ -452,6 +523,19 @@ namespace osu.Game.Rulesets.Osu.Edit
                 PatternSnapping.AddLineSnapPoints(objects, points);
 
             return points.Select(p => (p, playfield.GamefieldToScreenSpace(p.Position))).ToList();
+        }
+
+        /// <summary>
+        /// The objects which patterns are formed with: the same objects as considered by regular object snapping.
+        /// </summary>
+        private List<OsuHitObject> getPatternSnapObjects()
+        {
+            var placementObject = BlueprintContainer.CurrentHitObjectPlacement?.HitObject;
+
+            return BlueprintContainer.SelectionBlueprints.AliveChildren
+                                     .Where(b => !b.IsSelected && b.Item is OsuHitObject && b.Item != placementObject && b.Item != EditorBeatmap.PlacementObject.Value)
+                                     .Select(b => (OsuHitObject)b.Item)
+                                     .ToList();
         }
 
         /// <summary>
@@ -497,6 +581,13 @@ namespace osu.Game.Rulesets.Osu.Edit
                 Vector2 tail = slider.Path.PositionAt(1);
                 yield return slider.Position + tail;
                 yield return slider.StackedPosition + tail;
+
+                // the centres of arcs, which are snapped to the centres of arcs of other sliders.
+                foreach (var arc in PatternSnapping.GetArcs(slider))
+                {
+                    yield return arc.Centre;
+                    yield return arc.Centre + slider.StackedPosition - slider.Position;
+                }
             }
         }
 

@@ -7,10 +7,12 @@ using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Primitives;
+using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.UserInterface;
 using osu.Framework.Input;
 using osu.Framework.Input.Events;
 using osu.Framework.Utils;
+using osu.Game.Configuration;
 using osu.Game.Extensions;
 using osu.Game.Graphics.Cursor;
 using osu.Game.Graphics.UserInterface;
@@ -94,6 +96,9 @@ namespace osu.Game.Rulesets.Osu.Edit
         [Resolved]
         private OsuHitObjectComposer composer { get; set; } = null!;
 
+        [Resolved]
+        private OsuConfigManager config { get; set; } = null!;
+
         private InputManager inputManager = null!;
 
         private OsuTooltipContainer.OsuTooltip scrollRotationTooltip = null!;
@@ -108,9 +113,25 @@ namespace osu.Game.Rulesets.Osu.Edit
 
         private float rotationScrollAccumulation;
 
+        /// <summary>
+        /// The size of <see cref="ScrollRotationOrigin"/> on screen, in pixels.
+        /// </summary>
+        private const float scroll_rotation_origin_size = 8;
+
+        /// <summary>
+        /// A white dot at the point which scroll rotation rotates around.
+        /// </summary>
+        public Drawable ScrollRotationOrigin { get; private set; } = null!;
+
         [BackgroundDependencyLoader]
         private void load()
         {
+            AddInternal(ScrollRotationOrigin = new Circle
+            {
+                Origin = Anchor.Centre,
+                Colour = Colour4.White,
+                Alpha = 0,
+            });
             AddInternal(scrollRotationTooltip = new OsuTooltipContainer.OsuTooltip());
         }
 
@@ -156,7 +177,7 @@ namespace osu.Game.Rulesets.Osu.Edit
             float stepAngle = e.AltPressed ? 1 : 5;
             float rotation = steps * stepAngle;
 
-            RotationHandler.Rotate(rotation);
+            RotationHandler.Rotate(rotation, getScrollRotationOrigin());
             scrollRotationTotal += rotation;
 
             // display the total rotation of this gesture in the same range and format as rotating via the selection box handles.
@@ -171,14 +192,26 @@ namespace osu.Game.Rulesets.Osu.Edit
             return true;
         }
 
+        /// <summary>
+        /// The point which scroll rotation rotates around, in gamefield (osu!pixel) space.
+        /// Either the centre of the hit circles and slider heads of the selection, ignoring slider bodies (a single slider is rotated around its head),
+        /// or the centre of the whole selection (as when rotating via the selection box).
+        /// </summary>
+        /// <remarks>
+        /// Rotation around this point preserves it, so that it stays the same throughout a scroll rotation gesture.
+        /// </remarks>
+        private Vector2 getScrollRotationOrigin() => config.Get<bool>(OsuSetting.SlopEditorRotateAroundObjectStarts)
+            ? GeometryUtils.MinimumEnclosingCircle(selectedMovableObjects.Select(h => h.Position)).Item1
+            : GeometryUtils.MinimumEnclosingCircle(selectedMovableObjects).Item1;
+
         protected override void Update()
         {
             base.Update();
 
+            var state = inputManager.CurrentState;
+
             if (scrollRotationActive)
             {
-                var state = inputManager.CurrentState;
-
                 // the gesture ends as soon as either modifier is released, or any other mouse interaction starts.
                 if (!state.Keyboard.ControlPressed || !state.Keyboard.ShiftPressed || state.Mouse.Buttons.HasAnyButtonPressed)
                     endScrollRotation();
@@ -186,6 +219,27 @@ namespace osu.Game.Rulesets.Osu.Edit
 
             if (scrollRotationTooltip.IsPresent)
                 updateScrollRotationTooltipPosition();
+
+            // like osu!stable, the point which is rotated around is shown while rotating, and already while holding the modifiers to show where it is.
+            bool showRotationOrigin = state.Keyboard.ControlPressed && state.Keyboard.ShiftPressed && !state.Keyboard.SuperPressed
+                                      && !state.Mouse.Buttons.HasAnyButtonPressed
+                                      && RotationHandler.CanRotateAroundSelectionOrigin.Value;
+
+            if (showRotationOrigin)
+                updateScrollRotationOriginPosition();
+
+            ScrollRotationOrigin.Alpha = showRotationOrigin ? 1 : 0;
+        }
+
+        private void updateScrollRotationOriginPosition()
+        {
+            ScrollRotationOrigin.Position = ToLocalSpace(composer.Playfield.GamefieldToScreenSpace(getScrollRotationOrigin()));
+
+            // a fixed size on screen, regardless of the scale of the playfield.
+            float scale = Vector2.Distance(ToScreenSpace(Vector2.Zero), ToScreenSpace(Vector2.UnitX));
+
+            if (scale > 0 && float.IsFinite(scale))
+                ScrollRotationOrigin.Size = new Vector2(scroll_rotation_origin_size / scale);
         }
 
         private void endScrollRotation()

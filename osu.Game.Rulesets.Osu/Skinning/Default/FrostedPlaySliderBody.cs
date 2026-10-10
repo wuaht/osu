@@ -28,14 +28,21 @@ namespace osu.Game.Rulesets.Osu.Skinning.Default
         /// </summary>
         protected readonly BindableFloat Frostiness = new BindableFloat();
 
+        /// <summary>
+        /// Whether frosted slider bodies are always coloured with the combo colour, ignoring the slider track colour of the skin.
+        /// </summary>
+        protected readonly Bindable<bool> AlwaysColoured = new Bindable<bool>();
+
         [BackgroundDependencyLoader(permitNulls: true)]
         private void load(ISkinSource skin, OsuConfigManager? config)
         {
             config?.BindWith(OsuSetting.SlopFrostedSliders, FrostedSliders);
             config?.BindWith(OsuSetting.SlopFrostedSlidersFrostiness, Frostiness);
+            config?.BindWith(OsuSetting.SlopFrostedSlidersAlwaysColoured, AlwaysColoured);
 
             FrostedSliders.BindValueChanged(_ => updateAccentColour(skin));
             Frostiness.BindValueChanged(_ => updateAccentColour(skin));
+            AlwaysColoured.BindValueChanged(_ => updateAccentColour(skin));
 
             updateAccentColour(skin);
         }

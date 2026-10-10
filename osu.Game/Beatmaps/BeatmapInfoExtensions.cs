@@ -69,7 +69,8 @@ namespace osu.Game.Beatmaps
         /// </summary>
         public static bool AllowGameplayWithRuleset(this IBeatmapInfo beatmap, RulesetInfo ruleset, bool allowConversion)
         {
-            if (beatmap.Ruleset.ShortName == ruleset.ShortName)
+            // includes the beatmaps of the ruleset a variant ruleset (e.g. FPoSu) plays as they are, which aren't considered converted.
+            if (beatmap.IsNativeTo(ruleset))
                 return true;
 
             if (allowConversion && beatmap.Ruleset.OnlineID == 0 && ruleset.OnlineID != 0)

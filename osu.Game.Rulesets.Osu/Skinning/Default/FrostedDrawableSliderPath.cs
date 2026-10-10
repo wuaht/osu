@@ -41,8 +41,13 @@ namespace osu.Game.Rulesets.Osu.Skinning.Default
         private void updateBlur()
         {
             BlurSigma = frostedSliders.Value
-                ? new Vector2(min_blur_sigma + (max_blur_sigma - min_blur_sigma) * blur.Value)
+                ? new Vector2(GetBlurSigma(blur.Value))
                 : Vector2.Zero;
         }
+
+        /// <summary>
+        /// Returns the blur sigma for a blur setting from 0 to 1.
+        /// </summary>
+        public static float GetBlurSigma(float blur) => min_blur_sigma + (max_blur_sigma - min_blur_sigma) * blur;
     }
 }

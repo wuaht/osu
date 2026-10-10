@@ -414,6 +414,11 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
             return new SnapResult(screenSpacePosition, beatSnapProvider.SnapTime(time));
         }
 
+        /// <summary>
+        /// The time at a screen space position, not snapped to the beat divisor.
+        /// </summary>
+        public double TimeAtScreenSpacePosition(Vector2 screenSpacePosition) => TimeAtPosition(Content.ToLocalSpace(screenSpacePosition).X);
+
         protected override void Dispose(bool isDisposing)
         {
             base.Dispose(isDisposing);

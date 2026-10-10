@@ -253,6 +253,8 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopFrostedSliders, false);
             SetDefault(OsuSetting.SlopFrostedSlidersFrostiness, 1f, 0f, 1f, 0.01f);
             SetDefault(OsuSetting.SlopFrostedSlidersBlur, 0.25f, 0f, 1f, 0.01f);
+            SetDefault(OsuSetting.SlopFrostedSlidersAlwaysColoured, true);
+            SetDefault(OsuSetting.SlopFrostedHitCircles, true);
             SetDefault(OsuSetting.SlopMenuCursorStyle, MenuCursorStyle.Default);
 
             SetDefault(OsuSetting.SlopEditorSkin, string.Empty);
@@ -267,6 +269,9 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopEditorVisualSpacingSnap, true);
             SetDefault(OsuSetting.SlopEditorBlanketSnap, true);
             SetDefault(OsuSetting.SlopEditorLineSnap, true);
+            SetDefault(OsuSetting.SlopEditorSliderBlanketSnap, true);
+            SetDefault(OsuSetting.SlopEditorRotateAroundObjectStarts, true);
+            SetDefault(OsuSetting.SlopEditorTimelineSliderVelocityWithAlt, false);
             SetDefault(OsuSetting.SlopEditorShowDifficultyStrains, false);
             SetDefault(OsuSetting.SlopEditorShowOffscreenObjects, false);
             SetDefault(OsuSetting.SlopEditorWaveformStyle, EditorWaveformStyle.Default);
@@ -548,6 +553,16 @@ namespace osu.Game.Configuration
         SlopFrostedSlidersBlur,
 
         /// <summary>
+        /// Whether frosted slider bodies are always coloured with the combo colour, ignoring the slider track colour of the skin.
+        /// </summary>
+        SlopFrostedSlidersAlwaysColoured,
+
+        /// <summary>
+        /// Whether the content behind translucent hit circles is blurred like behind frosted slider bodies.
+        /// </summary>
+        SlopFrostedHitCircles,
+
+        /// <summary>
         /// The cursor used in menus and the editor.
         /// </summary>
         SlopMenuCursorStyle,
@@ -623,6 +638,21 @@ namespace osu.Game.Configuration
         /// Whether objects in the beatmap editor snap to positions which continue straight lines of equally spaced visible objects.
         /// </summary>
         SlopEditorLineSnap,
+
+        /// <summary>
+        /// Whether sliders snap to positions where their circular arcs share the centre of circular arcs of other sliders, such that one blankets the other.
+        /// </summary>
+        SlopEditorSliderBlanketSnap,
+
+        /// <summary>
+        /// Whether rotating the selection with ctrl+shift+scroll rotates around the centre of the hit circles and slider heads, rather than of the whole selection.
+        /// </summary>
+        SlopEditorRotateAroundObjectStarts,
+
+        /// <summary>
+        /// Whether dragging the end of a slider on the timeline changes its velocity while holding alt, rather than shift.
+        /// </summary>
+        SlopEditorTimelineSliderVelocityWithAlt,
 
         /// <summary>
         /// Whether the difficulty strain of the beatmap is displayed in the summary timeline at the bottom of the beatmap editor.

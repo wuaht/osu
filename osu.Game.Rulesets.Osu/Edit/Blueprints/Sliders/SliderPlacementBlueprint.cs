@@ -427,7 +427,8 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
 
         private void updateSlider()
         {
-            if (state == SliderPlacementState.Drawing)
+            // while holding alt, the length is not snapped to the beat divisor.
+            if (state == SliderPlacementState.Drawing || inputManager.CurrentState.Keyboard.AltPressed)
                 HitObject.Path.ExpectedDistance.Value = (float)HitObject.Path.CalculatedDistance;
             else
                 HitObject.Path.ExpectedDistance.Value = distanceSnapProvider?.FindSnappedDistance((float)HitObject.Path.CalculatedDistance, HitObject.StartTime, HitObject) ?? (float)HitObject.Path.CalculatedDistance;

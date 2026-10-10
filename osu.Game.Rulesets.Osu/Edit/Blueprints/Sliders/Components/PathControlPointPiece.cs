@@ -84,13 +84,13 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders.Components
                     Origin = Anchor.Centre,
                     Size = new Vector2(8),
                 },
-                // shown around selected control points.
+                // shown around selected control points. large enough to also surround the ring of control points which objects can be snapped to.
                 markerRing = new EditorAnchorShapeContainer(outline: true)
                 {
                     Anchor = Anchor.Centre,
                     Origin = Anchor.Centre,
-                    Size = new Vector2(12),
-                    BorderThickness = 1,
+                    Size = new Vector2(16),
+                    BorderThickness = 2,
                     Alpha = 0,
                 }
             };

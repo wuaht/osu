@@ -90,13 +90,16 @@ namespace osu.Game.Rulesets.Osu.Edit
         public override IEnumerable<PatternSnapGuideLine> CreateGuideLines()
         {
             // the full circle hints at the shape of the blanket.
-            yield return new PatternSnapGuideLine(createArc(0, 2 * Math.PI, 1), PatternSnapping.GUIDE_LINE_ALPHA * 0.35f);
+            yield return new PatternSnapGuideLine(CreateArc(Position, Arc.Radius, 0, 2 * Math.PI, 1), PatternSnapping.GUIDE_LINE_ALPHA * 0.35f);
 
             // the arc of the slider.
-            yield return new PatternSnapGuideLine(createArc(Arc.ThetaStart, Arc.ThetaRange, Arc.Direction), PatternSnapping.GUIDE_LINE_ALPHA);
+            yield return new PatternSnapGuideLine(CreateArc(Position, Arc.Radius, Arc.ThetaStart, Arc.ThetaRange, Arc.Direction), PatternSnapping.GUIDE_LINE_ALPHA);
         }
 
-        private Vector2[] createArc(double thetaStart, double thetaRange, double direction)
+        /// <summary>
+        /// Creates the vertices of a circular arc.
+        /// </summary>
+        public static Vector2[] CreateArc(Vector2 centre, float radius, double thetaStart, double thetaRange, double direction)
         {
             const double max_step = Math.PI / 90;
 
@@ -106,10 +109,31 @@ namespace osu.Game.Rulesets.Osu.Edit
             for (int i = 0; i <= segments; i++)
             {
                 double theta = thetaStart + direction * thetaRange * i / segments;
-                vertices[i] = Position + new Vector2((float)Math.Cos(theta), (float)Math.Sin(theta)) * Arc.Radius;
+                vertices[i] = centre + new Vector2((float)Math.Cos(theta), (float)Math.Sin(theta)) * radius;
             }
 
             return vertices;
+        }
+    }
+
+    /// <summary>
+    /// The centre of a circular arc of a slider, which the centre of a circular arc of another slider is snapped to, such that one slider blankets the other.
+    /// </summary>
+    /// <param name="Position">The shared centre of both arcs, in gamefield (osu!pixel) space.</param>
+    /// <param name="Arc">The arc of the slider which is snapped to.</param>
+    /// <param name="SnappedArc">The arc of the slider which is snapped, with its centre at <paramref name="Position"/>.</param>
+    public record SliderBlanketSnapPoint(Vector2 Position, CircularArcProperties Arc, CircularArcProperties SnappedArc) : PatternSnapPoint(Position)
+    {
+        public override IEnumerable<PatternSnapGuideLine> CreateGuideLines()
+        {
+            // the full circles hint at the shape of the blanket.
+            yield return new PatternSnapGuideLine(BlanketSnapPoint.CreateArc(Position, Arc.Radius, 0, 2 * Math.PI, 1), PatternSnapping.GUIDE_LINE_ALPHA * 0.35f);
+            yield return new PatternSnapGuideLine(BlanketSnapPoint.CreateArc(Position, SnappedArc.Radius, 0, 2 * Math.PI, 1), PatternSnapping.GUIDE_LINE_ALPHA * 0.35f);
+
+            // the arcs of both sliders.
+            yield return new PatternSnapGuideLine(BlanketSnapPoint.CreateArc(Position, Arc.Radius, Arc.ThetaStart, Arc.ThetaRange, Arc.Direction), PatternSnapping.GUIDE_LINE_ALPHA);
+            yield return new PatternSnapGuideLine(BlanketSnapPoint.CreateArc(Position, SnappedArc.Radius, SnappedArc.ThetaStart, SnappedArc.ThetaRange, SnappedArc.Direction),
+                PatternSnapping.GUIDE_LINE_ALPHA);
         }
     }
 
@@ -279,32 +303,39 @@ namespace osu.Game.Rulesets.Osu.Edit
                 if (hitObject is not Slider slider)
                     continue;
 
-                var controlPoints = slider.Path.ControlPoints;
-
-                // segments are determined in the same way as in SliderPath.calculatePath(), so that only arcs which are actually displayed as such are considered.
-                int start = 0;
-
-                for (int i = 0; i < controlPoints.Count; i++)
+                foreach (var arc in GetArcs(slider))
                 {
-                    if (controlPoints[i].Type == null && i < controlPoints.Count - 1)
-                        continue;
-
-                    if (i - start + 1 == 3 && controlPoints[start].Type?.Type == SplineType.PerfectCurve)
-                    {
-                        var arc = new CircularArcProperties(new[] { controlPoints[start].Position, controlPoints[start + 1].Position, controlPoints[i].Position });
-
-                        if (isDisplayedAsArc(arc))
-                        {
-                            // the arc is defined relative to the slider's position.
-                            var shiftedArc = new CircularArcProperties(arc.ThetaStart, arc.ThetaRange, arc.Direction, arc.Radius, slider.Position + arc.Centre);
-
-                            if (isInPlayfield(shiftedArc.Centre))
-                                output.Add(new BlanketSnapPoint(shiftedArc.Centre, shiftedArc));
-                        }
-                    }
-
-                    start = i;
+                    if (isInPlayfield(arc.Centre))
+                        output.Add(new BlanketSnapPoint(arc.Centre, arc));
                 }
+            }
+        }
+
+        /// <summary>
+        /// Returns the circular arcs of a slider, with their centres in gamefield (osu!pixel) space.
+        /// </summary>
+        public static IEnumerable<CircularArcProperties> GetArcs(Slider slider)
+        {
+            var controlPoints = slider.Path.ControlPoints;
+
+            // segments are determined in the same way as in SliderPath.calculatePath(), so that only arcs which are actually displayed as such are considered.
+            int start = 0;
+
+            for (int i = 0; i < controlPoints.Count; i++)
+            {
+                if (controlPoints[i].Type == null && i < controlPoints.Count - 1)
+                    continue;
+
+                if (i - start + 1 == 3 && controlPoints[start].Type?.Type == SplineType.PerfectCurve)
+                {
+                    var arc = new CircularArcProperties(new[] { controlPoints[start].Position, controlPoints[start + 1].Position, controlPoints[i].Position });
+
+                    // the arc is defined relative to the slider's position.
+                    if (isDisplayedAsArc(arc))
+                        yield return new CircularArcProperties(arc.ThetaStart, arc.ThetaRange, arc.Direction, arc.Radius, slider.Position + arc.Centre);
+                }
+
+                start = i;
             }
         }
 

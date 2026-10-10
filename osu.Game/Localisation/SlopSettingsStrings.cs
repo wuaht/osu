@@ -53,6 +53,28 @@ namespace osu.Game.Localisation
             @"How strongly frosted slider bodies blur the content behind them. Lower values keep the content more recognisable.");
 
         /// <summary>
+        /// "Always colour frosted slider bodies"
+        /// </summary>
+        public static LocalisableString FrostedSlidersAlwaysColoured => new TranslatableString(getKey(@"frosted_sliders_always_coloured"), @"Always colour frosted slider bodies");
+
+        /// <summary>
+        /// "Frosted slider bodies use the combo colour, even if the skin specifies a slider track colour."
+        /// </summary>
+        public static LocalisableString FrostedSlidersAlwaysColouredDescription => new TranslatableString(getKey(@"frosted_sliders_always_coloured_description"),
+            @"Frosted slider bodies use the combo colour, even if the skin specifies a slider track colour.");
+
+        /// <summary>
+        /// "Frosted hit circles"
+        /// </summary>
+        public static LocalisableString FrostedHitCircles => new TranslatableString(getKey(@"frosted_hit_circles"), @"Frosted hit circles");
+
+        /// <summary>
+        /// "Blurs the content behind hit circles which are translucent with frosted sliders. Has no effect on opaque hit circles."
+        /// </summary>
+        public static LocalisableString FrostedHitCirclesDescription => new TranslatableString(getKey(@"frosted_hit_circles_description"),
+            @"Blurs the content behind hit circles which are translucent with frosted sliders. Has no effect on opaque hit circles.");
+
+        /// <summary>
         /// "Menu cursor"
         /// </summary>
         public static LocalisableString MenuCursorStyle => new TranslatableString(getKey(@"menu_cursor_style"), @"Menu cursor");
@@ -244,6 +266,39 @@ namespace osu.Game.Localisation
         /// </summary>
         public static LocalisableString LineSnapDescription => new TranslatableString(getKey(@"line_snap_description"),
             @"Objects snap to positions which continue a straight line of equally spaced visible objects.");
+
+        /// <summary>
+        /// "Slider blanket snapping"
+        /// </summary>
+        public static LocalisableString SliderBlanketSnap => new TranslatableString(getKey(@"slider_blanket_snap"), @"Slider blanket snapping");
+
+        /// <summary>
+        /// "Sliders snap to positions where their arcs share the centre of the arcs of visible sliders, so that one slider blankets the other."
+        /// </summary>
+        public static LocalisableString SliderBlanketSnapDescription => new TranslatableString(getKey(@"slider_blanket_snap_description"),
+            @"Sliders snap to positions where their arcs share the centre of the arcs of visible sliders, so that one slider blankets the other.");
+
+        /// <summary>
+        /// "Rotate around hit circles and slider heads"
+        /// </summary>
+        public static LocalisableString RotateAroundObjectStarts => new TranslatableString(getKey(@"rotate_around_object_starts"), @"Rotate around hit circles and slider heads");
+
+        /// <summary>
+        /// "Rotating with ctrl+shift+scroll rotates around the centre of the hit circles and slider heads, ignoring slider bodies. A single slider rotates around its head."
+        /// </summary>
+        public static LocalisableString RotateAroundObjectStartsDescription => new TranslatableString(getKey(@"rotate_around_object_starts_description"),
+            @"Rotating with ctrl+shift+scroll rotates around the centre of the hit circles and slider heads, ignoring slider bodies. A single slider rotates around its head.");
+
+        /// <summary>
+        /// "Change slider velocity on the timeline with alt"
+        /// </summary>
+        public static LocalisableString TimelineSliderVelocityWithAlt => new TranslatableString(getKey(@"timeline_slider_velocity_with_alt"), @"Change slider velocity on the timeline with alt");
+
+        /// <summary>
+        /// "Dragging the end of a slider on the timeline changes its velocity while holding alt instead of shift."
+        /// </summary>
+        public static LocalisableString TimelineSliderVelocityWithAltDescription => new TranslatableString(getKey(@"timeline_slider_velocity_with_alt_description"),
+            @"Dragging the end of a slider on the timeline changes its velocity while holding alt instead of shift.");
 
         /// <summary>
         /// "Show difficulty strains"
