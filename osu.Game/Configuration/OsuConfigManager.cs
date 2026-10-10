@@ -296,6 +296,9 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopFileSelectorRecentDirectories, string.Empty);
 
             SetDefault(OsuSetting.SlopBeatmapMirror, BeatmapMirror.Mino);
+
+            SetDefault(OsuSetting.SlopUnofficialBuildNotifiedVersion, string.Empty);
+            SetDefault(OsuSetting.SlopUnsupportedRealtimeNotifiedVersion, string.Empty);
         }
 
         protected override bool CheckLookupContainsPrivateInformation(OsuSetting lookup)
@@ -739,5 +742,15 @@ namespace osu.Game.Configuration
         /// The <see cref="Online.BeatmapMirrors.BeatmapMirror"/> which beatmaps are downloaded from while not logged in or while connected to the development server.
         /// </summary>
         SlopBeatmapMirror,
+
+        /// <summary>
+        /// The version of the game for which the user was notified that it isn't an official build, such that it is only shown once after installing a version.
+        /// </summary>
+        SlopUnofficialBuildNotifiedVersion,
+
+        /// <summary>
+        /// The version of the game for which the user was notified that the servers don't support its realtime functionality, such that it is only shown once after installing a version.
+        /// </summary>
+        SlopUnsupportedRealtimeNotifiedVersion,
     }
 }

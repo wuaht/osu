@@ -63,8 +63,17 @@ namespace osu.Game.Updater
                     config.SetValue(OsuSetting.ReleaseStream, FixedReleaseStream.Value);
 
                 // notify the user if they're using a build that is not officially sanctioned.
+                // as this client is never an official build, the user is only notified once after installing a version, and it is logged otherwise.
                 if (RuntimeInfo.EntryAssembly.GetCustomAttribute<OfficialBuildAttribute>() == null)
-                    Notifications.Post(new SimpleNotification { Text = NotificationsStrings.NotOfficialBuild });
+                {
+                    if (config.Get<string>(OsuSetting.SlopUnofficialBuildNotifiedVersion) != game.Version)
+                    {
+                        Notifications.Post(new SimpleNotification { Text = NotificationsStrings.NotOfficialBuild });
+                        config.SetValue(OsuSetting.SlopUnofficialBuildNotifiedVersion, game.Version);
+                    }
+                    else
+                        Logger.Log(NotificationsStrings.NotOfficialBuild.ToString());
+                }
             }
             else
             {

@@ -21,6 +21,18 @@ namespace osu.Game.Online.Multiplayer
         /// </summary>
         private static int unsupportedVersionNotified;
 
+        /// <summary>
+        /// Whether the user has already been notified that the server does not support realtime functionality in an earlier session of the installed version,
+        /// in which case the message is only logged.
+        /// </summary>
+        public static bool UnsupportedVersionNotifiedBefore { get; set; }
+
+        /// <summary>
+        /// Invoked when the user is notified that the server does not support realtime functionality, such that it can be remembered for later sessions.
+        /// May be invoked from any thread.
+        /// </summary>
+        public static Action? OnUnsupportedVersionNotified { get; set; }
+
         public static void FireAndForget(this Task task, Action? onSuccess = null, Action<Exception>? onError = null) =>
             task.ContinueWith(t =>
             {
@@ -40,10 +52,15 @@ namespace osu.Game.Online.Multiplayer
                     {
                         // The server rejects every realtime call of unofficial builds (such as slop!) with the same message.
                         // As realtime calls happen frequently (e.g. on every activity change), only notify the user once.
-                        if (isUnsupportedVersionMessage(message) && Interlocked.Exchange(ref unsupportedVersionNotified, 1) == 1)
+                        if (isUnsupportedVersionMessage(message))
                         {
-                            Logger.Log(message);
-                            return;
+                            if (UnsupportedVersionNotifiedBefore || Interlocked.Exchange(ref unsupportedVersionNotified, 1) == 1)
+                            {
+                                Logger.Log(message);
+                                return;
+                            }
+
+                            OnUnsupportedVersionNotified?.Invoke();
                         }
 
                         // Hub exceptions generally contain something we can show the user directly.

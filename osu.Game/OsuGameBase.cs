@@ -354,6 +354,10 @@ namespace osu.Game
             BeatmapManager.ProcessBeatmap = (beatmapSet, scope) => beatmapUpdater.Process(beatmapSet, scope);
             BeatmapManager.ProcessSavedBeatmap = beatmapUpdater.ProcessSaved;
 
+            // the realtime servers reject this client, which the user only needs to be told once after installing a version.
+            MultiplayerClientExtensions.UnsupportedVersionNotifiedBefore = LocalConfig.Get<string>(OsuSetting.SlopUnsupportedRealtimeNotifiedVersion) == Version;
+            MultiplayerClientExtensions.OnUnsupportedVersionNotified = () => Schedule(() => LocalConfig.SetValue(OsuSetting.SlopUnsupportedRealtimeNotifiedVersion, Version));
+
             dependencies.Cache(userCache = new UserLookupCache());
             base.Content.Add(userCache);
 
