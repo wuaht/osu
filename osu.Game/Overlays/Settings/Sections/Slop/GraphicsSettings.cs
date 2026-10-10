@@ -46,6 +46,18 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                     KeyboardStep = 0.01f,
                     DisplayAsPercentage = true,
                 }),
+                new SettingsItemV2(new FormCheckBox
+                {
+                    Caption = SlopSettingsStrings.FrostedSlidersAlwaysColoured,
+                    HintText = SlopSettingsStrings.FrostedSlidersAlwaysColouredDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopFrostedSlidersAlwaysColoured),
+                }),
+                new SettingsItemV2(new FormCheckBox
+                {
+                    Caption = SlopSettingsStrings.FrostedHitCircles,
+                    HintText = SlopSettingsStrings.FrostedHitCirclesDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopFrostedHitCircles),
+                }),
                 new SettingsItemV2(new FormEnumDropdown<MenuCursorStyle>
                 {
                     Caption = SlopSettingsStrings.MenuCursorStyle,

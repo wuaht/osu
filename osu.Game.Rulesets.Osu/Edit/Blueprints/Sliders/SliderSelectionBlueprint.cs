@@ -337,11 +337,13 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
         private double desiredDistance;
         private bool isAdjustingLength;
         private bool adjustVelocityMomentary;
+        private bool ignoreBeatSnapMomentary;
 
         private void startAdjustingLength(DragStartEvent e)
         {
             isAdjustingLength = true;
             adjustVelocityMomentary = e.ShiftPressed;
+            ignoreBeatSnapMomentary = e.AltPressed;
             lengthAdjustMouseOffset = ToLocalSpace(e.ScreenSpaceMouseDownPosition) - HitObject.Position - HitObject.Path.PositionAt(1);
             oldDuration = HitObject.Path.Distance / HitObject.SliderVelocityMultiplier;
             oldVelocityMultiplier = HitObject.SliderVelocityMultiplier;
@@ -355,9 +357,12 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
             isAdjustingLength = false;
         }
 
-        private void adjustLength(MouseEvent e) => adjustLength(findClosestPathDistance(e), e.ShiftPressed);
+        private void adjustLength(MouseEvent e) => adjustLength(findClosestPathDistance(e), e.ShiftPressed, e.AltPressed);
 
-        private void adjustLength(double proposedDistance, bool adjustVelocity)
+        /// <param name="proposedDistance">The proposed length of the slider.</param>
+        /// <param name="adjustVelocity">Whether to adjust the velocity of the slider, rather than its duration.</param>
+        /// <param name="ignoreBeatSnap">Whether the duration of the slider should not be snapped to the beat divisor.</param>
+        private void adjustLength(double proposedDistance, bool adjustVelocity, bool ignoreBeatSnap)
         {
             desiredDistance = proposedDistance;
             double proposedVelocity = oldVelocityMultiplier;
@@ -378,8 +383,11 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
                 minDistance = Math.Min(minDistance, HitObject.Path.CalculatedDistance);
 
                 // Add a small amount to the proposed distance to make it easier to snap to the full length of the slider.
-                proposedDistance = distanceSnapProvider?.FindSnappedDistance((float)proposedDistance + 1, HitObject.StartTime, HitObject) ?? proposedDistance;
-                proposedDistance = Math.Clamp(proposedDistance, minDistance, HitObject.Path.CalculatedDistance);
+                if (!ignoreBeatSnap)
+                    proposedDistance = distanceSnapProvider?.FindSnappedDistance((float)proposedDistance + 1, HitObject.StartTime, HitObject) ?? proposedDistance;
+
+                // the slider may be extended beyond the path's calculated distance, which extends its last segment in a straight line.
+                proposedDistance = Math.Max(proposedDistance, ignoreBeatSnap ? 1 : minDistance);
             }
 
             if (Precision.AlmostEquals(proposedDistance, HitObject.Path.Distance) && Precision.AlmostEquals(proposedVelocity, HitObject.SliderVelocityMultiplier))
@@ -460,6 +468,22 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
                 bestValue = d;
             }
 
+            // beyond the end of the path, the slider is extended in a straight line along the direction of its end.
+            if (Precision.AlmostEquals(bestValue, fullPathCache.Value.CalculatedDistance, step1))
+            {
+                var calculatedPath = fullPathCache.Value.CalculatedPath;
+
+                if (calculatedPath.Count >= 2 && calculatedPath[^1] != calculatedPath[^2])
+                {
+                    Vector2 end = calculatedPath[^1];
+                    Vector2 direction = (end - calculatedPath[^2]).Normalized();
+                    float extension = Vector2.Dot(desiredPosition - end, direction);
+
+                    if (extension > 0)
+                        return fullPathCache.Value.CalculatedDistance + extension;
+                }
+            }
+
             return bestValue;
         }
 
@@ -508,10 +532,11 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
                 return true;
             }
 
-            if (isAdjustingLength && e.ShiftPressed != adjustVelocityMomentary)
+            if (isAdjustingLength && (e.ShiftPressed != adjustVelocityMomentary || e.AltPressed != ignoreBeatSnapMomentary))
             {
                 adjustVelocityMomentary = e.ShiftPressed;
-                adjustLength(desiredDistance, adjustVelocityMomentary);
+                ignoreBeatSnapMomentary = e.AltPressed;
+                adjustLength(desiredDistance, adjustVelocityMomentary, ignoreBeatSnapMomentary);
                 return true;
             }
 
@@ -520,10 +545,11 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
 
         protected override void OnKeyUp(KeyUpEvent e)
         {
-            if (!IsSelected || !isAdjustingLength || e.ShiftPressed == adjustVelocityMomentary) return;
+            if (!IsSelected || !isAdjustingLength || (e.ShiftPressed == adjustVelocityMomentary && e.AltPressed == ignoreBeatSnapMomentary)) return;
 
             adjustVelocityMomentary = e.ShiftPressed;
-            adjustLength(desiredDistance, adjustVelocityMomentary);
+            ignoreBeatSnapMomentary = e.AltPressed;
+            adjustLength(desiredDistance, adjustVelocityMomentary, ignoreBeatSnapMomentary);
         }
 
         private PathControlPoint addControlPoint(Vector2 position)

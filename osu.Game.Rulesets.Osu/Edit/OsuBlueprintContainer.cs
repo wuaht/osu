@@ -64,6 +64,12 @@ namespace osu.Game.Rulesets.Osu.Edit
                     return true;
             }
 
+            for (int i = 0; i < blueprints.Count; i++)
+            {
+                if (checkSnappingSliderArcs(blueprints[i].blueprint, distanceTravelled, blueprints[i].originalSnapPositions))
+                    return true;
+            }
+
             // if no positional snapping could be performed, try unrestricted snapping from the earliest
             // item in the selection.
 
@@ -82,6 +88,40 @@ namespace osu.Game.Rulesets.Osu.Edit
             if (moved)
                 ApplySnapResultTime(result, referenceBlueprint.Item.StartTime);
             return moved;
+        }
+
+        /// <summary>
+        /// Check for snapping the centres of the circular arcs of a slider to the centres of arcs of other sliders, such that one slider blankets the other.
+        /// </summary>
+        /// <param name="blueprint">The blueprint to check for snapping.</param>
+        /// <param name="distanceTravelled">Distance travelled since start of dragging action.</param>
+        /// <param name="originalPositions">The snap positions of blueprint before start of dragging action.</param>
+        /// <returns>Whether an arc to snap to was found.</returns>
+        private bool checkSnappingSliderArcs(SelectionBlueprint<HitObject> blueprint, Vector2 distanceTravelled, Vector2[] originalPositions)
+        {
+            if (blueprint.Item is not Slider slider)
+                return false;
+
+            var playfield = Composer.Playfield;
+
+            // the arcs move along with the head of the slider, whose current position may differ from the one the drag would move it to.
+            Vector2 headOffset = originalPositions[0] + distanceTravelled - blueprint.ScreenSpaceSnapPoints[0];
+
+            foreach (var arc in PatternSnapping.GetArcs(slider))
+            {
+                // the arc is located relative to the (stacked) slider, like its blueprint.
+                Vector2 currentCentre = playfield.GamefieldToScreenSpace(arc.Centre + slider.StackedPosition - slider.Position);
+
+                var result = Composer.TrySnapSliderArc(currentCentre + headOffset, arc);
+
+                if (result == null)
+                    continue;
+
+                if (SelectionHandler.HandleMovement(new MoveSelectionEvent<HitObject>(blueprint, result.ScreenSpacePosition - currentCentre)))
+                    return true;
+            }
+
+            return false;
         }
 
         /// <summary>

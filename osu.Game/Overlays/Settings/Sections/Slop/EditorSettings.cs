@@ -126,6 +126,24 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                 }),
                 new SettingsItemV2(new FormCheckBox
                 {
+                    Caption = SlopSettingsStrings.SliderBlanketSnap,
+                    HintText = SlopSettingsStrings.SliderBlanketSnapDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorSliderBlanketSnap),
+                }),
+                new SettingsItemV2(new FormCheckBox
+                {
+                    Caption = SlopSettingsStrings.RotateAroundObjectStarts,
+                    HintText = SlopSettingsStrings.RotateAroundObjectStartsDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorRotateAroundObjectStarts),
+                }),
+                new SettingsItemV2(new FormCheckBox
+                {
+                    Caption = SlopSettingsStrings.TimelineSliderVelocityWithAlt,
+                    HintText = SlopSettingsStrings.TimelineSliderVelocityWithAltDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorTimelineSliderVelocityWithAlt),
+                }),
+                new SettingsItemV2(new FormCheckBox
+                {
                     Caption = SlopSettingsStrings.ShowOffscreenObjects,
                     HintText = SlopSettingsStrings.ShowOffscreenObjectsDescription,
                     Current = config.GetBindable<bool>(OsuSetting.SlopEditorShowOffscreenObjects),

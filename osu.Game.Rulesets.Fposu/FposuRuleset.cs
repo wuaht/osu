@@ -8,20 +8,15 @@ using osu.Framework.Graphics;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Localisation;
 using osu.Game.Beatmaps;
-using osu.Game.Configuration;
-using osu.Game.Overlays.Settings;
-using osu.Game.Rulesets.Configuration;
 using osu.Game.Rulesets.Difficulty;
 using osu.Game.Rulesets.Fposu.Mods;
 using osu.Game.Rulesets.Fposu.UI;
 using osu.Game.Rulesets.Mods;
 using osu.Game.Rulesets.Osu;
 using osu.Game.Rulesets.Osu.Beatmaps;
-using osu.Game.Rulesets.Osu.Configuration;
 using osu.Game.Rulesets.Osu.Difficulty;
 using osu.Game.Rulesets.Osu.Mods;
 using osu.Game.Rulesets.Osu.Replays;
-using osu.Game.Rulesets.Osu.UI;
 using osu.Game.Rulesets.Replays.Types;
 using osu.Game.Rulesets.Scoring;
 using osu.Game.Rulesets.UI;
@@ -39,9 +34,12 @@ namespace osu.Game.Rulesets.Fposu
     /// The camera is turned with the mouse, and the cursor is where the centre of the view hits the screen.
     /// Everything except the presentation (beatmaps, mods, scoring, difficulty etc.) is taken from the <see cref="OsuRuleset"/>.
     /// </remarks>
-    public class FposuRuleset : Ruleset
+    public class FposuRuleset : Ruleset, IRulesetVariant
     {
         public const string SHORT_NAME = "fposu";
+
+        // osu! beatmaps are played as they are, with the configuration and settings of osu!.
+        public string BaseRulesetShortName => OsuRuleset.SHORT_NAME;
 
         /// <summary>
         /// The osu! ruleset, which everything except the presentation is taken from.
@@ -108,9 +106,7 @@ namespace osu.Game.Rulesets.Fposu
 
         public override IConvertibleReplayFrame CreateConvertibleReplayFrame() => new OsuReplayFrame();
 
-        public override IRulesetConfigManager CreateConfig(SettingsStore? settings) => new OsuRulesetConfigManager(settings, RulesetInfo);
-
-        public override RulesetSettingsSubsection CreateSettings() => new OsuSettingsSubsection(this);
+        // the configuration and settings of osu! are used (see IRulesetVariant), so FPoSu has none of its own.
 
         public override ISkin? CreateSkinTransformer(ISkin skin, IBeatmap beatmap) => osuRuleset.CreateSkinTransformer(skin, beatmap);
 

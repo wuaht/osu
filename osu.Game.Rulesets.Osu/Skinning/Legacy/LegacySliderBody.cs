@@ -19,8 +19,13 @@ namespace osu.Game.Rulesets.Osu.Skinning.Legacy
             => skin.GetConfig<OsuSkinColour, Color4>(OsuSkinColour.SliderBorder)?.Value ?? Color4.White;
 
         protected override Color4 GetBodyAccentColour(ISkinSource skin, Color4 hitObjectAccentColour)
+        {
+            // frosted slider bodies may always use the combo colour, regardless of the skin's slider track colour.
+            Color4? trackOverride = FrostedSliders.Value && AlwaysColoured.Value ? null : skin.GetConfig<OsuSkinColour, Color4>(OsuSkinColour.SliderTrackOverride)?.Value;
+
             // legacy skins use a constant value for slider track alpha, regardless of the source colour.
-            => (skin.GetConfig<OsuSkinColour, Color4>(OsuSkinColour.SliderTrackOverride)?.Value ?? hitObjectAccentColour).Opacity(getBodyAlpha());
+            return (trackOverride ?? hitObjectAccentColour).Opacity(getBodyAlpha());
+        }
 
         private const float default_body_alpha = 0.7f;
 

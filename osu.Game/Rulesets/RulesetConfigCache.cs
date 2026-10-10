@@ -45,7 +45,10 @@ namespace osu.Game.Rulesets
             if (!IsLoaded)
                 throw new InvalidOperationException($@"Cannot retrieve {nameof(IRulesetConfigManager)} before {nameof(RulesetConfigCache)} has loaded");
 
-            if (!configCache.TryGetValue(ruleset.RulesetInfo.ShortName, out var config))
+            // variants use the configuration of the ruleset whose beatmaps they play.
+            string shortName = (ruleset as IRulesetVariant)?.BaseRulesetShortName ?? ruleset.RulesetInfo.ShortName;
+
+            if (!configCache.TryGetValue(shortName, out var config))
                 throw new InvalidOperationException($@"Attempted to retrieve {nameof(IRulesetConfigManager)} for an unavailable ruleset {ruleset.GetDisplayString()}");
 
             return config;

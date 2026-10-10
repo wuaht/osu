@@ -15,6 +15,7 @@ using osu.Game.Rulesets.Objects.Drawables;
 using osu.Game.Rulesets.Osu.Configuration;
 using osu.Game.Rulesets.Osu.Objects;
 using osu.Game.Rulesets.Osu.Objects.Drawables;
+using osu.Game.Rulesets.Osu.Skinning.Default;
 using osu.Game.Skinning;
 using osuTK;
 using osuTK.Graphics;
@@ -90,16 +91,27 @@ namespace osu.Game.Rulesets.Osu.Skinning.Legacy
             // at this point, any further texture fetches should be correctly using the priority source if the base texture was retrieved using it.
             // the conditional above handles the case where a sliderendcircle.png is retrieved from the skin, but sliderendcircleoverlay.png doesn't exist.
             // expected behaviour in this scenario is not showing the overlay, rather than using hitcircleoverlay.png.
+            bool frostedSliders = gameConfig?.Get<bool>(OsuSetting.SlopFrostedSliders) == true;
+
+            CircleSprite = new LegacyKiaiFlashingDrawable(() => new Sprite { Texture = skin.GetTexture(circleName)?.WithMaximumSize(maxSize) })
+            {
+                Anchor = Anchor.Centre,
+                Origin = Anchor.Centre,
+                // With frosted sliders, circles are made translucent to match the slider bodies.
+                // Circles which are part of a slider are more translucent, as the frosted body is visible behind them.
+                Alpha = frostedSliders ? (priorityLookupPrefix == null ? 0.75f : 0.5f) : 1,
+            };
+
+            Drawable circle = CircleSprite;
+
+            // The content behind translucent hit circles is blurred like behind frosted slider bodies.
+            // Circles which are part of a slider aren't, as the frosted body is already behind them.
+            if (frostedSliders && priorityLookupPrefix == null && gameConfig?.Get<bool>(OsuSetting.SlopFrostedHitCircles) == true)
+                circle = new FrostedCircleBackdrop(CircleSprite, gameConfig.Get<float>(OsuSetting.SlopFrostedSlidersBlur));
+
             InternalChildren = new[]
             {
-                CircleSprite = new LegacyKiaiFlashingDrawable(() => new Sprite { Texture = skin.GetTexture(circleName)?.WithMaximumSize(maxSize) })
-                {
-                    Anchor = Anchor.Centre,
-                    Origin = Anchor.Centre,
-                    // With frosted sliders, circles are made translucent to match the slider bodies.
-                    // Circles which are part of a slider are more translucent, as the frosted body is visible behind them.
-                    Alpha = gameConfig?.Get<bool>(OsuSetting.SlopFrostedSliders) == true ? (priorityLookupPrefix == null ? 0.75f : 0.5f) : 1,
-                },
+                circle,
                 OverlayLayer = new Container
                 {
                     Anchor = Anchor.Centre,
@@ -216,6 +228,42 @@ namespace osu.Game.Rulesets.Osu.Skinning.Legacy
 
             if (drawableObject != null)
                 drawableObject.ApplyCustomUpdateState -= updateStateTransforms;
+        }
+
+        /// <summary>
+        /// Blurs the content behind a translucent circle, like behind frosted slider bodies.
+        /// </summary>
+        private partial class FrostedCircleBackdrop : BackdropBlurContainer
+        {
+            private readonly Drawable circle;
+            private readonly float baseAlpha;
+
+            /// <param name="circle">The circle, which is displayed in this container and determines the area which is blurred behind it.</param>
+            /// <param name="blur">The blur setting of frosted slider bodies (see <see cref="FrostedDrawableSliderPath"/>).</param>
+            public FrostedCircleBackdrop(Drawable circle, float blur)
+            {
+                this.circle = circle;
+                baseAlpha = circle.Alpha;
+
+                Anchor = Anchor.Centre;
+                Origin = Anchor.Centre;
+
+                // large enough for the largest circle textures (see the maximum size of the circle sprite) while scaled up by the hit animation.
+                Size = OsuHitObject.OBJECT_DIMENSIONS * 2 * 1.4f;
+
+                BlurSigma = new Vector2(FrostedDrawableSliderPath.GetBlurSigma(blur));
+
+                // excludes the soft shadow around legacy circles, which would otherwise blur the backdrop beyond the circle.
+                MaskCutoff = 0.3f;
+
+                // the backdrop is blurred at a lower resolution, which is barely noticeable at this size but much cheaper.
+                EffectBufferScale = new Vector2(0.5f);
+
+                Child = circle;
+            }
+
+            // fades out along with the circle (e.g. when hit), rather than disappearing once the circle is too transparent to be masked.
+            public override float BackdropOpacity => base.BackdropOpacity * Math.Clamp(circle.Alpha / baseAlpha, 0, 1);
         }
     }
 }

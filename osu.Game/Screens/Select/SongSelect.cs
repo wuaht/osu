@@ -1189,7 +1189,7 @@ namespace osu.Game.Screens.Select
 
             // Don't change the local ruleset if the user is on another ruleset and is showing converted beatmaps.
             // Eventually we probably want to check whether conversion is actually possible for the current ruleset.
-            bool requiresRulesetSwitch = !beatmapInfo.Ruleset.Equals(Ruleset.Value)
+            bool requiresRulesetSwitch = !beatmapInfo.IsNativeTo(Ruleset.Value)
                                          && (beatmapInfo.Ruleset.OnlineID > 0 || !showConvertedBeatmaps.Value);
 
             if (requiresRulesetSwitch)

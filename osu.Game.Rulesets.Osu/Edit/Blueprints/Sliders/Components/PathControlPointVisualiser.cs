@@ -23,6 +23,7 @@ using osu.Framework.Input.Events;
 using osu.Framework.Utils;
 using osu.Game.Configuration;
 using osu.Game.Graphics.UserInterface;
+using osu.Game.Localisation;
 using osu.Game.Rulesets.Edit;
 using osu.Game.Rulesets.Objects;
 using osu.Game.Rulesets.Objects.Types;
@@ -500,7 +501,8 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders.Components
             }
 
             // Snap the path to the current beat divisor before checking length validity.
-            hitObject.SnapTo(distanceSnapProvider);
+            // While holding alt, the length is not snapped and the slider follows its whole path.
+            snapLength(e.AltPressed);
 
             if (!hitObject.Path.HasValidLengthForPlacement)
             {
@@ -510,7 +512,7 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders.Components
                 hitObject.Position = oldPosition;
                 hitObject.StartTime = oldStartTime;
                 // Snap the path length again to undo the invalid length.
-                hitObject.SnapTo(distanceSnapProvider);
+                snapLength(e.AltPressed);
                 return;
             }
 
@@ -519,6 +521,14 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders.Components
                 hitObject.Path.ControlPoints[i].Type = dragPathTypes[i];
 
             EnsureValidPathTypes();
+        }
+
+        private void snapLength(bool ignoreBeatSnap)
+        {
+            if (ignoreBeatSnap)
+                hitObject.Path.ExpectedDistance.Value = null;
+            else
+                hitObject.SnapTo(distanceSnapProvider);
         }
 
         public void DragEnded()
@@ -574,7 +584,8 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders.Components
                     new OsuMenuItem("Curve type")
                     {
                         Items = curveTypeItems
-                    }
+                    },
+                    createSnapTargetMenuItem(selectedPieces),
                 };
 
                 if (splittableCount > 0)
@@ -604,6 +615,26 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders.Components
                     return new CurveTypeMenuItem(type, _ => updatePathTypeOfSelectedPieces(type)) { Hotkey = hotkey };
                 }
             }
+        }
+
+        /// <summary>
+        /// Toggles whether objects can be snapped to the selected control points.
+        /// </summary>
+        private static MenuItem createSnapTargetMenuItem(List<PathControlPointPiece<T>> selectedPieces)
+        {
+            int snapTargets = selectedPieces.Count(p => p.ControlPoint.IsSnapTarget);
+
+            return new TernaryStateToggleMenuItem(SlopEditorStrings.SnapObjectsToAnchor, action: state =>
+            {
+                foreach (var piece in selectedPieces)
+                    piece.ControlPoint.IsSnapTarget = state == TernaryState.True;
+            })
+            {
+                State =
+                {
+                    Value = snapTargets == 0 ? TernaryState.False : snapTargets == selectedPieces.Count ? TernaryState.True : TernaryState.Indeterminate
+                },
+            };
         }
 
         private void updateCurveMenuItems()

@@ -34,6 +34,11 @@ namespace osu.Game.Localisation
         /// </summary>
         public static LocalisableString Muted => new TranslatableString(getKey(@"muted"), @"Muted");
 
+        /// <summary>
+        /// "Snap objects to anchor"
+        /// </summary>
+        public static LocalisableString SnapObjectsToAnchor => new TranslatableString(getKey(@"snap_objects_to_anchor"), @"Snap objects to anchor");
+
         private static string getKey(string key) => $"{prefix}:{key}";
     }
 }

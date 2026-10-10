@@ -56,6 +56,33 @@ namespace osu.Game.Rulesets.Objects
         /// </summary>
         public event Action Changed;
 
+        private bool isSnapTarget;
+
+        /// <summary>
+        /// Whether objects can be snapped to this control point in the editor.
+        /// </summary>
+        /// <remarks>
+        /// Only kept while editing, as beatmaps can't store this.
+        /// </remarks>
+        [JsonIgnore]
+        public bool IsSnapTarget
+        {
+            get => isSnapTarget;
+            set
+            {
+                if (value == isSnapTarget)
+                    return;
+
+                isSnapTarget = value;
+                SnapTargetChanged?.Invoke();
+            }
+        }
+
+        /// <summary>
+        /// Invoked when <see cref="IsSnapTarget"/> changes. Separate from <see cref="Changed"/>, as it doesn't affect the path.
+        /// </summary>
+        public event Action SnapTargetChanged;
+
         /// <summary>
         /// Creates a new <see cref="PathControlPoint"/>.
         /// </summary>

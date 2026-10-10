@@ -17,6 +17,7 @@ using osu.Framework.Graphics.Shapes;
 using osu.Framework.Input.Events;
 using osu.Framework.Threading;
 using osu.Framework.Utils;
+using osu.Game.Configuration;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Sprites;
 using osu.Game.Overlays;
@@ -438,6 +439,8 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
             [Resolved]
             private IEditorChangeHandler? changeHandler { get; set; }
 
+            private readonly Bindable<bool> sliderVelocityWithAlt = new Bindable<bool>();
+
             private ScheduledDelegate? dragOperation;
 
             public Action<DragEvent?>? OnDragHandled;
@@ -469,6 +472,12 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
                         RelativeSizeAxes = Axes.Both,
                     }
                 };
+            }
+
+            [BackgroundDependencyLoader]
+            private void load(OsuConfigManager config)
+            {
+                config.BindWith(OsuSetting.SlopEditorTimelineSliderVelocityWithAlt, sliderVelocityWithAlt);
             }
 
             protected override void LoadComplete()
@@ -561,14 +570,43 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
                 {
                     OnDragHandled?.Invoke(e);
 
-                    if (timeline.FindSnappedPositionAndTime(e.ScreenSpaceMousePosition).Time is double time)
+                    var keyboard = e.CurrentState.Keyboard;
+
+                    // holding ctrl changes the length of a slider, keeping its velocity. holding shift as well, the length is not snapped to the beat divisor.
+                    bool adjustLength = keyboard.ControlPressed && hitObject is IHasPath;
+                    bool adjustVelocity = !adjustLength && (sliderVelocityWithAlt.Value ? keyboard.AltPressed : keyboard.ShiftPressed);
+
+                    double? proposedTime = adjustLength && keyboard.ShiftPressed
+                        ? timeline.TimeAtScreenSpacePosition(e.ScreenSpaceMousePosition)
+                        : timeline.FindSnappedPositionAndTime(e.ScreenSpaceMousePosition).Time;
+
+                    if (proposedTime is double time)
                     {
                         switch (hitObject)
                         {
+                            case IHasRepeats repeatHitObject when adjustLength:
+                            {
+                                var path = ((IHasPath)hitObject).Path;
+                                double proposedLengthDuration = time - hitObject.StartTime;
+
+                                if (proposedLengthDuration <= 0 || Precision.AlmostEquals(repeatHitObject.Duration, 0))
+                                    return;
+
+                                // with an unchanged velocity, the duration of the slider scales with its length.
+                                double proposedDistance = path.Distance * proposedLengthDuration / repeatHitObject.Duration;
+
+                                if (Precision.AlmostEquals(proposedDistance, path.Distance))
+                                    return;
+
+                                path.ExpectedDistance.Value = proposedDistance;
+                                beatmap.Update(hitObject);
+                                break;
+                            }
+
                             case IHasRepeats repeatHitObject:
                                 double proposedDuration = time - hitObject.StartTime;
 
-                                if (e.CurrentState.Keyboard.ShiftPressed && hitObject is IHasSliderVelocity hasSliderVelocity)
+                                if (adjustVelocity && hitObject is IHasSliderVelocity hasSliderVelocity)
                                 {
                                     double newVelocity = hasSliderVelocity.SliderVelocityMultiplier * (repeatHitObject.Duration / proposedDuration);
 
