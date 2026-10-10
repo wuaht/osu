@@ -74,6 +74,12 @@ namespace osu.Game.Online.API
 
         protected virtual string Uri => $@"{API!.Endpoints.APIUrl}/api/v2/{Target}";
 
+        /// <summary>
+        /// Whether this request is sent to an osu! server.
+        /// Requests to third-party servers (e.g. beatmap mirrors) are sent without the access token and other osu!-specific headers.
+        /// </summary>
+        protected virtual bool TargetsOsuServer => true;
+
         protected IAPIProvider? API;
 
         protected WebRequest? WebRequest;
@@ -134,11 +140,14 @@ namespace osu.Game.Online.API
             WebRequest.Failed += Fail;
             WebRequest.AllowRetryOnTimeout = false;
 
-            WebRequest.AddHeader(@"Accept-Language", API.Language.ToCultureCode());
-            WebRequest.AddHeader(@"x-api-version", API.APIVersion.ToString(CultureInfo.InvariantCulture));
+            if (TargetsOsuServer)
+            {
+                WebRequest.AddHeader(@"Accept-Language", API.Language.ToCultureCode());
+                WebRequest.AddHeader(@"x-api-version", API.APIVersion.ToString(CultureInfo.InvariantCulture));
 
-            if (!string.IsNullOrEmpty(API.AccessToken))
-                WebRequest.AddHeader(@"Authorization", $@"Bearer {API.AccessToken}");
+                if (!string.IsNullOrEmpty(API.AccessToken))
+                    WebRequest.AddHeader(@"Authorization", $@"Bearer {API.AccessToken}");
+            }
 
             if (isFailing) return;
 

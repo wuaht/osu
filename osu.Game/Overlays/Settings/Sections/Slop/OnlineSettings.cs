@@ -1,0 +1,36 @@
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// See the LICENCE file in the repository root for full licence text.
+
+using System.Collections.Generic;
+using System.Linq;
+using osu.Framework.Allocation;
+using osu.Framework.Graphics;
+using osu.Framework.Localisation;
+using osu.Game.Configuration;
+using osu.Game.Graphics.UserInterfaceV2;
+using osu.Game.Localisation;
+using osu.Game.Online.BeatmapMirrors;
+
+namespace osu.Game.Overlays.Settings.Sections.Slop
+{
+    public partial class OnlineSettings : SettingsSubsection
+    {
+        protected override LocalisableString Header => SlopSettingsStrings.OnlineHeader;
+
+        public override IEnumerable<LocalisableString> FilterTerms => base.FilterTerms.Concat(new LocalisableString[] { "mirror", "download", "beatmap", "update" });
+
+        [BackgroundDependencyLoader]
+        private void load(OsuConfigManager config)
+        {
+            Children = new Drawable[]
+            {
+                new SettingsItemV2(new FormEnumDropdown<BeatmapMirror>
+                {
+                    Caption = SlopSettingsStrings.BeatmapMirror,
+                    HintText = SlopSettingsStrings.BeatmapMirrorDescription,
+                    Current = config.GetBindable<BeatmapMirror>(OsuSetting.SlopBeatmapMirror),
+                }),
+            };
+        }
+    }
+}

@@ -17,6 +17,7 @@ using osu.Game.Graphics.Sprites;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Localisation;
 using osu.Game.Online.API;
+using osu.Game.Online.BeatmapMirrors;
 using osu.Game.Overlays;
 using osuTK;
 using osuTK.Graphics;
@@ -51,6 +52,9 @@ namespace osu.Game.Screens.Select
 
         [Resolved]
         private LoginOverlay? loginOverlay { get; set; }
+
+        [Resolved]
+        private BeatmapMirrorProvider? mirrors { get; set; }
 
         [Resolved]
         private IDialogOverlay? dialogOverlay { get; set; }
@@ -153,7 +157,8 @@ namespace osu.Game.Screens.Select
         {
             Debug.Assert(beatmapSet != null);
 
-            if (!api.IsLoggedIn)
+            // beatmaps can be updated through a beatmap mirror without logging in.
+            if (!api.IsLoggedIn && mirrors == null)
             {
                 loginOverlay?.Show();
                 return;

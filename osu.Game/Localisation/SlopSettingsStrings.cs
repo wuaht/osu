@@ -411,6 +411,22 @@ namespace osu.Game.Localisation
         /// </summary>
         public static LocalisableString WaveformStyleSpectral => new TranslatableString(getKey(@"waveform_style_spectral"), @"FL Studio / MiniMeters");
 
+        /// <summary>
+        /// "Online"
+        /// </summary>
+        public static LocalisableString OnlineHeader => new TranslatableString(getKey(@"online_header"), @"Online");
+
+        /// <summary>
+        /// "Beatmap mirror"
+        /// </summary>
+        public static LocalisableString BeatmapMirror => new TranslatableString(getKey(@"beatmap_mirror"), @"Beatmap mirror");
+
+        /// <summary>
+        /// "The server beatmaps are downloaded and updated from while not logged in or while connected to the development server. Only Mino and osu.direct can be searched, so the beatmap listing and update checks use one of them if another mirror is selected."
+        /// </summary>
+        public static LocalisableString BeatmapMirrorDescription => new TranslatableString(getKey(@"beatmap_mirror_description"),
+            @"The server beatmaps are downloaded and updated from while not logged in or while connected to the development server. Only Mino and osu.direct can be searched, so the beatmap listing and update checks use one of them if another mirror is selected.");
+
         private static string getKey(string key) => $"{prefix}:{key}";
     }
 }
