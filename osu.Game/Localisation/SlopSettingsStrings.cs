@@ -482,6 +482,16 @@ namespace osu.Game.Localisation
         public static LocalisableString BeatmapMirrorDescription => new TranslatableString(getKey(@"beatmap_mirror_description"),
             @"The server beatmaps are downloaded and updated from while not logged in or while connected to the development server. Only Mino and osu.direct can be searched, so the beatmap listing and update checks use one of them if another mirror is selected.");
 
+        /// <summary>
+        /// "Clear stored mappers"
+        /// </summary>
+        public static LocalisableString ClearStoredMappers => new TranslatableString(getKey(@"clear_stored_mappers"), @"Clear stored mappers");
+
+        /// <summary>
+        /// "Stored mappers cleared."
+        /// </summary>
+        public static LocalisableString StoredMappersCleared => new TranslatableString(getKey(@"stored_mappers_cleared"), @"Stored mappers cleared.");
+
         private static string getKey(string key) => $"{prefix}:{key}";
     }
 }

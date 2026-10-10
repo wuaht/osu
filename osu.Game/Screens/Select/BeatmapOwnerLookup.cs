@@ -2,11 +2,13 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Extensions;
+using osu.Framework.Extensions.ObjectExtensions;
 using osu.Framework.Graphics;
 using osu.Framework.Localisation;
 using osu.Game.Database;
@@ -90,8 +92,23 @@ namespace osu.Game.Screens.Select
                     Schedule(performLookup);
             });
 
+            ownerStore.OwnersCleared += onOwnersCleared;
+
             performLookup();
         }
+
+        private void onOwnersCleared(IReadOnlyCollection<int>? beatmapIds) => Schedule(() =>
+        {
+            if (beatmapOnlineID <= 0 || (beatmapIds != null && !beatmapIds.Contains(beatmapOnlineID)))
+                return;
+
+            lookupCancellationSource?.Cancel();
+            lookupCancellationSource = null;
+            isUpToDate = false;
+            owners.Value = null;
+
+            performLookup();
+        });
 
         private void performLookup()
         {
@@ -169,6 +186,9 @@ namespace osu.Game.Screens.Select
         {
             base.Dispose(isDisposing);
             lookupCancellationSource?.Cancel();
+
+            if (ownerStore.IsNotNull())
+                ownerStore.OwnersCleared -= onOwnersCleared;
         }
     }
 }

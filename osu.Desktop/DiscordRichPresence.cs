@@ -19,6 +19,7 @@ using osu.Game.Online;
 using osu.Game.Online.API;
 using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Online.Multiplayer;
+using osu.Game.Online.OfflineProfiles;
 using osu.Game.Online.Rooms;
 using osu.Game.Overlays;
 using osu.Game.Rulesets;
@@ -50,6 +51,12 @@ namespace osu.Desktop
 
         [Resolved]
         private LocalUserStatisticsProvider statisticsProvider { get; set; } = null!;
+
+        [Resolved]
+        private OfflineProfileManager? offlineProfiles { get; set; }
+
+        private readonly IBindable<APIState> apiState = new Bindable<APIState>();
+        private readonly IBindable<OfflineProfile?> activeOfflineProfile = new Bindable<OfflineProfile?>();
 
         private IBindable<DiscordRichPresenceMode> privacyMode = null!;
         private IBindable<UserStatus> userStatus = null!;
@@ -114,6 +121,17 @@ namespace osu.Desktop
             userActivity.BindValueChanged(_ => schedulePresenceUpdate());
             privacyMode.BindValueChanged(_ => schedulePresenceUpdate());
 
+            // the presence is also shown while not logged in, using the active offline profile as the identity.
+            apiState.BindTo(api.State);
+            apiState.BindValueChanged(_ => schedulePresenceUpdate());
+
+            if (offlineProfiles != null)
+            {
+                activeOfflineProfile.BindTo(offlineProfiles.ActiveProfile);
+                activeOfflineProfile.BindValueChanged(_ => schedulePresenceUpdate());
+                offlineProfiles.ProfileChanged += onOfflineProfileChanged;
+            }
+
             multiplayerClient.RoomUpdated += onRoomUpdated;
             statisticsProvider.StatisticsUpdated += onStatisticsUpdated;
         }
@@ -133,6 +151,8 @@ namespace osu.Desktop
 
         private void onStatisticsUpdated(UserStatisticsUpdate _) => schedulePresenceUpdate();
 
+        private void onOfflineProfileChanged(OfflineProfile _) => schedulePresenceUpdate();
+
         private ScheduledDelegate? presenceUpdateDelegate;
 
         private void schedulePresenceUpdate()
@@ -143,7 +163,7 @@ namespace osu.Desktop
                 if (!client.IsInitialized)
                     return;
 
-                if (!api.IsLoggedIn || userStatus.Value == UserStatus.Offline || privacyMode.Value == DiscordRichPresenceMode.Off)
+                if (userStatus.Value == UserStatus.Offline || privacyMode.Value == DiscordRichPresenceMode.Off)
                 {
                     client.ClearPresence();
                     return;
@@ -174,7 +194,7 @@ namespace osu.Desktop
                         new Button
                         {
                             Label = "View beatmap",
-                            Url = $@"{api.Endpoints.WebsiteUrl}/beatmaps/{beatmapId}?mode={ruleset.Value.ShortName}"
+                            Url = $@"{beatmapWebsiteUrl}/beatmaps/{beatmapId}?mode={ruleset.Value.ShortName}"
                         }
                     };
                 }
@@ -190,7 +210,7 @@ namespace osu.Desktop
             }
 
             // user party
-            if (!hideIdentifiableInformation && multiplayerClient.Room != null && !multiplayerClient.Room.Settings.MatchType.IsMatchmakingType())
+            if (!hideIdentifiableInformation && api.IsLoggedIn && multiplayerClient.Room != null && !multiplayerClient.Room.Settings.MatchType.IsMatchmakingType())
             {
                 MultiplayerRoom room = multiplayerClient.Room;
 
@@ -227,11 +247,13 @@ namespace osu.Desktop
             // large image tooltip
             if (privacyMode.Value == DiscordRichPresenceMode.Limited)
                 presence.Assets.LargeImageText = string.Empty;
-            else
+            else if (api.IsLoggedIn)
             {
                 var statistics = statisticsProvider.GetStatisticsFor(ruleset.Value);
                 presence.Assets.LargeImageText = $"{user.Value.Username}" + (statistics?.GlobalRank > 0 ? $" (rank #{statistics.GlobalRank:N0})" : string.Empty);
             }
+            else
+                presence.Assets.LargeImageText = clampLength(activeOfflineProfile.Value?.Username ?? string.Empty);
 
             // small image
             presence.Assets.SmallImageKey = ruleset.Value.IsLegacyRuleset() ? $"mode_{ruleset.Value.OnlineID}" : "mode_custom";
@@ -266,6 +288,11 @@ namespace osu.Desktop
             request.Failure += _ => Logger.Log($"Could not join multiplayer room, room could not be found (room ID: {roomId}).", LoggingTarget.Network, LogLevel.Important);
             api.Queue(request);
         });
+
+        /// <summary>
+        /// The website to link beatmaps to. Local beatmaps have the IDs of the official servers, which the development server doesn't share.
+        /// </summary>
+        private string beatmapWebsiteUrl => api.Endpoints is DevelopmentEndpointConfiguration ? new ProductionEndpointConfiguration().WebsiteUrl : api.Endpoints.WebsiteUrl;
 
         private static readonly int ellipsis_length = Encoding.UTF8.GetByteCount(new[] { '…' });
 
@@ -332,6 +359,9 @@ namespace osu.Desktop
 
             if (statisticsProvider.IsNotNull())
                 statisticsProvider.StatisticsUpdated -= onStatisticsUpdated;
+
+            if (offlineProfiles.IsNotNull())
+                offlineProfiles.ProfileChanged -= onOfflineProfileChanged;
 
             client.Dispose();
             base.Dispose(isDisposing);
