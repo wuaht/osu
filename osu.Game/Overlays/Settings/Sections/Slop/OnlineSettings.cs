@@ -7,9 +7,11 @@ using osu.Framework.Allocation;
 using osu.Framework.Graphics;
 using osu.Framework.Localisation;
 using osu.Game.Configuration;
+using osu.Game.Database;
 using osu.Game.Graphics.UserInterfaceV2;
 using osu.Game.Localisation;
 using osu.Game.Online.BeatmapMirrors;
+using osu.Game.Overlays.Notifications;
 
 namespace osu.Game.Overlays.Settings.Sections.Slop
 {
@@ -18,6 +20,14 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
         protected override LocalisableString Header => SlopSettingsStrings.OnlineHeader;
 
         public override IEnumerable<LocalisableString> FilterTerms => base.FilterTerms.Concat(new LocalisableString[] { "mirror", "download", "beatmap", "update" });
+
+        [Resolved]
+        private BeatmapOwnerStore ownerStore { get; set; } = null!;
+
+        [Resolved]
+        private INotificationOverlay? notifications { get; set; }
+
+        private SettingsButtonV2 clearMappersButton = null!;
 
         [BackgroundDependencyLoader]
         private void load(OsuConfigManager config)
@@ -30,7 +40,23 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                     HintText = SlopSettingsStrings.BeatmapMirrorDescription,
                     Current = config.GetBindable<BeatmapMirror>(OsuSetting.SlopBeatmapMirror),
                 }),
+                clearMappersButton = new DangerousSettingsButtonV2
+                {
+                    Text = SlopSettingsStrings.ClearStoredMappers,
+                    Action = clearMappers,
+                },
             };
+        }
+
+        private void clearMappers()
+        {
+            clearMappersButton.Enabled.Value = false;
+
+            ownerStore.ClearAsync().ContinueWith(_ => Schedule(() =>
+            {
+                clearMappersButton.Enabled.Value = true;
+                notifications?.Post(new SimpleNotification { Text = SlopSettingsStrings.StoredMappersCleared });
+            }));
         }
     }
 }

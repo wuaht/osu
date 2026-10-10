@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
@@ -82,6 +83,12 @@ namespace osu.Game.Database
         /// Whether the database has been opened, i.e. <see cref="GetStored"/> is able to return stored entries.
         /// </summary>
         public bool HasLoadedFromDisk => initialiseTask.IsCompleted;
+
+        /// <summary>
+        /// Invoked after stored owners were removed by <see cref="ClearAsync"/>, with the IDs of the affected beatmaps, or <see langword="null"/> if all were removed.
+        /// May be invoked from any thread.
+        /// </summary>
+        public event Action<IReadOnlyCollection<int>?>? OwnersCleared;
 
         /// <summary>
         /// Whether owners can currently be requested online, either from the official servers or from a beatmap mirror.
@@ -180,6 +187,72 @@ namespace osu.Game.Database
             {
                 return await tcs.Task.ConfigureAwait(false);
             }
+        }
+
+        /// <summary>
+        /// Removes stored owners, so they are requested online again the next time they are displayed.
+        /// </summary>
+        /// <param name="beatmapIds">The IDs of the beatmap difficulties to remove the owners of, or <see langword="null"/> to remove all stored owners.</param>
+        public async Task ClearAsync(IReadOnlyCollection<int>? beatmapIds = null)
+        {
+            await initialiseTask.ConfigureAwait(false);
+
+            await Task.Run(() =>
+            {
+                lock (connectionLock)
+                {
+                    if (beatmapIds == null)
+                    {
+                        memoryCache.Clear();
+                        mirrorFailures.Clear();
+                    }
+                    else
+                    {
+                        foreach (int id in beatmapIds)
+                        {
+                            memoryCache.TryRemove(id, out _);
+                            mirrorFailures.TryRemove(id, out _);
+                        }
+                    }
+
+                    if (connection == null)
+                        return;
+
+                    try
+                    {
+                        using (var transaction = connection.BeginTransaction())
+                        using (var cmd = connection.CreateCommand())
+                        {
+                            cmd.Transaction = transaction;
+
+                            if (beatmapIds == null)
+                            {
+                                cmd.CommandText = @"DELETE FROM `beatmap_owners`";
+                                cmd.ExecuteNonQuery();
+                            }
+                            else
+                            {
+                                cmd.CommandText = @"DELETE FROM `beatmap_owners` WHERE `beatmap_id` = @BeatmapID";
+                                var parameter = cmd.Parameters.Add(new SqliteParameter(@"@BeatmapID", 0));
+
+                                foreach (int id in beatmapIds)
+                                {
+                                    parameter.Value = id;
+                                    cmd.ExecuteNonQuery();
+                                }
+                            }
+
+                            transaction.Commit();
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        Logger.Error(e, $"Failed to clear owners from {database_name}.");
+                    }
+                }
+            }).ConfigureAwait(false);
+
+            OwnersCleared?.Invoke(beatmapIds);
         }
 
         private void initialise()

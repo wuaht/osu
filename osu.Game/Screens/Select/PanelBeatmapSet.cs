@@ -225,6 +225,9 @@ namespace osu.Game.Screens.Select
         [Resolved]
         private ManageCollectionsDialog? manageCollectionsDialog { get; set; }
 
+        [Resolved]
+        private BeatmapOwnerStore ownerStore { get; set; } = null!;
+
         public override MenuItem[] ContextMenuItems
         {
             get
@@ -261,6 +264,17 @@ namespace osu.Game.Screens.Select
                     if (beatmapSet.GetOnlineURL(api, ruleset.Value) is string url)
                         items.Add(new OsuMenuItem(CommonStrings.CopyLink, MenuItemType.Standard, () => game?.CopyToClipboard(url)));
 
+                    items.Add(new OsuMenuItemSpacer());
+                }
+
+                int[] beatmapIds = beatmapSet.Beatmaps.Select(b => b.OnlineID).Where(id => id > 0).Distinct().ToArray();
+
+                if (beatmapIds.Length > 0)
+                {
+                    items.Add(new OsuMenuItem(SlopSongSelectStrings.RefreshMappers, MenuItemType.Standard, () => _ = ownerStore.ClearAsync(beatmapIds))
+                    {
+                        Icon = FontAwesome.Solid.UserEdit
+                    });
                     items.Add(new OsuMenuItemSpacer());
                 }
 
