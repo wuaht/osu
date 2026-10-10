@@ -503,6 +503,43 @@ namespace osu.Game.Localisation
         /// </summary>
         public static LocalisableString StoredMappersCleared => new TranslatableString(getKey(@"stored_mappers_cleared"), @"Stored mappers cleared.");
 
+        /// <summary>
+        /// "BN Tracker server"
+        /// </summary>
+        public static LocalisableString BnTrackerServer => new TranslatableString(getKey(@"bn_tracker_server"), @"BN Tracker server");
+
+        /// <summary>
+        /// "The server which tracks the Beatmap Nominators asked to nominate your beatmap sets, shown on the "request" screen of the beatmap editor. Press enter to apply."
+        /// </summary>
+        public static LocalisableString BnTrackerServerDescription => new TranslatableString(getKey(@"bn_tracker_server_description"),
+            @"The server which tracks the Beatmap Nominators asked to nominate your beatmap sets, shown on the ""request"" screen of the beatmap editor. Press enter to apply.");
+
+        /// <summary>
+        /// "Sign out of the BN Tracker ({0})"
+        /// </summary>
+        public static LocalisableString BnTrackerSignOut(string username) => new TranslatableString(getKey(@"bn_tracker_sign_out"), @"Sign out of the BN Tracker ({0})", username);
+
+        /// <summary>
+        /// "Sign out of the BN Tracker"
+        /// </summary>
+        public static LocalisableString BnTrackerSignOutUnknownUser => new TranslatableString(getKey(@"bn_tracker_sign_out_unknown_user"), @"Sign out of the BN Tracker");
+
+        /// <summary>
+        /// "Not signed in to the BN Tracker"
+        /// </summary>
+        public static LocalisableString BnTrackerNotSignedIn => new TranslatableString(getKey(@"bn_tracker_not_signed_in"), @"Not signed in to the BN Tracker");
+
+        /// <summary>
+        /// "Frosted BN Tracker panels"
+        /// </summary>
+        public static LocalisableString FrostedBnTrackerPanels => new TranslatableString(getKey(@"frosted_bn_tracker_panels"), @"Frosted BN Tracker panels");
+
+        /// <summary>
+        /// "The panels of the "request" screen have a frosted glass background, through which the background of the beatmap shows."
+        /// </summary>
+        public static LocalisableString FrostedBnTrackerPanelsDescription => new TranslatableString(getKey(@"frosted_bn_tracker_panels_description"),
+            @"The panels of the ""request"" screen have a frosted glass background, through which the background of the beatmap shows.");
+
         private static string getKey(string key) => $"{prefix}:{key}";
     }
 }

@@ -51,6 +51,7 @@ using osu.Game.Localisation;
 using osu.Game.Online;
 using osu.Game.Online.API;
 using osu.Game.Online.BeatmapMirrors;
+using osu.Game.Online.BnTracker;
 using osu.Game.Online.Chat;
 using osu.Game.Online.Leaderboards;
 using osu.Game.Online.Metadata;
@@ -371,6 +372,10 @@ namespace osu.Game
             var offlineProfileManager = new OfflineProfileManager(Storage);
             dependencies.Cache(offlineProfileManager);
             base.Content.Add(offlineProfileManager);
+
+            var bnTrackerClient = new BnTrackerClient();
+            dependencies.Cache(bnTrackerClient);
+            base.Content.Add(bnTrackerClient);
 
             dependencies.CacheAs<IRulesetConfigCache>(rulesetConfigCache = new RulesetConfigCache(realm, RulesetStore));
 

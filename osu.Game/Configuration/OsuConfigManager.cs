@@ -16,6 +16,7 @@ using osu.Game.Input;
 using osu.Game.Input.Bindings;
 using osu.Game.Localisation;
 using osu.Game.Online.BeatmapMirrors;
+using osu.Game.Online.BnTracker;
 using osu.Game.Online.Leaderboards;
 using osu.Game.Overlays;
 using osu.Game.Overlays.Dashboard.Friends;
@@ -277,6 +278,7 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopEditorWaveformStyle, EditorWaveformStyle.Default);
             SetDefault(OsuSetting.SlopEditorLoopMusic, false);
             SetDefault(OsuSetting.SlopHitsoundEditorFrostedLanes, false);
+            SetDefault(OsuSetting.SlopBnTrackerFrostedPanels, false);
 
             // defaults of McOsu's FPoSu.
             SetDefault(OsuSetting.SlopFposuMouseDpi, 400, 50, 32000);
@@ -297,6 +299,9 @@ namespace osu.Game.Configuration
 
             SetDefault(OsuSetting.SlopBeatmapMirror, BeatmapMirror.Mino);
 
+            SetDefault(OsuSetting.SlopBnTrackerServer, BnTrackerClient.DEFAULT_SERVER);
+            SetDefault(OsuSetting.SlopBnTrackerToken, string.Empty);
+
             SetDefault(OsuSetting.SlopUnofficialBuildNotifiedVersion, string.Empty);
             SetDefault(OsuSetting.SlopUnsupportedRealtimeNotifiedVersion, string.Empty);
         }
@@ -306,6 +311,7 @@ namespace osu.Game.Configuration
             switch (lookup)
             {
                 case OsuSetting.Token:
+                case OsuSetting.SlopBnTrackerToken:
                     return true;
             }
 
@@ -752,5 +758,20 @@ namespace osu.Game.Configuration
         /// The version of the game for which the user was notified that the servers don't support its realtime functionality, such that it is only shown once after installing a version.
         /// </summary>
         SlopUnsupportedRealtimeNotifiedVersion,
+
+        /// <summary>
+        /// The address of the BN Tracker server, which tracks the Beatmap Nominators asked to nominate a beatmap set (see the "request" screen of the beatmap editor).
+        /// </summary>
+        SlopBnTrackerServer,
+
+        /// <summary>
+        /// The API token of the BN Tracker server.
+        /// </summary>
+        SlopBnTrackerToken,
+
+        /// <summary>
+        /// Whether the panels of the "request" screen of the beatmap editor have a frosted glass background, instead of an opaque one.
+        /// </summary>
+        SlopBnTrackerFrostedPanels,
     }
 }
