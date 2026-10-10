@@ -9,6 +9,7 @@ using osu.Framework.Graphics.UserInterface;
 using osu.Framework.Input.Events;
 using osu.Framework.Localisation;
 using osu.Game.Graphics;
+using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.Sprites;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Overlays;
@@ -73,12 +74,30 @@ namespace osu.Game.Screens.Edit.Components.Menus
             });
         }
 
+        protected override ScrollContainer<Drawable> CreateScrollContainer(Direction direction) => new NonScrollableContainer(direction);
+
         protected override Framework.Graphics.UserInterface.Menu CreateSubMenu() => new SubMenu
         {
             MaxHeight = MaxHeight,
         };
 
         protected override DrawableMenuItem CreateDrawableMenuItem(MenuItem item) => new DrawableEditorBarMenuItem(item);
+
+        /// <summary>
+        /// The items of the bar always fit, so it doesn't scroll. Otherwise, the items could be dragged around (and spring back when released).
+        /// The menus which open from the bar still scroll, as they can be longer than the screen.
+        /// </summary>
+        private partial class NonScrollableContainer : OsuScrollContainer
+        {
+            public NonScrollableContainer(Direction direction)
+                : base(direction)
+            {
+            }
+
+            protected override bool OnDragStart(DragStartEvent e) => false;
+
+            protected override bool OnScroll(ScrollEvent e) => false;
+        }
 
         internal partial class DrawableEditorBarMenuItem : DrawableMenuItem
         {
