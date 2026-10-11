@@ -94,8 +94,12 @@ namespace osu.Game.Screens.Edit.Hitsounding
             var metadata = editorBeatmap.BeatmapInfo.Metadata;
 
             dependencies.Cache(new HitsoundLaneNames(parent.Get<Storage>(), editorBeatmap.BeatmapInfo.BeatmapSet?.ID ?? Guid.Empty, $@"{metadata.Artist} - {metadata.Title}"));
-            dependencies.Cache(patterns = new HitsoundPatterns(parent.Get<Storage>(), editorBeatmap.BeatmapInfo.ID,
-                $@"{metadata.Artist} - {metadata.Title} [{editorBeatmap.BeatmapInfo.DifficultyName}]"));
+
+            // the patterns belong to the editor, such that they are kept in sync for changes outside of this screen (see HitsoundPatternSync).
+            patterns = parent.Get<HitsoundPatterns>() ?? HitsoundPatterns.Create(parent.Get<Storage>(), editorBeatmap);
+
+            if (parent.Get<HitsoundPatterns>() == null)
+                dependencies.Cache(patterns);
 
             return dependencies;
         }
@@ -172,29 +176,6 @@ namespace osu.Game.Screens.Edit.Hitsounding
 
             hitsoundEditor.SelectionChanged += () => CanCopy.Value = hitsoundEditor.SelectedKeys.Count > 0;
             CanPaste.Value = clipboard != null;
-
-            // creating, placing and removing patterns is undone along with the hitsounds.
-            if (changeHandler is EditorChangeHandler editorChangeHandler)
-            {
-                editorChangeHandler.AddStateExtension(patterns);
-                patterns.Changed += savePatternState;
-            }
-        }
-
-        [Resolved(canBeNull: true)]
-        private IEditorChangeHandler? changeHandler { get; set; }
-
-        private void savePatternState() => changeHandler?.SaveState();
-
-        protected override void Dispose(bool isDisposing)
-        {
-            if (changeHandler is EditorChangeHandler editorChangeHandler && patterns != null)
-            {
-                editorChangeHandler.RemoveStateExtension(patterns);
-                patterns.Changed -= savePatternState;
-            }
-
-            base.Dispose(isDisposing);
         }
 
         /// <summary>

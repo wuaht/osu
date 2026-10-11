@@ -70,6 +70,15 @@ namespace osu.Game.Screens.Edit.Hitsounding
             (patterns, instances) = read();
         }
 
+        /// <summary>
+        /// The patterns of the difficulty which is being edited.
+        /// </summary>
+        public static HitsoundPatterns Create(Storage storage, EditorBeatmap editorBeatmap)
+        {
+            var metadata = editorBeatmap.BeatmapInfo.Metadata;
+            return new HitsoundPatterns(storage, editorBeatmap.BeatmapInfo.ID, $@"{metadata.Artist} - {metadata.Title} [{editorBeatmap.BeatmapInfo.DifficultyName}]");
+        }
+
         public IReadOnlyList<HitsoundPattern> Patterns => patterns;
 
         /// <summary>
@@ -384,8 +393,14 @@ namespace osu.Game.Screens.Edit.Hitsounding
             }
         }
 
+        /// <summary>
+        /// Increased whenever patterns or the places where they are used change (but not their hitsounds).
+        /// </summary>
+        public int StructureVersion { get; private set; }
+
         private void onChanged()
         {
+            StructureVersion++;
             occurrences = null;
             write();
             Changed?.Invoke();

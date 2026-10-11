@@ -1310,11 +1310,6 @@ namespace osu.Game.Screens.Edit.Hitsounding
         [Resolved(canBeNull: true)]
         private HitsoundPatterns? patterns { get; set; }
 
-        /// <summary>
-        /// Whether changes shouldn't be copied to the other places where a pattern is used, e.g. while placing a pattern.
-        /// </summary>
-        private bool suppressPatternSync;
-
         private static readonly HitsoundCopyOptions pattern_copy_options = new HitsoundCopyOptions
         {
             Leniency = PASTE_LENIENCY,
@@ -1370,6 +1365,22 @@ namespace osu.Game.Screens.Edit.Hitsounding
             double start = columns[0].Time;
             double length = GetPatternLength(columns);
 
+            editorBeatmap.BeginChange();
+
+            try
+            {
+                return createPattern(start, length);
+            }
+            finally
+            {
+                editorBeatmap.EndChange();
+            }
+        }
+
+        private HitsoundPattern? createPattern(double start, double length)
+        {
+            Debug.Assert(patterns != null);
+
             if (!patterns.Overlaps(start, start + length))
             {
                 var pattern = patterns.Create(length, getPatternStates(Map, start, length));
@@ -1414,7 +1425,8 @@ namespace osu.Game.Screens.Edit.Hitsounding
 
             int dropped = 0;
 
-            suppressPatternSync = true;
+            // a single transaction including the change of the patterns, such that the changed hitsounds aren't copied to other places (see HitsoundPatternSync).
+            editorBeatmap.BeginChange();
 
             try
             {
@@ -1437,16 +1449,16 @@ namespace osu.Game.Screens.Edit.Hitsounding
                             dropped = placeDropped;
                     }
                 });
+
+                if (parent == null)
+                    patterns.AddInstance(pattern, time);
+                else
+                    patterns.AddSubPattern(parent.Pattern, pattern, time - parent.StartTime);
             }
             finally
             {
-                suppressPatternSync = false;
+                editorBeatmap.EndChange();
             }
-
-            if (parent == null)
-                patterns.AddInstance(pattern, time);
-            else
-                patterns.AddSubPattern(parent.Pattern, pattern, time - parent.StartTime);
 
             return dropped;
         }
@@ -1455,7 +1467,18 @@ namespace osu.Game.Screens.Edit.Hitsounding
         /// Makes a place use a copy of its pattern, such that its hitsounds can be changed without changing the other places (see <see cref="HitsoundPatterns.MakeUnique"/>).
         /// </summary>
         public HitsoundPattern? MakePatternUnique(HitsoundPatternOccurrence occurrence)
-            => patterns?.MakeUnique(occurrence, GetPatternStates(occurrence));
+        {
+            editorBeatmap.BeginChange();
+
+            try
+            {
+                return patterns?.MakeUnique(occurrence, GetPatternStates(occurrence));
+            }
+            finally
+            {
+                editorBeatmap.EndChange();
+            }
+        }
 
         /// <summary>
         /// Moves a place where a pattern is used, along with its hitsounds, to another time.
@@ -1473,7 +1496,8 @@ namespace osu.Game.Screens.Edit.Hitsounding
             double delta = startTime - occurrence.StartTime;
             double length = occurrence.Pattern.Length;
 
-            suppressPatternSync = true;
+            // a single transaction including the change of the patterns, such that the changed hitsounds aren't copied to other places (see HitsoundPatternSync).
+            editorBeatmap.BeginChange();
 
             try
             {
@@ -1486,13 +1510,14 @@ namespace osu.Game.Screens.Edit.Hitsounding
                     foreach (double place in places)
                         applyPattern(states, place + delta, length, changed);
                 });
+
+                patterns.Move(occurrence, startTime);
             }
             finally
             {
-                suppressPatternSync = false;
+                editorBeatmap.EndChange();
             }
 
-            patterns.Move(occurrence, startTime);
             return true;
         }
 
@@ -1507,27 +1532,28 @@ namespace osu.Game.Screens.Edit.Hitsounding
             if (patterns == null)
                 return;
 
-            if (!keepHitsounds)
+            // a single transaction including the change of the patterns, such that the removed hitsounds aren't copied to other places (see HitsoundPatternSync).
+            editorBeatmap.BeginChange();
+
+            try
             {
-                var places = getPlacesOf(occurrence);
-
-                suppressPatternSync = true;
-
-                try
+                if (!keepHitsounds)
                 {
+                    var places = getPlacesOf(occurrence);
+
                     perform(changed =>
                     {
                         foreach (double place in places)
                             clearRange(place, occurrence.Pattern.Length, changed);
                     });
                 }
-                finally
-                {
-                    suppressPatternSync = false;
-                }
-            }
 
-            patterns.Remove(occurrence);
+                patterns.Remove(occurrence);
+            }
+            finally
+            {
+                editorBeatmap.EndChange();
+            }
         }
 
         /// <summary>
@@ -1560,7 +1586,10 @@ namespace osu.Game.Screens.Edit.Hitsounding
             }
         }
 
-        private List<(HitsoundPatternOccurrence occurrence, IReadOnlyList<HitsoundColumnState> states)>? capturePatternOccurrences()
+        /// <summary>
+        /// The current hitsounds of all places where patterns are used, to find the places which a change changes (see <see cref="SyncPatterns"/>).
+        /// </summary>
+        public List<(HitsoundPatternOccurrence occurrence, IReadOnlyList<HitsoundColumnState> states)>? CapturePatternStates()
         {
             if (patterns == null || patterns.Occurrences.Count == 0)
                 return null;
@@ -1571,12 +1600,15 @@ namespace osu.Game.Screens.Edit.Hitsounding
         }
 
         /// <summary>
-        /// Copies the hitsounds of places where a pattern is used which have been changed to the other places where it is used.
+        /// Copies the hitsounds of places where a pattern is used which have been changed (anywhere in the editor) to the other places where it is used.
         /// Sub-patterns are copied first, such that the patterns containing them are already the same everywhere when they are copied.
         /// If several places of the same pattern have been changed, the innermost (then the first) one wins.
         /// </summary>
         /// <param name="before">The hitsounds of the places before the change.</param>
         /// <param name="changed">The objects which have been changed.</param>
+        public void SyncPatterns(List<(HitsoundPatternOccurrence occurrence, IReadOnlyList<HitsoundColumnState> states)> before)
+            => perform(changed => syncPatterns(before, changed));
+
         private void syncPatterns(List<(HitsoundPatternOccurrence occurrence, IReadOnlyList<HitsoundColumnState> states)> before, HashSet<HitObject> changed)
         {
             Debug.Assert(patterns != null);
@@ -1689,12 +1721,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
 
             try
             {
-                var patternStates = suppressPatternSync ? null : capturePatternOccurrences();
-
                 action(changed);
-
-                if (patternStates != null)
-                    syncPatterns(patternStates, changed);
 
                 foreach (var h in changed)
                 {

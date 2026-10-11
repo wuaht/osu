@@ -26,6 +26,11 @@ namespace osu.Game.Screens.Edit
         /// </summary>
         public event Action? SaveStateTriggered;
 
+        /// <summary>
+        /// Fires when the outermost transaction is about to end, while it is still active, such that further changes can be made as part of it.
+        /// </summary>
+        public event Action? TransactionEnding;
+
         public bool TransactionActive => bulkChangesStarted > 0;
 
         private int bulkChangesStarted;
@@ -47,6 +52,9 @@ namespace osu.Game.Screens.Edit
         {
             if (bulkChangesStarted == 0)
                 throw new InvalidOperationException($"Cannot call {nameof(EndChange)} without a previous call to {nameof(BeginChange)}.");
+
+            if (bulkChangesStarted == 1)
+                TransactionEnding?.Invoke();
 
             if (--bulkChangesStarted == 0)
             {

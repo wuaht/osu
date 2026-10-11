@@ -356,6 +356,10 @@ namespace osu.Game.Screens.Edit
 
             AddInternal(new EditorVolumeMuting());
             AddInternal(new HitsoundDifficultyAutoApplier());
+
+            // hitsound patterns are kept in sync for changes anywhere in the editor, not only in the hitsound screen.
+            dependencies.Cache(HitsoundPatterns.Create(dependencies.Get<Storage>(), editorBeatmap));
+            AddInternal(new HitsoundPatternSync());
             AddInternal(hitsoundSync = new HitsoundDifficultySync());
 
             OsuMenuItem undoMenuItem;
