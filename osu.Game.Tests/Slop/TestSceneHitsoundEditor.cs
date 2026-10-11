@@ -115,8 +115,22 @@ namespace osu.Game.Tests.Slop
             AddAssert("selection followed", () => hitsoundEditor.GetSelectedLanes(0), () => Is.EquivalentTo(new[] { new HitsoundLane(HitSampleInfo.BANK_SOFT, HitSampleInfo.HIT_NORMAL) }));
 
             AddStep("press Ctrl+Down", () => pressWithControl(Key.Down));
-            AddAssert("hitnormal moved into soft whistle", () => EditorBeatmap.HitObjects[0].Samples.Any(s => s.Name == HitSampleInfo.HIT_WHISTLE && s.Bank == HitSampleInfo.BANK_SOFT));
-            AddAssert("hitnormal kept", () => HitsoundSamples.GetNormalBank(EditorBeatmap.HitObjects[0].Samples), () => Is.EqualTo(HitSampleInfo.BANK_SOFT));
+            AddAssert("hitnormal skipped addition lanes to drum", () => HitsoundSamples.GetNormalBank(EditorBeatmap.HitObjects[0].Samples), () => Is.EqualTo(HitSampleInfo.BANK_DRUM));
+            AddAssert("no addition copied", () => !EditorBeatmap.HitObjects[0].Samples.Any(HitsoundSamples.IsAddition));
+
+            AddStep("press Ctrl+Shift+Up", () =>
+            {
+                InputManager.PressKey(Key.ShiftLeft);
+                pressWithControl(Key.Up);
+                InputManager.ReleaseKey(Key.ShiftLeft);
+            });
+            AddAssert("hitnormal moved back a bank", () => HitsoundSamples.GetNormalBank(EditorBeatmap.HitObjects[0].Samples), () => Is.EqualTo(HitSampleInfo.BANK_SOFT));
+
+            AddStep("select second whistle", () => hitsoundEditor.SetSelection(new[] { 500 }, lanes: new[] { new HitsoundLane(HitSampleInfo.BANK_SOFT, HitSampleInfo.HIT_WHISTLE) }));
+            AddStep("move whistle to normal bank", () => hitsoundEditor.MoveSelectionBanks(-1));
+            AddAssert("whistle is normal", () => EditorBeatmap.HitObjects[1].Samples.Any(s => s.Name == HitSampleInfo.HIT_WHISTLE && s.Bank == HitSampleInfo.BANK_NORMAL));
+            AddAssert("selection followed to normal whistle", () => hitsoundEditor.GetSelectedLanes(500), () => Is.EquivalentTo(new[] { new HitsoundLane(HitSampleInfo.BANK_NORMAL, HitSampleInfo.HIT_WHISTLE) }));
+            AddStep("move whistle back", () => hitsoundEditor.MoveSelectionBanks(1));
 
             AddStep("select second whistle", () => hitsoundEditor.SetSelection(new[] { 500 }, lanes: new[] { new HitsoundLane(HitSampleInfo.BANK_SOFT, HitSampleInfo.HIT_WHISTLE) }));
             AddStep("move to normal hitnormal", () => hitsoundEditor.MoveSelectionLanes(-5));

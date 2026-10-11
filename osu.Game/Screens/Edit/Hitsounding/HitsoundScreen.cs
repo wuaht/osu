@@ -278,15 +278,24 @@ namespace osu.Game.Screens.Edit.Hitsounding
 
         protected override bool OnKeyDown(KeyDownEvent e)
         {
-            if (isTyping || !e.ControlPressed || e.ShiftPressed || e.AltPressed)
+            if (isTyping || !e.ControlPressed || e.AltPressed)
                 return base.OnKeyDown(e);
 
             switch (e.Key)
             {
                 case Key.Up:
                 case Key.Down:
-                    // moves the selected samples to the next lane of the same kind, e.g. from normal-hitnormal to soft-hitnormal.
-                    int offset = hitsoundEditor.FindSelectionLaneOffset(e.Key == Key.Up ? -1 : 1);
+                    int direction = e.Key == Key.Up ? -1 : 1;
+
+                    if (e.ShiftPressed)
+                    {
+                        // moves the selected samples to the next bank, keeping their sample, e.g. from normal-whistle to soft-whistle.
+                        hitsoundEditor.MoveSelectionBanks(direction);
+                        return true;
+                    }
+
+                    // moves the selected samples to the next lane they can be moved to, e.g. from normal-whistle to normal-finish.
+                    int offset = hitsoundEditor.FindSelectionLaneOffset(direction);
 
                     if (offset != 0)
                         hitsoundEditor.MoveSelectionLanes(offset);

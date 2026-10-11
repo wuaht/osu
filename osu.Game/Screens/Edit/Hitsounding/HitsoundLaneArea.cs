@@ -654,6 +654,13 @@ namespace osu.Game.Screens.Edit.Hitsounding
         /// </summary>
         private int laneMoveOffset;
 
+        /// <summary>
+        /// The number of banks by which the selected samples will be moved when releasing, while holding shift (see <see cref="HitsoundEditor.MoveSelectionBanks"/>).
+        /// </summary>
+        private int bankMoveDelta;
+
+        private bool movingBanks;
+
         private HitsoundColumn? moveColumn;
 
         private void beginMovingLanes(HitsoundColumn column, HitsoundLane lane)
@@ -662,6 +669,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
             movedAcrossLanes = false;
             moveStartLaneIndex = indexOf(lane);
             laneMoveOffset = 0;
+            bankMoveDelta = 0;
             moveColumn = column;
 
             Playback.PlayLane(lane, column.Volume, column.CustomIndex);
@@ -675,17 +683,39 @@ namespace osu.Game.Screens.Edit.Hitsounding
             if (wanted != 0)
                 movedAcrossLanes = true;
 
-            // where not all selected samples can be moved by the wanted number of lanes, they move as far as they can.
-            int offset = HitsoundEditor.ClampSelectionLaneOffset(wanted);
+            var lanes = HitsoundEditor.VisibleLanes;
+            bool banks = GetContainingInputManager()?.CurrentState.Keyboard.ShiftPressed == true;
+            int offset;
+            int bankDelta = 0;
+            HitsoundLane? target;
 
-            if (offset == laneMoveOffset)
+            if (banks)
+            {
+                // while holding shift, the samples move to the bank under the cursor, keeping their sample (e.g. from normal-whistle to soft-whistle).
+                int wantedBanks = Array.IndexOf(HitsoundLane.BANKS, lanes[index].Bank) - Array.IndexOf(HitsoundLane.BANKS, lanes[moveStartLaneIndex].Bank);
+                bankDelta = HitsoundEditor.ClampSelectionBankDelta(wantedBanks);
+                target = bankDelta != 0 ? HitsoundEditor.GetBankMovedLane(moveStartLaneIndex, bankDelta) : null;
+
+                int targetIndex = target is HitsoundLane t ? indexOf(t) : -1;
+                offset = targetIndex >= 0 ? targetIndex - moveStartLaneIndex : 0;
+            }
+            else
+            {
+                // where not all selected samples can be moved by the wanted number of lanes, they move as far as they can.
+                offset = HitsoundEditor.ClampSelectionLaneOffset(wanted, allowNormalToAddition: true);
+                target = offset != 0 ? HitsoundEditor.GetMovedLane(moveStartLaneIndex, offset) : null;
+            }
+
+            if (offset == laneMoveOffset && bankDelta == bankMoveDelta && banks == movingBanks)
                 return;
 
             laneMoveOffset = offset;
+            bankMoveDelta = bankDelta;
+            movingBanks = banks;
             invalidateDisplay();
 
-            if (moveColumn != null && offset != 0 && HitsoundEditor.GetMovedLane(moveStartLaneIndex, offset) is HitsoundLane target)
-                Playback.PlayLane(target, moveColumn.Volume, target.CustomIndex ?? moveColumn.CustomIndex);
+            if (moveColumn != null && target is HitsoundLane playedLane)
+                Playback.PlayLane(playedLane, moveColumn.Volume, playedLane.CustomIndex ?? moveColumn.CustomIndex);
         }
 
         private void endMovingLanes()
@@ -693,8 +723,10 @@ namespace osu.Game.Screens.Edit.Hitsounding
             movingLanes = false;
             invalidateDisplay();
 
-            if (laneMoveOffset != 0)
-                HitsoundEditor.MoveSelectionLanes(laneMoveOffset);
+            if (movingBanks && bankMoveDelta != 0)
+                HitsoundEditor.MoveSelectionBanks(bankMoveDelta);
+            else if (!movingBanks && laneMoveOffset != 0)
+                HitsoundEditor.MoveSelectionLanes(laneMoveOffset, allowNormalToAddition: true);
             else if (!movedAcrossLanes && moveColumn != null)
             {
                 // a click without dragging deselects the hitsound, like clicking a sample of a hitsound which isn't selected selects it.
@@ -702,6 +734,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
             }
 
             laneMoveOffset = 0;
+            bankMoveDelta = 0;
             moveColumn = null;
         }
 

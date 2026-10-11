@@ -314,7 +314,7 @@ namespace osu.Game.Localisation
         public static LocalisableString ControlsDescription => new TranslatableString(getKey(@"controls_description"), @"Left click a lane to add a hitsound, and a hitsound to select or deselect it. Right click (or right drag) to remove. Drag to paint along a lane.
 With a selection, clicking empty space deselects. Drag on empty space to select a rectangle of lanes. Ctrl/Shift + drag adds a rectangle to the selection (also where dragging would create hitsounds).
 Ctrl + click toggles a hitsound in the selection, Shift + click selects all hitsounds up to it. Escape deselects.
-Drag selected samples up or down (or press Ctrl+Up/Down) to move them to other lanes, e.g. from normal to soft.
+Drag selected samples up or down (or press Ctrl+Up/Down) to move them to other lanes. Hold Shift (Ctrl+Shift+Up/Down) to move them to another bank, e.g. from normal-whistle to soft-whistle.
 Volume area: drag to draw (hold Ctrl for 1% steps), right drag to draw a straight line, Shift + drag to level to the starting volume, Alt + drag to reset to the volume most hitsounds use.
 Ctrl+C/Ctrl+V copy and paste hitsound patterns at the playhead.
 W/E/R toggle whistle/finish/clap, Shift+W/E/R set the hitnormal bank (normal/soft/drum), Alt+Q/W/E/R set the addition bank (auto/normal/soft/drum).

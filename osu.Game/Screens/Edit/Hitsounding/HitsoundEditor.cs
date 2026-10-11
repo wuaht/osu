@@ -854,16 +854,81 @@ namespace osu.Game.Screens.Edit.Hitsounding
         }
 
         /// <summary>
-        /// Whether the samples of the selection can be moved by a number of visible lanes, which requires every sample to stay within the visible lanes.
+        /// The lanes the selected samples would be moved to by a number of visible lanes, or <c>null</c> if they can't be moved that way.
         /// </summary>
-        public bool CanMoveSelectionLanes(int offset)
+        /// <param name="offset">The number of visible lanes.</param>
+        /// <param name="allowNormalToAddition">
+        /// Whether hitnormals may be moved into addition lanes. As every hitsound plays a hitnormal, this adds the addition but the hitnormal stays,
+        /// so it is only allowed when explicitly dragging hitnormals alone (otherwise moving would look like copying).
+        /// </param>
+        private List<(HitsoundColumn column, List<(HitsoundLane from, HitsoundLane to)> moves)>? getOffsetMoves(int offset, bool allowNormalToAddition)
         {
             if (offset == 0)
-                return false;
+                return null;
 
+            var lanes = VisibleLanes;
             var items = getMovableSelection();
-            return items.Count > 0 && items.All(item => item.laneIndices.All(i => i + offset >= 0 && i + offset < VisibleLanes.Count));
+
+            if (items.Count == 0 || items.Any(item => item.laneIndices.Any(i => i + offset < 0 || i + offset >= lanes.Count)))
+                return null;
+
+            var result = items.Select(item => (item.column, item.laneIndices.Select(i => (from: lanes[i], to: lanes[i + offset])).ToList())).ToList();
+
+            if (result.Any(r => r.Item2.Any(m => !m.from.IsAddition && m.to.IsAddition)))
+            {
+                bool onlyHitnormals = result.All(r => r.Item2.All(m => !m.from.IsAddition));
+
+                if (!allowNormalToAddition || !onlyHitnormals)
+                    return null;
+            }
+
+            return result;
         }
+
+        /// <summary>
+        /// The lanes the selected samples would be moved to when moving them to another bank, keeping their sample (e.g. from normal-whistle to soft-whistle),
+        /// or <c>null</c> if there is no such bank for some of them.
+        /// </summary>
+        /// <param name="direction">The number of banks to move by: negative for previous banks, positive for next ones (in the order the banks are displayed).</param>
+        private List<(HitsoundColumn column, List<(HitsoundLane from, HitsoundLane to)> moves)>? getBankMoves(int direction)
+        {
+            if (direction == 0)
+                return null;
+
+            var lanes = VisibleLanes;
+            var items = getMovableSelection();
+
+            if (items.Count == 0)
+                return null;
+
+            var result = new List<(HitsoundColumn, List<(HitsoundLane, HitsoundLane)>)>();
+
+            foreach (var (column, laneIndices) in items)
+            {
+                var moves = new List<(HitsoundLane, HitsoundLane)>();
+
+                foreach (int i in laneIndices)
+                {
+                    var lane = lanes[i];
+                    int bankIndex = Array.IndexOf(HitsoundLane.BANKS, lane.Bank) + direction;
+
+                    if (bankIndex < 0 || bankIndex >= HitsoundLane.BANKS.Length)
+                        return null;
+
+                    // the lane may be hidden (e.g. as unused), in which case it appears once the sample is moved there.
+                    moves.Add((lane, lane with { Bank = HitsoundLane.BANKS[bankIndex] }));
+                }
+
+                result.Add((column, moves));
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Whether the samples of the selection can be moved by a number of visible lanes (see <see cref="MoveSelectionLanes"/>).
+        /// </summary>
+        public bool CanMoveSelectionLanes(int offset, bool allowNormalToAddition = false) => getOffsetMoves(offset, allowNormalToAddition) != null;
 
         /// <summary>
         /// The closest offset in a direction by which the samples of the selection can be moved (see <see cref="CanMoveSelectionLanes"/>), or 0 if there is none.
@@ -883,11 +948,11 @@ namespace osu.Game.Screens.Edit.Hitsounding
         /// <summary>
         /// The offset closest to <paramref name="wanted"/> (but not further from 0) by which the samples of the selection can be moved, or 0 if there is none.
         /// </summary>
-        public int ClampSelectionLaneOffset(int wanted)
+        public int ClampSelectionLaneOffset(int wanted, bool allowNormalToAddition = false)
         {
             for (int offset = wanted; offset != 0; offset -= Math.Sign(offset))
             {
-                if (CanMoveSelectionLanes(offset))
+                if (CanMoveSelectionLanes(offset, allowNormalToAddition))
                     return offset;
             }
 
@@ -895,26 +960,65 @@ namespace osu.Game.Screens.Edit.Hitsounding
         }
 
         /// <summary>
-        /// Moves the samples of the selection by a number of visible lanes, e.g. from normal-hitnormal to soft-hitnormal.
+        /// Moves the samples of the selection by a number of visible lanes, e.g. from normal-whistle to normal-finish.
         /// Hitnormals change their bank (and custom sample index for sub-lanes), additions are removed from their lane and added in the new one.
-        /// Additions moved into a hitnormal lane set the bank of the hitnormal. Hitnormals moved into an addition lane add the addition,
-        /// but the hitnormal stays (every hitsound plays one), except in <see cref="HitsoundDifficultyMode"/> where its object only carries the addition from then on.
+        /// Additions moved into a hitnormal lane set the bank of the hitnormal. Hitnormals can only be moved into an addition lane on their own
+        /// (<paramref name="allowNormalToAddition"/>), which adds the addition but keeps the hitnormal, as every hitsound plays one
+        /// (in <see cref="HitsoundDifficultyMode"/>, its object only carries the addition from then on).
         /// The selection follows the moved samples.
         /// </summary>
         /// <returns>Whether the samples have been moved.</returns>
-        public bool MoveSelectionLanes(int offset)
+        public bool MoveSelectionLanes(int offset, bool allowNormalToAddition = false)
         {
-            if (!CanMoveSelectionLanes(offset))
-                return false;
+            var moves = getOffsetMoves(offset, allowNormalToAddition);
+            return moves != null && moveSelection(moves);
+        }
 
-            var lanes = VisibleLanes;
-            var items = getMovableSelection();
+        /// <summary>
+        /// The number of banks closest to <paramref name="wanted"/> (but not further from 0) by which the samples of the selection can be moved, or 0 if there is none.
+        /// </summary>
+        public int ClampSelectionBankDelta(int wanted)
+        {
+            for (int delta = wanted; delta != 0; delta -= Math.Sign(delta))
+            {
+                if (getBankMoves(delta) != null)
+                    return delta;
+            }
 
+            return 0;
+        }
+
+        /// <summary>
+        /// Moves the samples of the selection to another bank, keeping their sample (e.g. from normal-whistle to soft-whistle).
+        /// </summary>
+        /// <param name="direction">The number of banks to move by: negative for previous banks, positive for next ones (in the order the banks are displayed).</param>
+        /// <returns>Whether the samples have been moved.</returns>
+        public bool MoveSelectionBanks(int direction)
+        {
+            var moves = getBankMoves(direction);
+            return moves != null && moveSelection(moves);
+        }
+
+        /// <summary>
+        /// The lane which a sample in a visible lane is moved to by <see cref="MoveSelectionBanks"/>, or <c>null</c> if there is no such bank.
+        /// </summary>
+        public HitsoundLane? GetBankMovedLane(int laneIndex, int direction)
+        {
+            if (laneIndex < 0 || laneIndex >= VisibleLanes.Count)
+                return null;
+
+            var lane = VisibleLanes[laneIndex];
+            int bankIndex = Array.IndexOf(HitsoundLane.BANKS, lane.Bank) + direction;
+
+            return bankIndex >= 0 && bankIndex < HitsoundLane.BANKS.Length ? lane with { Bank = HitsoundLane.BANKS[bankIndex] } : null;
+        }
+
+        private bool moveSelection(List<(HitsoundColumn column, List<(HitsoundLane from, HitsoundLane to)> moves)> items)
+        {
             perform(changed =>
             {
-                foreach (var (column, laneIndices) in items)
+                foreach (var (column, moves) in items)
                 {
-                    var moves = laneIndices.Select(i => (from: lanes[i], to: lanes[i + offset])).ToList();
                     var targets = editableTargets(column);
 
                     // all moves are decided on the samples before moving, such that samples aren't moved twice (e.g. from normal to soft, and then from soft to drum).
@@ -970,10 +1074,13 @@ namespace osu.Game.Screens.Edit.Hitsounding
             });
 
             // the selection follows the samples into their new lanes.
-            foreach (var (column, _) in items)
+            foreach (var (column, moves) in items)
             {
-                if (selectedLanes.TryGetValue(column.Key, out var selected))
-                    selectedLanes[column.Key] = selected.Select(l => moveLane(l, offset)).ToHashSet();
+                if (!selectedLanes.TryGetValue(column.Key, out var selected))
+                    continue;
+
+                var moved = moves.ToDictionary(m => m.from, m => m.to);
+                selectedLanes[column.Key] = selected.Select(l => moved.GetValueOrDefault(l, l)).ToHashSet();
             }
 
             SelectionChanged?.Invoke();
@@ -983,17 +1090,6 @@ namespace osu.Game.Screens.Edit.Hitsounding
             {
                 samples = HitsoundSamples.WithNormalBank(samples, lane.Bank, false);
                 return lane.CustomIndex is int customIndex ? HitsoundSamples.WithCustomIndex(samples, customIndex) : samples;
-            }
-
-            HitsoundLane moveLane(HitsoundLane lane, int by)
-            {
-                for (int i = 0; i < lanes.Count; i++)
-                {
-                    if (lanes[i] == lane)
-                        return i + by >= 0 && i + by < lanes.Count ? lanes[i + by] : lane;
-                }
-
-                return lane;
             }
         }
 
