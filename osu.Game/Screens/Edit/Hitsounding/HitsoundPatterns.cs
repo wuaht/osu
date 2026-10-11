@@ -19,7 +19,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
     /// Patterns can contain other patterns (sub-patterns), which are then used at the same place in every place where the containing pattern is used.
     /// Stored in a file for each difficulty next to the other files of the game, as the beatmap format has no place for them.
     /// </summary>
-    public class HitsoundPatterns
+    public class HitsoundPatterns : IEditorStateExtension
     {
         /// <summary>
         /// The directory containing a file for each difficulty, named by the ID of the difficulty.
@@ -47,8 +47,8 @@ namespace osu.Game.Screens.Edit.Hitsounding
         private readonly string beatmapTitle;
         private readonly string path;
 
-        private readonly List<HitsoundPattern> patterns;
-        private readonly List<HitsoundPatternInstance> instances;
+        private List<HitsoundPattern> patterns;
+        private List<HitsoundPatternInstance> instances;
 
         private List<HitsoundPatternOccurrence>? occurrences;
 
@@ -338,25 +338,9 @@ namespace osu.Game.Screens.Edit.Hitsounding
             {
                 if (storage.Exists(path))
                 {
-                    PatternsFile? file;
-
                     using (var stream = storage.GetStream(path))
                     using (var reader = new StreamReader(stream))
-                        file = JsonConvert.DeserializeObject<PatternsFile>(reader.ReadToEnd());
-
-                    if (file != null)
-                    {
-                        var readPatterns = file.Patterns.Select(p => p.ToPattern()).ToList();
-
-                        foreach (var pattern in readPatterns)
-                            pattern.SubPatterns.RemoveAll(s => readPatterns.All(p => p.ID != s.PatternID));
-
-                        var readInstances = file.Instances.Where(i => readPatterns.Any(p => p.ID == i.PatternID))
-                                                .OrderBy(i => i.StartTime)
-                                                .ToList();
-
-                        return (readPatterns, readInstances);
-                    }
+                        return deserialise(reader.ReadToEnd());
                 }
             }
             catch (Exception e)
@@ -365,6 +349,52 @@ namespace osu.Game.Screens.Edit.Hitsounding
             }
 
             return (new List<HitsoundPattern>(), new List<HitsoundPatternInstance>());
+        }
+
+        private static (List<HitsoundPattern>, List<HitsoundPatternInstance>) deserialise(string json)
+        {
+            var file = JsonConvert.DeserializeObject<PatternsFile>(json);
+
+            if (file == null)
+                return (new List<HitsoundPattern>(), new List<HitsoundPatternInstance>());
+
+            var readPatterns = file.Patterns.Select(p => p.ToPattern()).ToList();
+
+            foreach (var pattern in readPatterns)
+                pattern.SubPatterns.RemoveAll(s => readPatterns.All(p => p.ID != s.PatternID));
+
+            var readInstances = file.Instances.Where(i => readPatterns.Any(p => p.ID == i.PatternID))
+                                    .OrderBy(i => i.StartTime)
+                                    .ToList();
+
+            return (readPatterns, readInstances);
+        }
+
+        private string serialise() => JsonConvert.SerializeObject(new PatternsFile
+        {
+            Beatmap = beatmapTitle,
+            Patterns = patterns.Select(PatternEntry.FromPattern).ToList(),
+            Instances = instances.ToList(),
+        }, Formatting.Indented);
+
+        /// <summary>
+        /// The patterns and where they are used, such that creating, placing and removing patterns can be undone along with the hitsounds.
+        /// </summary>
+        public string GetState() => serialise();
+
+        public void ApplyState(string state)
+        {
+            try
+            {
+                (patterns, instances) = deserialise(state);
+            }
+            catch (Exception e)
+            {
+                Logger.Error(e, @"Failed to restore the hitsound patterns");
+                return;
+            }
+
+            onChanged();
         }
 
         private void write()
@@ -377,16 +407,9 @@ namespace osu.Game.Screens.Edit.Hitsounding
                     return;
                 }
 
-                var file = new PatternsFile
-                {
-                    Beatmap = beatmapTitle,
-                    Patterns = patterns.Select(PatternEntry.FromPattern).ToList(),
-                    Instances = instances.ToList(),
-                };
-
                 using (var stream = storage.CreateFileSafely(path))
                 using (var writer = new StreamWriter(stream))
-                    writer.Write(JsonConvert.SerializeObject(file, Formatting.Indented));
+                    writer.Write(serialise());
             }
             catch (Exception e)
             {

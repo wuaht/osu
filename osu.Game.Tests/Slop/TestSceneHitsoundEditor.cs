@@ -435,6 +435,14 @@ namespace osu.Game.Tests.Slop
 
             AddStep("add clap at second place", () => hitsoundEditor.ToggleAddition(new[] { hitsoundEditor.Map.GetColumn(1000)! }, HitSampleInfo.HIT_CLAP));
             AddAssert("first place unchanged", () => !hasSample(objectsAt(0).Single(), HitSampleInfo.HIT_CLAP));
+
+            AddStep("undo clap", () => Editor.Undo());
+            AddStep("undo make unique", () => Editor.Undo());
+            AddAssert("one pattern again", () => patterns.Patterns.Count, () => Is.EqualTo(1));
+            AddAssert("used at both places", () => patterns.GetOccurrences(patterns.Patterns.Single()).Count(), () => Is.EqualTo(2));
+
+            AddStep("redo make unique", () => Editor.Redo());
+            AddAssert("two patterns again", () => patterns.Patterns.Count, () => Is.EqualTo(2));
         }
 
         [Test]

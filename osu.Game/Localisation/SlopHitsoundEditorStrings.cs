@@ -726,6 +726,17 @@ Alt + scroll to zoom. Ctrl + click a lane name to preview the skin's sample inst
             @"Patterns can only overlap if one is completely inside the other (as a sub-pattern), and a pattern can't be placed inside itself.");
 
         /// <summary>
+        /// "New pattern"
+        /// </summary>
+        public static LocalisableString CreatePatternShort => new TranslatableString(getKey(@"create_pattern_short"), @"New pattern");
+
+        /// <summary>
+        /// "Places "{0}" at the playhead, replacing the hitsounds there."
+        /// </summary>
+        public static LocalisableString PlacePatternNamedTooltip(string name) => new TranslatableString(getKey(@"place_pattern_named_tooltip"),
+            @"Places ""{0}"" at the playhead, replacing the hitsounds there.", name);
+
+        /// <summary>
         /// "Make unique"
         /// </summary>
         public static LocalisableString MakePatternUnique => new TranslatableString(getKey(@"make_pattern_unique"), @"Make unique");

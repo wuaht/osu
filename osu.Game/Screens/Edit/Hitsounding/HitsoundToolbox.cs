@@ -47,7 +47,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
         private readonly BindableBool expandOnHover = new BindableBool();
 
         private IconButton contractButton = null!;
-        private Container contractedContent = null!;
+        private Drawable contractedContent = null!;
         private Drawable expandedContent = null!;
 
         public HitsoundToolbox()
@@ -83,14 +83,23 @@ namespace osu.Game.Screens.Edit.Hitsounding
                     AutoSizeAxes = Axes.Y,
                     Children = new Drawable[]
                     {
-                        contractedContent = new Container
+                        contractedContent = new FillFlowContainer
                         {
                             RelativeSizeAxes = Axes.X,
                             AutoSizeAxes = Axes.Y,
-                            Child = new ToolboxGroup(SlopHitsoundEditorStrings.Hitsounds)
+                            Direction = FillDirection.Vertical,
+                            Spacing = new Vector2(5),
+                            Children = new Drawable[]
                             {
-                                Child = new CompactTargetTools(),
-                            },
+                                new ToolboxGroup(SlopHitsoundEditorStrings.Hitsounds)
+                                {
+                                    Child = new CompactTargetTools(),
+                                },
+                                new ToolboxGroup(SlopHitsoundEditorStrings.Patterns)
+                                {
+                                    Child = new CompactPatternTools(),
+                                },
+                            }
                         },
                         // the expanded content keeps its width, such that it doesn't reflow while the toolbox expands or contracts.
                         expandedContent = new FillFlowContainer

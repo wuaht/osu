@@ -172,6 +172,29 @@ namespace osu.Game.Screens.Edit.Hitsounding
 
             hitsoundEditor.SelectionChanged += () => CanCopy.Value = hitsoundEditor.SelectedKeys.Count > 0;
             CanPaste.Value = clipboard != null;
+
+            // creating, placing and removing patterns is undone along with the hitsounds.
+            if (changeHandler is EditorChangeHandler editorChangeHandler)
+            {
+                editorChangeHandler.AddStateExtension(patterns);
+                patterns.Changed += savePatternState;
+            }
+        }
+
+        [Resolved(canBeNull: true)]
+        private IEditorChangeHandler? changeHandler { get; set; }
+
+        private void savePatternState() => changeHandler?.SaveState();
+
+        protected override void Dispose(bool isDisposing)
+        {
+            if (changeHandler is EditorChangeHandler editorChangeHandler && patterns != null)
+            {
+                editorChangeHandler.RemoveStateExtension(patterns);
+                patterns.Changed -= savePatternState;
+            }
+
+            base.Dispose(isDisposing);
         }
 
         /// <summary>
@@ -349,7 +372,11 @@ namespace osu.Game.Screens.Edit.Hitsounding
                 return;
             }
 
-            if (hitsoundEditor.CreatePattern(columns) == null)
+            EditorBeatmap.BeginChange();
+            var pattern = hitsoundEditor.CreatePattern(columns);
+            EditorBeatmap.EndChange();
+
+            if (pattern == null)
                 notify(SlopHitsoundEditorStrings.PatternOverlaps, FontAwesome.Solid.ExclamationTriangle);
         }
 
@@ -360,7 +387,12 @@ namespace osu.Game.Screens.Edit.Hitsounding
         {
             double time = EditorBeatmap.SnapTime(clock.CurrentTime, null);
 
-            switch (hitsoundEditor.PlacePattern(pattern, time))
+            // the hitsounds and the place of the pattern are a single undo step.
+            EditorBeatmap.BeginChange();
+            int? result = hitsoundEditor.PlacePattern(pattern, time);
+            EditorBeatmap.EndChange();
+
+            switch (result)
             {
                 case null:
                     notify(SlopHitsoundEditorStrings.PatternOverlaps, FontAwesome.Solid.ExclamationTriangle);
@@ -384,7 +416,12 @@ namespace osu.Game.Screens.Edit.Hitsounding
         /// <summary>
         /// Makes a place use a copy of its pattern, such that it can be changed on its own (see <see cref="HitsoundEditor.MakePatternUnique"/>).
         /// </summary>
-        public void MakePatternUnique(HitsoundPatternOccurrence occurrence) => hitsoundEditor.MakePatternUnique(occurrence);
+        public void MakePatternUnique(HitsoundPatternOccurrence occurrence)
+        {
+            EditorBeatmap.BeginChange();
+            hitsoundEditor.MakePatternUnique(occurrence);
+            EditorBeatmap.EndChange();
+        }
 
         #endregion
 

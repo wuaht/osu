@@ -108,6 +108,78 @@ namespace osu.Game.Screens.Edit.Hitsounding
             }
         }
 
+        /// <summary>
+        /// The pattern tools while the toolbox is contracted: creating a pattern from the selection, and a button for each pattern which places it at the playhead.
+        /// </summary>
+        private partial class CompactPatternTools : CompositeDrawable
+        {
+            [Resolved]
+            private HitsoundScreen screen { get; set; } = null!;
+
+            [Resolved]
+            private HitsoundPatterns patterns { get; set; } = null!;
+
+            private FillFlowContainer patternFlow = null!;
+
+            [BackgroundDependencyLoader]
+            private void load()
+            {
+                RelativeSizeAxes = Axes.X;
+                AutoSizeAxes = Axes.Y;
+
+                InternalChild = new FillFlowContainer
+                {
+                    RelativeSizeAxes = Axes.X,
+                    AutoSizeAxes = Axes.Y,
+                    Direction = FillDirection.Vertical,
+                    Spacing = new Vector2(5),
+                    Children = new Drawable[]
+                    {
+                        createButton(SlopHitsoundEditorStrings.CreatePatternShort, SlopHitsoundEditorStrings.CreatePatternTooltip, () => screen.CreatePatternFromSelection()),
+                        patternFlow = new FillFlowContainer
+                        {
+                            RelativeSizeAxes = Axes.X,
+                            AutoSizeAxes = Axes.Y,
+                            Direction = FillDirection.Vertical,
+                            Spacing = new Vector2(4),
+                        },
+                    }
+                };
+            }
+
+            protected override void LoadComplete()
+            {
+                base.LoadComplete();
+
+                patterns.Changed += onPatternsChanged;
+                updatePatterns();
+            }
+
+            private void onPatternsChanged() => Scheduler.AddOnce(updatePatterns);
+
+            private void updatePatterns()
+            {
+                patternFlow.Clear();
+
+                foreach (var pattern in patterns.Patterns)
+                {
+                    patternFlow.Add(createButton(pattern.Name, SlopHitsoundEditorStrings.PlacePatternNamedTooltip(pattern.Name), () => screen.PlacePattern(pattern)).With(b =>
+                    {
+                        b.BackgroundColour = pattern.Colour.Darken(0.6f);
+                        b.Height = 26;
+                    }));
+                }
+            }
+
+            protected override void Dispose(bool isDisposing)
+            {
+                if (patterns.IsNotNull())
+                    patterns.Changed -= onPatternsChanged;
+
+                base.Dispose(isDisposing);
+            }
+        }
+
         private partial class PatternRow : CompositeDrawable
         {
             private readonly HitsoundPattern pattern;

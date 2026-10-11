@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using osu.Framework.Bindables;
 using osu.Framework.Extensions;
 
@@ -20,6 +21,13 @@ namespace osu.Game.Screens.Edit
         public event Action? OnStateChange;
 
         private readonly List<byte[]> savedStates = new List<byte[]>();
+
+        /// <summary>
+        /// The states of the <see cref="IEditorStateExtension"/>s for each saved state.
+        /// </summary>
+        private readonly List<Dictionary<IEditorStateExtension, string>> savedExtensionStates = new List<Dictionary<IEditorStateExtension, string>>();
+
+        private readonly List<IEditorStateExtension> stateExtensions = new List<IEditorStateExtension>();
 
         private int currentState = -1;
 
@@ -46,6 +54,29 @@ namespace osu.Game.Screens.Edit
 
         public const int MAX_SAVED_STATES = 50;
 
+        /// <summary>
+        /// Adds state which isn't part of the beatmap to the undo history, from now on.
+        /// </summary>
+        public void AddStateExtension(IEditorStateExtension extension)
+        {
+            if (stateExtensions.Contains(extension))
+                return;
+
+            ensureStateSaved();
+            stateExtensions.Add(extension);
+
+            // the current state is the one to return to when undoing the first change of the extension.
+            savedExtensionStates[currentState][extension] = extension.GetState();
+        }
+
+        public void RemoveStateExtension(IEditorStateExtension extension)
+        {
+            stateExtensions.Remove(extension);
+
+            foreach (var states in savedExtensionStates)
+                states.Remove(extension);
+        }
+
         public override void BeginChange()
         {
             ensureStateSaved();
@@ -68,17 +99,25 @@ namespace osu.Game.Screens.Edit
             {
                 WriteCurrentStateToStream(stream);
                 byte[] newState = stream.ToArray();
+                var newExtensionStates = stateExtensions.ToDictionary(e => e, e => e.GetState());
 
                 // if the previous state is binary equal we don't need to push a new one, unless this is the initial state.
-                if (savedStates.Count > 0 && newState.SequenceEqual(savedStates[currentState])) return;
+                if (savedStates.Count > 0 && newState.SequenceEqual(savedStates[currentState]) && extensionStatesEqual(savedExtensionStates[currentState], newExtensionStates)) return;
 
                 if (currentState < savedStates.Count - 1)
+                {
                     savedStates.RemoveRange(currentState + 1, savedStates.Count - currentState - 1);
+                    savedExtensionStates.RemoveRange(currentState + 1, savedExtensionStates.Count - currentState - 1);
+                }
 
                 if (savedStates.Count > MAX_SAVED_STATES)
+                {
                     savedStates.RemoveAt(0);
+                    savedExtensionStates.RemoveAt(0);
+                }
 
                 savedStates.Add(newState);
+                savedExtensionStates.Add(newExtensionStates);
 
                 currentState = savedStates.Count - 1;
 
@@ -103,6 +142,12 @@ namespace osu.Game.Screens.Edit
 
             ApplyStateChange(savedStates[currentState], savedStates[newState]);
 
+            foreach (var (extension, state) in savedExtensionStates[newState])
+            {
+                if (stateExtensions.Contains(extension) && savedExtensionStates[currentState].GetValueOrDefault(extension) != state)
+                    extension.ApplyState(state);
+            }
+
             currentState = newState;
 
             isRestoring = false;
@@ -125,10 +170,29 @@ namespace osu.Game.Screens.Edit
         /// <param name="newState">The new state to be applied.</param>
         protected abstract void ApplyStateChange(byte[] previousState, byte[] newState);
 
+        private static bool extensionStatesEqual(Dictionary<IEditorStateExtension, string> a, Dictionary<IEditorStateExtension, string> b)
+            => a.Count == b.Count && a.All(e => b.TryGetValue(e.Key, out string? other) && other == e.Value);
+
         private void updateBindables()
         {
             CanUndo.Value = savedStates.Count > 0 && currentState > 0;
             CanRedo.Value = currentState < savedStates.Count - 1;
         }
+    }
+
+    /// <summary>
+    /// State which isn't part of the beatmap, but is undone and redone along with it (see <see cref="EditorChangeHandler.AddStateExtension"/>).
+    /// </summary>
+    public interface IEditorStateExtension
+    {
+        /// <summary>
+        /// A serialised copy of the current state.
+        /// </summary>
+        string GetState();
+
+        /// <summary>
+        /// Restores a state returned by <see cref="GetState"/>.
+        /// </summary>
+        void ApplyState(string state);
     }
 }
