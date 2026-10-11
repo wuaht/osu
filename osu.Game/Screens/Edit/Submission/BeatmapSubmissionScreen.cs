@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
 using osu.Framework.Allocation;
@@ -30,6 +31,7 @@ using osu.Game.Online.API.Requests;
 using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Overlays;
 using osu.Game.Overlays.Notifications;
+using osu.Game.Screens.Edit.Hitsounding;
 using osu.Game.Screens.Select;
 using osuTK;
 
@@ -207,9 +209,30 @@ namespace osu.Game.Screens.Edit.Submission
             configManager.BindWith(OsuSetting.EditorSubmissionNotifyOnDiscussionReplies, settings.NotifyOnDiscussionReplies);
         }
 
+        /// <summary>
+        /// The difficulties which aren't uploaded: the hitsound difficulty, which only exists to edit hitsounds (see <see cref="HitsoundPreferences.IsHitsoundDifficulty"/>).
+        /// They are kept locally.
+        /// </summary>
+        private List<BeatmapInfo> excludedBeatmaps = new List<BeatmapInfo>();
+
+        private HashSet<string> excludedFilenames = new HashSet<string>();
+
+        private IEnumerable<BeatmapInfo> uploadedBeatmaps => Beatmap.Value.BeatmapSetInfo.Beatmaps.Where(b => !excludedBeatmaps.Contains(b));
+
         private void createBeatmapSet()
         {
             bool beatmapHasOnlineId = Beatmap.Value.BeatmapSetInfo.OnlineID > 0;
+
+            excludedBeatmaps = Beatmap.Value.BeatmapSetInfo.Beatmaps.Where(b => HitsoundPreferences.IsHitsoundDifficulty(configManager, b)).ToList();
+
+            // a beatmap set needs at least one difficulty.
+            if (excludedBeatmaps.Count == Beatmap.Value.BeatmapSetInfo.Beatmaps.Count)
+                excludedBeatmaps.Clear();
+
+            excludedFilenames = excludedBeatmaps.Select(b => b.File?.Filename).OfType<string>().ToHashSet();
+
+            foreach (var excluded in excludedBeatmaps)
+                log($@"not uploading hitsound difficulty ""{excluded.DifficultyName}""");
 
             PutBeatmapSetRequest createRequest;
 
@@ -217,14 +240,14 @@ namespace osu.Game.Screens.Edit.Submission
             {
                 createRequest = PutBeatmapSetRequest.UpdateExisting(
                     (uint)Beatmap.Value.BeatmapSetInfo.OnlineID,
-                    Beatmap.Value.BeatmapSetInfo.Beatmaps.Where(b => b.OnlineID > 0).Select(b => (uint)b.OnlineID).ToArray(),
-                    (uint)Beatmap.Value.BeatmapSetInfo.Beatmaps.Count(b => b.OnlineID <= 0),
+                    uploadedBeatmaps.Where(b => b.OnlineID > 0).Select(b => (uint)b.OnlineID).ToArray(),
+                    (uint)uploadedBeatmaps.Count(b => b.OnlineID <= 0),
                     settings);
                 log($"Updating existing beatmap set (id:{createRequest.BeatmapSetID} beatmapsToKeep:[{string.Join(",", createRequest.BeatmapsToKeep)}] beatmapsToCreate:{createRequest.BeatmapsToCreate})");
             }
             else
             {
-                createRequest = PutBeatmapSetRequest.CreateNew((uint)Beatmap.Value.BeatmapSetInfo.Beatmaps.Count, settings);
+                createRequest = PutBeatmapSetRequest.CreateNew((uint)uploadedBeatmaps.Count(), settings);
                 log($"Creating new beatmap set (beatmapsToCreate:{createRequest.BeatmapsToCreate})");
             }
 
@@ -270,7 +293,7 @@ namespace osu.Game.Screens.Edit.Submission
                 beatmapPackageStream = new MemoryStream();
                 exportProgressNotification = new ProgressNotification();
 
-                var legacyBeatmapExporter = new SubmissionBeatmapExporter(storage, response);
+                var legacyBeatmapExporter = new SubmissionBeatmapExporter(storage, response, excludedBeatmaps.Select(b => b.Hash).ToHashSet());
 
                 await legacyBeatmapExporter
                       .ExportToStreamAsync(Beatmap.Value.BeatmapSetInfo.ToLive(realmAccess), beatmapPackageStream, exportProgressNotification)
@@ -311,6 +334,10 @@ namespace osu.Game.Screens.Edit.Submission
 
             foreach (string filename in archiveReader.Filenames)
             {
+                // difficulties which aren't uploaded are deleted online if they have been uploaded before.
+                if (excludedFilenames.Contains(filename))
+                    continue;
+
                 string localHash = archiveReader.GetStream(filename).ComputeSHA2Hash();
 
                 if (!onlineFilesByFilename.Remove(filename, out string? onlineHash))
@@ -359,7 +386,7 @@ namespace osu.Game.Screens.Edit.Submission
             Debug.Assert(beatmapSetId != null);
             Debug.Assert(beatmapPackageStream != null);
 
-            var uploadRequest = new ReplaceBeatmapPackageRequest(beatmapSetId.Value, beatmapPackageStream.ToArray());
+            var uploadRequest = new ReplaceBeatmapPackageRequest(beatmapSetId.Value, getUploadedPackage());
 
             uploadRequest.Success += uploadCompleted;
             uploadRequest.Failure += ex =>
@@ -372,6 +399,38 @@ namespace osu.Game.Screens.Edit.Submission
 
             api.Queue(uploadRequest);
             uploadStep.SetInProgress();
+        }
+
+        /// <summary>
+        /// The exported package without the difficulties which aren't uploaded.
+        /// </summary>
+        private byte[] getUploadedPackage()
+        {
+            Debug.Assert(beatmapPackageStream != null);
+
+            if (excludedFilenames.Count == 0)
+                return beatmapPackageStream.ToArray();
+
+            using var source = new ZipArchive(new MemoryStream(beatmapPackageStream.ToArray()), ZipArchiveMode.Read);
+            var output = new MemoryStream();
+
+            using (var target = new ZipArchive(output, ZipArchiveMode.Create, true))
+            {
+                foreach (var entry in source.Entries)
+                {
+                    if (excludedFilenames.Contains(entry.FullName))
+                        continue;
+
+                    var copy = target.CreateEntry(entry.FullName);
+                    copy.LastWriteTime = entry.LastWriteTime;
+
+                    using var from = entry.Open();
+                    using var to = copy.Open();
+                    from.CopyTo(to);
+                }
+            }
+
+            return output.ToArray();
         }
 
         private void uploadCompleted()
@@ -403,6 +462,18 @@ namespace osu.Game.Screens.Edit.Submission
                 log($@"Local update failed: {ex}");
                 allowExit();
                 return;
+            }
+
+            // the difficulties are recreated by the import, so the hitsound difficulties are marked as such again in case they aren't named like one.
+            if (importedSet != null)
+            {
+                foreach (var excluded in excludedBeatmaps)
+                {
+                    var imported = importedSet.PerformRead(s => s.Beatmaps.FirstOrDefault(b => b.DifficultyName == excluded.DifficultyName)?.Detach());
+
+                    if (imported != null)
+                        HitsoundPreferences.SetHitsoundDifficulty(configManager, imported, true);
+                }
             }
 
             updateStep.SetCompleted();
