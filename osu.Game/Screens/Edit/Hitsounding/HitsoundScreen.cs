@@ -294,12 +294,9 @@ namespace osu.Game.Screens.Edit.Hitsounding
                         return true;
                     }
 
-                    // moves the selected samples to the next lane they can be moved to, e.g. from normal-whistle to normal-finish.
-                    int offset = hitsoundEditor.FindSelectionLaneOffset(direction);
-
-                    if (offset != 0)
-                        hitsoundEditor.MoveSelectionLanes(offset);
-
+                    // moves the selected samples exactly one lane, e.g. from normal-whistle to normal-finish.
+                    // hitnormals moved together with additions stay where they are rather than landing in an addition lane, which would look like copying them.
+                    hitsoundEditor.MoveSelectionLanes(direction, allowNormalToAddition: true);
                     return true;
             }
 

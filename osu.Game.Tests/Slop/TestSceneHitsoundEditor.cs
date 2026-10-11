@@ -114,17 +114,22 @@ namespace osu.Game.Tests.Slop
             AddAssert("hitnormal moved to soft", () => HitsoundSamples.GetNormalBank(EditorBeatmap.HitObjects[0].Samples), () => Is.EqualTo(HitSampleInfo.BANK_SOFT));
             AddAssert("selection followed", () => hitsoundEditor.GetSelectedLanes(0), () => Is.EquivalentTo(new[] { new HitsoundLane(HitSampleInfo.BANK_SOFT, HitSampleInfo.HIT_NORMAL) }));
 
-            AddStep("press Ctrl+Down", () => pressWithControl(Key.Down));
-            AddAssert("hitnormal skipped addition lanes to drum", () => HitsoundSamples.GetNormalBank(EditorBeatmap.HitObjects[0].Samples), () => Is.EqualTo(HitSampleInfo.BANK_DRUM));
-            AddAssert("no addition copied", () => !EditorBeatmap.HitObjects[0].Samples.Any(HitsoundSamples.IsAddition));
+            AddStep("press Ctrl+Shift+Down", () => pressWithControlShift(Key.Down));
+            AddAssert("hitnormal moved a bank to drum", () => HitsoundSamples.GetNormalBank(EditorBeatmap.HitObjects[0].Samples), () => Is.EqualTo(HitSampleInfo.BANK_DRUM));
+            AddAssert("no addition added", () => !EditorBeatmap.HitObjects[0].Samples.Any(HitsoundSamples.IsAddition));
 
-            AddStep("press Ctrl+Shift+Up", () =>
-            {
-                InputManager.PressKey(Key.ShiftLeft);
-                pressWithControl(Key.Up);
-                InputManager.ReleaseKey(Key.ShiftLeft);
-            });
+            AddStep("press Ctrl+Shift+Up", () => pressWithControlShift(Key.Up));
             AddAssert("hitnormal moved back a bank", () => HitsoundSamples.GetNormalBank(EditorBeatmap.HitObjects[0].Samples), () => Is.EqualTo(HitSampleInfo.BANK_SOFT));
+
+            AddStep("press Ctrl+Down", () => pressWithControl(Key.Down));
+            AddAssert("hitnormal alone moved one lane into soft whistle", () => EditorBeatmap.HitObjects[0].Samples.Any(s => s.Name == HitSampleInfo.HIT_WHISTLE && s.Bank == HitSampleInfo.BANK_SOFT));
+            AddStep("undo", () => Editor.Undo());
+
+            AddStep("select whole second hitsound", () => hitsoundEditor.SetSelection(new[] { 500 }));
+            AddStep("press Ctrl+Down", () => pressWithControl(Key.Down));
+            AddAssert("whistle moved one lane to finish", () => hasSample(EditorBeatmap.HitObjects[1], HitSampleInfo.HIT_FINISH) && !hasSample(EditorBeatmap.HitObjects[1], HitSampleInfo.HIT_WHISTLE));
+            AddAssert("hitnormal stayed", () => HitsoundSamples.GetNormalBank(EditorBeatmap.HitObjects[1].Samples), () => Is.EqualTo(HitSampleInfo.BANK_SOFT));
+            AddStep("undo", () => Editor.Undo());
 
             AddStep("select second whistle", () => hitsoundEditor.SetSelection(new[] { 500 }, lanes: new[] { new HitsoundLane(HitSampleInfo.BANK_SOFT, HitSampleInfo.HIT_WHISTLE) }));
             AddStep("move whistle to normal bank", () => hitsoundEditor.MoveSelectionBanks(-1));
@@ -146,6 +151,13 @@ namespace osu.Game.Tests.Slop
                 InputManager.PressKey(Key.ControlLeft);
                 InputManager.Key(key);
                 InputManager.ReleaseKey(Key.ControlLeft);
+            }
+
+            void pressWithControlShift(Key key)
+            {
+                InputManager.PressKey(Key.ShiftLeft);
+                pressWithControl(key);
+                InputManager.ReleaseKey(Key.ShiftLeft);
             }
         }
 

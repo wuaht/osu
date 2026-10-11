@@ -858,8 +858,8 @@ namespace osu.Game.Screens.Edit.Hitsounding
         /// </summary>
         /// <param name="offset">The number of visible lanes.</param>
         /// <param name="allowNormalToAddition">
-        /// Whether hitnormals may be moved into addition lanes. As every hitsound plays a hitnormal, this adds the addition but the hitnormal stays,
-        /// so it is only allowed when explicitly dragging hitnormals alone (otherwise moving would look like copying).
+        /// Whether hitnormals may be moved into addition lanes. As every hitsound plays a hitnormal, this adds the addition but the hitnormal stays.
+        /// When additions are moved as well, the hitnormals stay where they are instead, as moving would otherwise look like copying.
         /// </param>
         private List<(HitsoundColumn column, List<(HitsoundLane from, HitsoundLane to)> moves)>? getOffsetMoves(int offset, bool allowNormalToAddition)
         {
@@ -872,14 +872,25 @@ namespace osu.Game.Screens.Edit.Hitsounding
             if (items.Count == 0 || items.Any(item => item.laneIndices.Any(i => i + offset < 0 || i + offset >= lanes.Count)))
                 return null;
 
-            var result = items.Select(item => (item.column, item.laneIndices.Select(i => (from: lanes[i], to: lanes[i + offset])).ToList())).ToList();
+            var result = items.Select(item => (item.column, moves: item.laneIndices.Select(i => (from: lanes[i], to: lanes[i + offset])).ToList())).ToList();
 
-            if (result.Any(r => r.Item2.Any(m => !m.from.IsAddition && m.to.IsAddition)))
+            if (result.Any(r => r.moves.Any(m => !m.from.IsAddition && m.to.IsAddition)))
             {
-                bool onlyHitnormals = result.All(r => r.Item2.All(m => !m.from.IsAddition));
-
-                if (!allowNormalToAddition || !onlyHitnormals)
+                if (!allowNormalToAddition)
                     return null;
+
+                bool onlyHitnormals = result.All(r => r.moves.All(m => !m.from.IsAddition));
+
+                if (!onlyHitnormals)
+                {
+                    foreach (var r in result)
+                        r.moves.RemoveAll(m => !m.from.IsAddition && m.to.IsAddition);
+
+                    result.RemoveAll(r => r.moves.Count == 0);
+
+                    if (result.Count == 0)
+                        return null;
+                }
             }
 
             return result;
@@ -929,21 +940,6 @@ namespace osu.Game.Screens.Edit.Hitsounding
         /// Whether the samples of the selection can be moved by a number of visible lanes (see <see cref="MoveSelectionLanes"/>).
         /// </summary>
         public bool CanMoveSelectionLanes(int offset, bool allowNormalToAddition = false) => getOffsetMoves(offset, allowNormalToAddition) != null;
-
-        /// <summary>
-        /// The closest offset in a direction by which the samples of the selection can be moved (see <see cref="CanMoveSelectionLanes"/>), or 0 if there is none.
-        /// </summary>
-        /// <param name="direction">-1 to move up, 1 to move down.</param>
-        public int FindSelectionLaneOffset(int direction)
-        {
-            for (int distance = 1; distance < VisibleLanes.Count; distance++)
-            {
-                if (CanMoveSelectionLanes(direction * distance))
-                    return direction * distance;
-            }
-
-            return 0;
-        }
 
         /// <summary>
         /// The offset closest to <paramref name="wanted"/> (but not further from 0) by which the samples of the selection can be moved, or 0 if there is none.
