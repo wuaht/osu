@@ -325,6 +325,42 @@ namespace osu.Game.Tests.Slop
         }
 
         [Test]
+        public void TestPastingRectangleSelectionOnlyAddsCopiedAdditions()
+        {
+            AddStep("select first hitsound in all lanes", () => hitsoundEditor.SetSelection(new[] { 0 }, lanes: HitsoundLane.ALL));
+            AddStep("copy", () => screen!.Copy());
+            AddStep("seek to second object", () => EditorClock.Seek(500));
+            AddStep("paste", () => screen!.Paste());
+
+            AddAssert("whistle kept", () => hasSample(EditorBeatmap.HitObjects[1], HitSampleInfo.HIT_WHISTLE));
+            AddAssert("no finish added", () => !hasSample(EditorBeatmap.HitObjects[1], HitSampleInfo.HIT_FINISH));
+            AddAssert("no clap added", () => !hasSample(EditorBeatmap.HitObjects[1], HitSampleInfo.HIT_CLAP));
+        }
+
+        [Test]
+        public void TestPatternChangesAreSyncedToAllPlaces()
+        {
+            AddStep("add objects for second place", () => EditorBeatmap.AddRange(new[] { createCircle(1000), createCircle(1500) }));
+            AddStep("select first two hitsounds", () => hitsoundEditor.SetSelection(new[] { 0, 500 }));
+            AddStep("create pattern", () => screen!.CreatePatternFromSelection());
+            AddStep("seek to third object", () => EditorClock.Seek(1000));
+            AddStep("place pattern", () => screen!.PlacePattern(patterns.Patterns.Single()));
+
+            AddAssert("pattern used twice", () => patterns.Instances.Count, () => Is.EqualTo(2));
+            AddAssert("whistle placed", () => hasSample(EditorBeatmap.HitObjects[3], HitSampleInfo.HIT_WHISTLE));
+
+            AddStep("add clap at first place", () => hitsoundEditor.ToggleAddition(new[] { hitsoundEditor.Map.GetColumn(0)! }, HitSampleInfo.HIT_CLAP));
+            AddAssert("clap synced to second place", () => hasSample(EditorBeatmap.HitObjects[2], HitSampleInfo.HIT_CLAP));
+
+            AddStep("undo", () => Editor.Undo());
+            AddAssert("clap removed at first place", () => !hasSample(EditorBeatmap.HitObjects[0], HitSampleInfo.HIT_CLAP));
+            AddAssert("clap removed at second place", () => !hasSample(EditorBeatmap.HitObjects[2], HitSampleInfo.HIT_CLAP));
+
+            AddStep("delete pattern", () => patterns.Delete(patterns.Patterns.Single()));
+            AddAssert("hitsounds kept", () => hasSample(EditorBeatmap.HitObjects[3], HitSampleInfo.HIT_WHISTLE));
+        }
+
+        [Test]
         public void TestVolumeLine()
         {
             AddStep("seek between objects", () => EditorClock.Seek(250));
@@ -341,6 +377,8 @@ namespace osu.Game.Tests.Slop
         }
 
         private HitsoundEditor hitsoundEditor => Editor.ChildrenOfType<HitsoundEditor>().Single();
+
+        private HitsoundPatterns patterns => screen!.Patterns;
 
         private void clickLaneWith(Key modifier, HitsoundLane lane, double time)
         {

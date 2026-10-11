@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -1024,6 +1025,206 @@ namespace osu.Game.Screens.Edit.Hitsounding
 
         #endregion
 
+        #region Hitsound patterns
+
+        [Resolved(canBeNull: true)]
+        private HitsoundPatterns? patterns { get; set; }
+
+        /// <summary>
+        /// Whether changes shouldn't be copied to the other places where a pattern is used, e.g. while placing a pattern.
+        /// </summary>
+        private bool suppressPatternSync;
+
+        private static readonly HitsoundCopyOptions pattern_copy_options = new HitsoundCopyOptions
+        {
+            Leniency = PASTE_LENIENCY,
+            CopySliderBodies = false,
+            PreserveMutedVolumes = false,
+            OverwriteUnmatched = true,
+        };
+
+        /// <summary>
+        /// The hitsounds at a place where a pattern is used, with times relative to its start.
+        /// </summary>
+        public IReadOnlyList<HitsoundColumnState> GetPatternStates(HitsoundPatternInstance instance)
+            => getPatternStates(Map, instance.StartTime, patterns?.GetPattern(instance.PatternID)?.Length ?? 0);
+
+        /// <summary>
+        /// The hitsounds of a pattern: the ones at the first place where it is used, or the last known ones if it isn't used anywhere.
+        /// </summary>
+        public IReadOnlyList<HitsoundColumnState> GetPatternStates(HitsoundPattern pattern)
+        {
+            var instance = patterns?.GetInstances(pattern).FirstOrDefault();
+            return instance != null ? GetPatternStates(instance) : pattern.States;
+        }
+
+        /// <summary>
+        /// The columns at a place where a pattern is used.
+        /// </summary>
+        public IReadOnlyList<HitsoundColumn> GetPatternColumns(HitsoundPatternInstance instance)
+            => getColumnsInRange(Map, instance.StartTime, patterns?.GetPattern(instance.PatternID)?.Length ?? 0).ToList();
+
+        /// <summary>
+        /// The length of a pattern created from hitsounds: the whole beats from the first hitsound to after the last one.
+        /// </summary>
+        public double GetPatternLength(IReadOnlyList<HitsoundColumn> columns)
+        {
+            double start = columns[0].Time;
+            double span = columns[^1].Time - start;
+            double beatLength = editorBeatmap.ControlPointInfo.TimingPointAt(start).BeatLength;
+
+            return (Math.Floor((span + PASTE_LENIENCY) / beatLength) + 1) * beatLength;
+        }
+
+        /// <summary>
+        /// Creates a pattern from hitsounds, and uses it at their place.
+        /// The pattern covers whole beats from the first hitsound on (see <see cref="GetPatternLength"/>), including hitsounds which aren't given.
+        /// </summary>
+        /// <returns>The pattern, or <c>null</c> if the hitsounds overlap a place where another pattern is used.</returns>
+        public HitsoundPattern? CreatePattern(IReadOnlyList<HitsoundColumn> columns)
+        {
+            if (patterns == null || columns.Count == 0)
+                return null;
+
+            double start = columns[0].Time;
+            double length = GetPatternLength(columns);
+
+            if (patterns.Overlaps(start, start + length))
+                return null;
+
+            var pattern = patterns.Create(length, getPatternStates(Map, start, length));
+            patterns.AddInstance(pattern, start);
+
+            return pattern;
+        }
+
+        /// <summary>
+        /// Uses a pattern at a time, replacing the hitsounds there.
+        /// </summary>
+        /// <returns>
+        /// The number of hitsounds of the pattern which couldn't be placed, as there were not enough (or no) hit objects at their time,
+        /// or <c>null</c> if the pattern would overlap a place where a pattern is already used.
+        /// </returns>
+        public int? PlacePattern(HitsoundPattern pattern, double time)
+        {
+            if (patterns == null || patterns.Overlaps(time, time + pattern.Length))
+                return null;
+
+            var states = GetPatternStates(pattern);
+            int dropped = 0;
+
+            suppressPatternSync = true;
+
+            try
+            {
+                perform(changed => dropped = applyPattern(states, time, pattern.Length, changed));
+            }
+            finally
+            {
+                suppressPatternSync = false;
+            }
+
+            patterns.AddInstance(pattern, time);
+            return dropped;
+        }
+
+        private Dictionary<HitsoundPatternInstance, IReadOnlyList<HitsoundColumnState>>? capturePatternInstances()
+        {
+            if (patterns == null || patterns.Instances.Count == 0)
+                return null;
+
+            var current = HitsoundMap.Create(editorBeatmap.HitObjects, rulesetId);
+
+            return patterns.Instances.ToDictionary(i => i, i => getPatternStates(current, i.StartTime, patterns.GetEndTime(i) - i.StartTime));
+        }
+
+        /// <summary>
+        /// Copies the hitsounds of places where a pattern is used which have been changed to the other places where it is used.
+        /// If several places of the same pattern have been changed, the first one wins.
+        /// </summary>
+        /// <param name="before">The hitsounds of the places before the change.</param>
+        /// <param name="changed">The objects which have been changed.</param>
+        private void syncPatterns(Dictionary<HitsoundPatternInstance, IReadOnlyList<HitsoundColumnState>> before, HashSet<HitObject> changed)
+        {
+            Debug.Assert(patterns != null);
+
+            var current = HitsoundMap.Create(editorBeatmap.HitObjects, rulesetId);
+            var synced = new HashSet<Guid>();
+
+            foreach (var (instance, previous) in before)
+            {
+                var pattern = patterns.GetPattern(instance.PatternID);
+
+                if (pattern == null || synced.Contains(pattern.ID))
+                    continue;
+
+                var states = getPatternStates(current, instance.StartTime, pattern.Length);
+
+                if (HitsoundPatternStates.AreEqual(states, previous))
+                    continue;
+
+                synced.Add(pattern.ID);
+                patterns.SetStates(pattern, states);
+
+                foreach (var other in patterns.GetInstances(pattern).Where(i => i != instance).ToList())
+                    applyPattern(states, other.StartTime, pattern.Length, changed);
+            }
+        }
+
+        /// <summary>
+        /// Replaces the hitsounds of a time range by the hitsounds of a pattern.
+        /// In <see cref="HitsoundDifficultyMode"/>, objects are created and deleted as needed.
+        /// </summary>
+        /// <param name="states">The hitsounds of the pattern, with times relative to its start.</param>
+        /// <param name="startTime">The start of the time range.</param>
+        /// <param name="length">The length of the time range.</param>
+        /// <param name="changed">The objects which have been changed.</param>
+        /// <returns>The number of hitsounds which couldn't be applied, as there were not enough (or no) hit objects at their time.</returns>
+        private int applyPattern(IReadOnlyList<HitsoundColumnState> states, double startTime, double length, HashSet<HitObject> changed)
+        {
+            var absolute = states.Select(s => s.WithTime(s.Time + startTime)).ToList();
+
+            if (HitsoundDifficultyMode.Value)
+            {
+                var current = HitsoundMap.Create(editorBeatmap.HitObjects, rulesetId);
+
+                foreach (var column in getColumnsInRange(current, startTime, length).ToList())
+                {
+                    if (!absolute.Any(s => Math.Abs(s.Time - column.Time) <= PASTE_LENIENCY))
+                        deleteColumn(column, changed);
+                }
+
+                foreach (var state in absolute)
+                {
+                    var column = current.FindClosestColumn(state.Time, PASTE_LENIENCY);
+                    int missing = state.RequiredTargetCount - (column?.Targets.Count ?? 0);
+
+                    if (missing > 0)
+                        createObjects(column?.Time ?? state.Time, missing, s => s);
+                }
+            }
+
+            var map = HitsoundMap.Create(editorBeatmap.HitObjects, rulesetId);
+            var result = HitsoundCopier.Copy(absolute, Array.Empty<HitsoundBodyState>(), getColumnsInRange(map, startTime, length), Array.Empty<HitsoundBody>(), pattern_copy_options);
+
+            changed.UnionWith(result.ChangedHitObjects);
+
+            // hitsounds without any column at their time don't count as copied by the copier, so are counted here.
+            return result.DroppedHitsounds + absolute.Count(s => map.FindClosestColumn(s.Time, PASTE_LENIENCY) == null);
+        }
+
+        private static IReadOnlyList<HitsoundColumnState> getPatternStates(HitsoundMap map, double startTime, double length)
+            => getColumnsInRange(map, startTime, length).Select(c => c.GetState().WithTime(c.Time - startTime)).ToList();
+
+        /// <summary>
+        /// The columns from <paramref name="startTime"/> to before <paramref name="startTime"/> + <paramref name="length"/>.
+        /// </summary>
+        private static IEnumerable<HitsoundColumn> getColumnsInRange(HitsoundMap map, double startTime, double length)
+            => map.GetColumnsInRange(startTime - PASTE_LENIENCY, startTime + length - PASTE_LENIENCY)
+                  .Where(c => c.Time < startTime + length - PASTE_LENIENCY);
+
+        #endregion
+
         #region Helpers
 
         private void perform(Action<HashSet<HitObject>> action)
@@ -1034,7 +1235,12 @@ namespace osu.Game.Screens.Edit.Hitsounding
 
             try
             {
+                var patternStates = suppressPatternSync ? null : capturePatternInstances();
+
                 action(changed);
+
+                if (patternStates != null)
+                    syncPatterns(patternStates, changed);
 
                 foreach (var h in changed)
                 {

@@ -50,6 +50,13 @@ namespace osu.Game.Screens.Edit.Hitsounding
         [Cached]
         private readonly HitsoundPlayback playback = new HitsoundPlayback();
 
+        private HitsoundPatterns patterns = null!;
+
+        /// <summary>
+        /// The hitsound patterns of the difficulty.
+        /// </summary>
+        public HitsoundPatterns Patterns => patterns;
+
         private HitsoundTopBar topBar = null!;
         private Container gridContainer = null!;
         private HitsoundToolbox toolbox = null!;
@@ -86,6 +93,8 @@ namespace osu.Game.Screens.Edit.Hitsounding
             var metadata = editorBeatmap.BeatmapInfo.Metadata;
 
             dependencies.Cache(new HitsoundLaneNames(parent.Get<Storage>(), editorBeatmap.BeatmapInfo.BeatmapSet?.ID ?? Guid.Empty, $@"{metadata.Artist} - {metadata.Title}"));
+            dependencies.Cache(patterns = new HitsoundPatterns(parent.Get<Storage>(), editorBeatmap.BeatmapInfo.ID,
+                $@"{metadata.Artist} - {metadata.Title} [{editorBeatmap.BeatmapInfo.DifficultyName}]"));
 
             return dependencies;
         }
@@ -300,6 +309,55 @@ namespace osu.Game.Screens.Edit.Hitsounding
 
             EditorBeatmap.EndChange();
         }
+
+        #endregion
+
+        #region Patterns
+
+        /// <summary>
+        /// Creates a hitsound pattern from the selected hitsounds (see <see cref="HitsoundEditor.CreatePattern"/>).
+        /// </summary>
+        public void CreatePatternFromSelection()
+        {
+            var columns = hitsoundEditor.SelectedColumns;
+
+            if (columns.Count == 0)
+            {
+                notify(SlopHitsoundEditorStrings.PatternNeedsSelection, FontAwesome.Solid.InfoCircle);
+                return;
+            }
+
+            if (hitsoundEditor.CreatePattern(columns) == null)
+                notify(SlopHitsoundEditorStrings.PatternOverlaps, FontAwesome.Solid.ExclamationTriangle);
+        }
+
+        /// <summary>
+        /// Places a hitsound pattern at the playhead, and selects its hitsounds there.
+        /// </summary>
+        public void PlacePattern(HitsoundPattern pattern)
+        {
+            double time = EditorBeatmap.SnapTime(clock.CurrentTime, null);
+
+            switch (hitsoundEditor.PlacePattern(pattern, time))
+            {
+                case null:
+                    notify(SlopHitsoundEditorStrings.PatternOverlaps, FontAwesome.Solid.ExclamationTriangle);
+                    return;
+
+                case > 0 and int dropped:
+                    notify(SlopHitsoundEditorStrings.PatternDropped(dropped), FontAwesome.Solid.ExclamationTriangle);
+                    break;
+            }
+
+            if (patterns.Instances.FirstOrDefault(i => i.PatternID == pattern.ID && Math.Abs(i.StartTime - time) < 1) is HitsoundPatternInstance instance)
+                SelectPatternInstance(instance);
+        }
+
+        /// <summary>
+        /// Selects the hitsounds at a place where a pattern is used.
+        /// </summary>
+        public void SelectPatternInstance(HitsoundPatternInstance instance)
+            => hitsoundEditor.SetSelection(hitsoundEditor.GetPatternColumns(instance).Select(c => c.Key));
 
         #endregion
 

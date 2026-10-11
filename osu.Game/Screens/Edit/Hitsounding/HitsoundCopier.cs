@@ -23,10 +23,22 @@ namespace osu.Game.Screens.Edit.Hitsounding
         /// <param name="target">The hitsounds of the beatmap to copy onto. The hit objects are modified directly.</param>
         /// <param name="options">The options.</param>
         public static HitsoundCopyResult Copy(IReadOnlyList<HitsoundColumnState> source, IReadOnlyList<HitsoundBodyState> sourceBodies, HitsoundMap target, HitsoundCopyOptions options)
+            => Copy(source, sourceBodies, target.Columns, target.Bodies, options);
+
+        /// <summary>
+        /// Copies the given hitsounds onto some of the hitsounds of a beatmap (e.g. the ones in a time range).
+        /// </summary>
+        /// <param name="source">The hitsounds to copy, ordered by time.</param>
+        /// <param name="sourceBodies">The slider body hitsounds to copy, ordered by start time.</param>
+        /// <param name="targetColumns">The hitsounds to copy onto. The hit objects are modified directly.</param>
+        /// <param name="targetBodies">The slider bodies to copy onto.</param>
+        /// <param name="options">The options.</param>
+        public static HitsoundCopyResult Copy(IReadOnlyList<HitsoundColumnState> source, IReadOnlyList<HitsoundBodyState> sourceBodies,
+                                              IEnumerable<HitsoundColumn> targetColumns, IEnumerable<HitsoundBody> targetBodies, HitsoundCopyOptions options)
         {
             var result = new HitsoundCopyResult();
 
-            foreach (var column in target.Columns)
+            foreach (var column in targetColumns)
             {
                 var state = findClosest(source, s => s.Time, column.Time, options.Leniency);
 
@@ -38,7 +50,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
 
             if (options.CopySliderBodies)
             {
-                foreach (var body in target.Bodies)
+                foreach (var body in targetBodies)
                 {
                     // bodies without a counterpart are left alone even when overwriting, as most hitsound difficulties don't have sliders.
                     var state = findClosest(sourceBodies, s => s.StartTime, body.StartTime, options.Leniency);

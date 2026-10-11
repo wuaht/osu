@@ -105,6 +105,10 @@ namespace osu.Game.Screens.Edit.Hitsounding
                                 {
                                     Child = new TargetTools(),
                                 },
+                                new ToolboxGroup(SlopHitsoundEditorStrings.Patterns)
+                                {
+                                    Child = new PatternTools(),
+                                },
                                 new ToolboxGroup(SlopHitsoundEditorStrings.HitsoundDifficulty)
                                 {
                                     Child = new HitsoundDifficultyTools(),

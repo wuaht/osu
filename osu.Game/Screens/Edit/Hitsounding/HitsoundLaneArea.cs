@@ -53,6 +53,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
             InternalChildren = new Drawable[]
             {
                 rowContainer = new Container { RelativeSizeAxes = Axes.Both },
+                new HitsoundPatternRegions(),
                 new HitsoundTicks(0.6f),
                 bodyContainer = new Container<HitsoundBodyPiece> { RelativeSizeAxes = Axes.Both },
                 columnContainer = new Container<HitsoundColumnPiece> { RelativeSizeAxes = Axes.Both },

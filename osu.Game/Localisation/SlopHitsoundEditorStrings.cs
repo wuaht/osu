@@ -655,6 +655,93 @@ Alt + scroll to zoom. Ctrl + click a lane name to preview the skin's sample inst
         /// </summary>
         public static LocalisableString None => new TranslatableString(getKey(@"none"), @"None");
 
+        /// <summary>
+        /// "Patterns"
+        /// </summary>
+        public static LocalisableString Patterns => new TranslatableString(getKey(@"patterns"), @"Patterns");
+
+        /// <summary>
+        /// "Create pattern from selection"
+        /// </summary>
+        public static LocalisableString CreatePattern => new TranslatableString(getKey(@"create_pattern"), @"Create pattern from selection");
+
+        /// <summary>
+        /// "Turns the selected hitsounds into a pattern, which covers whole beats from the first selected hitsound on.
+        /// Place the pattern at other parts of the song: changing the hitsounds of one place changes all others."
+        /// </summary>
+        public static LocalisableString CreatePatternTooltip => new TranslatableString(getKey(@"create_pattern_tooltip"),
+            "Turns the selected hitsounds into a pattern, which covers whole beats from the first selected hitsound on.\nPlace the pattern at other parts of the song: changing the hitsounds of one place changes all others.");
+
+        /// <summary>
+        /// "Place"
+        /// </summary>
+        public static LocalisableString PlacePattern => new TranslatableString(getKey(@"place_pattern"), @"Place");
+
+        /// <summary>
+        /// "Places the pattern at the playhead, replacing the hitsounds there."
+        /// </summary>
+        public static LocalisableString PlacePatternTooltip => new TranslatableString(getKey(@"place_pattern_tooltip"), @"Places the pattern at the playhead, replacing the hitsounds there.");
+
+        /// <summary>
+        /// "Delete pattern"
+        /// </summary>
+        public static LocalisableString DeletePattern => new TranslatableString(getKey(@"delete_pattern"), @"Delete pattern");
+
+        /// <summary>
+        /// "Deletes the pattern. Its hitsounds are kept."
+        /// </summary>
+        public static LocalisableString DeletePatternTooltip => new TranslatableString(getKey(@"delete_pattern_tooltip"), @"Deletes the pattern. Its hitsounds are kept.");
+
+        /// <summary>
+        /// "Remove from here"
+        /// </summary>
+        public static LocalisableString RemovePatternInstance => new TranslatableString(getKey(@"remove_pattern_instance"), @"Remove from here");
+
+        /// <summary>
+        /// "Select hitsounds"
+        /// </summary>
+        public static LocalisableString SelectPatternHitsounds => new TranslatableString(getKey(@"select_pattern_hitsounds"), @"Select hitsounds");
+
+        /// <summary>
+        /// "Place again at playhead"
+        /// </summary>
+        public static LocalisableString PlacePatternAgain => new TranslatableString(getKey(@"place_pattern_again"), @"Place again at playhead");
+
+        /// <summary>
+        /// "No patterns yet. Select hitsounds and create a pattern from them to reuse them in other parts of the song."
+        /// </summary>
+        public static LocalisableString NoPatterns => new TranslatableString(getKey(@"no_patterns"),
+            @"No patterns yet. Select hitsounds and create a pattern from them to reuse them in other parts of the song.");
+
+        /// <summary>
+        /// "Select the hitsounds to create a pattern from."
+        /// </summary>
+        public static LocalisableString PatternNeedsSelection => new TranslatableString(getKey(@"pattern_needs_selection"), @"Select the hitsounds to create a pattern from.");
+
+        /// <summary>
+        /// "Patterns can't overlap each other."
+        /// </summary>
+        public static LocalisableString PatternOverlaps => new TranslatableString(getKey(@"pattern_overlaps"), @"Patterns can't overlap each other.");
+
+        /// <summary>
+        /// "{0} hitsounds of the pattern couldn't be placed, as there are not enough hit objects at their time."
+        /// </summary>
+        public static LocalisableString PatternDropped(int count) => new TranslatableString(getKey(@"pattern_dropped"),
+            @"{0} hitsounds of the pattern couldn't be placed, as there are not enough hit objects at their time.", count);
+
+        /// <summary>
+        /// "Used {0}x · {1} beats"
+        /// </summary>
+        public static LocalisableString PatternUsage(int count, string beats) => new TranslatableString(getKey(@"pattern_usage"), @"Used {0}x · {1} beats", count, beats);
+
+        /// <summary>
+        /// "{0}
+        /// Click to select its hitsounds, double click to seek to it, right click for more.
+        /// Changing the hitsounds here changes all places where the pattern is used."
+        /// </summary>
+        public static LocalisableString PatternInstanceTooltip(string name) => new TranslatableString(getKey(@"pattern_instance_tooltip"),
+            "{0}:\nClick to select its hitsounds, double click to seek to it, right click for more.\nChanging the hitsounds here changes all places where the pattern is used.", name);
+
         private static string getKey(string key) => $@"{prefix}:{key}";
     }
 }

@@ -84,11 +84,26 @@ namespace osu.Game.Screens.Edit.Hitsounding
                         },
                         RowDimensions = new[]
                         {
+                            new Dimension(GridSizeMode.Absolute, HitsoundPatternStrip.HEIGHT),
                             new Dimension(),
                             new Dimension(GridSizeMode.Absolute, volume_height),
                         },
                         Content = new[]
                         {
+                            new Drawable[]
+                            {
+                                new HitsoundHeaderCell
+                                {
+                                    Child = new OsuSpriteText
+                                    {
+                                        Anchor = Anchor.CentreLeft,
+                                        Origin = Anchor.CentreLeft,
+                                        Text = SlopHitsoundEditorStrings.Patterns,
+                                        Font = OsuFont.Default.With(size: 13, weight: FontWeight.Bold),
+                                    },
+                                },
+                                new HitsoundPatternStrip(),
+                            },
                             new Drawable[]
                             {
                                 new HitsoundLaneHeaders(),
@@ -158,15 +173,16 @@ namespace osu.Game.Screens.Edit.Hitsounding
 
                 grid.RowDimensions = new[]
                 {
+                    new Dimension(GridSizeMode.Absolute, HitsoundPatternStrip.HEIGHT),
                     new Dimension(),
                     new Dimension(GridSizeMode.Absolute, volumeHeight),
                 };
             }
 
             float wantedHeight = hitsoundEditor.VisibleLanes.Count * LANE_HEIGHT;
-            float availableHeight = DrawHeight - min_vertical_margin * 2 - volumeHeight;
+            float availableHeight = DrawHeight - min_vertical_margin * 2 - volumeHeight - HitsoundPatternStrip.HEIGHT;
 
-            lanes.Height = Math.Max(0, Math.Min(wantedHeight, availableHeight)) + volumeHeight;
+            lanes.Height = Math.Max(0, Math.Min(wantedHeight, availableHeight)) + volumeHeight + HitsoundPatternStrip.HEIGHT;
         }
     }
 }
