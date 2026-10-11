@@ -432,6 +432,29 @@ namespace osu.Game.Screens.Edit.Hitsounding
             EditorBeatmap.EndChange();
         }
 
+        /// <summary>
+        /// Moves a place where a pattern is used, along with its hitsounds, to another (snapped) time (see <see cref="HitsoundEditor.MovePatternOccurrence"/>).
+        /// </summary>
+        public void MovePatternOccurrence(HitsoundPatternOccurrence occurrence, double startTime)
+        {
+            EditorBeatmap.BeginChange();
+            bool moved = hitsoundEditor.MovePatternOccurrence(occurrence, EditorBeatmap.SnapTime(startTime, null));
+            EditorBeatmap.EndChange();
+
+            if (!moved && Math.Abs(startTime - occurrence.StartTime) >= 1)
+                notify(SlopHitsoundEditorStrings.PatternOverlaps, FontAwesome.Solid.ExclamationTriangle);
+        }
+
+        /// <summary>
+        /// Stops using a pattern at a place (see <see cref="HitsoundEditor.RemovePatternOccurrence"/>).
+        /// </summary>
+        public void RemovePatternOccurrence(HitsoundPatternOccurrence occurrence, bool keepHitsounds)
+        {
+            EditorBeatmap.BeginChange();
+            hitsoundEditor.RemovePatternOccurrence(occurrence, keepHitsounds);
+            EditorBeatmap.EndChange();
+        }
+
         #endregion
 
         #region Clipboard

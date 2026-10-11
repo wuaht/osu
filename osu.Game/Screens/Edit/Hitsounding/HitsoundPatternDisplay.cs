@@ -19,6 +19,7 @@ using osu.Game.Graphics;
 using osu.Game.Graphics.Sprites;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Localisation;
+using osuTK.Input;
 
 namespace osu.Game.Screens.Edit.Hitsounding
 {
@@ -78,8 +79,8 @@ namespace osu.Game.Screens.Edit.Hitsounding
 
             foreach (var (occurrence, clip) in clipsByOccurrence)
             {
-                float start = TimeToX(occurrence.StartTime);
-                float end = TimeToX(occurrence.EndTime);
+                float start = TimeToX(occurrence.StartTime + clip.DragOffset);
+                float end = TimeToX(occurrence.EndTime + clip.DragOffset);
 
                 // clips far outside of the visible area aren't drawn.
                 clip.Alpha = end < -20 || start > DrawWidth + 20 ? 0 : 1;
@@ -119,7 +120,20 @@ namespace osu.Game.Screens.Edit.Hitsounding
             [Resolved]
             private EditorClock clock { get; set; } = null!;
 
+            [Resolved]
+            private HitsoundTimeline timeline { get; set; } = null!;
+
+            [Resolved]
+            private EditorBeatmap editorBeatmap { get; set; } = null!;
+
             private Box fill = null!;
+
+            /// <summary>
+            /// How far the clip is being dragged from its place, snapped to the beat divisor.
+            /// </summary>
+            public double DragOffset { get; private set; }
+
+            private float dragDistance;
 
             public InstanceClip(HitsoundPatternOccurrence occurrence)
             {
@@ -194,6 +208,34 @@ namespace osu.Game.Screens.Edit.Hitsounding
                 base.OnHoverLost(e);
             }
 
+            protected override bool OnDragStart(DragStartEvent e)
+            {
+                if (e.Button != MouseButton.Left)
+                    return false;
+
+                dragDistance = 0;
+                DragOffset = 0;
+                return true;
+            }
+
+            protected override void OnDrag(DragEvent e)
+            {
+                // like clips in FL Studio, dragging moves the pattern (with its hitsounds) to another place.
+                dragDistance += e.Delta.X;
+
+                double target = editorBeatmap.SnapTime(occurrence.StartTime + timeline.PixelsToDuration(dragDistance), null);
+                DragOffset = target - occurrence.StartTime;
+            }
+
+            protected override void OnDragEnd(DragEndEvent e)
+            {
+                double offset = DragOffset;
+                DragOffset = 0;
+
+                if (Math.Abs(offset) >= 1)
+                    screen.MovePatternOccurrence(occurrence, occurrence.StartTime + offset);
+            }
+
             protected override bool OnClick(ClickEvent e)
             {
                 screen.SelectPatternOccurrence(occurrence);
@@ -212,7 +254,8 @@ namespace osu.Game.Screens.Edit.Hitsounding
                 new OsuMenuItem(SlopHitsoundEditorStrings.PlacePatternAgain, MenuItemType.Standard, () => screen.PlacePattern(pattern)),
                 new OsuMenuItem(SlopHitsoundEditorStrings.MakePatternUnique, MenuItemType.Standard, () => screen.MakePatternUnique(occurrence)),
                 new OsuMenuItem(occurrence.Parent != null ? SlopHitsoundEditorStrings.RemoveSubPattern : SlopHitsoundEditorStrings.RemovePatternInstance, MenuItemType.Destructive,
-                    () => patterns.Remove(occurrence)),
+                    () => screen.RemovePatternOccurrence(occurrence, keepHitsounds: false)),
+                new OsuMenuItem(SlopHitsoundEditorStrings.UnlinkPatternInstance, MenuItemType.Standard, () => screen.RemovePatternOccurrence(occurrence, keepHitsounds: true)),
                 new OsuMenuItem(SlopHitsoundEditorStrings.DeletePattern, MenuItemType.Destructive, () => patterns.Delete(pattern)),
             };
         }

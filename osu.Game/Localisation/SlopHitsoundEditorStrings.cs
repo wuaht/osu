@@ -742,6 +742,11 @@ Alt + scroll to zoom. Ctrl + click a lane name to preview the skin's sample inst
         public static LocalisableString MakePatternUnique => new TranslatableString(getKey(@"make_pattern_unique"), @"Make unique");
 
         /// <summary>
+        /// "Unlink here (keep hitsounds)"
+        /// </summary>
+        public static LocalisableString UnlinkPatternInstance => new TranslatableString(getKey(@"unlink_pattern_instance"), @"Unlink here (keep hitsounds)");
+
+        /// <summary>
         /// "Remove from containing pattern"
         /// </summary>
         public static LocalisableString RemoveSubPattern => new TranslatableString(getKey(@"remove_sub_pattern"), @"Remove from containing pattern");
@@ -759,12 +764,12 @@ Alt + scroll to zoom. Ctrl + click a lane name to preview the skin's sample inst
 
         /// <summary>
         /// "{0}:
-        /// Click to select its hitsounds, double click to seek to it, right click for more (e.g. make unique).
+        /// Click to select its hitsounds, drag to move it, double click to seek to it, right click for more (e.g. make unique).
         /// Changing the hitsounds here changes all places where the pattern is used.
         /// Create or place a pattern inside it to use it as a sub-pattern."
         /// </summary>
         public static LocalisableString PatternInstanceTooltip(string name) => new TranslatableString(getKey(@"pattern_instance_tooltip"),
-            "{0}:\nClick to select its hitsounds, double click to seek to it, right click for more (e.g. make unique).\nChanging the hitsounds here changes all places where the pattern is used.\nCreate or place a pattern inside it to use it as a sub-pattern.", name);
+            "{0}:\nClick to select its hitsounds, drag to move it, double click to seek to it, right click for more (e.g. make unique).\nChanging the hitsounds here changes all places where the pattern is used.\nCreate or place a pattern inside it to use it as a sub-pattern.", name);
 
         /// <summary>
         /// "{0} (in {1})"

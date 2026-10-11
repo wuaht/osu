@@ -96,8 +96,11 @@ namespace osu.Game.Screens.Edit.Hitsounding
         /// <summary>
         /// Whether a time range overlaps a place where a pattern is used directly in the song.
         /// </summary>
-        public bool Overlaps(double startTime, double endTime)
-            => instances.Any(i => i.StartTime < endTime - HitsoundEditor.PASTE_LENIENCY && GetEndTime(i) > startTime + HitsoundEditor.PASTE_LENIENCY);
+        /// <param name="startTime">The start of the time range.</param>
+        /// <param name="endTime">The end of the time range.</param>
+        /// <param name="except">A place which isn't considered, e.g. the one being moved.</param>
+        public bool Overlaps(double startTime, double endTime, HitsoundPatternInstance? except = null)
+            => instances.Any(i => i != except && i.StartTime < endTime - HitsoundEditor.PASTE_LENIENCY && GetEndTime(i) > startTime + HitsoundEditor.PASTE_LENIENCY);
 
         /// <summary>
         /// The innermost place where a pattern is used which contains a whole time range, in which a sub-pattern could be used for the range.
@@ -137,14 +140,19 @@ namespace osu.Game.Screens.Edit.Hitsounding
         /// <summary>
         /// Whether a sub-pattern of a length fits into a pattern at an offset, without overlapping the other sub-patterns there.
         /// </summary>
-        public bool FitsSubPattern(HitsoundPattern parent, double offset, double length)
+        /// <param name="parent">The pattern which would contain the sub-pattern.</param>
+        /// <param name="offset">The time from the start of <paramref name="parent"/> at which the sub-pattern would start.</param>
+        /// <param name="length">The length of the sub-pattern.</param>
+        /// <param name="except">A sub-pattern which isn't considered, e.g. the one being moved.</param>
+        public bool FitsSubPattern(HitsoundPattern parent, double offset, double length, HitsoundSubPattern? except = null)
         {
             double end = offset + length;
 
             if (offset < -HitsoundEditor.PASTE_LENIENCY || end > parent.Length + HitsoundEditor.PASTE_LENIENCY)
                 return false;
 
-            return !parent.SubPatterns.Any(s => s.Offset < end - HitsoundEditor.PASTE_LENIENCY
+            return !parent.SubPatterns.Any(s => s != except
+                                                && s.Offset < end - HitsoundEditor.PASTE_LENIENCY
                                                 && s.Offset + (GetPattern(s.PatternID)?.Length ?? 0) > offset + HitsoundEditor.PASTE_LENIENCY);
         }
 
@@ -240,7 +248,58 @@ namespace osu.Game.Screens.Edit.Hitsounding
         }
 
         /// <summary>
-        /// Stops using a pattern at a place. Its hitsounds are kept.
+        /// Moves a place where a pattern is used to another time. Only the place is moved, its hitsounds have to be moved separately.
+        /// For a sub-pattern, this moves it within the pattern containing it, so in all places where that pattern is used.
+        /// </summary>
+        /// <param name="occurrence">The place.</param>
+        /// <param name="startTime">The new start time.</param>
+        public void Move(HitsoundPatternOccurrence occurrence, double startTime)
+        {
+            if (occurrence.Instance != null)
+            {
+                int index = instances.IndexOf(occurrence.Instance);
+
+                if (index < 0)
+                    return;
+
+                instances[index] = occurrence.Instance with { StartTime = startTime };
+                sortInstances();
+            }
+            else if (occurrence.Parent != null && occurrence.SubPattern != null)
+            {
+                int index = occurrence.Parent.SubPatterns.IndexOf(occurrence.SubPattern);
+
+                if (index < 0)
+                    return;
+
+                double parentStart = occurrence.StartTime - occurrence.SubPattern.Offset;
+
+                occurrence.Parent.SubPatterns[index] = occurrence.SubPattern with { Offset = Math.Max(0, startTime - parentStart) };
+                occurrence.Parent.SubPatterns.Sort((a, b) => a.Offset.CompareTo(b.Offset));
+            }
+
+            onChanged();
+        }
+
+        /// <summary>
+        /// Whether a place where a pattern is used can be moved to another time without overlapping other places (or leaving the pattern containing it).
+        /// </summary>
+        public bool CanMove(HitsoundPatternOccurrence occurrence, double startTime)
+        {
+            if (occurrence.Instance != null)
+                return !Overlaps(startTime, startTime + occurrence.Pattern.Length, occurrence.Instance);
+
+            if (occurrence.Parent != null && occurrence.SubPattern != null)
+            {
+                double parentStart = occurrence.StartTime - occurrence.SubPattern.Offset;
+                return FitsSubPattern(occurrence.Parent, startTime - parentStart, occurrence.Pattern.Length, occurrence.SubPattern);
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Stops using a pattern at a place. Its hitsounds have to be removed separately (see <see cref="HitsoundEditor.RemovePatternOccurrence"/>).
         /// For a sub-pattern, this removes it from all places where the pattern containing it is used.
         /// </summary>
         public void Remove(HitsoundPatternOccurrence occurrence)

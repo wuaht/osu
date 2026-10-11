@@ -7,6 +7,7 @@ using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Game.Overlays;
 using osu.Game.Screens.Edit.Components.Timelines.Summary.Parts;
+using osu.Game.Screens.Edit.Hitsounding;
 using osuTK;
 
 namespace osu.Game.Screens.Edit.Components.Timelines.Summary
@@ -54,6 +55,13 @@ namespace osu.Game.Screens.Edit.Components.Timelines.Summary
                             Size = new Vector2(5)
                         },
                     }
+                },
+                // only shows something while the hitsound screen is open.
+                new HitsoundPatternSummaryPart
+                {
+                    Anchor = Anchor.Centre,
+                    Origin = Anchor.Centre,
+                    RelativeSizeAxes = Axes.Both,
                 },
                 new BreakPart
                 {

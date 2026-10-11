@@ -479,6 +479,26 @@ namespace osu.Game.Tests.Slop
             AddAssert("pattern can't contain itself", () => hitsoundEditor.PlacePattern(patterns.Patterns.First(p => p.SubPatterns.Count > 0), 0), () => Is.Null);
         }
 
+        [Test]
+        public void TestMoveAndRemovePattern()
+        {
+            AddStep("add objects for second place", () => EditorBeatmap.AddRange(new[] { createCircle(1000), createCircle(1500) }));
+            AddStep("select first two hitsounds", () => hitsoundEditor.SetSelection(new[] { 0, 500 }));
+            AddStep("create pattern", () => screen!.CreatePatternFromSelection());
+
+            AddStep("move pattern to second place", () => screen!.MovePatternOccurrence(patterns.Occurrences.Single(), 1000));
+            AddAssert("pattern moved", () => patterns.Instances.Single().StartTime, () => Is.EqualTo(1000));
+            AddAssert("whistle moved along", () => hasSample(objectsAt(1500).Single(), HitSampleInfo.HIT_WHISTLE));
+            AddAssert("whistle removed at old place", () => !hasSample(objectsAt(500).Single(), HitSampleInfo.HIT_WHISTLE));
+
+            AddStep("remove pattern from here", () => screen!.RemovePatternOccurrence(patterns.Occurrences.Single(), keepHitsounds: false));
+            AddAssert("pattern not used anymore", () => patterns.Occurrences.Count, () => Is.EqualTo(0));
+            AddAssert("its hitsounds removed", () => !hasSample(objectsAt(1500).Single(), HitSampleInfo.HIT_WHISTLE));
+
+            AddStep("undo", () => Editor.Undo());
+            AddAssert("pattern and hitsounds back", () => patterns.Occurrences.Count == 1 && hasSample(objectsAt(1500).Single(), HitSampleInfo.HIT_WHISTLE));
+        }
+
         private IEnumerable<HitObject> objectsAt(double time) => EditorBeatmap.HitObjects.Where(h => Math.Abs(h.StartTime - time) < 1);
 
         [Test]

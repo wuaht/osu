@@ -1461,6 +1461,109 @@ namespace osu.Game.Screens.Edit.Hitsounding
         public HitsoundPattern? MakePatternUnique(HitsoundPatternOccurrence occurrence)
             => patterns?.MakeUnique(occurrence, GetPatternStates(occurrence));
 
+        /// <summary>
+        /// Moves a place where a pattern is used, along with its hitsounds, to another time.
+        /// The hitsounds at the old place are removed (in <see cref="HitsoundDifficultyMode"/> by deleting the objects, otherwise by removing their additions).
+        /// For a sub-pattern, it is moved in all places where the pattern containing it is used.
+        /// </summary>
+        /// <returns>Whether the place has been moved, which isn't possible if it would overlap other places.</returns>
+        public bool MovePatternOccurrence(HitsoundPatternOccurrence occurrence, double startTime)
+        {
+            if (patterns == null || Math.Abs(startTime - occurrence.StartTime) < 1 || !patterns.CanMove(occurrence, startTime))
+                return false;
+
+            var states = GetPatternStates(occurrence);
+            var places = getPlacesOf(occurrence);
+            double delta = startTime - occurrence.StartTime;
+            double length = occurrence.Pattern.Length;
+
+            suppressPatternSync = true;
+
+            try
+            {
+                perform(changed =>
+                {
+                    // all old places are cleared first, as the new places may overlap them.
+                    foreach (double place in places)
+                        clearRange(place, length, changed);
+
+                    foreach (double place in places)
+                        applyPattern(states, place + delta, length, changed);
+                });
+            }
+            finally
+            {
+                suppressPatternSync = false;
+            }
+
+            patterns.Move(occurrence, startTime);
+            return true;
+        }
+
+        /// <summary>
+        /// Stops using a pattern at a place, and removes its hitsounds there (in <see cref="HitsoundDifficultyMode"/> by deleting the objects, otherwise by removing their additions).
+        /// For a sub-pattern, it is removed from all places where the pattern containing it is used.
+        /// </summary>
+        /// <param name="occurrence">The place.</param>
+        /// <param name="keepHitsounds">Whether to keep the hitsounds, only unlinking them from the pattern.</param>
+        public void RemovePatternOccurrence(HitsoundPatternOccurrence occurrence, bool keepHitsounds)
+        {
+            if (patterns == null)
+                return;
+
+            if (!keepHitsounds)
+            {
+                var places = getPlacesOf(occurrence);
+
+                suppressPatternSync = true;
+
+                try
+                {
+                    perform(changed =>
+                    {
+                        foreach (double place in places)
+                            clearRange(place, occurrence.Pattern.Length, changed);
+                    });
+                }
+                finally
+                {
+                    suppressPatternSync = false;
+                }
+            }
+
+            patterns.Remove(occurrence);
+        }
+
+        /// <summary>
+        /// The start times of all places which change along with a place: the place itself, or for a sub-pattern, its places in all places of the pattern containing it.
+        /// </summary>
+        private List<double> getPlacesOf(HitsoundPatternOccurrence occurrence)
+        {
+            if (patterns == null || occurrence.Parent == null || occurrence.SubPattern == null)
+                return new List<double> { occurrence.StartTime };
+
+            return patterns.GetOccurrences(occurrence.Parent).Select(p => p.StartTime + occurrence.SubPattern.Offset).ToList();
+        }
+
+        /// <summary>
+        /// Removes the hitsounds of a time range: in <see cref="HitsoundDifficultyMode"/> by deleting the objects, otherwise by removing their additions.
+        /// </summary>
+        private void clearRange(double startTime, double length, HashSet<HitObject> changed)
+        {
+            var current = HitsoundMap.Create(editorBeatmap.HitObjects, rulesetId);
+
+            foreach (var column in getColumnsInRange(current, startTime, length).ToList())
+            {
+                if (HitsoundDifficultyMode.Value)
+                    deleteColumn(column, changed);
+                else
+                {
+                    foreach (var target in editableTargets(column))
+                        setSamples(target, HitsoundSamples.WithoutAdditions(target.Samples), changed);
+                }
+            }
+        }
+
         private List<(HitsoundPatternOccurrence occurrence, IReadOnlyList<HitsoundColumnState> states)>? capturePatternOccurrences()
         {
             if (patterns == null || patterns.Occurrences.Count == 0)
