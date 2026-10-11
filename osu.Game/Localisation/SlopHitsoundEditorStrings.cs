@@ -720,9 +720,20 @@ Alt + scroll to zoom. Ctrl + click a lane name to preview the skin's sample inst
         public static LocalisableString PatternNeedsSelection => new TranslatableString(getKey(@"pattern_needs_selection"), @"Select the hitsounds to create a pattern from.");
 
         /// <summary>
-        /// "Patterns can't overlap each other."
+        /// "Patterns can only overlap if one is completely inside the other (as a sub-pattern), and a pattern can't be placed inside itself."
         /// </summary>
-        public static LocalisableString PatternOverlaps => new TranslatableString(getKey(@"pattern_overlaps"), @"Patterns can't overlap each other.");
+        public static LocalisableString PatternOverlaps => new TranslatableString(getKey(@"pattern_overlaps"),
+            @"Patterns can only overlap if one is completely inside the other (as a sub-pattern), and a pattern can't be placed inside itself.");
+
+        /// <summary>
+        /// "Make unique"
+        /// </summary>
+        public static LocalisableString MakePatternUnique => new TranslatableString(getKey(@"make_pattern_unique"), @"Make unique");
+
+        /// <summary>
+        /// "Remove from containing pattern"
+        /// </summary>
+        public static LocalisableString RemoveSubPattern => new TranslatableString(getKey(@"remove_sub_pattern"), @"Remove from containing pattern");
 
         /// <summary>
         /// "{0} hitsounds of the pattern couldn't be placed, as there are not enough hit objects at their time."
@@ -736,12 +747,18 @@ Alt + scroll to zoom. Ctrl + click a lane name to preview the skin's sample inst
         public static LocalisableString PatternUsage(int count, string beats) => new TranslatableString(getKey(@"pattern_usage"), @"Used {0}x · {1} beats", count, beats);
 
         /// <summary>
-        /// "{0}
-        /// Click to select its hitsounds, double click to seek to it, right click for more.
-        /// Changing the hitsounds here changes all places where the pattern is used."
+        /// "{0}:
+        /// Click to select its hitsounds, double click to seek to it, right click for more (e.g. make unique).
+        /// Changing the hitsounds here changes all places where the pattern is used.
+        /// Create or place a pattern inside it to use it as a sub-pattern."
         /// </summary>
         public static LocalisableString PatternInstanceTooltip(string name) => new TranslatableString(getKey(@"pattern_instance_tooltip"),
-            "{0}:\nClick to select its hitsounds, double click to seek to it, right click for more.\nChanging the hitsounds here changes all places where the pattern is used.", name);
+            "{0}:\nClick to select its hitsounds, double click to seek to it, right click for more (e.g. make unique).\nChanging the hitsounds here changes all places where the pattern is used.\nCreate or place a pattern inside it to use it as a sub-pattern.", name);
+
+        /// <summary>
+        /// "{0} (in {1})"
+        /// </summary>
+        public static LocalisableString SubPatternName(string name, string parent) => new TranslatableString(getKey(@"sub_pattern_name"), @"{0} (in {1})", name, parent);
 
         private static string getKey(string key) => $@"{prefix}:{key}";
     }

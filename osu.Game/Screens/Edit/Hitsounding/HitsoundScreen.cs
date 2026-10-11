@@ -371,15 +371,20 @@ namespace osu.Game.Screens.Edit.Hitsounding
                     break;
             }
 
-            if (patterns.Instances.FirstOrDefault(i => i.PatternID == pattern.ID && Math.Abs(i.StartTime - time) < 1) is HitsoundPatternInstance instance)
-                SelectPatternInstance(instance);
+            if (patterns.GetOccurrences(pattern).FirstOrDefault(o => Math.Abs(o.StartTime - time) < 1) is HitsoundPatternOccurrence occurrence)
+                SelectPatternOccurrence(occurrence);
         }
 
         /// <summary>
         /// Selects the hitsounds at a place where a pattern is used.
         /// </summary>
-        public void SelectPatternInstance(HitsoundPatternInstance instance)
-            => hitsoundEditor.SetSelection(hitsoundEditor.GetPatternColumns(instance).Select(c => c.Key));
+        public void SelectPatternOccurrence(HitsoundPatternOccurrence occurrence)
+            => hitsoundEditor.SetSelection(hitsoundEditor.GetPatternColumns(occurrence).Select(c => c.Key));
+
+        /// <summary>
+        /// Makes a place use a copy of its pattern, such that it can be changed on its own (see <see cref="HitsoundEditor.MakePatternUnique"/>).
+        /// </summary>
+        public void MakePatternUnique(HitsoundPatternOccurrence occurrence) => hitsoundEditor.MakePatternUnique(occurrence);
 
         #endregion
 

@@ -19,6 +19,12 @@ namespace osu.Game.Screens.Edit.Hitsounding
     /// <param name="CustomIndex">The custom sample index.</param>
     public sealed record HitsoundColumnState(double Time, IReadOnlyList<string> NormalBanks, IReadOnlyList<HitsoundAdditionGroup> AdditionGroups, int Volume, int CustomIndex)
     {
+        /// <summary>
+        /// The exact samples of each target, if known. Unlike the summary above, they keep which target plays which sample from which custom sample set,
+        /// such that hitsound patterns can reproduce the hitsounds exactly (e.g. an addition played from another custom sample set than the hitnormal).
+        /// </summary>
+        public IReadOnlyList<IReadOnlyList<HitSampleInfo>>? TargetSamples { get; init; }
+
         public HitsoundColumnState WithTime(double time) => this with { Time = time };
 
         /// <summary>
@@ -44,7 +50,10 @@ namespace osu.Game.Screens.Edit.Hitsounding
                 normalBanks,
                 additionGroups,
                 lists.Count == 0 ? 100 : lists.Max(HitsoundSamples.GetVolume),
-                lists.Count == 0 ? 0 : HitsoundSamples.GetCustomIndex(lists[0]));
+                lists.Count == 0 ? 0 : HitsoundSamples.GetCustomIndex(lists[0]))
+            {
+                TargetSamples = lists.Select(l => (IReadOnlyList<HitSampleInfo>)l.ToList()).ToList(),
+            };
         }
     }
 

@@ -93,7 +93,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
 
             private string getBeats(HitsoundPattern pattern)
             {
-                var instance = patterns.GetInstances(pattern).FirstOrDefault();
+                var instance = patterns.GetOccurrences(pattern).FirstOrDefault();
                 double beatLength = editorBeatmap.ControlPointInfo.TimingPointAt(instance?.StartTime ?? 0).BeatLength;
 
                 return (pattern.Length / beatLength).ToString(@"0.##", CultureInfo.CurrentCulture);
@@ -180,7 +180,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
                                     },
                                     new OsuSpriteText
                                     {
-                                        Text = SlopHitsoundEditorStrings.PatternUsage(patterns.GetInstances(pattern).Count(), beats),
+                                        Text = SlopHitsoundEditorStrings.PatternUsage(patterns.GetOccurrences(pattern).Count(), beats),
                                         Font = OsuFont.Default.With(size: 11),
                                         Alpha = 0.7f,
                                     },

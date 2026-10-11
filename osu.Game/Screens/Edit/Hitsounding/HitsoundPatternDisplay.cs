@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using osu.Framework.Allocation;
@@ -32,7 +33,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
         private HitsoundPatterns patterns { get; set; } = null!;
 
         private readonly Container<InstanceClip> clips;
-        private readonly Dictionary<HitsoundPatternInstance, InstanceClip> clipsByInstance = new Dictionary<HitsoundPatternInstance, InstanceClip>();
+        private readonly List<(HitsoundPatternOccurrence occurrence, InstanceClip clip)> clipsByOccurrence = new List<(HitsoundPatternOccurrence, InstanceClip)>();
 
         public HitsoundPatternStrip()
         {
@@ -60,16 +61,14 @@ namespace osu.Game.Screens.Edit.Hitsounding
         private void updateClips()
         {
             clips.Clear();
-            clipsByInstance.Clear();
+            clipsByOccurrence.Clear();
 
-            foreach (var instance in patterns.Instances)
+            // sub-patterns are added last, such that they are drawn on top of (and receive input before) the patterns containing them.
+            foreach (var occurrence in patterns.Occurrences.OrderBy(o => o.Depth))
             {
-                if (patterns.GetPattern(instance.PatternID) is not HitsoundPattern pattern)
-                    continue;
-
-                var clip = new InstanceClip(pattern, instance);
+                var clip = new InstanceClip(occurrence);
                 clips.Add(clip);
-                clipsByInstance[instance] = clip;
+                clipsByOccurrence.Add((occurrence, clip));
             }
         }
 
@@ -77,15 +76,17 @@ namespace osu.Game.Screens.Edit.Hitsounding
         {
             base.Update();
 
-            foreach (var (instance, clip) in clipsByInstance)
+            foreach (var (occurrence, clip) in clipsByOccurrence)
             {
-                float start = TimeToX(instance.StartTime);
-                float end = TimeToX(patterns.GetEndTime(instance));
+                float start = TimeToX(occurrence.StartTime);
+                float end = TimeToX(occurrence.EndTime);
 
                 // clips far outside of the visible area aren't drawn.
                 clip.Alpha = end < -20 || start > DrawWidth + 20 ? 0 : 1;
                 clip.X = start;
                 clip.Width = end - start;
+                clip.Y = clip.Inset;
+                clip.Height = Math.Max(4, clips.ChildSize.Y - clip.Inset * 2);
             }
         }
 
@@ -101,8 +102,13 @@ namespace osu.Game.Screens.Edit.Hitsounding
         {
             private const float idle_alpha = 0.7f;
 
-            private readonly HitsoundPattern pattern;
-            private readonly HitsoundPatternInstance instance;
+            /// <summary>
+            /// How far sub-patterns are inset from the top and bottom for each level they are nested in.
+            /// </summary>
+            private const float inset_per_depth = 4;
+
+            private readonly HitsoundPatternOccurrence occurrence;
+            private HitsoundPattern pattern => occurrence.Pattern;
 
             [Resolved]
             private HitsoundScreen screen { get; set; } = null!;
@@ -115,13 +121,18 @@ namespace osu.Game.Screens.Edit.Hitsounding
 
             private Box fill = null!;
 
-            public InstanceClip(HitsoundPattern pattern, HitsoundPatternInstance instance)
+            public InstanceClip(HitsoundPatternOccurrence occurrence)
             {
-                this.pattern = pattern;
-                this.instance = instance;
+                this.occurrence = occurrence;
 
-                RelativeSizeAxes = Axes.Y;
+                // sub-patterns are drawn smaller, inside the clips of the patterns containing them.
+                Inset = Math.Min(occurrence.Depth * inset_per_depth, HEIGHT / 2 - 8);
             }
+
+            /// <summary>
+            /// The distance from the top and bottom of the strip.
+            /// </summary>
+            public readonly float Inset;
 
             [BackgroundDependencyLoader]
             private void load()
@@ -167,7 +178,9 @@ namespace osu.Game.Screens.Edit.Hitsounding
                 };
             }
 
-            public LocalisableString TooltipText => SlopHitsoundEditorStrings.PatternInstanceTooltip(pattern.Name);
+            public LocalisableString TooltipText => SlopHitsoundEditorStrings.PatternInstanceTooltip(occurrence.Parent != null
+                ? SlopHitsoundEditorStrings.SubPatternName(pattern.Name, occurrence.Parent.Name).ToString()
+                : pattern.Name);
 
             protected override bool OnHover(HoverEvent e)
             {
@@ -183,21 +196,23 @@ namespace osu.Game.Screens.Edit.Hitsounding
 
             protected override bool OnClick(ClickEvent e)
             {
-                screen.SelectPatternInstance(instance);
+                screen.SelectPatternOccurrence(occurrence);
                 return true;
             }
 
             protected override bool OnDoubleClick(DoubleClickEvent e)
             {
-                clock.SeekSmoothlyTo(instance.StartTime);
+                clock.SeekSmoothlyTo(occurrence.StartTime);
                 return true;
             }
 
             public MenuItem[] ContextMenuItems => new MenuItem[]
             {
-                new OsuMenuItem(SlopHitsoundEditorStrings.SelectPatternHitsounds, MenuItemType.Standard, () => screen.SelectPatternInstance(instance)),
+                new OsuMenuItem(SlopHitsoundEditorStrings.SelectPatternHitsounds, MenuItemType.Standard, () => screen.SelectPatternOccurrence(occurrence)),
                 new OsuMenuItem(SlopHitsoundEditorStrings.PlacePatternAgain, MenuItemType.Standard, () => screen.PlacePattern(pattern)),
-                new OsuMenuItem(SlopHitsoundEditorStrings.RemovePatternInstance, MenuItemType.Destructive, () => patterns.RemoveInstance(instance)),
+                new OsuMenuItem(SlopHitsoundEditorStrings.MakePatternUnique, MenuItemType.Standard, () => screen.MakePatternUnique(occurrence)),
+                new OsuMenuItem(occurrence.Parent != null ? SlopHitsoundEditorStrings.RemoveSubPattern : SlopHitsoundEditorStrings.RemovePatternInstance, MenuItemType.Destructive,
+                    () => patterns.Remove(occurrence)),
                 new OsuMenuItem(SlopHitsoundEditorStrings.DeletePattern, MenuItemType.Destructive, () => patterns.Delete(pattern)),
             };
         }
@@ -214,7 +229,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
         [Resolved]
         private HitsoundPatterns patterns { get; set; } = null!;
 
-        private readonly Dictionary<HitsoundPatternInstance, Container> regions = new Dictionary<HitsoundPatternInstance, Container>();
+        private readonly List<(HitsoundPatternOccurrence occurrence, Container region)> regions = new List<(HitsoundPatternOccurrence, Container)>();
 
         public HitsoundPatternRegions()
         {
@@ -236,10 +251,9 @@ namespace osu.Game.Screens.Edit.Hitsounding
             ClearInternal();
             regions.Clear();
 
-            foreach (var instance in patterns.Instances)
+            foreach (var occurrence in patterns.Occurrences)
             {
-                if (patterns.GetPattern(instance.PatternID) is not HitsoundPattern pattern)
-                    continue;
+                var pattern = occurrence.Pattern;
 
                 var region = new Container
                 {
@@ -272,7 +286,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
                 };
 
                 AddInternal(region);
-                regions[instance] = region;
+                regions.Add((occurrence, region));
             }
         }
 
@@ -280,10 +294,10 @@ namespace osu.Game.Screens.Edit.Hitsounding
         {
             base.Update();
 
-            foreach (var (instance, region) in regions)
+            foreach (var (occurrence, region) in regions)
             {
-                float start = timeline.TimeToX(instance.StartTime, DrawWidth);
-                float end = timeline.TimeToX(patterns.GetEndTime(instance), DrawWidth);
+                float start = timeline.TimeToX(occurrence.StartTime, DrawWidth);
+                float end = timeline.TimeToX(occurrence.EndTime, DrawWidth);
 
                 region.Alpha = end < 0 || start > DrawWidth ? 0 : 1;
                 region.X = start;

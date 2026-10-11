@@ -398,6 +398,68 @@ namespace osu.Game.Tests.Slop
         }
 
         [Test]
+        public void TestPatternKeepsCustomSampleSetsOfEachObject()
+        {
+            AddStep("stack objects with an addition from custom sample set 2", () =>
+            {
+                var carrier = createCircle(0);
+                carrier.Samples = new List<HitSampleInfo>
+                {
+                    new HitSampleInfo(HitSampleInfo.HIT_NORMAL, HitSampleInfo.BANK_NORMAL, suffix: "2", useBeatmapSamples: true),
+                    new HitSampleInfo(HitSampleInfo.HIT_CLAP, HitSampleInfo.BANK_SOFT, suffix: "2", useBeatmapSamples: true),
+                };
+
+                EditorBeatmap.AddRange(new HitObject[] { carrier, createCircle(1000), createCircle(1000), createCircle(1500) });
+            });
+            AddStep("select first two hitsounds", () => hitsoundEditor.SetSelection(new[] { 0, 500 }));
+            AddStep("create pattern", () => screen!.CreatePatternFromSelection());
+            AddStep("seek to second place", () => EditorClock.Seek(1000));
+            AddStep("place pattern", () => screen!.PlacePattern(patterns.Patterns.Single()));
+
+            AddAssert("clap placed from custom sample set 2", () => objectsAt(1000).Any(h => h.Samples.Any(s => s.Name == HitSampleInfo.HIT_CLAP && s.Suffix == "2")));
+            AddAssert("other object keeps the default samples", () => objectsAt(1000).Any(h => HitsoundSamples.GetCustomIndex(h.Samples) == 0));
+        }
+
+        [Test]
+        public void TestMakePatternUnique()
+        {
+            AddStep("add objects for second place", () => EditorBeatmap.AddRange(new[] { createCircle(1000), createCircle(1500) }));
+            AddStep("select first two hitsounds", () => hitsoundEditor.SetSelection(new[] { 0, 500 }));
+            AddStep("create pattern", () => screen!.CreatePatternFromSelection());
+            AddStep("seek to second place", () => EditorClock.Seek(1000));
+            AddStep("place pattern", () => screen!.PlacePattern(patterns.Patterns.Single()));
+
+            AddStep("make second place unique", () => screen!.MakePatternUnique(patterns.Occurrences.Single(o => o.StartTime == 1000)));
+            AddAssert("two patterns", () => patterns.Patterns.Count, () => Is.EqualTo(2));
+            AddAssert("each used once", () => patterns.Patterns.All(p => patterns.GetOccurrences(p).Count() == 1));
+
+            AddStep("add clap at second place", () => hitsoundEditor.ToggleAddition(new[] { hitsoundEditor.Map.GetColumn(1000)! }, HitSampleInfo.HIT_CLAP));
+            AddAssert("first place unchanged", () => !hasSample(objectsAt(0).Single(), HitSampleInfo.HIT_CLAP));
+        }
+
+        [Test]
+        public void TestSubPatternIsUsedInAllPlacesOfItsPattern()
+        {
+            AddStep("add objects for second place", () => EditorBeatmap.AddRange(new[] { createCircle(1000), createCircle(1500) }));
+            AddStep("select first two hitsounds", () => hitsoundEditor.SetSelection(new[] { 0, 500 }));
+            AddStep("create pattern", () => screen!.CreatePatternFromSelection());
+            AddStep("seek to second place", () => EditorClock.Seek(1000));
+            AddStep("place pattern", () => screen!.PlacePattern(patterns.Patterns.Single()));
+
+            AddStep("select second hitsound", () => hitsoundEditor.SetSelection(new[] { 500 }));
+            AddStep("create sub-pattern", () => screen!.CreatePatternFromSelection());
+            AddAssert("sub-pattern used in both places", () => patterns.Occurrences.Where(o => o.Depth == 1).Select(o => o.StartTime), () => Is.EqualTo(new double[] { 500, 1500 }));
+
+            AddStep("add finish in second place of sub-pattern", () => hitsoundEditor.ToggleAddition(new[] { hitsoundEditor.Map.GetColumn(1500)! }, HitSampleInfo.HIT_FINISH));
+            AddAssert("finish synced to first place", () => hasSample(objectsAt(500).Single(), HitSampleInfo.HIT_FINISH));
+
+            AddStep("try placing pattern inside itself", () => EditorClock.Seek(0));
+            AddAssert("pattern can't contain itself", () => hitsoundEditor.PlacePattern(patterns.Patterns.First(p => p.SubPatterns.Count > 0), 0), () => Is.Null);
+        }
+
+        private IEnumerable<HitObject> objectsAt(double time) => EditorBeatmap.HitObjects.Where(h => Math.Abs(h.StartTime - time) < 1);
+
+        [Test]
         public void TestVolumeLine()
         {
             AddStep("seek between objects", () => EditorClock.Seek(250));
