@@ -47,11 +47,19 @@ namespace osu.Game.Screens.Edit.Hitsounding
             };
         }
 
-        public void Apply(HitsoundColumn column, IReadOnlyList<HitsoundLane> lanes, bool selected, IEnumerable<HitsoundLane> mutedLanes, float laneHeight)
+        /// <param name="column">The hitsound to display.</param>
+        /// <param name="lanes">The visible lanes.</param>
+        /// <param name="selected">Whether the hitsound is selected.</param>
+        /// <param name="selectedLanes">The lanes in which the hitsound is selected, or <c>null</c> if it's selected in all lanes.</param>
+        /// <param name="mutedLanes">The muted lanes.</param>
+        /// <param name="laneHeight">The height of a lane.</param>
+        public void Apply(HitsoundColumn column, IReadOnlyList<HitsoundLane> lanes, bool selected, IReadOnlyCollection<HitsoundLane>? selectedLanes, IEnumerable<HitsoundLane> mutedLanes,
+                          float laneHeight)
         {
             Alpha = 1;
 
-            selectionHighlight.Alpha = selected ? 0.2f : 0;
+            // hitsounds which are only selected in some lanes only highlight their samples in these lanes.
+            selectionHighlight.Alpha = selected && selectedLanes == null ? 0.2f : 0;
 
             // keysounds can't be edited, which is shown by a grey line.
             line.Colour = column.HasFileSamples ? Colour4.Gray : Colour4.White;
@@ -88,7 +96,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
                 marker.Y = (i + 0.5f) * laneHeight;
                 marker.Child.Colour = colour;
                 marker.BorderColour = ColourInfo.SingleColour(Colour4.White);
-                marker.BorderThickness = selected ? 3 : 0;
+                marker.BorderThickness = selected && (selectedLanes == null || selectedLanes.Contains(lane)) ? 3 : 0;
 
                 if (lane.IsAddition)
                 {

@@ -24,6 +24,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
     /// Displays the volumes of the hitsounds as bars, which can be drawn with the mouse like the event editor of FL Studio:
     /// left dragging draws, right dragging draws a straight line, shift + dragging levels to the volume at which the drag started,
     /// and alt + dragging resets to the volume which most hitsounds use.
+    /// Dragging a selected hitsound changes all selected hitsounds to the same volume, or by the same amount while holding shift.
     /// </summary>
     public partial class HitsoundVolumeArea : HitsoundTimelinePart, IHasHitsoundTooltip
     {
@@ -166,6 +167,11 @@ namespace osu.Game.Screens.Edit.Hitsounding
             Selection,
 
             /// <summary>
+            /// All selected hitsounds are changed by the difference between the volume at the cursor and the volume at which the drag started.
+            /// </summary>
+            SelectionRelative,
+
+            /// <summary>
             /// The volumes under the cursor are set to the volume at which the drag started.
             /// </summary>
             Level,
@@ -205,6 +211,14 @@ namespace osu.Game.Screens.Edit.Hitsounding
         /// The volumes of the hitsounds changed by the current line before it was started, such that they can be restored when the line doesn't cover them anymore.
         /// </summary>
         private readonly Dictionary<int, int> lineOriginalVolumes = new Dictionary<int, int>();
+
+        /// <summary>
+        /// The volumes of the selected hitsounds before a relative change was started, such that the difference is always applied to them.
+        /// Otherwise, volumes which reached the minimum or maximum would lose their differences.
+        /// </summary>
+        private readonly Dictionary<int, int> relativeOriginalVolumes = new Dictionary<int, int>();
+
+        private int relativeStartVolume;
 
         private Vector2? hoverPosition;
 
@@ -247,6 +261,14 @@ namespace osu.Game.Screens.Edit.Hitsounding
                 drawMode = DrawMode.Reset;
                 lastVolume = HitsoundEditor.GetBaseHitsounds().volume;
                 drawBetween(position.X, position.X, lastVolume, lastVolume);
+            }
+            else if (e.ShiftPressed && column != null && HitsoundEditor.IsSelected(column.Key))
+            {
+                drawMode = DrawMode.SelectionRelative;
+                relativeStartVolume = volume;
+                relativeOriginalVolumes.Clear();
+                foreach (var selected in HitsoundEditor.SelectedColumns)
+                    relativeOriginalVolumes[selected.Key] = selected.Volume;
             }
             else if (e.ShiftPressed)
             {
@@ -298,6 +320,21 @@ namespace osu.Game.Screens.Edit.Hitsounding
                 case DrawMode.Selection:
                     if (volume != lastVolume)
                         HitsoundEditor.SetVolume(HitsoundEditor.SelectedColumns, volume);
+                    break;
+
+                case DrawMode.SelectionRelative:
+                    if (volume != lastVolume)
+                    {
+                        var volumes = new List<(HitsoundColumn column, int volume)>();
+
+                        foreach (var (key, original) in relativeOriginalVolumes)
+                        {
+                            if (HitsoundEditor.Map.GetColumn(key) is HitsoundColumn selected)
+                                volumes.Add((selected, original + volume - relativeStartVolume));
+                        }
+
+                        HitsoundEditor.SetVolumes(volumes);
+                    }
                     break;
 
                 case DrawMode.Draw:
@@ -405,6 +442,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
             drawButton = null;
             linePreview.Alpha = 0;
             lineOriginalVolumes.Clear();
+            relativeOriginalVolumes.Clear();
             HitsoundEditor.EndStroke();
         }
 

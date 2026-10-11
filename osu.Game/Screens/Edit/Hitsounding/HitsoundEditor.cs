@@ -12,6 +12,7 @@ using osu.Framework.Extensions.ObjectExtensions;
 using osu.Framework.Graphics;
 using osu.Game.Audio;
 using osu.Game.Beatmaps;
+using osu.Game.Configuration;
 using osu.Game.Rulesets.Objects;
 using osu.Game.Rulesets.Objects.Types;
 
@@ -70,7 +71,8 @@ namespace osu.Game.Screens.Edit.Hitsounding
 
         /// <summary>
         /// The hitnormal bank and volume which most hitsounds of the beatmap use.
-        /// New hitsounds without a hitsound before them start with these, and volumes are reset to the volume.
+        /// New hitsounds of additions are played along with a hitnormal of this bank, new hitsounds without a hitsound before them start with this volume,
+        /// and volumes are reset to it.
         /// </summary>
         public (string bank, int volume) GetBaseHitsounds()
         {
@@ -117,6 +119,12 @@ namespace osu.Game.Screens.Edit.Hitsounding
         private readonly HashSet<int> selectedKeys = new HashSet<int>();
 
         /// <summary>
+        /// The lanes of selected hitsounds which are only selected in some lanes (by selecting a rectangle of lanes), by their keys.
+        /// Hitsounds without an entry are selected in all lanes.
+        /// </summary>
+        private readonly Dictionary<int, HashSet<HitsoundLane>> selectedLanes = new Dictionary<int, HashSet<HitsoundLane>>();
+
+        /// <summary>
         /// Objects which have been created in <see cref="HitsoundDifficultyMode"/> only to play an addition which no other object of their hitsound could play.
         /// Their hitnormal isn't wanted, so they are deleted once they don't play any additions anymore.
         /// </summary>
@@ -134,10 +142,39 @@ namespace osu.Game.Screens.Edit.Hitsounding
 
         private int rulesetId => editorBeatmap.BeatmapInfo.Ruleset.OnlineID;
 
+        /// <summary>
+        /// The bank of the hitnormals which are played along with new additions, or <c>null</c> to use the bank which most hitsounds use.
+        /// Stored for the beatmap set (see <see cref="HitsoundPreferences.GetDefaultNormalBank"/>).
+        /// </summary>
+        public readonly Bindable<string?> DefaultNormalBank = new Bindable<string?>();
+
+        /// <summary>
+        /// The bank of the hitnormals which are played along with new additions (see <see cref="DefaultNormalBank"/>).
+        /// </summary>
+        public string GetDefaultNormalBank() => DefaultNormalBank.Value ?? GetBaseHitsounds().bank;
+
+        [Resolved]
+        private OsuConfigManager? config { get; set; }
+
         [BackgroundDependencyLoader]
         private void load()
         {
-            HitsoundDifficultyMode.Value = IsHitsoundDifficultyName(editorBeatmap.BeatmapInfo.DifficultyName);
+            var beatmapInfo = editorBeatmap.BeatmapInfo;
+
+            HitsoundDifficultyMode.Value = HitsoundPreferences.IsHitsoundDifficulty(config, beatmapInfo);
+            DefaultNormalBank.Value = HitsoundPreferences.GetDefaultNormalBank(config, beatmapInfo.BeatmapSet);
+
+            if (config != null)
+            {
+                // remembered such that other difficulties can find the hitsound difficulty (see HitsoundDifficultyAutoApplier).
+                HitsoundDifficultyMode.BindValueChanged(m => HitsoundPreferences.SetHitsoundDifficulty(config, beatmapInfo, m.NewValue));
+
+                DefaultNormalBank.BindValueChanged(b =>
+                {
+                    if (beatmapInfo.BeatmapSet != null)
+                        HitsoundPreferences.SetDefaultNormalBank(config, beatmapInfo.BeatmapSet, b.NewValue);
+                });
+            }
 
             editorBeatmap.HitObjectAdded += onHitObjectChanged;
             editorBeatmap.HitObjectRemoved += onHitObjectChanged;
@@ -175,6 +212,9 @@ namespace osu.Game.Screens.Edit.Hitsounding
             // hitsounds whose objects have been removed or moved can't be selected anymore.
             int selectedCount = selectedKeys.Count;
             selectedKeys.RemoveWhere(k => Map.GetColumn(k) == null);
+
+            foreach (int key in selectedLanes.Keys.Where(k => !selectedKeys.Contains(k)).ToArray())
+                selectedLanes.Remove(key);
 
             MapChanged?.Invoke();
             updateVisibleLanes(false);
@@ -317,6 +357,11 @@ namespace osu.Game.Screens.Edit.Hitsounding
         public bool IsSelected(int key) => selectedKeys.Contains(key);
 
         /// <summary>
+        /// The lanes in which a selected hitsound is selected, or <c>null</c> if it's selected in all lanes (or not selected).
+        /// </summary>
+        public IReadOnlyCollection<HitsoundLane>? GetSelectedLanes(int key) => selectedLanes.GetValueOrDefault(key);
+
+        /// <summary>
         /// The selected columns, ordered by time.
         /// </summary>
         public IReadOnlyList<HitsoundColumn> SelectedColumns => selectedKeys.Count == 0
@@ -336,17 +381,40 @@ namespace osu.Game.Screens.Edit.Hitsounding
             return column != null ? new[] { column } : Array.Empty<HitsoundColumn>();
         }
 
-        public void SetSelection(IEnumerable<int> keys, bool additive = false)
+        /// <param name="keys">The keys of the hitsounds to select.</param>
+        /// <param name="additive">Whether to keep the current selection.</param>
+        /// <param name="lanes">The lanes in which to select the hitsounds, or <c>null</c> to select them in all lanes.</param>
+        public void SetSelection(IEnumerable<int> keys, bool additive = false, IEnumerable<HitsoundLane>? lanes = null)
         {
             if (!additive)
+            {
                 selectedKeys.Clear();
+                selectedLanes.Clear();
+            }
 
-            selectedKeys.UnionWith(keys);
+            var laneList = lanes?.ToList();
+
+            foreach (int key in keys)
+            {
+                bool wasSelected = !selectedKeys.Add(key);
+
+                if (laneList == null)
+                    selectedLanes.Remove(key);
+                else if (!wasSelected)
+                    selectedLanes[key] = new HashSet<HitsoundLane>(laneList);
+                else if (selectedLanes.TryGetValue(key, out var existing))
+                    existing.UnionWith(laneList);
+
+                // hitsounds which were already selected in all lanes stay so.
+            }
+
             SelectionChanged?.Invoke();
         }
 
         public void ToggleSelection(int key)
         {
+            selectedLanes.Remove(key);
+
             if (!selectedKeys.Remove(key))
                 selectedKeys.Add(key);
 
@@ -410,6 +478,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
                 return;
 
             selectedKeys.Clear();
+            selectedLanes.Clear();
             SelectionChanged?.Invoke();
         }
 
@@ -472,6 +541,19 @@ namespace osu.Game.Screens.Edit.Hitsounding
         public void SetLane(HitsoundColumn column, HitsoundLane lane, bool active) => perform(changed => setLane(column, lane, active, changed));
 
         /// <summary>
+        /// Turns off the samples of the given lanes for each column (see <see cref="SetLane"/>), in a single change.
+        /// </summary>
+        public void RemoveLanes(IReadOnlyList<(HitsoundColumn column, IReadOnlyCollection<HitsoundLane> lanes)> items) => perform(changed =>
+        {
+            foreach (var (column, lanes) in items)
+            {
+                // additions first, as turning off hitnormals deletes the objects in hitsound difficulty mode.
+                foreach (var lane in lanes.OrderBy(l => l.IsAddition ? 0 : 1))
+                    setLane(column, lane, false, changed);
+            }
+        });
+
+        /// <summary>
         /// Creates a hitsound at a time without one, which is only possible in <see cref="HitsoundDifficultyMode"/>.
         /// </summary>
         /// <param name="time">The time.</param>
@@ -482,13 +564,14 @@ namespace osu.Game.Screens.Edit.Hitsounding
             if (!HitsoundDifficultyMode.Value || Map.FindClosestColumn(time, HitsoundMap.COLUMN_MERGE_DISTANCE) != null)
                 return false;
 
-            // continue the hitsounds before, as the hitnormal bank, volume and custom index are usually the same for a while.
+            // continue the hitsounds before, as the volume and custom index are usually the same for a while.
             int previousIndex = Map.IndexOfFirstColumnAtOrAfter(time) - 1;
             var previous = previousIndex >= 0 ? Map.Columns[previousIndex] : null;
 
-            var baseHitsounds = previous == null ? GetBaseHitsounds() : default;
+            var baseHitsounds = GetBaseHitsounds();
 
-            string normalBank = lane.IsAddition ? previous?.NormalBank ?? baseHitsounds.bank : lane.Bank;
+            // the hitnormal bank rarely changes within a song, so additions are played along with a hitnormal of the default bank.
+            string normalBank = lane.IsAddition ? GetDefaultNormalBank() : lane.Bank;
             int volume = previous?.Volume ?? baseHitsounds.volume;
             int customIndex = lane.CustomIndex ?? previous?.CustomIndex ?? 0;
 
@@ -866,6 +949,56 @@ namespace osu.Game.Screens.Edit.Hitsounding
             });
 
             return dropped;
+        }
+
+        /// <summary>
+        /// Pastes copied hitsounds. Hitsounds which were only selected in some lanes when copying only add the additions of these lanes,
+        /// keeping the hitnormals of the hitsounds they are pasted onto. Where there are no hitsounds, they are created with the copied hitnormals.
+        /// </summary>
+        /// <returns>The number of hitsounds which couldn't be pasted, as there were not enough (or no) hit objects at their time.</returns>
+        public int Paste(IReadOnlyList<HitsoundClipboardEntry> entries)
+        {
+            var replaced = new List<HitsoundColumnState>();
+            var merged = new List<(HitsoundColumn column, IReadOnlyCollection<HitsoundLane> lanes)>();
+
+            foreach (var entry in entries)
+            {
+                if (entry.Lanes == null)
+                {
+                    replaced.Add(entry.State);
+                    continue;
+                }
+
+                if (Map.FindClosestColumn(entry.State.Time, PASTE_LENIENCY) is HitsoundColumn column)
+                    merged.Add((column, entry.Lanes.Where(l => l.IsAddition).ToList()));
+                else
+                    replaced.Add(entry.State with { AdditionGroups = filterAdditions(entry.State.AdditionGroups, entry.Lanes) });
+            }
+
+            editorBeatmap.BeginChange();
+
+            if (merged.Count > 0)
+            {
+                perform(changed =>
+                {
+                    foreach (var (column, lanes) in merged)
+                    {
+                        foreach (var lane in lanes)
+                            setLane(column, lane, true, changed);
+                    }
+                });
+            }
+
+            int dropped = ApplyStates(replaced);
+
+            editorBeatmap.EndChange();
+
+            return dropped;
+
+            static IReadOnlyList<HitsoundAdditionGroup> filterAdditions(IReadOnlyList<HitsoundAdditionGroup> groups, IReadOnlyCollection<HitsoundLane> lanes)
+                => groups.Select(g => g with { Names = g.Names.Where(n => lanes.Any(l => l.Bank == g.Bank && l.Sample == n)).ToList() })
+                         .Where(g => g.Names.Count > 0)
+                         .ToList();
         }
 
         /// <summary>

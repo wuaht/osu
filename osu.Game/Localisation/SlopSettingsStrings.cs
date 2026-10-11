@@ -458,6 +458,29 @@ namespace osu.Game.Localisation
             @"The lanes of the hitsound editor have a frosted glass background, through which the background of the beatmap shows.");
 
         /// <summary>
+        /// "Expand hitsound toolbox on hover"
+        /// </summary>
+        public static LocalisableString HitsoundToolboxExpandOnHover => new TranslatableString(getKey(@"hitsound_toolbox_expand_on_hover"), @"Expand hitsound toolbox on hover");
+
+        /// <summary>
+        /// "While the sidebars are contracted, the toolbox of the hitsound editor expands while hovering it, like the toolboxes of the compose screen."
+        /// </summary>
+        public static LocalisableString HitsoundToolboxExpandOnHoverDescription => new TranslatableString(getKey(@"hitsound_toolbox_expand_on_hover_description"),
+            @"While the sidebars are contracted, the toolbox of the hitsound editor expands while hovering it, like the toolboxes of the compose screen.");
+
+        /// <summary>
+        /// "Sync hitsounds with the hitsound difficulty"
+        /// </summary>
+        public static LocalisableString AutoApplyHitsoundDifficulty => new TranslatableString(getKey(@"auto_apply_hitsound_difficulty"),
+            @"Sync hitsounds with the hitsound difficulty");
+
+        /// <summary>
+        /// "Objects which are placed or moved in other difficulties get the hitsounds of the hitsound difficulty at their time. Leaving the hitsound difficulty after saving it copies its hitsounds to the other difficulties, except those deselected under "Copy hitsounds" in the hitsound editor."
+        /// </summary>
+        public static LocalisableString AutoApplyHitsoundDifficultyDescription => new TranslatableString(getKey(@"auto_apply_hitsound_difficulty_description"),
+            @"Objects which are placed or moved in other difficulties get the hitsounds of the hitsound difficulty at their time. Leaving the hitsound difficulty after saving it copies its hitsounds to the other difficulties, except those deselected under ""Copy hitsounds"" in the hitsound editor.");
+
+        /// <summary>
         /// "Timeline waveform"
         /// </summary>
         public static LocalisableString WaveformStyle => new TranslatableString(getKey(@"waveform_style"), @"Timeline waveform");

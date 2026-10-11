@@ -355,6 +355,8 @@ namespace osu.Game.Screens.Edit
             AddInternal(bookmarkController);
 
             AddInternal(new EditorVolumeMuting());
+            AddInternal(new HitsoundDifficultyAutoApplier());
+            AddInternal(hitsoundSync = new HitsoundDifficultySync());
 
             OsuMenuItem undoMenuItem;
             OsuMenuItem redoMenuItem;
@@ -623,6 +625,8 @@ namespace osu.Game.Screens.Edit
         [CanBeNull]
         internal event Action Saved;
 
+        private HitsoundDifficultySync hitsoundSync;
+
         /// <summary>
         /// Saves the currently edited beatmap.
         /// </summary>
@@ -661,6 +665,7 @@ namespace osu.Game.Screens.Edit
             updateLastSavedHash();
             onScreenDisplay?.Display(new BeatmapEditorToast(isAutosave ? SlopSettingsStrings.BeatmapAutoSaved : ToastStrings.BeatmapSaved, editorBeatmap.BeatmapInfo.GetDisplayTitle()));
             Saved?.Invoke();
+            hitsoundSync.OnSaved();
 
             // This triggers an update to the window title post-save (ie if the difficulty name changed).
             Activity.Value = getCurrentUserActivity();
@@ -984,6 +989,9 @@ namespace osu.Game.Screens.Edit
                 var beatmap = r.Find<BeatmapInfo>(editorBeatmap.BeatmapInfo.ID);
                 beatmap?.EditorTimestamp = clock.CurrentTime;
             });
+
+            // after saving (or discarding changes), such that the other difficulties are loaded with the hitsounds of the hitsound difficulty.
+            hitsoundSync.SyncIfPending();
 
             // `resetTrack()` MUST happen before `refetchBeatmap()`, because along other things, `refetchBeatmap()` causes a global working beatmap change,
             // which would cause `EditorClock` to reload the track and automatically reapply adjustments to it if not preceded by `resetTrack()`.

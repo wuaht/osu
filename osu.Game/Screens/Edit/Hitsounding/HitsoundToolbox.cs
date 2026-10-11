@@ -15,6 +15,7 @@ using osu.Game.Audio;
 using osu.Game.Beatmaps;
 using osu.Game.Configuration;
 using osu.Game.Graphics;
+using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.Sprites;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Graphics.UserInterfaceV2;
@@ -27,8 +28,8 @@ namespace osu.Game.Screens.Edit.Hitsounding
 {
     /// <summary>
     /// The tools of the hitsound editor: editing the targeted hitsounds, hitsound difficulties, and copying hitsounds between difficulties.
-    /// Like the toolboxes of the compose screen, it contracts while the editor's sidebars are contracted.
-    /// Unlike them, it doesn't expand on hover, as it shows compact tools for the targeted hitsounds while contracted.
+    /// Like the toolboxes of the compose screen, it contracts while the editor's sidebars are contracted, and expands on hover (unless disabled by
+    /// <see cref="OsuSetting.SlopHitsoundEditorToolboxExpandOnHover"/>, as it shows compact tools for the targeted hitsounds while contracted).
     /// </summary>
     public partial class HitsoundToolbox : ExpandingToolboxContainer
     {
@@ -40,9 +41,10 @@ namespace osu.Game.Screens.Edit.Hitsounding
         /// </summary>
         public float ReservedWidth => DrawWidth;
 
-        protected override bool ExpandOnHover => false;
+        protected override bool ExpandOnHover => expandOnHover.Value && base.ExpandOnHover;
 
         private readonly BindableBool contractSidebars = new BindableBool();
+        private readonly BindableBool expandOnHover = new BindableBool();
 
         private IconButton contractButton = null!;
         private Container contractedContent = null!;
@@ -57,6 +59,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
         private void load(OsuConfigManager config)
         {
             config.BindWith(OsuSetting.EditorContractSidebars, contractSidebars);
+            config.BindWith(OsuSetting.SlopHitsoundEditorToolboxExpandOnHover, expandOnHover);
 
             Children = new Drawable[]
             {
@@ -110,6 +113,10 @@ namespace osu.Game.Screens.Edit.Hitsounding
                                 {
                                     Child = new CopyTools(),
                                 },
+                                consistencyGroup = new ToolboxGroup(SlopHitsoundEditorStrings.Consistency)
+                                {
+                                    Child = consistencyDisplay = new HitsoundConsistencyDisplay(),
+                                },
                             }
                         },
                     }
@@ -117,9 +124,68 @@ namespace osu.Game.Screens.Edit.Hitsounding
             };
         }
 
+        /// <summary>
+        /// Whether to scroll to the consistency of the difficulties when the toolbox is loaded next, after switching to another difficulty from there
+        /// (see <see cref="ScrollToConsistencyAfterSwitch"/>). Static, as the editor (including this toolbox) is recreated when switching difficulties.
+        /// </summary>
+        private static bool scrollToConsistencyOnLoad;
+
+        /// <summary>
+        /// Until when to keep scrolling to the consistency of the difficulties, as it may still be loading and being laid out.
+        /// </summary>
+        private double? scrollToConsistencyUntil;
+
+        /// <summary>
+        /// The longest time to wait for the consistency of the difficulties to be loaded.
+        /// </summary>
+        private const double scroll_to_consistency_timeout = 15000;
+
+        /// <summary>
+        /// How long to keep scrolling to it after the consistency of the difficulties has been loaded, until its layout has settled.
+        /// </summary>
+        private const double scroll_to_consistency_settle_time = 300;
+
+        private OsuScrollContainer scroll = null!;
+
+        private ToolboxGroup consistencyGroup = null!;
+
+        private HitsoundConsistencyDisplay consistencyDisplay = null!;
+
+        protected override OsuScrollContainer CreateScrollContainer() => scroll = base.CreateScrollContainer();
+
+        /// <summary>
+        /// Scrolls the toolbox to the consistency of the difficulties once it's loaded after switching to another difficulty.
+        /// </summary>
+        public static void ScrollToConsistencyAfterSwitch() => scrollToConsistencyOnLoad = true;
+
+        protected override void Update()
+        {
+            base.Update();
+
+            if (scrollToConsistencyUntil == null)
+                return;
+
+            if (consistencyDisplay.IsLoaded && consistencyDisplay.HasLoadedDifficulties)
+                scrollToConsistencyUntil = Math.Min(scrollToConsistencyUntil.Value, Time.Current + scroll_to_consistency_settle_time);
+
+            if (Time.Current > scrollToConsistencyUntil)
+            {
+                scrollToConsistencyUntil = null;
+                return;
+            }
+
+            scroll.ScrollTo(consistencyGroup, false);
+        }
+
         protected override void LoadComplete()
         {
             base.LoadComplete();
+
+            if (scrollToConsistencyOnLoad)
+            {
+                scrollToConsistencyOnLoad = false;
+                scrollToConsistencyUntil = Time.Current + scroll_to_consistency_timeout;
+            }
 
             Expanded.BindValueChanged(e =>
             {
@@ -614,6 +680,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
                         volumeSlider = new FormSliderBar<int>
                         {
                             Caption = SlopHitsoundEditorStrings.Volume,
+                            HintText = SlopHitsoundEditorStrings.VolumeHint,
                             Current = volume,
                             TransferValueOnCommit = true,
                             LabelFormat = v => $@"{v}%",
@@ -641,8 +708,16 @@ namespace osu.Game.Screens.Edit.Hitsounding
 
                 volume.BindValueChanged(v =>
                 {
-                    if (!updatingState)
-                        HitsoundEditor.SetVolume(Screen.GetTargetColumns(), v.NewValue);
+                    if (updatingState)
+                        return;
+
+                    var columns = Screen.GetTargetColumns();
+
+                    // holding shift keeps the differences between the volumes.
+                    if (GetContainingInputManager()?.CurrentState.Keyboard.ShiftPressed == true)
+                        HitsoundEditor.SetVolumes(columns.Select(c => (c, c.Volume + v.NewValue - v.OldValue)).ToList());
+                    else
+                        HitsoundEditor.SetVolume(columns, v.NewValue);
                 });
 
                 customIndex.BindValueChanged(i =>
@@ -756,6 +831,9 @@ namespace osu.Game.Screens.Edit.Hitsounding
 
             private readonly Dictionary<string, HitsoundToggleButton> bankButtons = new Dictionary<string, HitsoundToggleButton>();
 
+            private readonly Dictionary<string, HitsoundToggleButton> defaultBankButtons = new Dictionary<string, HitsoundToggleButton>();
+            private HitsoundToggleButton mostUsedBankButton = null!;
+
             private readonly BindableBool removeObjects = new BindableBool(true);
 
             [BackgroundDependencyLoader]
@@ -772,7 +850,19 @@ namespace osu.Game.Screens.Edit.Hitsounding
                     {
                         Action = () => startingBank.Value = b,
                     };
+
+                    defaultBankButtons[bank] = new HitsoundToggleButton(HitsoundLaneHeaders.GetBankName(bank), HitsoundLane.GetBankColour(bank))
+                    {
+                        Action = () => hitsoundEditor.DefaultNormalBank.Value = b,
+                    };
                 }
+
+                mostUsedBankButton = new HitsoundToggleButton(SlopHitsoundEditorStrings.MostUsed, Colour4.White)
+                {
+                    Outlined = true,
+                    TooltipText = SlopHitsoundEditorStrings.DefaultNormalBankHint,
+                    Action = () => hitsoundEditor.DefaultNormalBank.Value = null,
+                };
 
                 InternalChild = new FillFlowContainer
                 {
@@ -788,6 +878,8 @@ namespace osu.Game.Screens.Edit.Hitsounding
                             HintText = SlopHitsoundEditorStrings.HitsoundDifficultyModeHint,
                             Current = hitsoundEditor.HitsoundDifficultyMode,
                         },
+                        createRow(SlopHitsoundEditorStrings.DefaultNormalBank,
+                            HitsoundLane.BANKS.Select(b => (Drawable)defaultBankButtons[b]).Prepend(mostUsedBankButton).ToArray()),
                         createRow(SlopHitsoundEditorStrings.StartingBank, HitsoundLane.BANKS.Select(b => (Drawable)bankButtons[b]).ToArray()),
                         new FormSliderBar<int>
                         {
@@ -826,6 +918,14 @@ namespace osu.Game.Screens.Edit.Hitsounding
                     foreach (var (buttonBank, button) in bankButtons)
                         button.State = buttonBank == b.NewValue ? HitsoundToggleState.On : HitsoundToggleState.Off;
                 }, true);
+
+                hitsoundEditor.DefaultNormalBank.BindValueChanged(b =>
+                {
+                    mostUsedBankButton.State = b.NewValue == null ? HitsoundToggleState.On : HitsoundToggleState.Off;
+
+                    foreach (var (buttonBank, button) in defaultBankButtons)
+                        button.State = buttonBank == b.NewValue ? HitsoundToggleState.On : HitsoundToggleState.Off;
+                }, true);
             }
         }
 
@@ -833,6 +933,9 @@ namespace osu.Game.Screens.Edit.Hitsounding
         {
             [Resolved]
             private HitsoundScreen screen { get; set; } = null!;
+
+            [Resolved]
+            private OsuConfigManager config { get; set; } = null!;
 
             private readonly List<(BeatmapInfo difficulty, BindableBool selected)> difficulties = new List<(BeatmapInfo, BindableBool)>();
 
@@ -893,14 +996,18 @@ namespace osu.Game.Screens.Edit.Hitsounding
                 foreach (var difficulty in others)
                 {
                     // hitsound difficulties are usually the source of the hitsounds, not a target.
-                    var selected = new BindableBool(!HitsoundEditor.IsHitsoundDifficultyName(difficulty.DifficultyName));
+                    // the choice is remembered, as it also decides which difficulties the hitsound difficulty is synced to (see HitsoundDifficultySync).
+                    var selected = new BindableBool(HitsoundPreferences.ReceivesHitsounds(config, difficulty));
+                    var d = difficulty;
+                    selected.BindValueChanged(s => HitsoundPreferences.SetReceivesHitsounds(config, d, s.NewValue));
 
                     difficulties.Add((difficulty, selected));
                     difficultyFlow.Add(createToggle(difficulty.DifficultyName, selected, difficulty.Ruleset.Name));
                 }
 
                 var items = others.Select(d => new DifficultyItem(d)).ToList();
-                importSource.Value = items.FirstOrDefault(i => HitsoundEditor.IsHitsoundDifficultyName(i.Difficulty.DifficultyName)) ?? items[0];
+                var hitsoundDifficulty = HitsoundPreferences.FindHitsoundDifficulty(config, others);
+                importSource.Value = items.FirstOrDefault(i => i.Difficulty.Equals(hitsoundDifficulty)) ?? items[0];
 
                 flow.AddRange(new Drawable[]
                 {

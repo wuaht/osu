@@ -202,7 +202,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
         }
 
         private void applyColumn(HitsoundColumnPiece piece, HitsoundColumn column)
-            => piece.Apply(column, HitsoundEditor.VisibleLanes, HitsoundEditor.IsSelected(column.Key), HitsoundEditor.MutedLanes, laneHeight);
+            => piece.Apply(column, HitsoundEditor.VisibleLanes, HitsoundEditor.IsSelected(column.Key), HitsoundEditor.GetSelectedLanes(column.Key), HitsoundEditor.MutedLanes, laneHeight);
 
         private void updateBodies(HitsoundMap map, double start, double end)
         {
@@ -696,12 +696,12 @@ namespace osu.Game.Screens.Edit.Hitsounding
 
             double time = XToTime(position.X);
 
-            // only the hitsounds which play a sample of the covered lanes are selected.
+            // only the hitsounds which play a sample of the covered lanes are selected, and only in these lanes.
             var keys = HitsoundEditor.Map.GetColumnsInRange(Math.Min(boxStartTime, time), Math.Max(boxStartTime, time))
                                      .Where(c => lanes.Any(c.Has))
                                      .Select(c => c.Key);
 
-            HitsoundEditor.SetSelection(keys, boxAdditive);
+            HitsoundEditor.SetSelection(keys, boxAdditive, lanes);
         }
 
         private void handleBoxClick(Vector2 position)

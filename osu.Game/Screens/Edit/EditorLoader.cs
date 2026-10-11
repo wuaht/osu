@@ -110,7 +110,8 @@ namespace osu.Game.Screens.Edit
             }, editorState);
 
         public void ScheduleSwitchToExistingDifficulty(BeatmapInfo beatmapInfo, EditorState editorState)
-            => scheduleDifficultySwitch(() => beatmapManager.GetWorkingBeatmap(beatmapInfo), editorState);
+            // refetched, as the difficulty may have been changed while leaving the previous one (e.g. by copying hitsounds to it, see HitsoundDifficultySync).
+            => scheduleDifficultySwitch(() => beatmapManager.GetWorkingBeatmap(beatmapInfo, true), editorState);
 
         private void scheduleDifficultySwitch(Func<WorkingBeatmap> nextBeatmap, EditorState editorState)
         {

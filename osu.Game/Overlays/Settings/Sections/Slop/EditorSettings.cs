@@ -114,6 +114,18 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                 }),
                 new SettingsItemV2(new FormCheckBox
                 {
+                    Caption = SlopSettingsStrings.HitsoundToolboxExpandOnHover,
+                    HintText = SlopSettingsStrings.HitsoundToolboxExpandOnHoverDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopHitsoundEditorToolboxExpandOnHover),
+                }),
+                new SettingsItemV2(new FormCheckBox
+                {
+                    Caption = SlopSettingsStrings.AutoApplyHitsoundDifficulty,
+                    HintText = SlopSettingsStrings.AutoApplyHitsoundDifficultyDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorAutoApplyHitsoundDifficulty),
+                }),
+                new SettingsItemV2(new FormCheckBox
+                {
                     Caption = SlopSettingsStrings.FrostedBnTrackerPanels,
                     HintText = SlopSettingsStrings.FrostedBnTrackerPanelsDescription,
                     Current = config.GetBindable<bool>(OsuSetting.SlopBnTrackerFrostedPanels),

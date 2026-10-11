@@ -294,6 +294,34 @@ namespace osu.Game.Tests.Slop
                 InputManager.ReleaseButton(MouseButton.Left);
             });
             AddAssert("only hitsound with whistle selected", () => hitsoundEditor.SelectedKeys, () => Is.EquivalentTo(new[] { 500 }));
+            AddAssert("only selected in whistle lane", () => hitsoundEditor.GetSelectedLanes(500), () => Is.EquivalentTo(new[] { whistle }));
+
+            AddStep("add clap to selected hitsound", () => hitsoundEditor.ToggleAddition(hitsoundEditor.SelectedColumns, HitSampleInfo.HIT_CLAP));
+            AddStep("delete", () => InputManager.Key(Key.Delete));
+            AddAssert("whistle removed", () => !hasSample(EditorBeatmap.HitObjects[1], HitSampleInfo.HIT_WHISTLE));
+            AddAssert("clap kept", () => hasSample(EditorBeatmap.HitObjects[1], HitSampleInfo.HIT_CLAP));
+        }
+
+        [Test]
+        public void TestPastingAdditionsKeepsHitnormal()
+        {
+            var whistle = new HitsoundLane(HitSampleInfo.BANK_SOFT, HitSampleInfo.HIT_WHISTLE);
+
+            AddStep("seek between objects", () => EditorClock.Seek(250));
+            AddStep("select whistle lane of second hitsound", () =>
+            {
+                InputManager.MoveMouseTo(lanePosition(whistle, 300));
+                InputManager.PressButton(MouseButton.Left);
+                InputManager.MoveMouseTo(lanePosition(whistle, 450));
+                InputManager.MoveMouseTo(lanePosition(whistle, 700));
+                InputManager.ReleaseButton(MouseButton.Left);
+            });
+            AddStep("copy", () => screen!.Copy());
+            AddStep("seek to first object", () => EditorClock.Seek(0));
+            AddStep("paste", () => screen!.Paste());
+
+            AddAssert("whistle added", () => EditorBeatmap.HitObjects[0].Samples.Any(s => s.Name == HitSampleInfo.HIT_WHISTLE && s.Bank == HitSampleInfo.BANK_SOFT));
+            AddAssert("hitnormal bank kept", () => HitsoundSamples.GetNormalBank(EditorBeatmap.HitObjects[0].Samples), () => Is.EqualTo(HitSampleInfo.BANK_NORMAL));
         }
 
         [Test]
@@ -381,8 +409,16 @@ namespace osu.Game.Tests.Slop
             AddUntilStep("toolbox contracted", () => toolbox.DrawWidth, () => Is.EqualTo(HitsoundToolbox.CONTRACTED_WIDTH).Within(1));
             AddUntilStep("hit objects line up with lanes", () => timelinePartsLineUp());
 
+            AddStep("enable expanding on hover", () => config.SetValue(OsuSetting.SlopHitsoundEditorToolboxExpandOnHover, true));
+            AddStep("hover toolbox", () => InputManager.MoveMouseTo(toolbox));
+            AddUntilStep("toolbox expanded", () => toolbox.DrawWidth, () => Is.EqualTo(HitsoundToolbox.EXPANDED_WIDTH).Within(1));
+
+            AddStep("move mouse away", () => InputManager.MoveMouseTo(Content.ScreenSpaceDrawQuad.TopLeft + new Vector2(10)));
+            AddUntilStep("toolbox contracted", () => toolbox.DrawWidth, () => Is.EqualTo(HitsoundToolbox.CONTRACTED_WIDTH).Within(1));
+
             double hoverStartTime = 0;
 
+            AddStep("disable expanding on hover", () => config.SetValue(OsuSetting.SlopHitsoundEditorToolboxExpandOnHover, false));
             AddStep("hover toolbox", () =>
             {
                 InputManager.MoveMouseTo(toolbox);

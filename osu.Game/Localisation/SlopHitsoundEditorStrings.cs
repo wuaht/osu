@@ -50,6 +50,12 @@ namespace osu.Game.Localisation
         public static LocalisableString Volume => new TranslatableString(getKey(@"volume"), @"Volume");
 
         /// <summary>
+        /// "Changes all hitsounds to this volume. Hold Shift while changing it to change all volumes by the same amount instead."
+        /// </summary>
+        public static LocalisableString VolumeHint => new TranslatableString(getKey(@"volume_hint"),
+            @"Changes all hitsounds to this volume. Hold Shift while changing it to change all volumes by the same amount instead.");
+
+        /// <summary>
         /// "Ramp volume"
         /// </summary>
         public static LocalisableString RampVolume => new TranslatableString(getKey(@"ramp_volume"), @"Ramp volume");
@@ -115,6 +121,22 @@ namespace osu.Game.Localisation
         public static LocalisableString StartingBank => new TranslatableString(getKey(@"starting_bank"), @"Starting hitnormal bank");
 
         /// <summary>
+        /// "Default hitnormal bank"
+        /// </summary>
+        public static LocalisableString DefaultNormalBank => new TranslatableString(getKey(@"default_normal_bank"), @"Default hitnormal bank");
+
+        /// <summary>
+        /// "Most used"
+        /// </summary>
+        public static LocalisableString MostUsed => new TranslatableString(getKey(@"most_used"), @"Most used");
+
+        /// <summary>
+        /// "The bank of the hitnormals which are played along with additions that are added where no hitsound is yet. "Most used" uses the bank which most hitsounds use."
+        /// </summary>
+        public static LocalisableString DefaultNormalBankHint => new TranslatableString(getKey(@"default_normal_bank_hint"),
+            @"The bank of the hitnormals which are played along with additions that are added where no hitsound is yet. ""Most used"" uses the bank which most hitsounds use.");
+
+        /// <summary>
         /// "Starting volume"
         /// </summary>
         public static LocalisableString StartingVolume => new TranslatableString(getKey(@"starting_volume"), @"Starting volume");
@@ -150,6 +172,47 @@ namespace osu.Game.Localisation
         /// "No other difficulties."
         /// </summary>
         public static LocalisableString NoOtherDifficulties => new TranslatableString(getKey(@"no_other_difficulties"), @"No other difficulties.");
+
+        /// <summary>
+        /// "Switch to this difficulty"
+        /// </summary>
+        public static LocalisableString SwitchToDifficulty => new TranslatableString(getKey(@"switch_to_difficulty"), @"Switch to this difficulty");
+
+        /// <summary>
+        /// "Consistency"
+        /// </summary>
+        public static LocalisableString Consistency => new TranslatableString(getKey(@"consistency"), @"Consistency");
+
+        /// <summary>
+        /// "Same hitsounds as this difficulty"
+        /// </summary>
+        public static LocalisableString SameHitsounds => new TranslatableString(getKey(@"same_hitsounds"), @"Same hitsounds as this difficulty");
+
+        /// <summary>
+        /// "{0} different hitsounds"
+        /// </summary>
+        public static LocalisableString DifferentHitsounds(int count) => new TranslatableString(getKey(@"different_hitsounds"), @"{0} different hitsounds", count);
+
+        /// <summary>
+        /// "Doesn't receive hitsounds"
+        /// </summary>
+        public static LocalisableString DoesntReceiveHitsounds => new TranslatableString(getKey(@"doesnt_receive_hitsounds"), @"Doesn't receive hitsounds");
+
+        /// <summary>
+        /// "Loading..."
+        /// </summary>
+        public static LocalisableString Loading => new TranslatableString(getKey(@"loading"), @"Loading...");
+
+        /// <summary>
+        /// "and {0} more"
+        /// </summary>
+        public static LocalisableString AndMore(int count) => new TranslatableString(getKey(@"and_more"), @"and {0} more", count);
+
+        /// <summary>
+        /// "Compares the hitsounds of the other difficulties to this one, where both have hitsounds at the same time. Click a time to go there."
+        /// </summary>
+        public static LocalisableString ConsistencyHint => new TranslatableString(getKey(@"consistency_hint"),
+            @"Compares the hitsounds of the other difficulties to this one, where both have hitsounds at the same time. Click a time to go there.");
 
         /// <summary>
         /// "Banks"
@@ -480,6 +543,12 @@ Alt + scroll to zoom. Ctrl + click a lane name to preview the skin's sample inst
         /// "{0} hitsounds couldn't be copied, as there are not enough hit objects at their time."
         /// </summary>
         public static LocalisableString CopyDropped(int count) => new TranslatableString(getKey(@"copy_dropped"), @"{0} hitsounds couldn't be copied, as there are not enough hit objects at their time.", count);
+
+        /// <summary>
+        /// "Copied the hitsound difficulty to {1} difficulties ({0} hitsounds changed)."
+        /// </summary>
+        public static LocalisableString SyncResult(int hitsounds, int difficulties) => new TranslatableString(getKey(@"sync_result"),
+            @"Copied the hitsound difficulty to {1} difficulties ({0} hitsounds changed).", hitsounds, difficulties);
 
         /// <summary>
         /// "Copying to {0} difficulties failed. See the log for details."

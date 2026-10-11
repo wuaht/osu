@@ -326,7 +326,11 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
 
                 volume.Current.BindValueChanged(val =>
                 {
-                    setVolume(val.NewValue);
+                    // holding shift keeps the differences between the volumes of the selected objects.
+                    if (GetContainingInputManager()?.CurrentState.Keyboard.ShiftPressed == true)
+                        changeVolume(val.NewValue - val.OldValue);
+                    else
+                        setVolume(val.NewValue);
                 });
 
                 createStateBindables();
@@ -542,6 +546,19 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
                     }
                 });
                 volume.IsMultipleValues = false;
+            }
+
+            private void changeVolume(int difference)
+            {
+                updateAllRelevantSamples((_, relevantSamples) =>
+                {
+                    for (int i = 0; i < relevantSamples.Count; i++)
+                    {
+                        int newVolume = Math.Clamp(relevantSamples[i].Volume + difference, DrawableHitObject.MINIMUM_SAMPLE_VOLUME, 100);
+                        relevantSamples[i] = relevantSamples[i].With(newVolume: newVolume);
+                    }
+                });
+                volume.IsMultipleValues = getCommonVolume() == null;
             }
 
             #region hitsound toggles

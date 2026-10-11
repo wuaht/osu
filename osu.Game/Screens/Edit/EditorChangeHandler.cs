@@ -39,6 +39,11 @@ namespace osu.Game.Screens.Edit
 
         private bool isRestoring;
 
+        /// <summary>
+        /// Whether a saved state is currently being restored (by undoing or redoing).
+        /// </summary>
+        public bool IsRestoring => isRestoring;
+
         public const int MAX_SAVED_STATES = 50;
 
         public override void BeginChange()

@@ -32,6 +32,40 @@ namespace osu.Game.Tests.Slop
             => Assert.That(HitsoundEditor.IsHitsoundDifficultyName(name), Is.EqualTo(expected));
 
         [Test]
+        public void TestConsistency()
+        {
+            var reference = new[]
+            {
+                state(0, HitSampleInfo.BANK_SOFT, 100, HitSampleInfo.HIT_WHISTLE),
+                state(500, HitSampleInfo.BANK_SOFT, 100),
+                state(1000, HitSampleInfo.BANK_SOFT, 80),
+            };
+
+            var other = new[]
+            {
+                // the same hitsound, slightly off.
+                state(2, HitSampleInfo.BANK_SOFT, 100, HitSampleInfo.HIT_WHISTLE),
+                // a hitsound which the reference doesn't have isn't compared.
+                state(250, HitSampleInfo.BANK_DRUM, 100, HitSampleInfo.HIT_CLAP),
+                state(500, HitSampleInfo.BANK_NORMAL, 100, HitSampleInfo.HIT_CLAP),
+                // muted hitsounds keep their volume.
+                state(1000, HitSampleInfo.BANK_SOFT, 5),
+            };
+
+            var differences = HitsoundConsistency.Compare(reference, other);
+
+            Assert.That(differences.Select(d => d.Time), Is.EqualTo(new[] { 500.0 }));
+            Assert.That(differences[0].Details, Is.EqualTo(new[] { "normal hitnormal instead of soft", "extra normal-clap" }));
+        }
+
+        private static HitsoundColumnState state(double time, string bank, int volume, params string[] additions)
+        {
+            var samples = new List<HitSampleInfo> { new HitSampleInfo(HitSampleInfo.HIT_NORMAL, bank, volume: volume) };
+            samples.AddRange(additions.Select(a => new HitSampleInfo(a, bank, volume: volume)));
+            return HitsoundColumnState.Create(time, new IList<HitSampleInfo>[] { samples });
+        }
+
+        [Test]
         public void TestColumnStateGroupsAdditionsByBank()
         {
             var state = HitsoundColumnState.Create(1000, new IList<HitSampleInfo>[]

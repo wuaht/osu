@@ -278,6 +278,11 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopEditorWaveformStyle, EditorWaveformStyle.Default);
             SetDefault(OsuSetting.SlopEditorLoopMusic, false);
             SetDefault(OsuSetting.SlopHitsoundEditorFrostedLanes, false);
+            SetDefault(OsuSetting.SlopHitsoundEditorToolboxExpandOnHover, true);
+            SetDefault(OsuSetting.SlopEditorAutoApplyHitsoundDifficulty, false);
+            SetDefault(OsuSetting.SlopHitsoundDifficultyModes, string.Empty);
+            SetDefault(OsuSetting.SlopHitsoundSyncExcludedDifficulties, string.Empty);
+            SetDefault(OsuSetting.SlopHitsoundDefaultNormalBanks, string.Empty);
             SetDefault(OsuSetting.SlopBnTrackerFrostedPanels, false);
 
             // defaults of McOsu's FPoSu.
@@ -651,6 +656,31 @@ namespace osu.Game.Configuration
         /// Whether the lanes of the hitsound editor have a frosted glass background, instead of an opaque one.
         /// </summary>
         SlopHitsoundEditorFrostedLanes,
+
+        /// <summary>
+        /// Whether the contracted toolbox of the hitsound editor expands while hovering it, like the toolboxes of the compose screen.
+        /// </summary>
+        SlopHitsoundEditorToolboxExpandOnHover,
+
+        /// <summary>
+        /// Whether hit objects which are placed or moved in a difficulty get the hitsounds of the hitsound difficulty of the beatmap set.
+        /// </summary>
+        SlopEditorAutoApplyHitsoundDifficulty,
+
+        /// <summary>
+        /// Difficulties for which hitsound difficulty mode was turned on or off in the hitsound editor, unlike their name suggests (see <see cref="Screens.Edit.Hitsounding.HitsoundPreferences"/>).
+        /// </summary>
+        SlopHitsoundDifficultyModes,
+
+        /// <summary>
+        /// Difficulties which don't receive the hitsounds of the hitsound difficulty (see <see cref="Screens.Edit.Hitsounding.HitsoundPreferences"/>).
+        /// </summary>
+        SlopHitsoundSyncExcludedDifficulties,
+
+        /// <summary>
+        /// The banks of the hitnormals played along with new additions, by beatmap set (see <see cref="Screens.Edit.Hitsounding.HitsoundPreferences"/>).
+        /// </summary>
+        SlopHitsoundDefaultNormalBanks,
 
         /// <summary>
         /// Whether objects in the beatmap editor snap to positions which continue straight lines of equally spaced visible objects.

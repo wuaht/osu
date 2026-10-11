@@ -39,7 +39,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
         /// The copied hitsounds, with times relative to the first hitsound.
         /// Static, such that hitsounds can be pasted into other difficulties.
         /// </summary>
-        private static IReadOnlyList<HitsoundColumnState>? clipboard;
+        private static IReadOnlyList<HitsoundClipboardEntry>? clipboard;
 
         [Cached]
         private readonly HitsoundEditor hitsoundEditor = new HitsoundEditor();
@@ -269,12 +269,36 @@ namespace osu.Game.Screens.Edit.Hitsounding
         /// <summary>
         /// Deletes the hitsounds in hitsound difficulty mode, and removes their additions otherwise.
         /// </summary>
+        /// <remarks>
+        /// Hitsounds which are only selected in some lanes only lose the samples of these lanes.
+        /// </remarks>
         public void DeleteOrClear(IReadOnlyList<HitsoundColumn> columns)
         {
-            if (hitsoundEditor.HitsoundDifficultyMode.Value)
-                hitsoundEditor.DeleteColumns(columns);
-            else
-                hitsoundEditor.ClearAdditions(columns);
+            var partial = new List<(HitsoundColumn, IReadOnlyCollection<HitsoundLane>)>();
+            var whole = new List<HitsoundColumn>();
+
+            foreach (var column in columns)
+            {
+                if (hitsoundEditor.GetSelectedLanes(column.Key) is IReadOnlyCollection<HitsoundLane> lanes)
+                    partial.Add((column, lanes));
+                else
+                    whole.Add(column);
+            }
+
+            EditorBeatmap.BeginChange();
+
+            if (partial.Count > 0)
+                hitsoundEditor.RemoveLanes(partial);
+
+            if (whole.Count > 0)
+            {
+                if (hitsoundEditor.HitsoundDifficultyMode.Value)
+                    hitsoundEditor.DeleteColumns(whole);
+                else
+                    hitsoundEditor.ClearAdditions(whole);
+            }
+
+            EditorBeatmap.EndChange();
         }
 
         #endregion
@@ -290,7 +314,8 @@ namespace osu.Game.Screens.Edit.Hitsounding
 
             double start = columns[0].Time;
 
-            clipboard = columns.Select(c => c.GetState().WithTime(c.Time - start)).ToList();
+            // hitsounds which are only selected in some lanes only paste the samples of these lanes.
+            clipboard = columns.Select(c => new HitsoundClipboardEntry(c.GetState().WithTime(c.Time - start), hitsoundEditor.GetSelectedLanes(c.Key)?.ToList())).ToList();
             CanPaste.Value = true;
         }
 
@@ -300,9 +325,10 @@ namespace osu.Game.Screens.Edit.Hitsounding
                 return;
 
             double time = EditorBeatmap.SnapTime(clock.CurrentTime, null);
-            var states = clipboard.Select(s => s.WithTime(s.Time + time)).ToList();
+            var entries = clipboard.Select(e => e with { State = e.State.WithTime(e.State.Time + time) }).ToList();
+            var states = entries.Select(e => e.State).ToList();
 
-            int dropped = hitsoundEditor.ApplyStates(states);
+            int dropped = hitsoundEditor.Paste(entries);
 
             if (dropped > 0)
                 notify(SlopHitsoundEditorStrings.PasteDropped(dropped), FontAwesome.Solid.ExclamationTriangle);
@@ -323,6 +349,11 @@ namespace osu.Game.Screens.Edit.Hitsounding
                       .OrderBy(b => b.Ruleset.OnlineID)
                       .ThenBy(b => b.StarRating)
                       .ToList();
+
+        /// <summary>
+        /// Switches the editor to another difficulty (asking to save this one first, if it has unsaved changes).
+        /// </summary>
+        public void SwitchToDifficulty(BeatmapInfo difficulty) => editor?.SwitchToDifficulty(difficulty);
 
         /// <summary>
         /// Copies the hitsounds of this difficulty to other difficulties, after confirmation.
@@ -354,41 +385,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
             if (!editor.Save())
                 return;
 
-            int changedHitsounds = 0;
-            int droppedHitsounds = 0;
-            int failed = 0;
-
-            foreach (var difficulty in difficulties)
-            {
-                try
-                {
-                    // fetch a fresh detached reference, as each save changes the beatmap set.
-                    var info = beatmapManager.QueryBeatmap(b => b.ID == difficulty.ID)
-                               ?? throw new InvalidOperationException($@"{difficulty.GetDisplayTitle()} couldn't be found.");
-
-                    var working = beatmapManager.GetWorkingBeatmap(info);
-                    var playable = working.GetPlayableBeatmap(info.Ruleset);
-
-                    var result = HitsoundCopier.Copy(source, sourceBodies, HitsoundMap.Create(playable.HitObjects, info.Ruleset.OnlineID), options);
-
-                    droppedHitsounds += result.DroppedHitsounds;
-
-                    if (result.ChangedHitObjects.Count == 0)
-                        continue;
-
-                    // the samples of nested objects (which are written to the file as well) are created from the samples of their parents.
-                    foreach (var h in result.ChangedHitObjects)
-                        h.ApplyDefaults(playable.ControlPointInfo, playable.Difficulty);
-
-                    beatmapManager.Save(info, playable, working.GetSkin(), working.Storyboard);
-                    changedHitsounds += result.ChangedHitsounds;
-                }
-                catch (Exception e)
-                {
-                    Logger.Error(e, $@"Failed to copy hitsounds to {difficulty.GetDisplayTitle()}");
-                    failed++;
-                }
-            }
+            var (changedHitsounds, droppedHitsounds, failed) = HitsoundDifficultySync.CopyToDifficulties(beatmapManager, source, sourceBodies, difficulties, options);
 
             notify(SlopHitsoundEditorStrings.CopyResult(changedHitsounds, difficulties.Count - failed), FontAwesome.Solid.Check);
 
@@ -415,7 +412,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
 
             try
             {
-                var map = loadHitsounds(difficulty);
+                var map = LoadHitsounds(difficulty);
 
                 source = map.Columns.Select(c => c.GetState()).ToList();
                 sourceBodies = map.Bodies.Select(b => b.GetState()).ToList();
@@ -487,7 +484,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
             {
                 try
                 {
-                    others.Add(loadHitsounds(difficulty).Columns.Select(c => c.GetState()).ToList());
+                    others.Add(LoadHitsounds(difficulty).Columns.Select(c => c.GetState()).ToList());
                 }
                 catch (Exception e)
                 {
@@ -544,7 +541,10 @@ namespace osu.Game.Screens.Edit.Hitsounding
             difficulty.ApproachRate = 8;
         }
 
-        private HitsoundMap loadHitsounds(BeatmapInfo difficulty)
+        /// <summary>
+        /// Loads the saved hitsounds of a difficulty. Blocking.
+        /// </summary>
+        public HitsoundMap LoadHitsounds(BeatmapInfo difficulty)
         {
             // a fresh reference, in case the difficulty was saved since the editor was loaded.
             var info = beatmapManager.QueryBeatmap(b => b.ID == difficulty.ID)

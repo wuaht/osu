@@ -49,6 +49,13 @@ namespace osu.Game.Screens.Edit.Hitsounding
     }
 
     /// <summary>
+    /// Copied hitsounds.
+    /// </summary>
+    /// <param name="State">The hitsounds.</param>
+    /// <param name="Lanes">The lanes in which the hitsounds were selected when copying them, or <c>null</c> if they were selected in all lanes (see <see cref="HitsoundEditor.Paste"/>).</param>
+    public sealed record HitsoundClipboardEntry(HitsoundColumnState State, IReadOnlyCollection<HitsoundLane>? Lanes);
+
+    /// <summary>
     /// Additions which play from the same bank.
     /// </summary>
     public sealed record HitsoundAdditionGroup(string Bank, IReadOnlyList<string> Names);
