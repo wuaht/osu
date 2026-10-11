@@ -970,7 +970,8 @@ namespace osu.Game.Screens.Edit.Hitsounding
                 }
 
                 if (Map.FindClosestColumn(entry.State.Time, PASTE_LENIENCY) is HitsoundColumn column)
-                    merged.Add((column, entry.Lanes.Where(l => l.IsAddition).ToList()));
+                    // the selected lanes also include lanes in which the copied hitsound had no sample, which must not be turned on.
+                    merged.Add((column, entry.Lanes.Where(l => l.IsAddition && hasAddition(entry.State, l)).ToList()));
                 else
                     replaced.Add(entry.State with { AdditionGroups = filterAdditions(entry.State.AdditionGroups, entry.Lanes) });
             }
@@ -994,6 +995,10 @@ namespace osu.Game.Screens.Edit.Hitsounding
             editorBeatmap.EndChange();
 
             return dropped;
+
+            static bool hasAddition(HitsoundColumnState state, HitsoundLane lane)
+                => (lane.CustomIndex == null || lane.CustomIndex == state.CustomIndex)
+                   && state.AdditionGroups.Any(g => g.Bank == lane.Bank && g.Names.Contains(lane.Sample));
 
             static IReadOnlyList<HitsoundAdditionGroup> filterAdditions(IReadOnlyList<HitsoundAdditionGroup> groups, IReadOnlyCollection<HitsoundLane> lanes)
                 => groups.Select(g => g with { Names = g.Names.Where(n => lanes.Any(l => l.Bank == g.Bank && l.Sample == n)).ToList() })
