@@ -190,6 +190,17 @@ namespace osu.Game.Screens.Edit.Timing
             [Resolved]
             private Bindable<ControlPointGroup?> selectedGroup { get; set; } = null!;
 
+            /// <summary>
+            /// All selected groups (see <see cref="TimingScreen.SelectedGroups"/>), if multiple groups can be selected.
+            /// </summary>
+            [Resolved]
+            private BindableList<ControlPointGroup>? selectedGroups { get; set; }
+
+            private readonly BindableList<ControlPointGroup> boundSelectedGroups = new BindableList<ControlPointGroup>();
+
+            [Resolved]
+            private EditorBeatmap beatmap { get; set; } = null!;
+
             [Resolved]
             private Bindable<TimingControlPoint?> activeTimingPoint { get; set; } = null!;
 
@@ -255,6 +266,13 @@ namespace osu.Game.Screens.Edit.Timing
                 base.LoadComplete();
 
                 selectedGroup.BindValueChanged(_ => updateState());
+
+                if (selectedGroups != null)
+                {
+                    boundSelectedGroups.BindTo(selectedGroups);
+                    boundSelectedGroups.BindCollectionChanged((_, _) => updateState());
+                }
+
                 activeEffectPoint.BindValueChanged(_ => updateState());
                 activeTimingPoint.BindValueChanged(_ => updateState(), true);
                 FinishTransforms(true);
@@ -283,17 +301,77 @@ namespace osu.Game.Screens.Edit.Timing
             {
                 // schedule to give time for any modified focused text box to lose focus and commit changes (e.g. BPM / time signature textboxes) before switching to new point.
                 var currentGroup = Current.Value;
+                bool toggle = e.ControlPressed;
+                bool range = e.ShiftPressed;
+
                 Schedule(() =>
                 {
+                    if (selectedGroups != null && toggle)
+                    {
+                        toggleSelection(currentGroup);
+                        return;
+                    }
+
+                    if (selectedGroups != null && range && selectedGroup.Value != null)
+                    {
+                        selectRange(selectedGroup.Value, currentGroup);
+                        return;
+                    }
+
+                    // replace a selection of multiple groups, even if the clicked group is already the primary selection.
+                    if (selectedGroups != null)
+                    {
+                        selectedGroups.Clear();
+                        selectedGroups.Add(currentGroup);
+                    }
+
                     selectedGroup.Value = currentGroup;
                     editorClock.SeekSmoothlyTo(currentGroup.Time);
                 });
                 return true;
             }
 
+            private void toggleSelection(ControlPointGroup group)
+            {
+                if (selectedGroups!.Contains(group))
+                {
+                    selectedGroups.Remove(group);
+
+                    if (selectedGroup.Value?.Equals(group) == true)
+                        selectedGroup.Value = selectedGroups.LastOrDefault();
+                }
+                else
+                {
+                    selectedGroups.Add(group);
+                    selectedGroup.Value = group;
+                }
+            }
+
+            /// <summary>
+            /// Adds all groups from <paramref name="from"/> to <paramref name="to"/> to the selection.
+            /// </summary>
+            private void selectRange(ControlPointGroup from, ControlPointGroup to)
+            {
+                var groups = beatmap.ControlPointInfo.Groups.ToList();
+
+                int fromIndex = groups.IndexOf(from);
+                int toIndex = groups.IndexOf(to);
+
+                if (fromIndex < 0 || toIndex < 0)
+                    return;
+
+                for (int i = Math.Min(fromIndex, toIndex); i <= Math.Max(fromIndex, toIndex); i++)
+                {
+                    if (!selectedGroups!.Contains(groups[i]))
+                        selectedGroups.Add(groups[i]);
+                }
+
+                selectedGroup.Value = to;
+            }
+
             private void updateState()
             {
-                bool isSelected = selectedGroup.Value?.Equals(current.Value) == true;
+                bool isSelected = selectedGroup.Value?.Equals(current.Value) == true || boundSelectedGroups.Contains(current.Value);
 
                 bool hasCurrentTimingPoint = activeTimingPoint.Value != null && current.Value.ControlPoints.Contains(activeTimingPoint.Value);
                 bool hasCurrentEffectPoint = activeEffectPoint.Value != null && current.Value.ControlPoints.Contains(activeEffectPoint.Value);

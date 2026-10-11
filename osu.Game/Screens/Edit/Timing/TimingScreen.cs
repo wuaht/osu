@@ -2,19 +2,38 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
+using osu.Framework.Input;
+using osu.Framework.Input.Bindings;
+using osu.Framework.Input.Events;
 using osu.Game.Beatmaps.ControlPoints;
 using osu.Game.Screens.Edit.Compose.Components.Timeline;
 
 namespace osu.Game.Screens.Edit.Timing
 {
-    public partial class TimingScreen : EditorScreenWithTimeline
+    public partial class TimingScreen : EditorScreenWithTimeline, IKeyBindingHandler<PlatformAction>
     {
         [Cached]
         public readonly Bindable<ControlPointGroup> SelectedGroup = new Bindable<ControlPointGroup>();
+
+        /// <summary>
+        /// All selected groups, including <see cref="SelectedGroup"/>.
+        /// More groups can be selected by Ctrl+clicking (or Shift+clicking, for a range) them in the table.
+        /// </summary>
+        [Cached]
+        public readonly BindableList<ControlPointGroup> SelectedGroups = new BindableList<ControlPointGroup>();
+
+        private readonly BindableList<ControlPointGroup> groups = new BindableList<ControlPointGroup>();
+
+        [Cached]
+        private readonly EditorMetronome metronome = new EditorMetronome();
+
+        [Cached]
+        private readonly TimingAnalyser analyser = new TimingAnalyser();
 
         private readonly Bindable<EditorScreenMode> currentEditorMode = new Bindable<EditorScreenMode>();
 
@@ -50,6 +69,9 @@ namespace osu.Game.Screens.Edit.Timing
         [BackgroundDependencyLoader]
         private void load(Editor? editor)
         {
+            AddInternal(metronome);
+            AddInternal(analyser);
+
             if (editor != null)
                 currentEditorMode.BindTo(editor.Mode);
         }
@@ -57,6 +79,28 @@ namespace osu.Game.Screens.Edit.Timing
         protected override void LoadComplete()
         {
             base.LoadComplete();
+
+            // selecting a single group in any other way replaces the selection.
+            SelectedGroup.BindValueChanged(group =>
+            {
+                if (group.NewValue == null)
+                    SelectedGroups.Clear();
+                else if (!SelectedGroups.Contains(group.NewValue))
+                {
+                    SelectedGroups.Clear();
+                    SelectedGroups.Add(group.NewValue);
+                }
+            }, true);
+
+            ((IBindableList<ControlPointGroup>)groups).BindTo(EditorBeatmap.ControlPointInfo.Groups);
+            groups.BindCollectionChanged((_, e) =>
+            {
+                if (e.OldItems == null)
+                    return;
+
+                foreach (ControlPointGroup removed in e.OldItems)
+                    SelectedGroups.Remove(removed);
+            });
 
             // When entering the timing screen, let's choose the closest valid timing point.
             // This will emulate the osu-stable behaviour where a metronome and timing information
@@ -87,6 +131,32 @@ namespace osu.Game.Screens.Edit.Timing
                 SelectedGroup.Value = EditorBeatmap.ControlPointInfo.GroupAt(latestActiveTime);
             }
         }
+
+        public bool OnPressed(KeyBindingPressEvent<PlatformAction> e)
+        {
+            if (e.Action != PlatformAction.SelectAll)
+                return false;
+
+            // text boxes with focus handle select all themselves before this.
+            var allGroups = EditorBeatmap.ControlPointInfo.Groups.ToArray();
+
+            if (allGroups.Length == 0)
+                return true;
+
+            SelectedGroups.Clear();
+            SelectedGroups.AddRange(allGroups);
+
+            if (SelectedGroup.Value == null || !SelectedGroups.Contains(SelectedGroup.Value))
+                SelectedGroup.Value = allGroups[0];
+
+            return true;
+        }
+
+        public void OnReleased(KeyBindingReleaseEvent<PlatformAction> e)
+        {
+        }
+
+        protected override Drawable CreateTimelineContent() => new VariableTimingOverlay();
 
         protected override void ConfigureTimeline(TimelineArea timelineArea)
         {

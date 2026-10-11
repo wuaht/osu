@@ -34,5 +34,12 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
         /// </summary>
         [LocalisableDescription(typeof(SlopSettingsStrings), nameof(SlopSettingsStrings.WaveformStyleSpectral))]
         Spectral,
+
+        /// <summary>
+        /// Where notes and hits start instead of how loud the track is, which stays readable for loud, compressed songs.
+        /// The peaks are displayed where timing points snap to in the timing screen.
+        /// </summary>
+        [LocalisableDescription(typeof(SlopSettingsStrings), nameof(SlopSettingsStrings.WaveformStyleOnsets))]
+        Onsets,
     }
 }

@@ -4,12 +4,10 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using ManagedBass;
 using osu.Framework.Audio.Callbacks;
-using osu.Framework.Audio.Track;
 using osu.Framework.Logging;
 using osu.Game.Beatmaps;
 
@@ -147,51 +145,20 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
         #region Analysis
 
         /// <summary>
-        /// The analyses of tracks, keyed by their <see cref="WorkingBeatmap.Waveform"/> (which is replaced when the track changes),
-        /// so that all displays of a track share a single analysis.
+        /// The analyses of recently used audio files, so that all displays of a track (and all difficulties using it) share a single analysis.
         /// </summary>
-        private static readonly ConditionalWeakTable<Waveform, Task<EditorWaveformData?>> analyses = new ConditionalWeakTable<Waveform, Task<EditorWaveformData?>>();
+        private static readonly AudioAnalysisCache<EditorWaveformData> analyses = new AudioAnalysisCache<EditorWaveformData>(stream => Analyse(stream, CancellationToken.None), "waveform");
 
         /// <summary>
-        /// Retrieves the analysis of the track of the given beatmap, starting it in the background if it hasn't been performed yet.
+        /// Retrieves the analysis of the track of the given beatmap, starting it in the background if it hasn't been performed recently.
         /// Must be called from the update thread, as the audio file is read from the beatmap.
         /// </summary>
-        public static Task<EditorWaveformData?> GetForTrack(WorkingBeatmap beatmap)
-        {
-            var key = beatmap.Waveform;
+        public static Task<EditorWaveformData?> GetForTrack(WorkingBeatmap beatmap) => analyses.GetForTrack(beatmap);
 
-            // a missing waveform means there is no audio file.
-            if (key == null)
-                return Task.FromResult<EditorWaveformData?>(null);
-
-            lock (analyses)
-            {
-                if (analyses.TryGetValue(key, out var existing))
-                    return existing;
-
-                var stream = getAudioStream(beatmap);
-
-                var task = stream == null
-                    ? Task.FromResult<EditorWaveformData?>(null)
-                    : Task.Run(() =>
-                    {
-                        try
-                        {
-                            return Analyse(stream, CancellationToken.None);
-                        }
-                        catch (Exception e)
-                        {
-                            Logger.Error(e, "Failed to analyse the waveform");
-                            return null;
-                        }
-                    });
-
-                analyses.Add(key, task);
-                return task;
-            }
-        }
-
-        private static Stream? getAudioStream(WorkingBeatmap beatmap)
+        /// <summary>
+        /// Opens the audio file of the given beatmap, if it has one.
+        /// </summary>
+        public static Stream? GetAudioStream(WorkingBeatmap beatmap)
         {
             string? audioFile = beatmap.Metadata?.AudioFile;
 

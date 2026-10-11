@@ -15,7 +15,6 @@ using osu.Framework.Input.Events;
 using osu.Framework.Threading;
 using osu.Framework.Timing;
 using osu.Framework.Utils;
-using osu.Game.Audio;
 using osu.Game.Beatmaps.ControlPoints;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Containers;
@@ -38,13 +37,16 @@ namespace osu.Game.Screens.Edit.Timing
 
         private Sample? sampleLatch;
 
-        private readonly MetronomeTick metronomeTick = new MetronomeTick();
+        private EditorMetronome metronomeTick = null!;
+
+        /// <summary>
+        /// The metronome of the timing screen, which keeps ticking while this display is collapsed.
+        /// </summary>
+        [Resolved]
+        private EditorMetronome? sharedMetronome { get; set; }
 
         [Resolved]
         private OverlayColourProvider overlayColourProvider { get; set; } = null!;
-
-        [Resolved]
-        private BindableBeatDivisor beatDivisor { get; set; } = null!;
 
         public bool EnableClicking
         {
@@ -72,11 +74,11 @@ namespace osu.Game.Screens.Edit.Timing
 
             AutoSizeAxes = Axes.Both;
 
+            metronomeTick = sharedMetronome ?? new EditorMetronome();
             metronomeTick.Ticked = onTickPlayed;
 
             InternalChildren = new Drawable[]
             {
-                metronomeTick,
                 new Container
                 {
                     Name = @"Taper adjust",
@@ -229,6 +231,9 @@ namespace osu.Game.Screens.Edit.Timing
                 },
             };
 
+            if (sharedMetronome == null)
+                AddInternal(metronomeTick);
+
             Clock = new FramedClock(metronomeClock = new StopwatchClock(true));
         }
 
@@ -242,21 +247,6 @@ namespace osu.Game.Screens.Edit.Timing
         private readonly BindableDouble interpolatedBpm = new BindableDouble();
 
         private ScheduledDelegate? latchDelegate;
-
-        private bool spedUp;
-
-        private int computeSpedUpDivisor()
-        {
-            if (!spedUp)
-                return 1;
-
-            if (beatDivisor.Value % 3 == 0)
-                return 3;
-            if (beatDivisor.Value % 2 == 0)
-                return 2;
-
-            return 1;
-        }
 
         protected override void LoadComplete()
         {
@@ -301,7 +291,7 @@ namespace osu.Game.Screens.Edit.Timing
 
             timingPoint = BeatSyncSource.ControlPoints.TimingPointAt(BeatSyncSource.Clock.CurrentTime);
 
-            Divisor = metronomeTick.Divisor = computeSpedUpDivisor();
+            Divisor = metronomeTick.Divisor;
 
             if (effectiveBeatLength != timingPoint.BeatLength / Divisor)
             {
@@ -369,55 +359,6 @@ namespace osu.Game.Screens.Edit.Timing
             // Mappers weren't happy with the metronome tick not playing immediately after starting playback
             // so now this matches the actual tick sample.
             stick.FlashColour(overlayColourProvider.Content1, effectiveBeatLength, Easing.OutQuint);
-        }
-
-        protected override bool OnKeyDown(KeyDownEvent e)
-        {
-            updateDivisorFromKey(e);
-
-            return base.OnKeyDown(e);
-        }
-
-        protected override void OnKeyUp(KeyUpEvent e)
-        {
-            base.OnKeyUp(e);
-
-            updateDivisorFromKey(e);
-        }
-
-        private void updateDivisorFromKey(UIEvent e) => spedUp = e.ControlPressed;
-
-        private partial class MetronomeTick : BeatSyncedContainer
-        {
-            public bool EnableClicking;
-
-            private Sample? sampleTick;
-            private Sample? sampleTickDownbeat;
-
-            public Action? Ticked;
-
-            public MetronomeTick()
-            {
-                AllowMistimedEventFiring = false;
-            }
-
-            [BackgroundDependencyLoader]
-            private void load(AudioManager audio)
-            {
-                sampleTick = audio.Samples.Get(@"UI/metronome-tick");
-                sampleTickDownbeat = audio.Samples.Get(@"UI/metronome-tick-downbeat");
-            }
-
-            protected override void OnNewBeat(int beatIndex, TimingControlPoint timingPoint, EffectControlPoint effectPoint, ChannelAmplitudes amplitudes)
-            {
-                base.OnNewBeat(beatIndex, timingPoint, effectPoint, amplitudes);
-
-                if (!IsBeatSyncedWithTrack || !EnableClicking)
-                    return;
-
-                SamplePlaybackHelper.PlayWithRandomPitch(beatIndex % timingPoint.TimeSignature.Numerator == 0 ? sampleTickDownbeat : sampleTick, 0.02f);
-                Ticked?.Invoke();
-            }
         }
     }
 }

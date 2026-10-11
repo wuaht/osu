@@ -33,7 +33,19 @@ namespace osu.Game.Screens.Edit.Components
         private EditorClock editorClock { get; set; } = null!;
 
         private readonly Bindable<EditorScreenMode> currentScreenMode = new Bindable<EditorScreenMode>();
+        /// <summary>
+        /// The playback speed selected by the user.
+        /// </summary>
+        private readonly BindableNumber<double> playbackSpeed = new BindableDouble(1);
+
         private readonly BindableNumber<double> tempoAdjustment = new BindableDouble(1);
+
+        /// <summary>
+        /// Used instead of <see cref="tempoAdjustment"/> in the timing screen.
+        /// Changing the speed together with the pitch (resampling) keeps transients sharp and doesn't delay the audio,
+        /// unlike changing the tempo (time stretching), which made timing at slower speeds inaccurate.
+        /// </summary>
+        private readonly BindableNumber<double> frequencyAdjustment = new BindableDouble(1);
 
         [BackgroundDependencyLoader]
         private void load(OverlayColourProvider colourProvider, Editor? editor)
@@ -67,7 +79,7 @@ namespace osu.Game.Screens.Edit.Components
                         },
                         new PlaybackTabControl
                         {
-                            Current = tempoAdjustment,
+                            Current = playbackSpeed,
                             RelativeSizeAxes = Axes.X,
                             Height = 14,
                         },
@@ -76,6 +88,7 @@ namespace osu.Game.Screens.Edit.Components
             };
 
             editorClock.AudioAdjustments.AddAdjustment(AdjustableProperty.Tempo, tempoAdjustment);
+            editorClock.AudioAdjustments.AddAdjustment(AdjustableProperty.Frequency, frequencyAdjustment);
 
             if (editor != null)
                 currentScreenMode.BindTo(editor.Mode);
@@ -85,28 +98,29 @@ namespace osu.Game.Screens.Edit.Components
         {
             base.LoadComplete();
 
-            currentScreenMode.BindValueChanged(_ =>
-            {
-                if (currentScreenMode.Value == EditorScreenMode.Timing)
-                {
-                    tempoAdjustment.Value = 1;
-                    tempoAdjustment.Disabled = true;
-                    playbackSpeedControl.FadeTo(0.5f, 400, Easing.OutQuint);
-                    playbackSpeedControl.TooltipText = "Speed adjustment is unavailable in timing mode. Timing at slower speeds is inaccurate due to resampling artifacts.";
-                }
-                else
-                {
-                    tempoAdjustment.Disabled = false;
-                    playbackSpeedControl.FadeTo(1, 400, Easing.OutQuint);
-                    playbackSpeedControl.TooltipText = default;
-                }
-            });
+            currentScreenMode.BindValueChanged(_ => updateSpeedAdjustments());
+            playbackSpeed.BindValueChanged(_ => updateSpeedAdjustments(), true);
+        }
+
+        private void updateSpeedAdjustments()
+        {
+            bool isTimingScreen = currentScreenMode.Value == EditorScreenMode.Timing;
+
+            tempoAdjustment.Value = isTimingScreen ? 1 : playbackSpeed.Value;
+            frequencyAdjustment.Value = isTimingScreen ? playbackSpeed.Value : 1;
+
+            playbackSpeedControl.TooltipText = isTimingScreen
+                ? "In timing mode, the pitch changes along with the speed. This keeps the audio sharp and in sync, so timing stays accurate at slower speeds."
+                : default(LocalisableString);
         }
 
         protected override void Dispose(bool isDisposing)
         {
             if (editorClock.IsNotNull())
+            {
                 editorClock.AudioAdjustments.RemoveAdjustment(AdjustableProperty.Tempo, tempoAdjustment);
+                editorClock.AudioAdjustments.RemoveAdjustment(AdjustableProperty.Frequency, frequencyAdjustment);
+            }
 
             base.Dispose(isDisposing);
         }

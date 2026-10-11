@@ -23,6 +23,7 @@ using osu.Game.Graphics.UserInterface;
 using osu.Game.Graphics.UserInterfaceV2;
 using osu.Game.Input.Bindings;
 using osu.Game.Overlays;
+using osu.Game.Screens.Edit.Timing;
 using osuTK;
 using osuTK.Graphics;
 using osuTK.Input;
@@ -212,10 +213,31 @@ namespace osu.Game.Screens.Edit.Compose.Components
             return base.OnKeyDown(e);
         }
 
+        [Resolved]
+        private EditorScreenWithTimeline? screenWithTimeline { get; set; }
+
+        /// <summary>
+        /// Whether Ctrl is held above the timeline of the timing screen, where it places timing points instead of changing the beat snap divisor.
+        /// </summary>
+        private bool isPlacingTimingPoints()
+        {
+            if (screenWithTimeline is not TimingScreen)
+                return false;
+
+            var timeline = screenWithTimeline.TimelineArea?.Timeline;
+            var inputManager = GetContainingInputManager();
+
+            return timeline != null && inputManager != null && timeline.ScreenSpaceDrawQuad.Contains(inputManager.CurrentState.Mouse.Position);
+        }
+
         public bool OnPressed(KeyBindingPressEvent<GlobalAction> e)
         {
             switch (e.Action)
             {
+                case GlobalAction.EditorCycleNextBeatSnapDivisor when isPlacingTimingPoints():
+                case GlobalAction.EditorCyclePreviousBeatSnapDivisor when isPlacingTimingPoints():
+                    return true;
+
                 case GlobalAction.EditorCycleNextBeatSnapDivisor:
                     beatDivisor.SelectNext();
                     return true;

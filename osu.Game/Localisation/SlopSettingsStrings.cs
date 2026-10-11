@@ -478,6 +478,11 @@ namespace osu.Game.Localisation
         public static LocalisableString WaveformStyleSpectral => new TranslatableString(getKey(@"waveform_style_spectral"), @"FL Studio / MiniMeters");
 
         /// <summary>
+        /// "Onsets"
+        /// </summary>
+        public static LocalisableString WaveformStyleOnsets => new TranslatableString(getKey(@"waveform_style_onsets"), @"Onsets");
+
+        /// <summary>
         /// "Online"
         /// </summary>
         public static LocalisableString OnlineHeader => new TranslatableString(getKey(@"online_header"), @"Online");

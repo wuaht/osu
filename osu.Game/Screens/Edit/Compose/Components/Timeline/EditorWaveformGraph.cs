@@ -12,6 +12,7 @@ using osu.Framework.Graphics.Rendering.Vertices;
 using osu.Framework.Graphics.Shaders;
 using osu.Framework.Graphics.Textures;
 using osu.Game.Beatmaps;
+using osu.Game.Screens.Edit.Timing;
 using osuTK;
 using osuTK.Graphics;
 
@@ -51,6 +52,7 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
                     return;
 
                 style = value;
+                requestEnvelopeIfRequired();
                 Invalidate(Invalidation.DrawNode);
             }
         }
@@ -76,6 +78,33 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
         private EditorWaveformData? data;
 
         /// <summary>
+        /// The onsets of the track, displayed by <see cref="EditorWaveformStyle.Onsets"/>. Only calculated once that style is selected.
+        /// </summary>
+        private OnsetEnvelope? envelope;
+
+        private WorkingBeatmap? loadedBeatmap;
+        private bool envelopeRequested;
+
+        private void requestEnvelopeIfRequired()
+        {
+            if (style != EditorWaveformStyle.Onsets || loadedBeatmap == null || envelopeRequested)
+                return;
+
+            envelopeRequested = true;
+
+            int version = dataVersion;
+
+            OnsetEnvelope.GetForTrack(loadedBeatmap).ContinueWith(t => Schedule(() =>
+            {
+                if (version != dataVersion || !t.IsCompletedSuccessfully)
+                    return;
+
+                envelope = t.GetResultSafely();
+                Invalidate(Invalidation.DrawNode);
+            }));
+        }
+
+        /// <summary>
         /// Incremented whenever new data is requested, so that results of previous requests are ignored.
         /// </summary>
         private int dataVersion;
@@ -88,6 +117,10 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
             int version = ++dataVersion;
 
             data = null;
+            envelope = null;
+            loadedBeatmap = beatmap;
+            envelopeRequested = false;
+            requestEnvelopeIfRequired();
             Invalidate(Invalidation.DrawNode);
 
             EditorWaveformData.GetForTrack(beatmap).ContinueWith(t => Schedule(() =>
@@ -109,6 +142,7 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
             private IShader shader = null!;
             private Texture texture = null!;
             private EditorWaveformData? data;
+            private OnsetEnvelope? envelope;
             private EditorWaveformStyle style;
             private double trackLength;
             private Vector2 drawSize;
@@ -127,6 +161,7 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
                 shader = Source.shader;
                 texture = Source.texture;
                 data = Source.data;
+                envelope = Source.envelope;
                 style = Source.style;
                 trackLength = Source.trackLength;
                 drawSize = Source.DrawSize;
@@ -136,7 +171,7 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
             {
                 base.Draw(renderer);
 
-                if (data == null || trackLength <= 0 || drawSize.X <= 0 || drawSize.Y <= 0 || texture?.Available != true)
+                if (trackLength <= 0 || drawSize.X <= 0 || drawSize.Y <= 0 || texture?.Available != true)
                     return;
 
                 vertexBatch ??= renderer.CreateQuadBatch<TexturedVertex2D>(1000, 10);
@@ -145,6 +180,30 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
                 Vector2 pixelSize = DrawInfo.MatrixInverse.ExtractScale().Xy;
 
                 double localWidthPerMs = drawSize.X / trackLength;
+
+                // Only draw blocks which are visible.
+                RectangleF visibleRectangle = (Quad.FromRectangle(renderer.CurrentMaskingInfo.ScreenSpaceAABB) * DrawInfo.MatrixInverse).AABBFloat;
+
+                float centre = drawSize.Y / 2;
+
+                // Even silence is displayed as a thin line, so that the extent of the track remains visible.
+                float minimumHeight = pixelSize.Y;
+
+                if (style == EditorWaveformStyle.Onsets)
+                {
+                    if (envelope != null)
+                    {
+                        shader.Bind();
+                        texture.Bind();
+                        drawOnsets(envelope);
+                        shader.Unbind();
+                    }
+
+                    return;
+                }
+
+                if (data == null)
+                    return;
 
                 // Use the finest level whose blocks are at least a pixel wide, so that there's at most one block per pixel.
                 // Coarser levels contain the peaks of the finer ones, and their blocks still start at exact sample times.
@@ -158,17 +217,9 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
                         break;
                 }
 
-                // Only draw blocks which are visible.
-                RectangleF visibleRectangle = (Quad.FromRectangle(renderer.CurrentMaskingInfo.ScreenSpaceAABB) * DrawInfo.MatrixInverse).AABBFloat;
-
                 double blockDuration = data.FrameToTime(level.FramesPerBlock);
                 int startBlock = (int)Math.Clamp(Math.Floor(visibleRectangle.Left / localWidthPerMs / blockDuration) - 1, 0, level.Count);
                 int endBlock = (int)Math.Clamp(Math.Ceiling(visibleRectangle.Right / localWidthPerMs / blockDuration) + 1, 0, level.Count);
-
-                float centre = drawSize.Y / 2;
-
-                // Even silence is displayed as a thin line, so that the extent of the track remains visible.
-                float minimumHeight = pixelSize.Y;
 
                 ColourInfo white = applyDrawColour(Color4.White);
                 ColourInfo low = applyDrawColour(low_colour);
@@ -228,6 +279,35 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
                 }
 
                 shader.Unbind();
+
+                void drawOnsets(OnsetEnvelope onsets)
+                {
+                    // This drawable is displayed earlier by the visual offset of the waveform (see Editor.WAVEFORM_VISUAL_OFFSET).
+                    // The onsets are displayed at their times in the track instead, where timing points are placed onto them.
+                    double timeOffset = Editor.WAVEFORM_VISUAL_OFFSET + OnsetEnvelope.DisplayTimeAt(0);
+
+                    // Use the finest level whose values are at least a pixel wide (see the waveform levels above).
+                    int levelIndex = 0;
+
+                    while (levelIndex < onsets.DisplayLevels.Count - 1 && (1 << levelIndex) * localWidthPerMs < pixelSize.X)
+                        levelIndex++;
+
+                    float[] values = onsets.DisplayLevels[levelIndex];
+                    double valueDuration = 1 << levelIndex;
+
+                    int start = (int)Math.Clamp(Math.Floor((visibleRectangle.Left / localWidthPerMs - timeOffset) / valueDuration) - 1, 0, values.Length);
+                    int end = (int)Math.Clamp(Math.Ceiling((visibleRectangle.Right / localWidthPerMs - timeOffset) / valueDuration) + 1, 0, values.Length);
+
+                    ColourInfo colour = applyDrawColour(Color4.White);
+
+                    for (int i = start; i < end; i++)
+                    {
+                        float left = (float)((i * valueDuration + timeOffset) * localWidthPerMs);
+                        float right = (float)(((i + 1) * valueDuration + timeOffset) * localWidthPerMs);
+
+                        drawRange(left, right, values[i], -values[i], colour);
+                    }
+                }
 
                 void drawBandsSorted(float x0, float x1, float peakHeight, (float height, ColourInfo colour) a, (float height, ColourInfo colour) b, (float height, ColourInfo colour) c)
                 {
