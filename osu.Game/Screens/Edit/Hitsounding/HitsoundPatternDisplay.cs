@@ -255,7 +255,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
                 new OsuMenuItem(SlopHitsoundEditorStrings.MakePatternUnique, MenuItemType.Standard, () => screen.MakePatternUnique(occurrence)),
                 new OsuMenuItem(occurrence.Parent != null ? SlopHitsoundEditorStrings.RemoveSubPattern : SlopHitsoundEditorStrings.RemovePatternInstance, MenuItemType.Destructive,
                     () => screen.RemovePatternOccurrence(occurrence, keepHitsounds: false)),
-                new OsuMenuItem(SlopHitsoundEditorStrings.UnlinkPatternInstance, MenuItemType.Standard, () => screen.RemovePatternOccurrence(occurrence, keepHitsounds: true)),
+                new OsuMenuItem(SlopHitsoundEditorStrings.UnlinkPatternInstance, MenuItemType.Destructive, () => screen.RemovePatternOccurrence(occurrence, keepHitsounds: true)),
                 new OsuMenuItem(SlopHitsoundEditorStrings.DeletePattern, MenuItemType.Destructive, () => patterns.Delete(pattern)),
             };
         }
