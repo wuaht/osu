@@ -25,6 +25,7 @@ namespace osu.Game.Graphics
         public static IconUsage RulesetTaiko => get(OsuIconMapping.RulesetTaiko);
 
         public static IconUsage Logo => get(OsuIconMapping.Logo);
+        public static IconUsage SlopLogo => get(OsuIconMapping.SlopLogo);
         public static IconUsage EditCircle => get(OsuIconMapping.EditCircle);
         public static IconUsage LeftCircle => get(OsuIconMapping.LeftCircle);
         public static IconUsage RightCircle => get(OsuIconMapping.RightCircle);
@@ -729,6 +730,9 @@ namespace osu.Game.Graphics
 
             [Description(@"Mods/mod-wind-up")]
             ModWindUp,
+
+            [Description(@"SlopLogo")]
+            SlopLogo,
         }
 
         public class OsuIconStore : ITextureStore, ITexturedGlyphLookupStore
