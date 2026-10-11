@@ -105,7 +105,7 @@ namespace osu.Game.Tests.Slop
 
             AddStep("show all lanes", () =>
             {
-                hitsoundEditor = Editor.ChildrenOfType<HitsoundEditor>().Single();
+                hitsoundEditor = screen!.ChildrenOfType<HitsoundEditor>().Single();
                 hitsoundEditor.HideUnusedLanes.Value = false;
             });
 
@@ -181,7 +181,7 @@ namespace osu.Game.Tests.Slop
         {
             AddStep("set custom index of second object", () =>
             {
-                var hitsoundEditor = Editor.ChildrenOfType<HitsoundEditor>().Single();
+                var hitsoundEditor = screen!.ChildrenOfType<HitsoundEditor>().Single();
                 hitsoundEditor.SetCustomIndex(new[] { hitsoundEditor.Map.Columns[1] }, 3);
             });
 
@@ -204,7 +204,7 @@ namespace osu.Game.Tests.Slop
             AddUntilStep("wait for editor", () => Editor.ReadyForUse);
             waitForScreen();
 
-            AddAssert("hitsound difficulty mode enabled", () => Editor.ChildrenOfType<HitsoundEditor>().Single().HitsoundDifficultyMode.Value);
+            AddAssert("hitsound difficulty mode enabled", () => screen!.ChildrenOfType<HitsoundEditor>().Single().HitsoundDifficultyMode.Value);
             AddAssert("contains both hitsounds", () => EditorBeatmap.HitObjects.Select(h => h.StartTime), () => Is.EqualTo(new double[] { 0, 500 }));
             AddAssert("whistle copied", () => EditorBeatmap.HitObjects[1].Samples.Any(s => s.Name == HitSampleInfo.HIT_WHISTLE && s.Bank == HitSampleInfo.BANK_SOFT));
             AddAssert("starting bank applied", () => EditorBeatmap.HitObjects.All(h => HitsoundSamples.GetNormalBank(h.Samples) == HitSampleInfo.BANK_SOFT));
@@ -245,11 +245,11 @@ namespace osu.Game.Tests.Slop
             AddStep("seek to second object", () => EditorClock.Seek(500));
 
             AddStep("left click whistle", () => clickLane(whistle, MouseButton.Left));
-            AddAssert("hitsound selected", () => Editor.ChildrenOfType<HitsoundEditor>().Single().IsSelected(500));
+            AddAssert("hitsound selected", () => screen!.ChildrenOfType<HitsoundEditor>().Single().IsSelected(500));
             AddAssert("whistle kept", () => hasSample(EditorBeatmap.HitObjects[1], HitSampleInfo.HIT_WHISTLE));
 
             AddStep("left click whistle again", () => clickLane(whistle, MouseButton.Left));
-            AddAssert("hitsound deselected", () => !Editor.ChildrenOfType<HitsoundEditor>().Single().IsSelected(500));
+            AddAssert("hitsound deselected", () => !screen!.ChildrenOfType<HitsoundEditor>().Single().IsSelected(500));
 
             AddStep("left click clap", () => clickLane(clap, MouseButton.Left));
             AddAssert("clap added", () => hasSample(EditorBeatmap.HitObjects[1], HitSampleInfo.HIT_CLAP));
@@ -423,6 +423,33 @@ namespace osu.Game.Tests.Slop
             AddAssert("hitsounds kept", () => hasSample(EditorBeatmap.HitObjects[3], HitSampleInfo.HIT_WHISTLE));
         }
 
+        [TestCase(false)]
+        [TestCase(true)]
+        public void TestDeletingObjectOutsideHitsoundScreenIsSyncedToAllPlaces(bool deleteAsRange)
+        {
+            AddStep("add objects for second place", () => EditorBeatmap.AddRange(new[] { createCircle(1000), createCircle(1500) }));
+            AddStep("enable hitsound difficulty mode", () => hitsoundEditor.HitsoundDifficultyMode.Value = true);
+            AddStep("select first two hitsounds", () => hitsoundEditor.SetSelection(new[] { 0, 500 }));
+            AddStep("create pattern", () => screen!.CreatePatternFromSelection());
+            AddStep("seek to second place", () => EditorClock.Seek(1000));
+            AddStep("place pattern", () => screen!.PlacePattern(patterns.Patterns.Single()));
+
+            // like deleting the object in the compose screen.
+            AddStep("delete object at second place", () =>
+            {
+                var hitObject = objectsAt(1500).Single();
+
+                if (deleteAsRange)
+                    EditorBeatmap.RemoveRange(new[] { hitObject });
+                else
+                    EditorBeatmap.Remove(hitObject);
+            });
+            AddUntilStep("object deleted at first place", () => objectsAt(500), () => Is.Empty);
+
+            AddStep("undo", () => Editor.Undo());
+            AddUntilStep("objects back at both places", () => objectsAt(500).Count() == 1 && objectsAt(1500).Count() == 1);
+        }
+
         [Test]
         public void TestPatternKeepsCustomSampleSetsOfEachObject()
         {
@@ -529,7 +556,7 @@ namespace osu.Game.Tests.Slop
             AddAssert("second object follows line", () => HitsoundSamples.GetVolume(EditorBeatmap.HitObjects[1].Samples), () => Is.EqualTo(55).Within(5));
         }
 
-        private HitsoundEditor hitsoundEditor => Editor.ChildrenOfType<HitsoundEditor>().Single();
+        private HitsoundEditor hitsoundEditor => screen!.ChildrenOfType<HitsoundEditor>().Single();
 
         private HitsoundPatterns patterns => screen!.Patterns;
 
@@ -562,7 +589,7 @@ namespace osu.Game.Tests.Slop
         private void clickLane(HitsoundLane lane, MouseButton button)
         {
             var area = Editor.ChildrenOfType<HitsoundLaneArea>().Single();
-            var lanes = Editor.ChildrenOfType<HitsoundEditor>().Single().VisibleLanes;
+            var lanes = screen!.ChildrenOfType<HitsoundEditor>().Single().VisibleLanes;
             int index = lanes.ToList().IndexOf(lane);
 
             // the current time is at the centre of the lanes.

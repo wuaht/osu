@@ -388,11 +388,13 @@ namespace osu.Game.Screens.Edit
         /// <param name="hitObject">The <see cref="HitObject"/> to insert.</param>
         public void Insert(int index, HitObject hitObject)
         {
+            // the change begins before the object is inserted, such that listeners to TransactionBegan see the state before it.
+            BeginChange();
+
             trackStartTime(hitObject);
 
             mutableHitObjects.Insert(index, hitObject);
 
-            BeginChange();
             batchPendingInserts.Add(hitObject);
             EndChange();
         }
@@ -463,13 +465,15 @@ namespace osu.Game.Screens.Edit
         {
             HitObject hitObject = (HitObject)mutableHitObjects[index]!;
 
+            // the change begins before the object is removed, such that listeners to TransactionBegan see the state before it.
+            BeginChange();
+
             mutableHitObjects.RemoveAt(index);
 
             var bindable = startTimeBindables[hitObject];
             bindable.UnbindAll();
             startTimeBindables.Remove(hitObject);
 
-            BeginChange();
             batchPendingDeletes.Add(hitObject);
             EndChange();
         }
