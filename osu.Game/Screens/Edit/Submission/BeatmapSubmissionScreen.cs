@@ -90,6 +90,10 @@ namespace osu.Game.Screens.Edit.Submission
         [BackgroundDependencyLoader]
         private void load(AudioManager audio)
         {
+            // hitsound difficulties only exist to edit hitsounds, so they aren't uploaded unless chosen otherwise in the submission settings.
+            // set before the settings are loaded, as they show the defaults.
+            settings.ExcludedBeatmaps.AddRange(Beatmap.Value.BeatmapSetInfo.Beatmaps.Where(b => HitsoundPreferences.IsHitsoundDifficulty(configManager, b)));
+
             AddRangeInternal(new Drawable[]
             {
                 overlay = new BeatmapSubmissionOverlay(),
@@ -210,29 +214,28 @@ namespace osu.Game.Screens.Edit.Submission
         }
 
         /// <summary>
-        /// The difficulties which aren't uploaded: the hitsound difficulty, which only exists to edit hitsounds (see <see cref="HitsoundPreferences.IsHitsoundDifficulty"/>).
-        /// They are kept locally.
+        /// The difficulties which aren't uploaded (see <see cref="BeatmapSubmissionSettings.ExcludedBeatmaps"/>). They are kept locally.
         /// </summary>
         private List<BeatmapInfo> excludedBeatmaps = new List<BeatmapInfo>();
 
         private HashSet<string> excludedFilenames = new HashSet<string>();
 
-        private IEnumerable<BeatmapInfo> uploadedBeatmaps => Beatmap.Value.BeatmapSetInfo.Beatmaps.Where(b => !excludedBeatmaps.Contains(b));
+        private IEnumerable<BeatmapInfo> uploadedBeatmaps => Beatmap.Value.BeatmapSetInfo.Beatmaps.Where(b => excludedBeatmaps.All(e => e.ID != b.ID));
 
         private void createBeatmapSet()
         {
             bool beatmapHasOnlineId = Beatmap.Value.BeatmapSetInfo.OnlineID > 0;
 
-            excludedBeatmaps = Beatmap.Value.BeatmapSetInfo.Beatmaps.Where(b => HitsoundPreferences.IsHitsoundDifficulty(configManager, b)).ToList();
+            excludedBeatmaps = Beatmap.Value.BeatmapSetInfo.Beatmaps.Where(b => settings.ExcludedBeatmaps.Any(e => e.ID == b.ID)).ToList();
 
-            // a beatmap set needs at least one difficulty.
+            // a beatmap set needs at least one difficulty (the settings don't allow excluding all of them, but this is a safety net).
             if (excludedBeatmaps.Count == Beatmap.Value.BeatmapSetInfo.Beatmaps.Count)
                 excludedBeatmaps.Clear();
 
             excludedFilenames = excludedBeatmaps.Select(b => b.File?.Filename).OfType<string>().ToHashSet();
 
             foreach (var excluded in excludedBeatmaps)
-                log($@"not uploading hitsound difficulty ""{excluded.DifficultyName}""");
+                log($@"not uploading difficulty ""{excluded.DifficultyName}""");
 
             PutBeatmapSetRequest createRequest;
 
@@ -467,7 +470,7 @@ namespace osu.Game.Screens.Edit.Submission
             // the difficulties are recreated by the import, so the hitsound difficulties are marked as such again in case they aren't named like one.
             if (importedSet != null)
             {
-                foreach (var excluded in excludedBeatmaps)
+                foreach (var excluded in excludedBeatmaps.Where(b => HitsoundPreferences.IsHitsoundDifficulty(configManager, b)))
                 {
                     var imported = importedSet.PerformRead(s => s.Beatmaps.FirstOrDefault(b => b.DifficultyName == excluded.DifficultyName)?.Detach());
 
