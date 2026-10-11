@@ -99,6 +99,39 @@ namespace osu.Game.Tests.Slop
         }
 
         [Test]
+        public void TestMoveSelectionToOtherLanes()
+        {
+            HitsoundEditor hitsoundEditor = null!;
+
+            AddStep("show all lanes", () =>
+            {
+                hitsoundEditor = Editor.ChildrenOfType<HitsoundEditor>().Single();
+                hitsoundEditor.HideUnusedLanes.Value = false;
+            });
+
+            AddStep("select first hitnormal", () => hitsoundEditor.SetSelection(new[] { 0 }, lanes: new[] { new HitsoundLane(HitSampleInfo.BANK_NORMAL, HitSampleInfo.HIT_NORMAL) }));
+            AddStep("press Ctrl+Down", () => pressWithControl(Key.Down));
+            AddAssert("hitnormal moved to soft", () => HitsoundSamples.GetNormalBank(EditorBeatmap.HitObjects[0].Samples), () => Is.EqualTo(HitSampleInfo.BANK_SOFT));
+            AddAssert("selection followed", () => hitsoundEditor.GetSelectedLanes(0), () => Is.EquivalentTo(new[] { new HitsoundLane(HitSampleInfo.BANK_SOFT, HitSampleInfo.HIT_NORMAL) }));
+
+            AddStep("select second whistle", () => hitsoundEditor.SetSelection(new[] { 500 }, lanes: new[] { new HitsoundLane(HitSampleInfo.BANK_SOFT, HitSampleInfo.HIT_WHISTLE) }));
+            AddStep("press Ctrl+Up", () => pressWithControl(Key.Up));
+            AddAssert("whistle moved past hitnormal lane to normal clap", () => EditorBeatmap.HitObjects[1].Samples.Any(s => s.Name == HitSampleInfo.HIT_CLAP && s.Bank == HitSampleInfo.BANK_NORMAL));
+            AddAssert("whistle removed", () => !hasSample(EditorBeatmap.HitObjects[1], HitSampleInfo.HIT_WHISTLE));
+            AddAssert("hitnormal unchanged", () => HitsoundSamples.GetNormalBank(EditorBeatmap.HitObjects[1].Samples), () => Is.EqualTo(HitSampleInfo.BANK_SOFT));
+
+            AddStep("undo", () => Editor.Undo());
+            AddAssert("whistle restored", () => hasSample(EditorBeatmap.HitObjects[1], HitSampleInfo.HIT_WHISTLE) && !hasSample(EditorBeatmap.HitObjects[1], HitSampleInfo.HIT_CLAP));
+
+            void pressWithControl(Key key)
+            {
+                InputManager.PressKey(Key.ControlLeft);
+                InputManager.Key(key);
+                InputManager.ReleaseKey(Key.ControlLeft);
+            }
+        }
+
+        [Test]
         public void TestSetBankOfSelection()
         {
             AddStep("select all", () => InputManager.Keys(PlatformAction.SelectAll));

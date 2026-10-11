@@ -203,7 +203,8 @@ namespace osu.Game.Screens.Edit.Hitsounding
         }
 
         private void applyColumn(HitsoundColumnPiece piece, HitsoundColumn column)
-            => piece.Apply(column, HitsoundEditor.VisibleLanes, HitsoundEditor.IsSelected(column.Key), HitsoundEditor.GetSelectedLanes(column.Key), HitsoundEditor.MutedLanes, laneHeight);
+            => piece.Apply(column, HitsoundEditor.VisibleLanes, HitsoundEditor.IsSelected(column.Key), HitsoundEditor.GetSelectedLanes(column.Key), HitsoundEditor.MutedLanes, laneHeight,
+                movingLanes ? laneMoveOffset : 0);
 
         private void updateBodies(HitsoundMap map, double start, double end)
         {
@@ -278,7 +279,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
         {
             hoveredColumn = null;
 
-            if (hoverPosition is not Vector2 position || laneAt(position.Y) is not HitsoundLane lane || selectingBox)
+            if (hoverPosition is not Vector2 position || laneAt(position.Y) is not HitsoundLane lane || selectingBox || movingLanes)
             {
                 hoverMarker.Alpha = 0;
                 return;
@@ -312,7 +313,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
             hoverMarkerFill.Colour = colour;
         }
 
-        public LocalisableString TooltipText => hoveredColumn != null && paintButton == null && !selectingBox
+        public LocalisableString TooltipText => hoveredColumn != null && paintButton == null && !selectingBox && !movingLanes
             ? HitsoundColumnDescription.Describe(hoveredColumn)
             : default;
 
@@ -378,7 +379,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
 
         protected override bool OnMouseDown(MouseDownEvent e)
         {
-            if (paintButton != null || selectingBox)
+            if (paintButton != null || selectingBox || movingLanes)
                 return false;
 
             if (e.Button != MouseButton.Left && e.Button != MouseButton.Right)
@@ -419,6 +420,13 @@ namespace osu.Game.Screens.Edit.Hitsounding
                 // like in a piano roll, left clicking a sample which is already on selects or deselects its hitsound instead of turning it off.
                 if (column.Has(lane))
                 {
+                    // dragging a selected sample up or down moves the selected samples to other lanes, clicking it deselects it on release.
+                    if (e.Button == MouseButton.Left && HitsoundEditor.IsSelected(column.Key) && HitsoundEditor.GetSelectedLanes(column.Key)?.Contains(lane) != false)
+                    {
+                        beginMovingLanes(column, lane);
+                        return true;
+                    }
+
                     HitsoundEditor.ToggleSelection(column.Key);
                     Playback.PlayLane(lane, column.Volume, column.CustomIndex);
                     return true;
@@ -454,13 +462,15 @@ namespace osu.Game.Screens.Edit.Hitsounding
             return true;
         }
 
-        protected override bool OnDragStart(DragStartEvent e) => paintButton != null || selectingBox;
+        protected override bool OnDragStart(DragStartEvent e) => paintButton != null || selectingBox || movingLanes;
 
         protected override void OnDrag(DragEvent e)
         {
             var position = GetMousePosition(e);
 
-            if (selectingBox)
+            if (movingLanes)
+                updateMovingLanes(position);
+            else if (selectingBox)
                 updateBoxSelection(position);
             else
                 paintTo(position);
@@ -468,7 +478,9 @@ namespace osu.Game.Screens.Edit.Hitsounding
 
         protected override void OnMouseUp(MouseUpEvent e)
         {
-            if (e.Button == paintButton)
+            if (e.Button == MouseButton.Left && movingLanes)
+                endMovingLanes();
+            else if (e.Button == paintButton)
                 endPainting();
             else if (e.Button == MouseButton.Left && selectingBox)
                 endBoxSelection(GetMousePosition(e));
@@ -500,6 +512,15 @@ namespace osu.Game.Screens.Edit.Hitsounding
             // the stroke may have been interrupted (e.g. by losing focus), in which case the mouse up event never arrives.
             if (paintButton is MouseButton button && GetContainingInputManager()?.CurrentState.Mouse.IsPressed(button) == false)
                 endPainting();
+
+            // an interrupted move is cancelled.
+            if (movingLanes && GetContainingInputManager()?.CurrentState.Mouse.IsPressed(MouseButton.Left) == false)
+            {
+                movingLanes = false;
+                laneMoveOffset = 0;
+                moveColumn = null;
+                invalidateDisplay();
+            }
         }
 
         /// <summary>
@@ -610,6 +631,78 @@ namespace osu.Game.Screens.Edit.Hitsounding
                     Playback.PlayLane(paintLane, created.Volume, created.CustomIndex);
                 }
             }
+        }
+
+        #endregion
+
+        #region Moving lanes
+
+        /// <summary>
+        /// Whether the selected samples are being dragged to other lanes.
+        /// </summary>
+        private bool movingLanes;
+
+        /// <summary>
+        /// Whether the cursor has left the lane which the dragged sample is in, as opposed to the sample only being clicked.
+        /// </summary>
+        private bool movedAcrossLanes;
+
+        private int moveStartLaneIndex;
+
+        /// <summary>
+        /// The number of lanes by which the selected samples will be moved when releasing.
+        /// </summary>
+        private int laneMoveOffset;
+
+        private HitsoundColumn? moveColumn;
+
+        private void beginMovingLanes(HitsoundColumn column, HitsoundLane lane)
+        {
+            movingLanes = true;
+            movedAcrossLanes = false;
+            moveStartLaneIndex = indexOf(lane);
+            laneMoveOffset = 0;
+            moveColumn = column;
+
+            Playback.PlayLane(lane, column.Volume, column.CustomIndex);
+        }
+
+        private void updateMovingLanes(Vector2 position)
+        {
+            int index = Math.Clamp((int)Math.Floor(position.Y / laneHeight), 0, HitsoundEditor.VisibleLanes.Count - 1);
+            int wanted = index - moveStartLaneIndex;
+
+            if (wanted != 0)
+                movedAcrossLanes = true;
+
+            // where not all selected samples can be moved by the wanted number of lanes, they move as far as they can.
+            int offset = HitsoundEditor.ClampSelectionLaneOffset(wanted);
+
+            if (offset == laneMoveOffset)
+                return;
+
+            laneMoveOffset = offset;
+            invalidateDisplay();
+
+            if (moveColumn != null && offset != 0 && HitsoundEditor.GetMovedLane(moveStartLaneIndex, offset) is HitsoundLane target)
+                Playback.PlayLane(target, moveColumn.Volume, target.CustomIndex ?? moveColumn.CustomIndex);
+        }
+
+        private void endMovingLanes()
+        {
+            movingLanes = false;
+            invalidateDisplay();
+
+            if (laneMoveOffset != 0)
+                HitsoundEditor.MoveSelectionLanes(laneMoveOffset);
+            else if (!movedAcrossLanes && moveColumn != null)
+            {
+                // a click without dragging deselects the hitsound, like clicking a sample of a hitsound which isn't selected selects it.
+                HitsoundEditor.ToggleSelection(moveColumn.Key);
+            }
+
+            laneMoveOffset = 0;
+            moveColumn = null;
         }
 
         #endregion

@@ -25,6 +25,7 @@ using osu.Game.Overlays.Notifications;
 using osu.Game.Rulesets;
 using osu.Game.Screens.Edit.Components;
 using osu.Game.Utils;
+using osuTK.Input;
 
 namespace osu.Game.Screens.Edit.Hitsounding
 {
@@ -250,6 +251,27 @@ namespace osu.Game.Screens.Edit.Hitsounding
 
         public void OnReleased(KeyBindingReleaseEvent<GlobalAction> e)
         {
+        }
+
+        protected override bool OnKeyDown(KeyDownEvent e)
+        {
+            if (isTyping || !e.ControlPressed || e.ShiftPressed || e.AltPressed)
+                return base.OnKeyDown(e);
+
+            switch (e.Key)
+            {
+                case Key.Up:
+                case Key.Down:
+                    // moves the selected samples to the next lane of the same kind, e.g. from normal-hitnormal to soft-hitnormal.
+                    int offset = hitsoundEditor.FindSelectionLaneOffset(e.Key == Key.Up ? -1 : 1);
+
+                    if (offset != 0)
+                        hitsoundEditor.MoveSelectionLanes(offset);
+
+                    return true;
+            }
+
+            return base.OnKeyDown(e);
         }
 
         public bool OnPressed(KeyBindingPressEvent<PlatformAction> e)

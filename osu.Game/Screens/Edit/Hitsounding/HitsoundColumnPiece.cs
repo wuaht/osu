@@ -53,8 +53,9 @@ namespace osu.Game.Screens.Edit.Hitsounding
         /// <param name="selectedLanes">The lanes in which the hitsound is selected, or <c>null</c> if it's selected in all lanes.</param>
         /// <param name="mutedLanes">The muted lanes.</param>
         /// <param name="laneHeight">The height of a lane.</param>
+        /// <param name="laneMoveOffset">The number of lanes by which the selected samples are being dragged, which displays them in the lanes they will be moved to.</param>
         public void Apply(HitsoundColumn column, IReadOnlyList<HitsoundLane> lanes, bool selected, IReadOnlyCollection<HitsoundLane>? selectedLanes, IEnumerable<HitsoundLane> mutedLanes,
-                          float laneHeight)
+                          float laneHeight, int laneMoveOffset = 0)
         {
             Alpha = 1;
 
@@ -90,13 +91,15 @@ namespace osu.Game.Screens.Edit.Hitsounding
                 }
 
                 var lane = lanes[i];
-                var colour = HitsoundLane.GetBankColour(lane.Bank);
+                bool laneSelected = selected && (selectedLanes == null || selectedLanes.Contains(lane));
+                int displayIndex = laneSelected ? Math.Clamp(i + laneMoveOffset, 0, lanes.Count - 1) : i;
+                var colour = HitsoundLane.GetBankColour(lanes[displayIndex].Bank);
 
-                marker.Alpha = muted.Contains(lane) || muted.Contains(lane.Parent) ? 0.3f : 1;
-                marker.Y = (i + 0.5f) * laneHeight;
+                marker.Alpha = muted.Contains(lane) || muted.Contains(lane.Parent) ? 0.3f : displayIndex != i ? 0.7f : 1;
+                marker.Y = (displayIndex + 0.5f) * laneHeight;
                 marker.Child.Colour = colour;
                 marker.BorderColour = ColourInfo.SingleColour(Colour4.White);
-                marker.BorderThickness = selected && (selectedLanes == null || selectedLanes.Contains(lane)) ? 3 : 0;
+                marker.BorderThickness = laneSelected ? 3 : 0;
 
                 if (lane.IsAddition)
                 {
