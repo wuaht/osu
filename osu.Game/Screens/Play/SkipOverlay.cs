@@ -51,6 +51,11 @@ namespace osu.Game.Screens.Play
         private double displayTime;
 
         /// <summary>
+        /// The time from which skipping is possible, if it's not from when this overlay is loaded (e.g. for skipping breaks).
+        /// </summary>
+        private readonly double? skippableFrom;
+
+        /// <summary>
         /// Whether the gameplay clock is currently at the skippable period.
         /// </summary>
         private readonly BindableBool inSkipPeriod = new BindableBool();
@@ -67,9 +72,11 @@ namespace osu.Game.Screens.Play
         /// Displays a skip overlay, giving the user the ability to skip forward.
         /// </summary>
         /// <param name="startTime">The time at which gameplay begins to appear.</param>
-        public SkipOverlay(double startTime)
+        /// <param name="skippableFrom">The time from which skipping is possible, if it's not from when this overlay is loaded (e.g. the start of a break).</param>
+        public SkipOverlay(double startTime, double? skippableFrom = null)
         {
             this.startTime = startTime;
+            this.skippableFrom = skippableFrom;
 
             RelativePositionAxes = Axes.Both;
             RelativeSizeAxes = Axes.X;
@@ -136,7 +143,7 @@ namespace osu.Game.Screens.Play
         {
             base.LoadComplete();
 
-            displayTime = gameplayClock.CurrentTime;
+            displayTime = skippableFrom ?? gameplayClock.CurrentTime;
 
             // skip is not required if there is no extra "empty" time to skip.
             // we may need to remove this if rewinding before the initial player load position becomes a thing.
@@ -152,7 +159,8 @@ namespace osu.Game.Screens.Play
                 RequestSkip?.Invoke();
             };
 
-            FadingContent.TriggerShow();
+            if (skippableFrom == null)
+                FadingContent.TriggerShow();
         }
 
         /// <summary>
@@ -187,11 +195,18 @@ namespace osu.Game.Screens.Play
             if (fadeOutBeginTime <= displayTime)
                 return;
 
-            double progress = Math.Max(0, 1 - (gameplayClock.CurrentTime - displayTime) / (fadeOutBeginTime - displayTime));
+            double progress = Math.Clamp(1 - (gameplayClock.CurrentTime - displayTime) / (fadeOutBeginTime - displayTime), 0, 1);
 
             RemainingTimeBox.Width = (float)Interpolation.DampContinuously(RemainingTimeBox.Width, progress, 40, Math.Abs(Time.Elapsed));
 
-            inSkipPeriod.Value = progress > 0;
+            bool wasInSkipPeriod = inSkipPeriod.Value;
+
+            inSkipPeriod.Value = progress > 0 && (skippableFrom == null || gameplayClock.CurrentTime >= skippableFrom);
+
+            // overlays which only become skippable later show themselves once they do.
+            if (skippableFrom != null && inSkipPeriod.Value && !wasInSkipPeriod)
+                FadingContent.TriggerShow();
+
             buttonContainer.State.Value = inSkipPeriod.Value ? Visibility.Visible : Visibility.Hidden;
         }
 

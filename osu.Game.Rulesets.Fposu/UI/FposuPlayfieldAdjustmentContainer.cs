@@ -66,11 +66,12 @@ namespace osu.Game.Rulesets.Fposu.UI
 
         /// <summary>
         /// The background of the beatmap, dimmed according to the background dim setting.
-        /// The regular background is hidden behind the 3D environment.
+        /// The regular background is hidden behind the 3D environment. Hidden with <see cref="OsuSetting.SlopFposuTransparentBackground"/>.
         /// </summary>
         private partial class BeatmapBackground : Sprite
         {
             private IBindable<double> dimLevel = null!;
+            private IBindable<bool> transparent = null!;
 
             [BackgroundDependencyLoader]
             private void load(IBindable<WorkingBeatmap> beatmap, OsuConfigManager config)
@@ -84,6 +85,9 @@ namespace osu.Game.Rulesets.Fposu.UI
 
                 dimLevel = config.GetBindable<double>(OsuSetting.DimLevel);
                 dimLevel.BindValueChanged(dim => Colour = OsuColour.Gray(1 - (float)dim.NewValue), true);
+
+                transparent = config.GetBindable<bool>(OsuSetting.SlopFposuTransparentBackground);
+                transparent.BindValueChanged(t => Alpha = t.NewValue ? 0 : 1, true);
             }
         }
 

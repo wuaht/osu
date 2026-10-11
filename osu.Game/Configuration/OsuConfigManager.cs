@@ -291,6 +291,9 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopFposuAbsoluteMode, false);
             SetDefault(OsuSetting.SlopFposuBackgroundCube, true);
             SetDefault(OsuSetting.SlopFposuSkybox, true);
+            SetDefault(OsuSetting.SlopFposuTransparentBackground, false);
+
+            SetDefault(OsuSetting.SlopSkipBreaks, false);
 
             SetDefault(OsuSetting.SlopActiveOfflineProfile, string.Empty);
             SetDefault(OsuSetting.SlopOfflineProfilesIncludeUnranked, false);
@@ -728,6 +731,16 @@ namespace osu.Game.Configuration
         /// Whether a skybox is displayed around the camera in the FPoSu ruleset, instead of the background cube.
         /// </summary>
         SlopFposuSkybox,
+
+        /// <summary>
+        /// Whether the beatmap background is hidden in the FPoSu ruleset, so that the objects float in front of the skybox or background cube.
+        /// </summary>
+        SlopFposuTransparentBackground,
+
+        /// <summary>
+        /// Whether a skip button is displayed during breaks, like the one at the start of a beatmap.
+        /// </summary>
+        SlopSkipBreaks,
 
         /// <summary>
         /// The ID of the offline profile which is the local user while not logged in, or empty to play as a guest.

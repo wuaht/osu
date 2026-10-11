@@ -26,9 +26,11 @@ namespace osu.Game.Rulesets.Fposu.UI
     /// Renders its children (the 2D game) into a frame buffer, which is displayed on a <see cref="FposuScreenMesh"/> as seen by a <see cref="FposuCamera"/>.
     /// </summary>
     /// <remarks>
-    /// The children are laid out and receive input as if this was a regular container. Only how they are displayed differs.
+    /// The children are laid out and receive input as if this was a regular container the size of the window. Only how they are displayed differs.
+    /// This container itself is larger than the window (see <see cref="horizontal_overflow"/> and <see cref="vertical_overflow"/>),
+    /// so that what the children draw beyond the edges of the window (e.g. large approach circles) is displayed as well instead of being cut off.
     /// </remarks>
-    public partial class FposuScreen : Container, IBufferedDrawable
+    public partial class FposuScreen : Container, IBufferedDrawable, IBackbufferProvider
     {
         /// <summary>
         /// The number of columns each face of the mesh is drawn as, and the number of rows of the mesh.
@@ -53,6 +55,20 @@ namespace osu.Game.Rulesets.Fposu.UI
 
         private const int cube_grid_lines = 10;
 
+        /// <summary>
+        /// How much of the width of the window is displayed beyond its left and right edges.
+        /// </summary>
+        private const float horizontal_overflow = 0.1f;
+
+        /// <summary>
+        /// How much of the height of the window is displayed beyond its top and bottom edges.
+        /// Approach circles of objects at the top or bottom of the playfield extend far beyond the window when they appear.
+        /// </summary>
+        private const float vertical_overflow = 0.35f;
+
+        private const float horizontal_scale = 1 + 2 * horizontal_overflow;
+        private const float vertical_scale = 1 + 2 * vertical_overflow;
+
         private static readonly Color4 environment_colour = new Color4(12, 12, 16, 255);
         private static readonly Color4 cube_line_colour = new Color4(255, 255, 255, 28);
 
@@ -61,7 +77,7 @@ namespace osu.Game.Rulesets.Fposu.UI
         /// <summary>
         /// The current mesh, which depends on the settings and the aspect ratio of this container.
         /// </summary>
-        public FposuScreenMesh Mesh { get; private set; } = new FposuScreenMesh(0.5f, true, 9 / 16f);
+        public FposuScreenMesh Mesh { get; private set; } = new FposuScreenMesh(0.5f, true, 9 / 16f, horizontal_scale, vertical_scale);
 
         public IShader TextureShader { get; private set; } = null!;
 
@@ -113,10 +129,33 @@ namespace osu.Game.Rulesets.Fposu.UI
         /// </summary>
         private Vector3[] meshPoints = Array.Empty<Vector3>();
 
+        /// <summary>
+        /// The area of the window, in which the children are laid out.
+        /// </summary>
+        private readonly Container content;
+
+        protected override Container<Drawable> Content => content;
+
+        /// <summary>
+        /// The area of the window in screen space, which the 3D environment is displayed in.
+        /// </summary>
+        public RectangleF ScreenSpaceViewRectangle => content.ScreenSpaceDrawQuad.AABBFloat;
+
         public FposuScreen(FposuCamera camera)
         {
             Camera = camera;
             RelativeSizeAxes = Axes.Both;
+            Size = new Vector2(horizontal_scale, vertical_scale);
+            Anchor = Anchor.Centre;
+            Origin = Anchor.Centre;
+
+            InternalChild = content = new Container
+            {
+                RelativeSizeAxes = Axes.Both,
+                Size = new Vector2(1 / horizontal_scale, 1 / vertical_scale),
+                Anchor = Anchor.Centre,
+                Origin = Anchor.Centre,
+            };
         }
 
         [BackgroundDependencyLoader]
@@ -163,11 +202,11 @@ namespace osu.Game.Rulesets.Fposu.UI
         {
             base.Update();
 
-            float aspectRatio = DrawWidth > 0 ? DrawHeight / DrawWidth : 9 / 16f;
+            float aspectRatio = content.DrawWidth > 0 ? content.DrawHeight / content.DrawWidth : 9 / 16f;
 
             if (Mesh.Distance != distance.Value || Mesh.Curved != curved.Value || Mesh.AspectRatio != aspectRatio || meshPoints.Length == 0)
             {
-                Mesh = new FposuScreenMesh(distance.Value, curved.Value, aspectRatio);
+                Mesh = new FposuScreenMesh(distance.Value, curved.Value, aspectRatio, horizontal_scale, vertical_scale);
 
                 var points = new Vector3[(columns + 1) * (rows + 1)];
 
@@ -182,6 +221,15 @@ namespace osu.Game.Rulesets.Fposu.UI
 
             // the 2D game changes every frame.
             Invalidate(Invalidation.DrawNode);
+        }
+
+        // the children are drawn to the frame buffer of this screen rather than the one of the game,
+        // so drawables blurring what is behind them (e.g. frosted slider bodies) have to blur this frame buffer instead.
+        RectangleF IBackbufferProvider.BackbufferDrawRectangle => ScreenSpaceDrawQuad.AABBFloat;
+
+        void IBackbufferProvider.RequestBackbuffer()
+        {
+            // always drawn to a frame buffer.
         }
 
         protected override RectangleF ComputeChildMaskingBounds() => ScreenSpaceDrawQuad.AABBFloat; // like BufferedContainer, children should never be masked away.
@@ -214,6 +262,11 @@ namespace osu.Game.Rulesets.Fposu.UI
             private Vector3[] meshPoints = Array.Empty<Vector3>();
             private Texture whitePixel = null!;
 
+            /// <summary>
+            /// The area of the window, which the 3D environment is displayed in (see <see cref="FposuScreen.ScreenSpaceViewRectangle"/>).
+            /// </summary>
+            private RectangleF viewRectangle;
+
             // reused between frames to avoid allocations.
             private Vector2[] projected = Array.Empty<Vector2>();
             private bool[] valid = Array.Empty<bool>();
@@ -227,12 +280,14 @@ namespace osu.Game.Rulesets.Fposu.UI
             {
                 base.ApplyState();
 
+                viewRectangle = Source.ScreenSpaceViewRectangle;
+
                 forward = Source.Camera.Forward;
                 right = Source.Camera.Right;
                 up = Source.Camera.Up;
 
                 // the field of view is horizontal (like McOsu by default).
-                focalLength = DrawRectangle.Width / 2 / MathF.Tan(MathHelper.DegreesToRadians(Source.fov.Value) / 2);
+                focalLength = viewRectangle.Width / 2 / MathF.Tan(MathHelper.DegreesToRadians(Source.fov.Value) / 2);
 
                 drawCube = Source.backgroundCube.Value;
                 skyboxTexture = Source.currentSkyboxTexture;
@@ -252,7 +307,7 @@ namespace osu.Game.Rulesets.Fposu.UI
                 whitePixel = renderer.WhitePixel;
 
                 // the environment replaces anything behind the game.
-                renderer.DrawQuad(whitePixel, Quad.FromRectangle(DrawRectangle), environment_colour);
+                renderer.DrawQuad(whitePixel, Quad.FromRectangle(viewRectangle), environment_colour);
 
                 // like McOsu, the skybox replaces the background cube.
                 if (skyboxTexture != null)
@@ -292,6 +347,11 @@ namespace osu.Game.Rulesets.Fposu.UI
                 float cellWidth = texture.DisplayWidth / columns;
                 float cellHeight = texture.DisplayHeight / rows;
 
+                // the children are drawn onto a transparent frame buffer, which leaves their colours multiplied by their alpha.
+                // drawing it with regular blending would multiply them by their alpha again, which makes fading objects too dark.
+                renderer.SetBlend(premultiplied_blending);
+                ColourInfo colour = premultiply(DrawColourInfo.Colour);
+
                 for (int row = 0; row < rows; row++)
                 {
                     for (int column = 0; column < columns; column++)
@@ -307,9 +367,43 @@ namespace osu.Game.Rulesets.Fposu.UI
                         var quad = new Quad(projected[topLeft], projected[topRight], projected[bottomLeft], projected[bottomRight]);
 
                         // the texture coordinates are given separately from the texture rectangle, so that sampling isn't clamped to each cell (which would cause seams).
-                        renderer.DrawQuad(texture, quad, DrawColourInfo.Colour, textureCoords: new RectangleF(column * cellWidth, row * cellHeight, cellWidth, cellHeight));
+                        renderer.DrawQuad(texture, quad, colour, textureCoords: new RectangleF(column * cellWidth, row * cellHeight, cellWidth, cellHeight));
                     }
                 }
+
+                renderer.SetBlend(DrawColourInfo.Blending);
+            }
+
+            /// <summary>
+            /// Blends colours which are already multiplied by their alpha.
+            /// </summary>
+            private static readonly BlendingParameters premultiplied_blending = new BlendingParameters
+            {
+                Source = BlendingType.One,
+                Destination = BlendingType.OneMinusSrcAlpha,
+                SourceAlpha = BlendingType.One,
+                DestinationAlpha = BlendingType.One,
+                RGBEquation = BlendingEquation.Add,
+                AlphaEquation = BlendingEquation.Add,
+            };
+
+            /// <summary>
+            /// Multiplies the colours by their alpha, for drawing with <see cref="premultiplied_blending"/> (e.g. while the screen fades out).
+            /// </summary>
+            private static ColourInfo premultiply(ColourInfo colour)
+            {
+                static SRGBColour premultiplyColour(SRGBColour c) => new Color4(c.SRGB.R * c.SRGB.A, c.SRGB.G * c.SRGB.A, c.SRGB.B * c.SRGB.A, c.SRGB.A);
+
+                if (colour.HasSingleColour)
+                    return premultiplyColour(colour.TopLeft);
+
+                return new ColourInfo
+                {
+                    TopLeft = premultiplyColour(colour.TopLeft),
+                    TopRight = premultiplyColour(colour.TopRight),
+                    BottomLeft = premultiplyColour(colour.BottomLeft),
+                    BottomRight = premultiplyColour(colour.BottomRight),
+                };
             }
 
             /// <summary>
@@ -468,7 +562,7 @@ namespace osu.Game.Rulesets.Fposu.UI
             /// </summary>
             private Vector2 project(Vector3 point, float depth)
             {
-                Vector2 centre = DrawRectangle.Centre;
+                Vector2 centre = viewRectangle.Centre;
 
                 return new Vector2(
                     centre.X + focalLength * Vector3.Dot(point, right) / depth,

@@ -419,6 +419,17 @@ namespace osu.Game.Localisation
             @"Displays a sky around you instead of the background cube. Skins can provide their own as skybox.png, a cubemap in the horizontal cross layout.");
 
         /// <summary>
+        /// "Transparent background"
+        /// </summary>
+        public static LocalisableString FposuTransparentBackground => new TranslatableString(getKey(@"fposu_transparent_background"), @"Transparent background");
+
+        /// <summary>
+        /// "Hides the beatmap background, so that the objects float in front of the skybox or background cube."
+        /// </summary>
+        public static LocalisableString FposuTransparentBackgroundDescription => new TranslatableString(getKey(@"fposu_transparent_background_description"),
+            @"Hides the beatmap background, so that the objects float in front of the skybox or background cube.");
+
+        /// <summary>
         /// "Displays a grid around you, which helps with orientation."
         /// </summary>
         public static LocalisableString FposuBackgroundCubeDescription => new TranslatableString(getKey(@"fposu_background_cube_description"),
@@ -486,6 +497,22 @@ namespace osu.Game.Localisation
         /// "Online"
         /// </summary>
         public static LocalisableString OnlineHeader => new TranslatableString(getKey(@"online_header"), @"Online");
+
+        /// <summary>
+        /// "Gameplay"
+        /// </summary>
+        public static LocalisableString GameplayHeader => new TranslatableString(getKey(@"gameplay_header"), @"Gameplay");
+
+        /// <summary>
+        /// "Skip breaks"
+        /// </summary>
+        public static LocalisableString SkipBreaks => new TranslatableString(getKey(@"skip_breaks"), @"Skip breaks");
+
+        /// <summary>
+        /// "Displays a skip button during breaks, which jumps to shortly before the next objects."
+        /// </summary>
+        public static LocalisableString SkipBreaksDescription => new TranslatableString(getKey(@"skip_breaks_description"),
+            @"Displays a skip button during breaks, which jumps to shortly before the next objects.");
 
         /// <summary>
         /// "Beatmap mirror"

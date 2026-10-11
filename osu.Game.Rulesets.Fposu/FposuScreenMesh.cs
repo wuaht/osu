@@ -11,7 +11,8 @@ namespace osu.Game.Rulesets.Fposu
     /// The (optionally curved) screen in front of the camera which the 2D game is displayed on, built like in McOsu's FPoSu.
     /// </summary>
     /// <remarks>
-    /// Positions on the screen are given as UV coordinates, from (0, 0) at the top left to (1, 1) at the bottom right of the 2D game.
+    /// Positions on the screen are given as UV coordinates, from (0, 0) at the top left to (1, 1) at the bottom right of the whole mesh.
+    /// Without <see cref="HorizontalScale"/> and <see cref="VerticalScale"/>, this is exactly the 2D game.
     /// </remarks>
     public class FposuScreenMesh
     {
@@ -46,12 +47,23 @@ namespace osu.Game.Rulesets.Fposu
         public readonly float AspectRatio;
 
         /// <summary>
-        /// The width of the screen along its surface. The height is scaled by this, so that the 2D game isn't stretched.
+        /// The width of the whole mesh relative to the width of the 2D game, which is displayed in the middle of it.
+        /// The rest of the mesh shows what the 2D game draws beyond its edges.
+        /// </summary>
+        public readonly float HorizontalScale;
+
+        /// <summary>
+        /// The height of the whole mesh relative to the height of the 2D game (see <see cref="HorizontalScale"/>).
+        /// </summary>
+        public readonly float VerticalScale;
+
+        /// <summary>
+        /// The width of the 2D game along the surface of the screen. The height is scaled by this, so that the 2D game isn't stretched.
         /// </summary>
         public readonly float CircumLength;
 
         /// <summary>
-        /// Half of the height of the screen.
+        /// Half of the height of the whole mesh.
         /// </summary>
         public readonly float HalfHeight;
 
@@ -60,27 +72,63 @@ namespace osu.Game.Rulesets.Fposu
         /// </summary>
         private readonly Vector2[] columns;
 
-        public FposuScreenMesh(float distance, bool curved, float aspectRatio)
+        /// <param name="distance">The distance of the centre of the screen from the camera.</param>
+        /// <param name="curved">Whether the screen is curved around the camera.</param>
+        /// <param name="aspectRatio">The ratio of height to width of the 2D game.</param>
+        /// <param name="horizontalScale">The width of the whole mesh relative to the 2D game (see <see cref="HorizontalScale"/>).</param>
+        /// <param name="verticalScale">The height of the whole mesh relative to the 2D game (see <see cref="VerticalScale"/>).</param>
+        public FposuScreenMesh(float distance, bool curved, float aspectRatio, float horizontalScale = 1, float verticalScale = 1)
         {
             Distance = distance;
             Curved = curved;
             AspectRatio = aspectRatio;
+            HorizontalScale = horizontalScale;
+            VerticalScale = verticalScale;
 
-            // the edges of the screen are at x = ±0.5, and curved screens go through these edges.
+            // the edges of the 2D game are at x = ±0.5, and curved screens go through these edges.
             float edgeDistance = new Vector2(0.5f, distance).Length;
 
-            var left = new Vector2(-0.5f, -distance);
-            var right = new Vector2(0.5f, -distance);
+            CircumLength = getLength(createColumns(1, edgeDistance));
+            columns = createColumns(horizontalScale, edgeDistance);
+
+            HalfHeight = 0.5f * aspectRatio * CircumLength * verticalScale;
+        }
+
+        /// <summary>
+        /// Creates the vertical edges of the faces of a mesh which is <paramref name="scale"/> times as wide as the 2D game.
+        /// </summary>
+        private Vector2[] createColumns(float scale, float edgeDistance)
+        {
+            Vector2 left, right;
+
+            if (Curved)
+            {
+                // curved meshes continue around the circle, with the angle scaled like the width.
+                float angle = MathF.Atan2(0.5f, Distance) * scale;
+
+                left = new Vector2(-MathF.Sin(angle), -MathF.Cos(angle)) * edgeDistance;
+                right = new Vector2(MathF.Sin(angle), -MathF.Cos(angle)) * edgeDistance;
+            }
+            else
+            {
+                left = new Vector2(-0.5f * scale, -Distance);
+                right = new Vector2(0.5f * scale, -Distance);
+            }
 
             var list = new List<Vector2>();
             subdivide(list, left, right, SUBDIVISIONS, edgeDistance);
             list.Add(right);
-            columns = list.ToArray();
+            return list.ToArray();
+        }
 
-            for (int i = 0; i < columns.Length - 1; i++)
-                CircumLength += Vector2.Distance(columns[i], columns[i + 1]);
+        private static float getLength(Vector2[] points)
+        {
+            float length = 0;
 
-            HalfHeight = 0.5f * aspectRatio * CircumLength;
+            for (int i = 0; i < points.Length - 1; i++)
+                length += Vector2.Distance(points[i], points[i + 1]);
+
+            return length;
         }
 
         /// <summary>

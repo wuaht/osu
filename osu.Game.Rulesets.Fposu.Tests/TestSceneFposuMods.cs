@@ -72,7 +72,7 @@ namespace osu.Game.Rulesets.Fposu.Tests
             {
                 var drawable = aliveObjects().First();
                 var layer = drawableRuleset.ChildrenOfType<FposuDepthLayer>().Single();
-                Vector2 centre = screen.ScreenSpaceDrawQuad.AABBFloat.Centre;
+                Vector2 centre = screen.ScreenSpaceViewRectangle.Centre;
                 Vector2 anchor = anchorOf(drawable);
 
                 layer.TryGetProjection(drawable, 0, out var near, out float nearDepth);
@@ -145,7 +145,7 @@ namespace osu.Game.Rulesets.Fposu.Tests
             var camera = drawableRuleset.Camera;
             Vector3 p = screen.Mesh.GetPosition(screen.ToUVFromScreenSpace(screenSpacePosition));
 
-            var quad = screen.ScreenSpaceDrawQuad.AABBFloat;
+            var quad = screen.ScreenSpaceViewRectangle;
             float focalLength = quad.Width / 2 / MathF.Tan(MathHelper.DegreesToRadians(config.Get<float>(OsuSetting.SlopFposuFov)) / 2);
             float depth = Vector3.Dot(p, camera.Forward);
 

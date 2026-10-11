@@ -4,6 +4,7 @@
 #nullable disable
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -157,6 +158,13 @@ namespace osu.Game.Screens.Play
         protected SkipOverlay SkipIntroOverlay { get; private set; }
         private SkipOverlay skipOutroOverlay;
 
+        /// <summary>
+        /// Skip buttons for each break, if enabled (see <see cref="OsuSetting.SlopSkipBreaks"/>).
+        /// </summary>
+        private readonly List<SkipOverlay> skipBreakOverlays = new List<SkipOverlay>();
+
+        private bool skipBreaks;
+
         protected ScoreProcessor ScoreProcessor { get; private set; }
 
         protected HealthProcessor HealthProcessor { get; private set; }
@@ -226,6 +234,8 @@ namespace osu.Game.Screens.Play
         [BackgroundDependencyLoader(true)]
         private void load(OsuConfigManager config, OsuGameBase game, CancellationToken cancellationToken)
         {
+            skipBreaks = config.Get<bool>(OsuSetting.SlopSkipBreaks);
+
             var gameplayMods = Mods.Value.Select(m => m.DeepClone()).ToArray();
 
             if (gameplayMods.Any(m => m is UnknownMod))
@@ -493,11 +503,25 @@ namespace osu.Game.Screens.Play
                 Alpha = 0
             };
 
+            if (skipBreaks && Configuration.AllowSkipping && DrawableRuleset.AllowGameplayOverlays)
+            {
+                foreach (var breakPeriod in GameplayState.Beatmap.Breaks)
+                {
+                    skipBreakOverlays.Add(new SkipOverlay(breakPeriod.EndTime, breakPeriod.StartTime)
+                    {
+                        RequestSkip = () => performBreakSkip(breakPeriod.EndTime),
+                    });
+                }
+            }
+
             // rulesets may display the break and skip overlays as part of the gameplay (e.g. when displaying it in 3D).
             var rulesetOverlayContainer = DrawableRuleset.BreakAndSkipOverlayContainer;
 
             if (rulesetOverlayContainer != null)
+            {
                 rulesetOverlayContainer.AddRange(new Drawable[] { BreakOverlay, SkipIntroOverlay, skipOutroOverlay });
+                rulesetOverlayContainer.AddRange(skipBreakOverlays);
+            }
 
             var container = new Container
             {
@@ -528,6 +552,7 @@ namespace osu.Game.Screens.Play
                     DrawableRuleset.Cursor?.CreateProxy() ?? new Container(),
                     rulesetOverlayContainer == null ? SkipIntroOverlay : new Container(),
                     rulesetOverlayContainer == null ? skipOutroOverlay : new Container(),
+                    rulesetOverlayContainer == null ? new Container { RelativeSizeAxes = Axes.Both, Children = skipBreakOverlays } : new Container(),
                     DrawableRuleset.ResumeOverlay?.CreateProxy() ?? new Container(),
                     PauseOverlay = new PauseOverlay
                     {
@@ -740,6 +765,21 @@ namespace osu.Game.Screens.Play
             (GameplayClockContainer as MasterGameplayClockContainer)?.Skip(fullLength);
 
             // return samplePlaybackDisabled.Value to what is defined by the beatmap's current state
+            updateSampleDisabledState();
+        }
+
+        /// <summary>
+        /// Skips to shortly before the end of a break (like skipping the intro).
+        /// </summary>
+        private void performBreakSkip(double breakEndTime)
+        {
+            double skipTarget = breakEndTime - MasterGameplayClockContainer.MINIMUM_SKIP_TIME;
+
+            if (GameplayClockContainer.CurrentTime >= skipTarget)
+                return;
+
+            samplePlaybackDisabled.Value = true;
+            Seek(skipTarget);
             updateSampleDisabledState();
         }
 

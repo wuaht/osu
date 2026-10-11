@@ -263,7 +263,7 @@ namespace osu.Game.Rulesets.Fposu.UI
                 return false;
 
             // the same projection as the screen (see FposuScreen).
-            var screenQuad = screen.ScreenSpaceDrawQuad.AABBFloat;
+            var screenQuad = screen.ScreenSpaceViewRectangle;
             Vector2 centre = screenQuad.Centre;
             float focalLength = screenQuad.Width / 2 / MathF.Tan(MathHelper.DegreesToRadians(fov.Value) / 2);
 

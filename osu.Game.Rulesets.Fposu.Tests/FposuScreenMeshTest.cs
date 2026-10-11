@@ -51,6 +51,26 @@ namespace osu.Game.Rulesets.Fposu.Tests
 
         [TestCase(false)]
         [TestCase(true)]
+        public void TestScaledMeshKeepsGame(bool curved)
+        {
+            const float horizontal_scale = 1.2f;
+            const float vertical_scale = 1.7f;
+
+            var mesh = new FposuScreenMesh(0.5f, curved, aspect_ratio);
+            var scaled = new FposuScreenMesh(0.5f, curved, aspect_ratio, horizontal_scale, vertical_scale);
+
+            // the 2D game is displayed in the middle of the scaled mesh, at the same size and position as without scaling.
+            Vector2 toScaled(Vector2 uv) => new Vector2(0.5f + (uv.X - 0.5f) / horizontal_scale, 0.5f + (uv.Y - 0.5f) / vertical_scale);
+
+            foreach (var uv in new[] { new Vector2(0, 0), new Vector2(1, 1), new Vector2(0.5f, 0.5f), new Vector2(0.25f, 0.75f) })
+                assertEqual(scaled.GetPosition(toScaled(uv)), mesh.GetPosition(uv), curved ? 2e-3f : 1e-5f);
+
+            Assert.That(scaled.CircumLength, Is.EqualTo(mesh.CircumLength).Within(1e-5));
+            Assert.That(scaled.HalfHeight, Is.EqualTo(mesh.HalfHeight * vertical_scale).Within(1e-5));
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
         public void TestIntersectCentre(bool curved)
         {
             var mesh = new FposuScreenMesh(0.5f, curved, aspect_ratio);
@@ -99,7 +119,7 @@ namespace osu.Game.Rulesets.Fposu.Tests
             Assert.That(mesh.Intersect(new Vector3(0, 1, -0.2f)), Is.Null);
         }
 
-        private static void assertEqual(Vector3 actual, Vector3 expected)
-            => Assert.That((actual - expected).Length, Is.LessThan(1e-5f), $"Expected {expected}, but got {actual}.");
+        private static void assertEqual(Vector3 actual, Vector3 expected, float tolerance = 1e-5f)
+            => Assert.That((actual - expected).Length, Is.LessThan(tolerance), $"Expected {expected}, but got {actual}.");
     }
 }
