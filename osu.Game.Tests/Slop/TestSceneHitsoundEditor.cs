@@ -110,18 +110,22 @@ namespace osu.Game.Tests.Slop
             });
 
             AddStep("select first hitnormal", () => hitsoundEditor.SetSelection(new[] { 0 }, lanes: new[] { new HitsoundLane(HitSampleInfo.BANK_NORMAL, HitSampleInfo.HIT_NORMAL) }));
-            AddStep("press Ctrl+Down", () => pressWithControl(Key.Down));
+            AddStep("move to soft hitnormal", () => hitsoundEditor.MoveSelectionLanes(4));
             AddAssert("hitnormal moved to soft", () => HitsoundSamples.GetNormalBank(EditorBeatmap.HitObjects[0].Samples), () => Is.EqualTo(HitSampleInfo.BANK_SOFT));
             AddAssert("selection followed", () => hitsoundEditor.GetSelectedLanes(0), () => Is.EquivalentTo(new[] { new HitsoundLane(HitSampleInfo.BANK_SOFT, HitSampleInfo.HIT_NORMAL) }));
 
+            AddStep("press Ctrl+Down", () => pressWithControl(Key.Down));
+            AddAssert("hitnormal moved into soft whistle", () => EditorBeatmap.HitObjects[0].Samples.Any(s => s.Name == HitSampleInfo.HIT_WHISTLE && s.Bank == HitSampleInfo.BANK_SOFT));
+            AddAssert("hitnormal kept", () => HitsoundSamples.GetNormalBank(EditorBeatmap.HitObjects[0].Samples), () => Is.EqualTo(HitSampleInfo.BANK_SOFT));
+
             AddStep("select second whistle", () => hitsoundEditor.SetSelection(new[] { 500 }, lanes: new[] { new HitsoundLane(HitSampleInfo.BANK_SOFT, HitSampleInfo.HIT_WHISTLE) }));
-            AddStep("press Ctrl+Up", () => pressWithControl(Key.Up));
-            AddAssert("whistle moved past hitnormal lane to normal clap", () => EditorBeatmap.HitObjects[1].Samples.Any(s => s.Name == HitSampleInfo.HIT_CLAP && s.Bank == HitSampleInfo.BANK_NORMAL));
+            AddStep("move to normal hitnormal", () => hitsoundEditor.MoveSelectionLanes(-5));
             AddAssert("whistle removed", () => !hasSample(EditorBeatmap.HitObjects[1], HitSampleInfo.HIT_WHISTLE));
-            AddAssert("hitnormal unchanged", () => HitsoundSamples.GetNormalBank(EditorBeatmap.HitObjects[1].Samples), () => Is.EqualTo(HitSampleInfo.BANK_SOFT));
+            AddAssert("whistle became normal hitnormal", () => HitsoundSamples.GetNormalBank(EditorBeatmap.HitObjects[1].Samples), () => Is.EqualTo(HitSampleInfo.BANK_NORMAL));
 
             AddStep("undo", () => Editor.Undo());
-            AddAssert("whistle restored", () => hasSample(EditorBeatmap.HitObjects[1], HitSampleInfo.HIT_WHISTLE) && !hasSample(EditorBeatmap.HitObjects[1], HitSampleInfo.HIT_CLAP));
+            AddAssert("whistle restored", () => hasSample(EditorBeatmap.HitObjects[1], HitSampleInfo.HIT_WHISTLE));
+            AddAssert("hitnormal restored", () => HitsoundSamples.GetNormalBank(EditorBeatmap.HitObjects[1].Samples), () => Is.EqualTo(HitSampleInfo.BANK_SOFT));
 
             void pressWithControl(Key key)
             {

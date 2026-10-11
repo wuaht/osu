@@ -101,7 +101,8 @@ namespace osu.Game.Screens.Edit.Hitsounding
                 marker.BorderColour = ColourInfo.SingleColour(Colour4.White);
                 marker.BorderThickness = laneSelected ? 3 : 0;
 
-                if (lane.IsAddition)
+                // while moving, the shape is the one of the lane the sample is moved to.
+                if (lanes[displayIndex].IsAddition)
                 {
                     marker.Size = new Vector2(size * 0.8f);
                     marker.Rotation = 45;

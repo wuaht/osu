@@ -854,8 +854,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
         }
 
         /// <summary>
-        /// Whether the samples of the selection can be moved by a number of visible lanes, which requires every sample to land on a lane of the same kind
-        /// (hitnormals onto hitnormal lanes, additions onto addition lanes).
+        /// Whether the samples of the selection can be moved by a number of visible lanes, which requires every sample to stay within the visible lanes.
         /// </summary>
         public bool CanMoveSelectionLanes(int offset)
         {
@@ -863,13 +862,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
                 return false;
 
             var items = getMovableSelection();
-            return items.Count > 0 && items.All(item => item.laneIndices.All(i => isValidLaneMove(i, offset)));
-        }
-
-        private bool isValidLaneMove(int index, int offset)
-        {
-            int target = index + offset;
-            return target >= 0 && target < VisibleLanes.Count && VisibleLanes[target].IsAddition == VisibleLanes[index].IsAddition;
+            return items.Count > 0 && items.All(item => item.laneIndices.All(i => i + offset >= 0 && i + offset < VisibleLanes.Count));
         }
 
         /// <summary>
@@ -904,6 +897,8 @@ namespace osu.Game.Screens.Edit.Hitsounding
         /// <summary>
         /// Moves the samples of the selection by a number of visible lanes, e.g. from normal-hitnormal to soft-hitnormal.
         /// Hitnormals change their bank (and custom sample index for sub-lanes), additions are removed from their lane and added in the new one.
+        /// Additions moved into a hitnormal lane set the bank of the hitnormal. Hitnormals moved into an addition lane add the addition,
+        /// but the hitnormal stays (every hitsound plays one), except in <see cref="HitsoundDifficultyMode"/> where its object only carries the addition from then on.
         /// The selection follows the moved samples.
         /// </summary>
         /// <returns>Whether the samples have been moved.</returns>
@@ -925,38 +920,48 @@ namespace osu.Game.Screens.Edit.Hitsounding
                     // all moves are decided on the samples before moving, such that samples aren't moved twice (e.g. from normal to soft, and then from soft to drum).
                     var original = targets.ToDictionary(t => t, t => t.Samples.ToList());
 
+                    // the additions which are added in their new lanes once all samples have been moved out of their old lanes.
+                    var added = new List<HitsoundLane>();
+
                     foreach (var target in targets)
                     {
+                        var samples = target.Samples.ToList();
+
                         var normalMove = moves.FirstOrDefault(m => !m.from.IsAddition && HitsoundSamples.Has(original[target], m.from));
 
-                        if (normalMove == default)
-                            continue;
+                        if (normalMove != default)
+                        {
+                            if (normalMove.to.IsAddition)
+                            {
+                                // every hitsound plays a hitnormal, so moving one into an addition lane adds the addition, and the hitnormal stays.
+                                // in hitsound difficulty mode, the hitnormal isn't wanted anymore, so the object is deleted once it doesn't play any additions.
+                                if (HitsoundDifficultyMode.Value)
+                                    additionCarriers.Add(target.HitObject);
 
-                        var samples = HitsoundSamples.WithNormalBank(target.Samples.ToList(), normalMove.to.Bank, false);
+                                added.Add(normalMove.to);
+                            }
+                            else
+                                samples = withNormal(samples, normalMove.to);
+                        }
 
-                        if (normalMove.to.CustomIndex is int customIndex)
-                            samples = HitsoundSamples.WithCustomIndex(samples, customIndex);
+                        foreach (var (from, to) in moves.Where(m => m.from.IsAddition && HitsoundSamples.Has(original[target], m.from)))
+                        {
+                            samples = HitsoundSamples.WithoutAddition(samples, from.Sample);
+
+                            if (to.IsAddition)
+                                added.Add(to);
+                            else
+                            {
+                                // the addition becomes the hitnormal of the object, which is wanted now.
+                                samples = withNormal(samples, to);
+                                additionCarriers.Remove(target.HitObject);
+                            }
+                        }
 
                         setSamples(target, samples, changed);
                     }
 
-                    var added = new List<HitsoundLane>();
-
-                    foreach (var (from, to) in moves.Where(m => m.from.IsAddition))
-                    {
-                        bool moved = false;
-
-                        foreach (var target in targets.Where(t => HitsoundSamples.Has(original[t], from)))
-                        {
-                            setSamples(target, HitsoundSamples.WithoutAddition(target.Samples, from.Sample), changed);
-                            moved = true;
-                        }
-
-                        if (moved)
-                            added.Add(to);
-                    }
-
-                    foreach (var lane in added)
+                    foreach (var lane in added.Distinct())
                         setLane(column, lane, true, changed);
 
                     if (HitsoundDifficultyMode.Value)
@@ -973,6 +978,12 @@ namespace osu.Game.Screens.Edit.Hitsounding
 
             SelectionChanged?.Invoke();
             return true;
+
+            static List<HitSampleInfo> withNormal(List<HitSampleInfo> samples, HitsoundLane lane)
+            {
+                samples = HitsoundSamples.WithNormalBank(samples, lane.Bank, false);
+                return lane.CustomIndex is int customIndex ? HitsoundSamples.WithCustomIndex(samples, customIndex) : samples;
+            }
 
             HitsoundLane moveLane(HitsoundLane lane, int by)
             {
