@@ -408,7 +408,22 @@ namespace osu.Game
                     string[] paths = dragDropFiles.ToArray();
                     dragDropFiles.Clear();
 
-                    Task.Factory.StartNew(() => Import(paths), TaskCreationOptions.LongRunning);
+                    // .osu files dropped onto the editor replace the current difficulty's content.
+                    if (ScreenStack.CurrentScreen is Editor editor)
+                    {
+                        string[] ouPaths = paths.Where(p => p.EndsWith(@".osu", StringComparison.OrdinalIgnoreCase)).ToArray();
+                        string[] otherPaths = paths.Where(p => !p.EndsWith(@".osu", StringComparison.OrdinalIgnoreCase)).ToArray();
+
+                        foreach (string ouPath in ouPaths)
+                            editor.ImportGuestDifficulty(ouPath);
+
+                        if (otherPaths.Length > 0)
+                            Task.Factory.StartNew(() => Import(otherPaths), TaskCreationOptions.LongRunning);
+                    }
+                    else
+                    {
+                        Task.Factory.StartNew(() => Import(paths), TaskCreationOptions.LongRunning);
+                    }
                 }
             }
         }

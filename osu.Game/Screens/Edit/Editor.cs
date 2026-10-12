@@ -5,7 +5,9 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
@@ -31,7 +33,9 @@ using osu.Framework.Timing;
 using osu.Game.Audio;
 using osu.Game.Beatmaps;
 using osu.Game.Beatmaps.ControlPoints;
+using osu.Game.Beatmaps.Formats;
 using osu.Game.Configuration;
+using osu.Game.IO;
 using osu.Game.Database;
 using osu.Game.Extensions;
 using osu.Game.Graphics.Cursor;
@@ -62,6 +66,7 @@ using osu.Game.Screens.Edit.Verify;
 using osu.Game.Skinning;
 using osu.Game.Screens.OnlinePlay;
 using osu.Game.Users;
+using Decoder = osu.Game.Beatmaps.Formats.Decoder;
 using WebCommonStrings = osu.Game.Resources.Localisation.Web.CommonStrings;
 
 namespace osu.Game.Screens.Edit
@@ -1519,6 +1524,70 @@ namespace osu.Game.Screens.Edit
             {
                 this.Push(new ExternalEditScreen());
             }
+        }
+
+        /// <summary>
+        /// Imports the hit objects, timing points, and sample data from a .osu file, replacing the current state.
+        /// The file must belong to the same beatmap set (matching audio file).
+        /// </summary>
+        public void ImportGuestDifficulty(string path)
+        {
+            if (!canSave)
+                return;
+
+            byte[] droppedBytes;
+
+            try
+            {
+                droppedBytes = File.ReadAllBytes(path);
+            }
+            catch (Exception e)
+            {
+                Logger.Error(e, $"Failed to read .osu file at {path}");
+                notifications?.Post(new SimpleErrorNotification { Text = SlopEditorStrings.GuestDifficultyReadFailed });
+                return;
+            }
+
+            string droppedAudio;
+
+            try
+            {
+                using (var stream = new MemoryStream(droppedBytes))
+                using (var reader = new LineBufferedReader(stream, true))
+                {
+                    var decoded = Decoder.GetDecoder<Beatmap>(reader).Decode(reader);
+                    droppedAudio = decoded.Metadata.AudioFile;
+                }
+            }
+            catch (Exception e)
+            {
+                Logger.Error(e, $"Failed to parse dropped .osu file at {path}");
+                notifications?.Post(new SimpleErrorNotification { Text = SlopEditorStrings.GuestDifficultyParseFailed });
+                return;
+            }
+
+            if (!string.Equals(droppedAudio, editorBeatmap.BeatmapInfo.Metadata.AudioFile, StringComparison.OrdinalIgnoreCase))
+            {
+                notifications?.Post(new SimpleErrorNotification { Text = SlopEditorStrings.GuestDifficultyWrongSet });
+                return;
+            }
+
+            byte[] currentBytes;
+
+            using (var ms = new MemoryStream())
+            {
+                using (var sw = new StreamWriter(ms, Encoding.UTF8, 1024, true))
+                    new LegacyBeatmapEncoder(editorBeatmap, editorBeatmap.BeatmapSkin, editorBeatmap.Storyboard).Encode(sw);
+                currentBytes = ms.ToArray();
+            }
+
+            new LegacyEditorBeatmapPatcher(editorBeatmap).Patch(currentBytes, droppedBytes);
+
+            notifications?.Post(new SimpleNotification
+            {
+                Text = SlopEditorStrings.GuestDifficultyImported(Path.GetFileNameWithoutExtension(path)),
+                Icon = FontAwesome.Solid.Check,
+            });
         }
 
         private void submitBeatmap()

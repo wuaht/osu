@@ -39,6 +39,26 @@ namespace osu.Game.Localisation
         /// </summary>
         public static LocalisableString SnapObjectsToAnchor => new TranslatableString(getKey(@"snap_objects_to_anchor"), @"Snap objects to anchor");
 
+        /// <summary>
+        /// "Imported "{0}"."
+        /// </summary>
+        public static LocalisableString GuestDifficultyImported(string name) => new TranslatableString(getKey(@"guest_difficulty_imported"), @"Imported ""{0}"".", name);
+
+        /// <summary>
+        /// "The dropped .osu file couldn't be read."
+        /// </summary>
+        public static LocalisableString GuestDifficultyReadFailed => new TranslatableString(getKey(@"guest_difficulty_read_failed"), @"The dropped .osu file couldn't be read.");
+
+        /// <summary>
+        /// "The dropped .osu file couldn't be parsed."
+        /// </summary>
+        public static LocalisableString GuestDifficultyParseFailed => new TranslatableString(getKey(@"guest_difficulty_parse_failed"), @"The dropped .osu file couldn't be parsed.");
+
+        /// <summary>
+        /// "The dropped difficulty uses a different audio file and doesn't belong to this beatmap set."
+        /// </summary>
+        public static LocalisableString GuestDifficultyWrongSet => new TranslatableString(getKey(@"guest_difficulty_wrong_set"), @"The dropped difficulty uses a different audio file and doesn't belong to this beatmap set.");
+
         private static string getKey(string key) => $"{prefix}:{key}";
     }
 }
