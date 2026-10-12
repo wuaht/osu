@@ -52,20 +52,21 @@ namespace osu.Game.Overlays.Settings.Sections.Maintenance
                     // Quick test for whether there's already an osu! install at the target path.
                     if (fileInfos.Any(f => f.Name == OsuGameBase.CLIENT_DATABASE_FILENAME))
                     {
-                        dialogOverlay.Push(new ConfirmDialog(MaintenanceSettingsStrings.TargetDirectoryAlreadyInstalledOsu, () =>
-                            {
-                                (storage as OsuStorage)?.ChangeDataPath(target.FullName);
-                                game.RestartAppWhenExited();
-                                game.Exit();
-                            },
-                            () => { }));
-
+                        confirmUseExistingInstall(target);
                         return;
                     }
 
                     // Not using CreateSubDirectory as it throws unexpectedly when attempting to create a directory when already at the root of a disk.
                     // See https://cs.github.com/dotnet/runtime/blob/f1bdd5a6182f43f3928b389b03f7bc26f826c8bc/src/libraries/System.Private.CoreLib/src/System/IO/DirectoryInfo.cs#L88-L94
                     target = Directory.CreateDirectory(Path.Combine(target.FullName, @"osu-lazer"));
+
+                    // The subdirectory may already hold an install, e.g. when selecting the parent of an official osu!(lazer) data folder.
+                    // Only this client's storage config is changed when using it, so osu!(lazer) keeps its own data location.
+                    if (target.GetFiles().Any(f => f.Name == OsuGameBase.CLIENT_DATABASE_FILENAME))
+                    {
+                        confirmUseExistingInstall(target);
+                        return;
+                    }
                 }
             }
             catch (Exception e)
@@ -76,6 +77,17 @@ namespace osu.Game.Overlays.Settings.Sections.Maintenance
 
             ValidForResume = false;
             BeginMigration(target);
+        }
+
+        private void confirmUseExistingInstall(DirectoryInfo target)
+        {
+            dialogOverlay.Push(new ConfirmDialog(MaintenanceSettingsStrings.TargetDirectoryAlreadyInstalledOsu, () =>
+                {
+                    (storage as OsuStorage)?.ChangeDataPath(target.FullName);
+                    game.RestartAppWhenExited();
+                    game.Exit();
+                },
+                () => { }));
         }
 
         protected virtual void BeginMigration(DirectoryInfo target) => this.Push(new MigrationRunScreen(target));
