@@ -430,7 +430,7 @@ namespace osu.Game.Rulesets.Osu.Edit
         [CanBeNull]
         public SnapResult TrySnapSliderArc(Vector2 screenSpaceArcCentre, CircularArcProperties arc)
         {
-            if (!sliderBlanketSnap.Value && !blanketSnap.Value)
+            if (InputManager.CurrentState.Keyboard.ControlPressed || (!sliderBlanketSnap.Value && !blanketSnap.Value))
                 return null;
 
             beginPatternSnapFrame();
@@ -544,7 +544,7 @@ namespace osu.Game.Rulesets.Osu.Edit
         {
             var points = new List<PatternSnapPoint>();
 
-            if (!visualSpacingSnap.Value && !blanketSnap.Value && !lineSnap.Value)
+            if (InputManager.CurrentState.Keyboard.ControlPressed || (!visualSpacingSnap.Value && !blanketSnap.Value && !lineSnap.Value))
                 return new List<(PatternSnapPoint, Vector2)>();
 
             var objects = getPatternSnapObjects();
