@@ -92,7 +92,7 @@ namespace osu.Game.Screens.Edit.Submission
         {
             // hitsound difficulties only exist to edit hitsounds, so they aren't uploaded unless chosen otherwise in the submission settings.
             // set before the settings are loaded, as they show the defaults.
-            settings.ExcludedBeatmaps.AddRange(Beatmap.Value.BeatmapSetInfo.Beatmaps.Where(b => HitsoundPreferences.IsHitsoundDifficulty(configManager, b)));
+            settings.ExcludeHitsoundDifficulties(configManager, Beatmap.Value.BeatmapSetInfo.Beatmaps);
 
             AddRangeInternal(new Drawable[]
             {
