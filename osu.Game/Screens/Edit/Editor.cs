@@ -1837,10 +1837,10 @@ namespace osu.Game.Screens.Edit
 
             clock.SeekSmoothlyTo(position);
 
-            Mode.Value = EditorScreenMode.Compose;
+            // Only select objects if already in Compose; don't force a panel switch.
+            if (Mode.Value == EditorScreenMode.Compose)
+                currentScreen.Dependencies.Get<HitObjectComposer>().SelectFromTimestamp(position, selection);
 
-            // Delegate handling the selection to the ruleset.
-            currentScreen.Dependencies.Get<HitObjectComposer>().SelectFromTimestamp(position, selection);
             return true;
         }
 
