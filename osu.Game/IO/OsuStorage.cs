@@ -39,6 +39,8 @@ namespace osu.Game.IO
         {
             "framework.ini",
             "storage.ini",
+            OsuConfigManager.CLIENT_SETTINGS_PREFIX + "framework.ini",
+            OsuConfigManager.CLIENT_SETTINGS_PREFIX + "storage.ini",
 
             // These may not be safe to move around.
             "AuthNative.dll",

@@ -1,4 +1,4 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 #nullable disable
@@ -147,6 +147,10 @@ namespace osu.Game.Tests.NonVisual
 
                     foreach (string file in osuStorage.IgnoreFiles)
                     {
+                        // the shared and client-prefixed variants of the settings files are only both present when sharing a data folder with osu!(lazer).
+                        if (!File.Exists(Path.Combine(originalDirectory, file)) && file.EndsWith(".ini", StringComparison.Ordinal))
+                            continue;
+
                         if (!file.Contains(".realm", StringComparison.Ordinal) && !file.Contains("AuthNative", StringComparison.Ordinal))
                         {
                             Assert.That(File.Exists(Path.Combine(originalDirectory, file)));
@@ -163,7 +167,7 @@ namespace osu.Game.Tests.NonVisual
                         }
                     }
 
-                    Assert.That(new StreamReader(Path.Combine(originalDirectory, "storage.ini")).ReadToEnd().Contains($"FullPath = {customPath}"));
+                    Assert.That(new StreamReader(Path.Combine(originalDirectory, OsuConfigManager.CLIENT_SETTINGS_PREFIX + "storage.ini")).ReadToEnd().Contains($"FullPath = {customPath}"));
                 }
                 finally
                 {
@@ -250,7 +254,7 @@ namespace osu.Game.Tests.NonVisual
                     osuStorage?.ChangeDataPath(customPath2);
 
                     Assert.That(osuStorage?.CustomStoragePath, Is.EqualTo(customPath2));
-                    Assert.That(new StreamReader(Path.Combine(originalDirectory, "storage.ini")).ReadToEnd().Contains($"FullPath = {customPath2}"));
+                    Assert.That(new StreamReader(Path.Combine(originalDirectory, OsuConfigManager.CLIENT_SETTINGS_PREFIX + "storage.ini")).ReadToEnd().Contains($"FullPath = {customPath2}"));
                 }
                 finally
                 {
