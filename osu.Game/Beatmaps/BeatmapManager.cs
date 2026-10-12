@@ -513,6 +513,10 @@ namespace osu.Game.Beatmaps
 
                 return (Action)(() =>
                 {
+                    // see save() for why this is done right away.
+                    if (ProcessSavedBeatmap != null)
+                        workingBeatmapCache.Invalidate(setInfo);
+
                     setInfo.Files.Clear();
                     setInfo.Files.AddRange(files);
                     setInfo.Hash = setHash;
@@ -730,6 +734,11 @@ namespace osu.Game.Beatmaps
                 if (ProcessSavedBeatmap == null)
                     ProcessBeatmap?.Invoke(liveBeatmapSet, MetadataLookupScope.None);
             });
+
+            // The queued processing below invalidates the cached working beatmaps only once it runs,
+            // so do it right away to not hand out working beatmaps of the set which are outdated until then.
+            if (ProcessSavedBeatmap != null)
+                workingBeatmapCache.Invalidate(setInfo);
 
             // Queue difficulty recalculation after the save transaction commits so it runs on a background thread
             // and doesn't block the editor while the player is saving.
