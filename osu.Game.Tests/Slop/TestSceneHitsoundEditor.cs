@@ -626,6 +626,21 @@ namespace osu.Game.Tests.Slop
         }
 
         [Test]
+        public void TestPastingHitnormalLaneChangesHitnormal()
+        {
+            var softNormal = new HitsoundLane(HitSampleInfo.BANK_SOFT, HitSampleInfo.HIT_NORMAL);
+            var softWhistle = new HitsoundLane(HitSampleInfo.BANK_SOFT, HitSampleInfo.HIT_WHISTLE);
+
+            AddStep("select hitnormal and whistle lanes of second hitsound", () => hitsoundEditor.SetSelection(new[] { 500 }, lanes: new[] { softNormal, softWhistle }));
+            AddStep("copy", () => screen!.Copy());
+            AddStep("seek to first object", () => EditorClock.Seek(0));
+            AddStep("paste", () => screen!.Paste());
+
+            AddAssert("hitnormal bank pasted", () => HitsoundSamples.GetNormalBank(EditorBeatmap.HitObjects[0].Samples), () => Is.EqualTo(HitSampleInfo.BANK_SOFT));
+            AddAssert("whistle pasted", () => hasSample(EditorBeatmap.HitObjects[0], HitSampleInfo.HIT_WHISTLE));
+        }
+
+        [Test]
         public void TestPastingRectangleSelectionOnlyAddsCopiedAdditions()
         {
             AddStep("select first hitsound in all lanes", () => hitsoundEditor.SetSelection(new[] { 0 }, lanes: HitsoundLane.ALL));

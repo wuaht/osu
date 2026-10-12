@@ -1199,8 +1199,8 @@ namespace osu.Game.Screens.Edit.Hitsounding
         }
 
         /// <summary>
-        /// Pastes copied hitsounds. Hitsounds which were only selected in some lanes when copying only add the additions of these lanes,
-        /// keeping the hitnormals of the hitsounds they are pasted onto. Where there are no hitsounds, they are created with the copied hitnormals.
+        /// Pastes copied hitsounds. Hitsounds which were only selected in some lanes when copying only paste the samples of these lanes,
+        /// keeping the other samples of the hitsounds they are pasted onto. Where there are no hitsounds, they are created with the copied hitnormals.
         /// </summary>
         /// <returns>The number of hitsounds which couldn't be pasted, as there were not enough (or no) hit objects at their time.</returns>
         public int Paste(IReadOnlyList<HitsoundClipboardEntry> entries)
@@ -1217,8 +1217,13 @@ namespace osu.Game.Screens.Edit.Hitsounding
                 }
 
                 if (Map.FindClosestColumn(entry.State.Time, PASTE_LENIENCY) is HitsoundColumn column)
+                {
                     // the selected lanes also include lanes in which the copied hitsound had no sample, which must not be turned on.
-                    merged.Add((column, entry.Lanes.Where(l => l.IsAddition && hasAddition(entry.State, l)).ToList()));
+                    // hitnormals are set before the additions, as setting a hitnormal changes the bank of the hitnormals of all targets.
+                    merged.Add((column, entry.Lanes.Where(l => !l.IsAddition && hasHitnormal(entry.State, l))
+                                             .Concat(entry.Lanes.Where(l => l.IsAddition && hasAddition(entry.State, l)))
+                                             .ToList()));
+                }
                 else
                     replaced.Add(entry.State with { AdditionGroups = filterAdditions(entry.State.AdditionGroups, entry.Lanes) });
             }
@@ -1242,6 +1247,10 @@ namespace osu.Game.Screens.Edit.Hitsounding
             editorBeatmap.EndChange();
 
             return dropped;
+
+            static bool hasHitnormal(HitsoundColumnState state, HitsoundLane lane)
+                => (lane.CustomIndex == null || lane.CustomIndex == state.CustomIndex)
+                   && state.NormalBanks.Contains(lane.Bank);
 
             static bool hasAddition(HitsoundColumnState state, HitsoundLane lane)
                 => (lane.CustomIndex == null || lane.CustomIndex == state.CustomIndex)
