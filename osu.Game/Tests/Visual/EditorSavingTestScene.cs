@@ -60,6 +60,7 @@ namespace osu.Game.Tests.Visual
         protected void SaveEditor()
         {
             AddStep("Save", () => InputManager.Keys(PlatformAction.Save));
+            AddUntilStep("Wait for save", () => !Editor.IsSaving);
         }
 
         protected void ReloadEditorToSameBeatmap()
@@ -75,6 +76,7 @@ namespace osu.Game.Tests.Visual
             AddStep("Exit", () => InputManager.Key(Key.Escape));
 
             AddUntilStep("Wait for main menu", () => Game.ScreenStack.CurrentScreen is MainMenu);
+            AddUntilStep("Wait for exit save", () => Editor.ExitSave?.IsCompleted != false);
 
             SoloSongSelect songSelect = null;
 

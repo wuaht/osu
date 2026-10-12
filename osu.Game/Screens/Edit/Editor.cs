@@ -106,7 +106,8 @@ namespace osu.Game.Screens.Edit
                 if (!canSave)
                     return false;
 
-                return lastSavedHash != changeHandler?.CurrentStateHash;
+                // a save running in the background counts as saved.
+                return (pendingSave?.StateHash ?? lastSavedHash) != changeHandler?.CurrentStateHash;
             }
         }
 
@@ -131,6 +132,15 @@ namespace osu.Game.Screens.Edit
 
         [Resolved]
         private RealmAccess realm { get; set; }
+
+        [Resolved]
+        private GameHost host { get; set; }
+
+        /// <summary>
+        /// The game-wide beatmap (as opposed to <see cref="OsuScreen.Beatmap"/>, which is only leased while this screen is current).
+        /// </summary>
+        [Resolved]
+        private IBindable<WorkingBeatmap> globalBeatmap { get; set; }
 
         public readonly Bindable<EditorScreenMode> Mode = new Bindable<EditorScreenMode>();
 
@@ -693,6 +703,11 @@ namespace osu.Game.Screens.Edit
 
         private PendingSave pendingSave;
 
+        /// <summary>
+        /// Whether a save is currently being written in the background.
+        /// </summary>
+        internal bool IsSaving => pendingSave != null;
+
         private record PendingSave(Task<Action> Task, string StateHash, bool IsAutosave);
 
         /// <summary>
@@ -1061,8 +1076,6 @@ namespace osu.Game.Screens.Edit
 
         public override bool OnExiting(ScreenExitEvent e)
         {
-            completePendingSave();
-
             currentScreen?.OnExiting(e);
 
             if (!ExitConfirmed)
@@ -1081,7 +1094,7 @@ namespace osu.Game.Screens.Edit
                     return true;
                 }
 
-                if (isNewBeatmap || HasUnsavedChanges)
+                if ((isNewBeatmap && pendingSave == null) || HasUnsavedChanges)
                 {
                     updateSampleDisabledState();
                     dialogOverlay?.Push(new PromptForSaveDialog(confirmExit, confirmExitWithSave, cancelExit));
@@ -1089,21 +1102,108 @@ namespace osu.Game.Screens.Edit
                 }
             }
 
-            realm.Write(r =>
-            {
-                var beatmap = r.Find<BeatmapInfo>(editorBeatmap.BeatmapInfo.ID);
-                beatmap?.EditorTimestamp = clock.CurrentTime;
-            });
-
-            // after saving (or discarding changes), such that the other difficulties are loaded with the hitsounds of the hitsound difficulty.
-            hitsoundSync.SyncIfPending();
-
             // `resetTrack()` MUST happen before `refetchBeatmap()`, because along other things, `refetchBeatmap()` causes a global working beatmap change,
             // which would cause `EditorClock` to reload the track and automatically reapply adjustments to it if not preceded by `resetTrack()`.
             resetTrack();
             refetchBeatmap();
 
+            finishAfterExit();
+
             return base.OnExiting(e);
+        }
+
+        /// <summary>
+        /// A save (and the related work) still running in the background after an editor has exited, if any.
+        /// Beatmaps shouldn't be loaded into a new editor before it has finished, as they may be about to change.
+        /// </summary>
+        internal static Task ExitSave { get; private set; }
+
+        /// <summary>
+        /// Finishes any save running in the background, stores the editor timestamp and copies the hitsounds of the hitsound difficulty (if required),
+        /// all without stalling the exit. The game-wide beatmap is refetched once done, so that it reflects the saved state.
+        /// </summary>
+        private void finishAfterExit()
+        {
+            var save = pendingSave;
+            pendingSave = null;
+
+            Guid beatmapId = editorBeatmap.BeatmapInfo.ID;
+            double editorTimestamp = clock.CurrentTime;
+            var exitBeatmap = Beatmap.Value;
+
+            // this screen is gone once the work has finished, so the outcome is applied on the game's update thread instead.
+            var scheduler = host.UpdateThread.Scheduler;
+            var completion = new TaskCompletionSource();
+            ExitSave = completion.Task;
+
+            Task.Run(async () =>
+            {
+                Action applySave = null;
+                Exception saveError = null;
+
+                if (save != null)
+                {
+                    try
+                    {
+                        applySave = await save.Task.ConfigureAwait(false);
+                    }
+                    catch (Exception ex)
+                    {
+                        saveError = ex;
+                    }
+                }
+
+                try
+                {
+                    // after the save, as it would otherwise overwrite the timestamp with the one of the saved beatmap.
+                    realm.Write(r =>
+                    {
+                        var beatmap = r.Find<BeatmapInfo>(beatmapId);
+                        beatmap?.EditorTimestamp = editorTimestamp;
+                    });
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error(ex, @"Failed to store the editor timestamp.");
+                }
+
+                scheduler.Add(() =>
+                {
+                    try
+                    {
+                        if (saveError != null)
+                            Logger.Error(saveError, saveError.Message);
+                        else if (applySave != null)
+                        {
+                            applySave.Invoke();
+                            onScreenDisplay?.Display(new BeatmapEditorToast(save.IsAutosave ? SlopSettingsStrings.BeatmapAutoSaved : ToastStrings.BeatmapSaved,
+                                editorBeatmap.BeatmapInfo.GetDisplayTitle()));
+                            hitsoundSync.OnSaved();
+                        }
+
+                        // after saving (or discarding changes), such that the other difficulties are loaded with the hitsounds of the hitsound difficulty.
+                        hitsoundSync.SyncIfPending();
+
+                        // the beatmap was refetched on exit already, but the save may not have been stored at that point.
+                        // only if nothing else has changed the beatmap in the meantime (e.g. switching to another difficulty).
+                        if (applySave != null && globalBeatmap is Bindable<WorkingBeatmap> global && !global.Disabled && global.Value == exitBeatmap)
+                        {
+                            var refetchedBeatmap = beatmapManager.GetWorkingBeatmap(exitBeatmap.BeatmapInfo, true);
+
+                            if (!(refetchedBeatmap is DummyWorkingBeatmap))
+                                global.Value = refetchedBeatmap;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Error(ex, @"Failed to finish leaving the editor.");
+                    }
+                    finally
+                    {
+                        completion.SetResult();
+                    }
+                });
+            });
         }
 
         public override void OnSuspending(ScreenTransitionEvent e)
@@ -1134,7 +1234,8 @@ namespace osu.Game.Screens.Edit
 
         private void confirmExitWithSave()
         {
-            if (!attemptMutationOperation(Save))
+            // finished in the background after exiting, see `finishAfterExit()`.
+            if (!attemptMutationOperation(() => saveInBackground(false)))
                 return;
 
             ExitConfirmed = true;
@@ -1145,6 +1246,10 @@ namespace osu.Game.Screens.Edit
         {
             // stop the track if playing to allow the parent screen to choose a suitable playback mode.
             Beatmap.Value.Track.Stop();
+
+            // a first save may still be running, after which the beatmap is no longer new.
+            if (isNewBeatmap)
+                completePendingSave();
 
             if (isNewBeatmap)
             {

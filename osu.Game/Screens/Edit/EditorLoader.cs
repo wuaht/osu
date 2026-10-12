@@ -84,9 +84,35 @@ namespace osu.Game.Screens.Edit
                 // the push cannot happen in OnEntering() or similar (even if scheduled), because the transition from main menu will look bad.
                 // that is because this screen pushing the editor makes it no longer current, and OsuScreen checks if the screen is current
                 // before enqueueing this screen's LogoArriving onto the logo animation sequence.
+                if (!isPreviousEditorFinished)
+                    scheduledDifficultySwitch = Schedule(waitForPreviousEditor);
+                else
+                    pushEditor();
+            }
+
+            // the beatmap may be about to change, if it was saved (or received hitsounds) when leaving a previous editor.
+            void waitForPreviousEditor()
+            {
+                if (!isPreviousEditorFinished)
+                {
+                    scheduledDifficultySwitch = Schedule(waitForPreviousEditor);
+                    return;
+                }
+
+                if (!(Beatmap.Value is DummyWorkingBeatmap))
+                {
+                    Beatmap.Value = beatmapManager.GetWorkingBeatmap(Beatmap.Value.BeatmapInfo, true);
+                    ApplyToBackground(b => b.Beatmap = Beatmap.Value);
+                }
+
                 pushEditor();
             }
         }
+
+        /// <summary>
+        /// Whether the work running in the background after leaving the previous editor (if any) has finished.
+        /// </summary>
+        private static bool isPreviousEditorFinished => Editor.ExitSave?.IsCompleted != false && HitsoundDifficultySync.Running?.IsCompleted != false;
 
         public void ScheduleSwitchToNewDifficulty(BeatmapInfo referenceBeatmapInfo, RulesetInfo rulesetInfo, bool createCopy, EditorState editorState)
             => scheduleDifficultySwitch(() =>
@@ -123,10 +149,10 @@ namespace osu.Game.Screens.Edit
 
             scheduledDifficultySwitch = Schedule(waitForHitsoundSync);
 
-            // the next difficulty may be about to receive the hitsounds of the hitsound difficulty.
+            // the next difficulty may be about to be saved, or to receive the hitsounds of the hitsound difficulty.
             void waitForHitsoundSync()
             {
-                if (HitsoundDifficultySync.Running?.IsCompleted == false)
+                if (!isPreviousEditorFinished)
                 {
                     scheduledDifficultySwitch = Schedule(waitForHitsoundSync);
                     return;
