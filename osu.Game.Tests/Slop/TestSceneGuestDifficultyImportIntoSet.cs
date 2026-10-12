@@ -144,12 +144,28 @@ namespace osu.Game.Tests.Slop
         }
 
         [Test]
-        public void TestDifficultyNotInSetChangesNothing()
+        public void TestDifficultyNotInSetIsAdded()
         {
-            AddStep("drop unknown difficulty", () => Editor.ImportGuestDifficulty(writeGuestFile("Unknown")));
+            object? before = null;
+
+            AddStep("drop unknown difficulty", () =>
+            {
+                before = Editor;
+                Editor.ImportGuestDifficulty(writeGuestFile("Unknown"));
+            });
+            AddUntilStep("editor reloaded", () => Editor != before && Editor.ReadyForUse && openDifficulty?.BeatmapInfo.DifficultyName == copy_name);
+
+            AddAssert("open difficulty unchanged", () => openDifficulty!.HitObjects.Count, () => Is.EqualTo(1));
+            AddAssert("set has three difficulties", () => set.Beatmaps.Count, () => Is.EqualTo(3));
+            AddAssert("difficulty added", () => savedDifficulty("Unknown").HitObjects.Count, () => Is.EqualTo(2));
+            AddAssert("approach rate of added difficulty", () => savedDifficulty("Unknown").Difficulty.ApproachRate, () => Is.EqualTo(3));
             AddAssert("guest difficulty unchanged", () => savedDifficulty(guest_name).HitObjects.Count, () => Is.EqualTo(1));
-            AddAssert("set unchanged", () => set.Beatmaps.Count, () => Is.EqualTo(2));
-            AddAssert("no unsaved changes", () => Editor.HasUnsavedChanges, () => Is.False);
+            AddAssert("all difficulties have their files", () => realm.Run(r =>
+            {
+                var s = r.All<BeatmapSetInfo>().AsEnumerable().Single(s => !s.DeletePending && s.Metadata.Title == title);
+                return s.Beatmaps.All(b => s.Files.Any(f => f.File.Hash == b.Hash));
+            }));
+            AddAssert("editor's set contains the added difficulty", () => openDifficulty!.BeatmapInfo.BeatmapSet!.Beatmaps.Any(b => b.DifficultyName == "Unknown"));
         }
     }
 }

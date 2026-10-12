@@ -65,10 +65,10 @@ namespace osu.Game.Localisation
         public static LocalisableString GuestDifficultyWrongRuleset => new TranslatableString(getKey(@"guest_difficulty_wrong_ruleset"), @"The dropped difficulty is for a different game mode.");
 
         /// <summary>
-        /// "This beatmap set has no difficulty named "{0}"."
+        /// "Failed to add "{0}" from the dropped .osu file."
         /// </summary>
-        public static LocalisableString GuestDifficultyNotInSet(string name) => new TranslatableString(getKey(@"guest_difficulty_not_in_set"),
-            @"This beatmap set has no difficulty named ""{0}"".", name);
+        public static LocalisableString GuestDifficultyAddFailed(string name) => new TranslatableString(getKey(@"guest_difficulty_add_failed"),
+            @"Failed to add ""{0}"" from the dropped .osu file.", name);
 
         /// <summary>
         /// "Failed to replace "{0}" with the dropped .osu file."

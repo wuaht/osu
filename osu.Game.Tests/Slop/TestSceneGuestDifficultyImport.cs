@@ -100,15 +100,6 @@ namespace osu.Game.Tests.Slop
         }
 
         [Test]
-        public void TestDifficultyNotInSetIsRejected()
-        {
-            AddStep("drop file of difficulty not in set", () => Editor.ImportGuestDifficulty(writeFile(updatedText.Replace("Version:Insane", "Version:Hard"))));
-            AddAssert("no dialog", () => DialogOverlay.CurrentDialog, () => Is.Null);
-            AddAssert("approach rate unchanged", () => EditorBeatmap.Difficulty.ApproachRate, () => Is.EqualTo(9));
-            AddAssert("objects unchanged", () => EditorBeatmap.HitObjects.Any(h => h.StartTime == 1285));
-        }
-
-        [Test]
         public void TestDifficultyNameIsCaseInsensitive()
         {
             AddStep("drop file with lowercase name", () => Editor.ImportGuestDifficulty(writeFile(updatedText.Replace("Version:Insane", "Version:insane"))));

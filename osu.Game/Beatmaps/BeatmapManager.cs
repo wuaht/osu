@@ -215,6 +215,13 @@ namespace osu.Game.Beatmaps
             return addDifficultyToSet(targetBeatmapSet, newBeatmap, referenceWorkingBeatmap.Skin, referenceWorkingBeatmap.Storyboard);
         }
 
+        /// <summary>
+        /// Add the provided <paramref name="beatmap"/> as a new difficulty to the provided <paramref name="targetBeatmapSet"/>.
+        /// The <see cref="BeatmapInfo"/> of the beatmap should not belong to any beatmap set yet.
+        /// </summary>
+        public virtual WorkingBeatmap AddDifficulty(BeatmapSetInfo targetBeatmapSet, IBeatmap beatmap, ISkin beatmapSkin, Storyboard storyboard)
+            => addDifficultyToSet(targetBeatmapSet, beatmap, beatmapSkin, storyboard);
+
         private WorkingBeatmap addDifficultyToSet(BeatmapSetInfo targetBeatmapSet, IBeatmap newBeatmap, ISkin beatmapSkin, Storyboard storyboard)
         {
             // populate circular beatmap set info <-> beatmap info references manually.

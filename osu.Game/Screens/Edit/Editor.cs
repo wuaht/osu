@@ -1539,6 +1539,7 @@ namespace osu.Game.Screens.Edit
         /// e.g. to update a guest difficulty. The file must belong to this beatmap set and game mode.
         /// The difficulty of the set with the same name as the file is replaced: if it is this one, this can be undone,
         /// otherwise this difficulty and the replaced one are saved and the editor is reloaded.
+        /// If the set has no difficulty with that name, the file is added as a new difficulty in the same way.
         /// </summary>
         public void ImportGuestDifficulty(string path)
         {
@@ -1594,19 +1595,13 @@ namespace osu.Game.Screens.Edit
                 : editorBeatmap.BeatmapInfo.BeatmapSet?.Beatmaps.FirstOrDefault(b => b.Ruleset.OnlineID == ruleset.OnlineID
                                                                                     && string.Equals(b.DifficultyName, droppedName, StringComparison.OrdinalIgnoreCase));
 
-            if (target == null)
-            {
-                notifications?.Post(new SimpleErrorNotification { Text = SlopEditorStrings.GuestDifficultyNotInSet(droppedName) });
-                return;
-            }
-
             // the patcher compares the files line by line, so the dropped file is written the same way as the current state
             // (files written by other clients differ in formatting, and e.g. trailing empty lines would be taken for hit objects).
             dropped.BeatmapInfo.Ruleset = ruleset;
             var droppedPlayable = new FlatWorkingBeatmap(dropped).GetPlayableBeatmap(ruleset);
             droppedPlayable.ControlPointInfo = EditorBeatmap.ConvertControlPoints(droppedPlayable.ControlPointInfo);
 
-            if (target.Equals(editorBeatmap.BeatmapInfo))
+            if (target?.Equals(editorBeatmap.BeatmapInfo) == true)
             {
                 new LegacyEditorBeatmapPatcher(editorBeatmap).Patch(encode(editorBeatmap, editorBeatmap.BeatmapSkin), encode(droppedPlayable, null));
                 notifyImported();
@@ -1618,31 +1613,65 @@ namespace osu.Game.Screens.Edit
             if (!Save())
                 return;
 
-            try
+            if (target == null)
             {
-                // a fresh reference, as the beatmap set of the one of this difficulty doesn't contain the files saved since it was loaded.
-                var info = beatmapManager.QueryBeatmap(b => b.ID == target.ID)
-                           ?? throw new InvalidOperationException($@"{target.GetDisplayTitle()} couldn't be found.");
+                try
+                {
+                    // a fresh reference, as the beatmap set of this difficulty doesn't contain the files saved since it was loaded.
+                    var current = beatmapManager.QueryBeatmap(b => b.ID == editorBeatmap.BeatmapInfo.ID)
+                                  ?? throw new InvalidOperationException($@"{editorBeatmap.BeatmapInfo.GetDisplayTitle()} couldn't be found.");
+                    var set = current.BeatmapSet ?? throw new InvalidOperationException($@"The beatmap set of {current.GetDisplayTitle()} couldn't be found.");
+                    var working = beatmapManager.GetWorkingBeatmap(current);
 
-                var working = beatmapManager.GetWorkingBeatmap(info);
+                    // the difficulty is added with the metadata, skin and storyboard of the set.
+                    var info = droppedPlayable.BeatmapInfo;
+                    info.ID = Guid.NewGuid();
+                    info.Hash = string.Empty;
+                    info.MD5Hash = string.Empty;
+                    info.Ruleset = ruleset;
+                    info.Metadata = current.Metadata.DeepClone();
+                    info.BeatmapSet = null;
 
-                // the name, metadata, skin and storyboard of the difficulty are kept.
-                beatmapManager.Save(info, droppedPlayable, working.GetSkin(), working.Storyboard);
+                    if (info.OnlineID > 0 && set.Beatmaps.Any(b => b.OnlineID == info.OnlineID))
+                        info.ResetOnlineInfo();
+
+                    beatmapManager.AddDifficulty(set, droppedPlayable, working.GetSkin(), working.Storyboard);
+                }
+                catch (Exception e)
+                {
+                    Logger.Error(e, $"Failed to add {droppedName} from the dropped .osu file");
+                    notifications?.Post(new SimpleErrorNotification { Text = SlopEditorStrings.GuestDifficultyAddFailed(droppedName) });
+                    return;
+                }
             }
-            catch (Exception e)
+            else
             {
-                Logger.Error(e, $"Failed to replace {target.GetDisplayTitle()} with the dropped .osu file");
-                notifications?.Post(new SimpleErrorNotification { Text = SlopEditorStrings.GuestDifficultyReplaceFailed(droppedName) });
-                return;
+                try
+                {
+                    // a fresh reference, as the beatmap set of the one of this difficulty doesn't contain the files saved since it was loaded.
+                    var info = beatmapManager.QueryBeatmap(b => b.ID == target.ID)
+                               ?? throw new InvalidOperationException($@"{target.GetDisplayTitle()} couldn't be found.");
+
+                    var working = beatmapManager.GetWorkingBeatmap(info);
+
+                    // the name, metadata, skin and storyboard of the difficulty are kept.
+                    beatmapManager.Save(info, droppedPlayable, working.GetSkin(), working.Storyboard);
+                }
+                catch (Exception e)
+                {
+                    Logger.Error(e, $"Failed to replace {target.GetDisplayTitle()} with the dropped .osu file");
+                    notifications?.Post(new SimpleErrorNotification { Text = SlopEditorStrings.GuestDifficultyReplaceFailed(droppedName) });
+                    return;
+                }
             }
 
             notifyImported();
 
-            // reload with a fresh reference, such that the editor's beatmap set contains the replaced difficulty.
-            var current = beatmapManager.QueryBeatmap(b => b.ID == editorBeatmap.BeatmapInfo.ID);
+            // reload with a fresh reference, such that the editor's beatmap set contains the replaced or added difficulty.
+            var reloaded = beatmapManager.QueryBeatmap(b => b.ID == editorBeatmap.BeatmapInfo.ID);
 
-            if (current != null)
-                SwitchToDifficulty(current);
+            if (reloaded != null)
+                SwitchToDifficulty(reloaded);
 
             void notifyImported() => notifications?.Post(new SimpleNotification
             {
