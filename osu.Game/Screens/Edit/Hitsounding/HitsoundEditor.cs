@@ -665,17 +665,10 @@ namespace osu.Game.Screens.Edit.Hitsounding
 
                 if (target != null)
                     setSamples(target, HitsoundSamples.WithAddition(target.Samples, lane.Sample, lane.Bank), changed);
-                else if (HitsoundDifficultyMode.Value)
-                {
-                    string normalBank = column.NormalBank ?? lane.Bank;
-
-                    createObjects(column.Time, 1, samples => HitsoundSamples.WithCustomIndex(HitsoundSamples.WithVolume(
-                        HitsoundSamples.WithAddition(HitsoundSamples.WithoutAdditions(HitsoundSamples.WithNormalBank(samples, normalBank, false)), lane.Sample, lane.Bank),
-                        column.Volume), column.CustomIndex), additionCarrier: true);
-                }
                 else
                 {
                     // without a free target, the additions of the first target change their bank, which is the closest possible to what was asked for.
+                    // no object is stacked to play the addition instead, as hitsound difficulties mustn't contain objects at the same time.
                     setSamples(targets[0], HitsoundSamples.WithAddition(targets[0].Samples, lane.Sample, lane.Bank), changed);
                 }
             }
@@ -691,8 +684,8 @@ namespace osu.Game.Screens.Edit.Hitsounding
 
         /// <summary>
         /// Turns the sample of a sub-lane on or off. As the custom sample index applies to all samples of a target, the sample is preferably played by a target which
-        /// already uses the custom sample index. In <see cref="HitsoundDifficultyMode"/>, an object is created for it otherwise, so that the other samples stay the same.
-        /// Outside of it, the custom sample index of the hitsound changes instead, as there's no other way to play the sample.
+        /// already uses the custom sample index. Otherwise, the custom sample index of the hitsound changes instead, as there's no other way to play the sample
+        /// (objects aren't stacked to play it, as hitsound difficulties mustn't contain objects at the same time).
         /// </summary>
         private void setSubLane(HitsoundColumn column, HitsoundLane lane, int customIndex, bool active, List<HitsoundTarget> targets, HashSet<HitObject> changed)
         {
@@ -731,11 +724,6 @@ namespace osu.Game.Screens.Edit.Hitsounding
                     additionCarriers.Remove(sameIndex[0].HitObject);
                     setSamples(sameIndex[0], HitsoundSamples.WithNormalBank(sameIndex[0].Samples, lane.Bank, false), changed);
                 }
-                else if (HitsoundDifficultyMode.Value)
-                {
-                    createObjects(column.Time, 1, samples => HitsoundSamples.WithCustomIndex(HitsoundSamples.WithVolume(
-                        HitsoundSamples.WithoutAdditions(HitsoundSamples.WithNormalBank(samples, lane.Bank, false)), column.Volume), customIndex));
-                }
                 else
                 {
                     foreach (var target in targets)
@@ -752,17 +740,6 @@ namespace osu.Game.Screens.Edit.Hitsounding
             if (free != null)
             {
                 setSamples(free, HitsoundSamples.WithAddition(free.Samples, lane.Sample, lane.Bank), changed);
-                return;
-            }
-
-            if (HitsoundDifficultyMode.Value)
-            {
-                string normalBank = column.NormalBank ?? lane.Bank;
-
-                createObjects(column.Time, 1, samples => HitsoundSamples.WithCustomIndex(HitsoundSamples.WithVolume(
-                    HitsoundSamples.WithAddition(HitsoundSamples.WithoutAdditions(HitsoundSamples.WithNormalBank(samples, normalBank, false)), lane.Sample, lane.Bank),
-                    column.Volume), customIndex), additionCarrier: true);
-
                 return;
             }
 
@@ -1188,7 +1165,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
         #region Patterns
 
         /// <summary>
-        /// Applies hitsounds to the columns at their times. In <see cref="HitsoundDifficultyMode"/>, objects are created as needed.
+        /// Applies hitsounds to the columns at their times. In <see cref="HitsoundDifficultyMode"/>, an object is created where there is none.
         /// </summary>
         /// <param name="states">The hitsounds, ordered by time.</param>
         /// <returns>The number of hitsounds which couldn't be applied, as there were no (or not enough) objects at their time.</returns>
@@ -1202,18 +1179,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
             perform(changed =>
             {
                 if (HitsoundDifficultyMode.Value)
-                {
-                    var current = HitsoundMap.Create(editorBeatmap.HitObjects, rulesetId);
-
-                    foreach (var state in states)
-                    {
-                        var column = current.FindClosestColumn(state.Time, PASTE_LENIENCY);
-                        int missing = state.RequiredTargetCount - (column?.Targets.Count ?? 0);
-
-                        if (missing > 0)
-                            createObjects(column?.Time ?? state.Time, missing, s => s);
-                    }
-                }
+                    createMissingObjects(states);
 
                 var result = HitsoundCopier.Copy(states, Array.Empty<HitsoundBodyState>(), HitsoundMap.Create(editorBeatmap.HitObjects, rulesetId), new HitsoundCopyOptions
                 {
@@ -1659,14 +1625,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
                         deleteColumn(column, changed);
                 }
 
-                foreach (var state in absolute)
-                {
-                    var column = current.FindClosestColumn(state.Time, PASTE_LENIENCY);
-                    int missing = Math.Max(state.RequiredTargetCount, state.TargetSamples?.Count ?? 0) - (column?.Targets.Count ?? 0);
-
-                    if (missing > 0)
-                        createObjects(column?.Time ?? state.Time, missing, s => s);
-                }
+                createMissingObjects(absolute);
             }
 
             var map = HitsoundMap.Create(editorBeatmap.HitObjects, rulesetId);
@@ -1683,6 +1642,10 @@ namespace osu.Game.Screens.Edit.Hitsounding
                     continue;
 
                 var targets = editableTargets(column);
+
+                // the exact samples can't be reproduced by fewer targets, in which case the copied summary (which counts the hitsounds it had to drop) stays.
+                if (targetSamples.Count > targets.Count)
+                    continue;
 
                 for (int i = 0; i < targets.Count; i++)
                 {
@@ -1816,14 +1779,28 @@ namespace osu.Game.Screens.Edit.Hitsounding
         }
 
         /// <summary>
+        /// Creates an object at the time of each hitsound which there is no column for yet.
+        /// Objects aren't stacked where a column exists, as hitsound difficulties mustn't contain objects at the same time.
+        /// </summary>
+        private void createMissingObjects(IEnumerable<HitsoundColumnState> states)
+        {
+            var current = HitsoundMap.Create(editorBeatmap.HitObjects, rulesetId);
+
+            foreach (var state in states)
+            {
+                if (current.FindClosestColumn(state.Time, PASTE_LENIENCY) == null)
+                    createObjects(state.Time, 1, s => s);
+            }
+        }
+
+        /// <summary>
         /// Creates objects at a time and adds them to the beatmap.
         /// </summary>
         /// <param name="time">The time.</param>
         /// <param name="count">The number of objects.</param>
         /// <param name="createSamples">Creates the samples of each object from the default samples.</param>
-        /// <param name="additionCarrier">Whether the objects are only created to play additions (see <see cref="additionCarriers"/>).</param>
         /// <returns>The number of created objects.</returns>
-        private int createObjects(double time, int count, Func<List<HitSampleInfo>, List<HitSampleInfo>> createSamples, bool additionCarrier = false)
+        private int createObjects(double time, int count, Func<List<HitSampleInfo>, List<HitSampleInfo>> createSamples)
         {
             var ruleset = editorBeatmap.BeatmapInfo.Ruleset;
             var placements = new List<(double, int)>();
@@ -1857,9 +1834,6 @@ namespace osu.Game.Screens.Edit.Hitsounding
             {
                 h.Samples = createSamples(h.Samples.ToList());
                 editorBeatmap.Add(h);
-
-                if (additionCarrier)
-                    additionCarriers.Add(h);
             }
 
             return hitObjects.Count;

@@ -66,7 +66,8 @@ namespace osu.Game.Screens.Edit.Hitsounding
             }).ToList();
 
         /// <summary>
-        /// Creates hit objects which play the given hitsounds, stacking objects where a single object can't play all hitsounds.
+        /// Creates a hit object for each of the given hitsounds. Objects aren't stacked where a single object can't play all hitsounds,
+        /// as hitsound difficulties mustn't contain objects at the same time, so the hitsounds which it can't play are left out.
         /// </summary>
         /// <param name="states">The hitsounds, ordered by time.</param>
         /// <param name="ruleset">The ruleset of the beatmap.</param>
@@ -75,7 +76,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
         /// <returns>The hit objects, with defaults applied.</returns>
         public static List<HitObject> CreateHitObjects(IReadOnlyList<HitsoundColumnState> states, RulesetInfo ruleset, BeatmapDifficulty difficulty, ControlPointInfo controlPoints)
         {
-            var placements = states.SelectMany(s => Enumerable.Range(0, s.RequiredTargetCount).Select(i => (s.Time, i))).ToList();
+            var placements = states.Select(s => (s.Time, 0)).ToList();
             var hitObjects = HitsoundObjectFactory.Create(ruleset, difficulty, placements).ToList();
 
             foreach (var h in hitObjects)

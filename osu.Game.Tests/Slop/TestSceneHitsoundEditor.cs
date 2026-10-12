@@ -1029,12 +1029,13 @@ namespace osu.Game.Tests.Slop
 
             AddStep("enable hitsound difficulty mode", () => hitsoundEditor.HitsoundDifficultyMode.Value = true);
             AddStep("turn on clap of custom sample set 3", () => hitsoundEditor.SetLane(hitsoundEditor.Map.Columns[1], softClap, true));
-            AddAssert("object created for it", () => EditorBeatmap.HitObjects.Count, () => Is.EqualTo(3));
-            AddAssert("existing object keeps its custom sample set", () => HitsoundSamples.GetCustomIndex(EditorBeatmap.HitObjects.First(h => hasSample(h, HitSampleInfo.HIT_WHISTLE)).Samples), () => Is.EqualTo(0));
+            AddAssert("no object stacked for it", () => EditorBeatmap.HitObjects.Count, () => Is.EqualTo(2));
+            AddAssert("existing object switches custom sample set", () => HitsoundSamples.GetCustomIndex(EditorBeatmap.HitObjects[1].Samples), () => Is.EqualTo(3));
             AddAssert("clap plays", () => hitsoundEditor.Map.Columns[1].Has(softClap));
 
             AddStep("turn off clap again", () => hitsoundEditor.SetLane(hitsoundEditor.Map.Columns[1], softClap, false));
-            AddAssert("created object deleted", () => EditorBeatmap.HitObjects.Count, () => Is.EqualTo(2));
+            AddAssert("object kept", () => EditorBeatmap.HitObjects.Count, () => Is.EqualTo(2));
+            AddAssert("clap removed", () => !hasSample(EditorBeatmap.HitObjects[1], HitSampleInfo.HIT_CLAP));
             AddAssert("whistle kept", () => hasSample(EditorBeatmap.HitObjects[1], HitSampleInfo.HIT_WHISTLE));
         }
 
