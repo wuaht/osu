@@ -7,6 +7,7 @@ using osu.Game.Rulesets.Edit;
 using osu.Game.Rulesets.Edit.Checks;
 using osu.Game.Rulesets.Edit.Checks.Components;
 using osu.Game.Rulesets.Osu.Edit.Checks;
+using osu.Game.Screens.Edit.Hitsounding;
 
 namespace osu.Game.Rulesets.Osu.Edit
 {
@@ -34,7 +35,12 @@ namespace osu.Game.Rulesets.Osu.Edit
 
         public IEnumerable<Issue> Run(BeatmapVerifierContext context)
         {
-            return checks.SelectMany(check => check.Run(context));
+            // hitsound difficulties intentionally stack objects at the same time to play multiple samples simultaneously.
+            bool isHsDiff = HitsoundEditor.IsHitsoundDifficultyName(context.CurrentDifficulty.Playable.BeatmapInfo.DifficultyName);
+
+            return checks
+                .Where(c => !isHsDiff || c is not CheckConcurrentObjects)
+                .SelectMany(check => check.Run(context));
         }
     }
 }
