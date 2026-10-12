@@ -55,9 +55,25 @@ namespace osu.Game.Localisation
         public static LocalisableString GuestDifficultyParseFailed => new TranslatableString(getKey(@"guest_difficulty_parse_failed"), @"The dropped .osu file couldn't be parsed.");
 
         /// <summary>
-        /// "The dropped difficulty uses a different audio file and doesn't belong to this beatmap set."
+        /// "The dropped difficulty doesn't belong to this beatmap set."
         /// </summary>
-        public static LocalisableString GuestDifficultyWrongSet => new TranslatableString(getKey(@"guest_difficulty_wrong_set"), @"The dropped difficulty uses a different audio file and doesn't belong to this beatmap set.");
+        public static LocalisableString GuestDifficultyWrongSet => new TranslatableString(getKey(@"guest_difficulty_wrong_set"), @"The dropped difficulty doesn't belong to this beatmap set.");
+
+        /// <summary>
+        /// "The dropped difficulty is for a different game mode."
+        /// </summary>
+        public static LocalisableString GuestDifficultyWrongRuleset => new TranslatableString(getKey(@"guest_difficulty_wrong_ruleset"), @"The dropped difficulty is for a different game mode.");
+
+        /// <summary>
+        /// "Replace this difficulty?"
+        /// </summary>
+        public static LocalisableString GuestDifficultyNameMismatchHeader => new TranslatableString(getKey(@"guest_difficulty_name_mismatch_header"), @"Replace this difficulty?");
+
+        /// <summary>
+        /// "The dropped file is the difficulty "{0}", but "{1}" is open. Replace the content of "{1}" with it anyway?"
+        /// </summary>
+        public static LocalisableString GuestDifficultyNameMismatchBody(string dropped, string open) => new TranslatableString(getKey(@"guest_difficulty_name_mismatch_body"),
+            @"The dropped file is the difficulty ""{0}"", but ""{1}"" is open. Replace the content of ""{1}"" with it anyway?", dropped, open);
 
         private static string getKey(string key) => $"{prefix}:{key}";
     }

@@ -1533,8 +1533,9 @@ namespace osu.Game.Screens.Edit
         }
 
         /// <summary>
-        /// Imports the hit objects, timing points, and sample data from a .osu file, replacing the current state.
-        /// The file must belong to the same beatmap set (matching audio file).
+        /// Replaces the content of this difficulty (hit objects, timing points, breaks, bookmarks, samples and difficulty settings) with that of a .osu file,
+        /// e.g. to update a guest difficulty. The file must belong to this beatmap set and game mode. This can be undone.
+        /// If the file is a difficulty with a different name, this is confirmed first.
         /// </summary>
         public void ImportGuestDifficulty(string path)
         {
@@ -1554,16 +1555,13 @@ namespace osu.Game.Screens.Edit
                 return;
             }
 
-            string droppedAudio;
+            Beatmap dropped;
 
             try
             {
                 using (var stream = new MemoryStream(droppedBytes))
                 using (var reader = new LineBufferedReader(stream, true))
-                {
-                    var decoded = Decoder.GetDecoder<Beatmap>(reader).Decode(reader);
-                    droppedAudio = decoded.Metadata.AudioFile;
-                }
+                    dropped = Decoder.GetDecoder<Beatmap>(reader).Decode(reader);
             }
             catch (Exception e)
             {
@@ -1572,28 +1570,77 @@ namespace osu.Game.Screens.Edit
                 return;
             }
 
-            if (!string.Equals(droppedAudio, editorBeatmap.BeatmapInfo.Metadata.AudioFile, StringComparison.OrdinalIgnoreCase))
+            if (!belongsToThisSet(dropped.BeatmapInfo))
             {
                 notifications?.Post(new SimpleErrorNotification { Text = SlopEditorStrings.GuestDifficultyWrongSet });
                 return;
             }
 
-            byte[] currentBytes;
-
-            using (var ms = new MemoryStream())
+            if (dropped.BeatmapInfo.Ruleset.OnlineID != editorBeatmap.BeatmapInfo.Ruleset.OnlineID)
             {
-                using (var sw = new StreamWriter(ms, Encoding.UTF8, 1024, true))
-                    new LegacyBeatmapEncoder(editorBeatmap, editorBeatmap.BeatmapSkin, editorBeatmap.Storyboard).Encode(sw);
-                currentBytes = ms.ToArray();
+                notifications?.Post(new SimpleErrorNotification { Text = SlopEditorStrings.GuestDifficultyWrongRuleset });
+                return;
             }
 
-            new LegacyEditorBeatmapPatcher(editorBeatmap).Patch(currentBytes, droppedBytes);
+            string droppedName = dropped.BeatmapInfo.DifficultyName;
+            string openName = editorBeatmap.BeatmapInfo.DifficultyName;
 
-            notifications?.Post(new SimpleNotification
+            if (string.Equals(droppedName, openName, StringComparison.OrdinalIgnoreCase) || dialogOverlay == null)
             {
-                Text = SlopEditorStrings.GuestDifficultyImported(Path.GetFileNameWithoutExtension(path)),
-                Icon = FontAwesome.Solid.Check,
-            });
+                apply();
+                return;
+            }
+
+            dialogOverlay.Push(new GuestDifficultyReplaceDialog(droppedName, openName, apply));
+
+            void apply()
+            {
+                byte[] currentBytes = encode(editorBeatmap, editorBeatmap.BeatmapSkin);
+
+                // the patcher compares the files line by line, so the dropped file is written the same way as the current state
+                // (files written by other clients differ in formatting, and e.g. trailing empty lines would be taken for hit objects).
+                dropped.BeatmapInfo.Ruleset = editorBeatmap.BeatmapInfo.Ruleset;
+                var droppedPlayable = new FlatWorkingBeatmap(dropped).GetPlayableBeatmap(editorBeatmap.BeatmapInfo.Ruleset);
+                droppedPlayable.ControlPointInfo = EditorBeatmap.ConvertControlPoints(droppedPlayable.ControlPointInfo);
+                byte[] normalisedDroppedBytes = encode(droppedPlayable, null);
+
+                new LegacyEditorBeatmapPatcher(editorBeatmap).Patch(currentBytes, normalisedDroppedBytes);
+
+                notifications?.Post(new SimpleNotification
+                {
+                    Text = SlopEditorStrings.GuestDifficultyImported(droppedName),
+                    Icon = FontAwesome.Solid.Check,
+                });
+            }
+
+            static byte[] encode(IBeatmap beatmap, ISkin skin)
+            {
+                using var ms = new MemoryStream();
+
+                using (var sw = new StreamWriter(ms, Encoding.UTF8, 1024, true))
+                    new LegacyBeatmapEncoder(beatmap, skin, null).Encode(sw);
+
+                return ms.ToArray();
+            }
+        }
+
+        /// <summary>
+        /// Whether a dropped difficulty belongs to the beatmap set of this difficulty: it has the same online ID if both have one, and otherwise the same song.
+        /// </summary>
+        private bool belongsToThisSet(BeatmapInfo droppedInfo)
+        {
+            int droppedSetId = droppedInfo.BeatmapSet?.OnlineID ?? -1;
+            int setId = editorBeatmap.BeatmapInfo.BeatmapSet?.OnlineID ?? -1;
+
+            if (droppedSetId > 0 && setId > 0)
+                return droppedSetId == setId;
+
+            var droppedMetadata = droppedInfo.Metadata;
+            var metadata = editorBeatmap.BeatmapInfo.Metadata;
+
+            return string.Equals(droppedMetadata.AudioFile, metadata.AudioFile, StringComparison.OrdinalIgnoreCase)
+                   && string.Equals(droppedMetadata.Title, metadata.Title, StringComparison.OrdinalIgnoreCase)
+                   && string.Equals(droppedMetadata.Artist, metadata.Artist, StringComparison.OrdinalIgnoreCase);
         }
 
         private void submitBeatmap()

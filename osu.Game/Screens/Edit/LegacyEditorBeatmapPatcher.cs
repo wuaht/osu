@@ -43,12 +43,42 @@ namespace osu.Game.Screens.Edit
             IBeatmap newBeatmap = null;
 
             editorBeatmap.BeginChange();
+            processDifficulty(() => newBeatmap ??= readBeatmap(newState));
             processHitObjects(result, () => newBeatmap ??= readBeatmap(newState));
             processTimingPoints(() => newBeatmap ??= readBeatmap(newState));
             processBreaks(() => newBeatmap ??= readBeatmap(newState));
             processBookmarks(() => newBeatmap ??= readBeatmap(newState));
             processHitObjectLocalData(() => newBeatmap ??= readBeatmap(newState));
             editorBeatmap.EndChange();
+        }
+
+        /// <summary>
+        /// Applies the difficulty settings and stack leniency, before the hit objects (whose lengths depend on the slider multiplier).
+        /// </summary>
+        private void processDifficulty(Func<IBeatmap> getNewBeatmap)
+        {
+            var newBeatmap = getNewBeatmap();
+            var current = editorBeatmap.Difficulty;
+            var updated = newBeatmap.Difficulty;
+
+            bool difficultyChanged = current.DrainRate != updated.DrainRate
+                                     || current.CircleSize != updated.CircleSize
+                                     || current.OverallDifficulty != updated.OverallDifficulty
+                                     || current.ApproachRate != updated.ApproachRate
+                                     || current.SliderMultiplier != updated.SliderMultiplier
+                                     || current.SliderTickRate != updated.SliderTickRate;
+
+            if (difficultyChanged)
+                current.CopyFrom(updated);
+
+            if (editorBeatmap.StackLeniency != newBeatmap.StackLeniency)
+            {
+                editorBeatmap.StackLeniency = newBeatmap.StackLeniency;
+                difficultyChanged = true;
+            }
+
+            if (difficultyChanged)
+                editorBeatmap.UpdateAllHitObjects();
         }
 
         private void processTimingPoints(Func<IBeatmap> getNewBeatmap)
