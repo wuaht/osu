@@ -353,7 +353,7 @@ namespace osu.Game
             base.Content.Add(new BeatmapOnlineChangeIngest(beatmapUpdater, realm, metadataClient));
 
             BeatmapManager.ProcessBeatmap = (beatmapSet, scope) => beatmapUpdater.Process(beatmapSet, scope);
-            BeatmapManager.ProcessSavedBeatmap = beatmapUpdater.ProcessSaved;
+            BeatmapManager.ProcessSavedBeatmap = beatmapUpdater.QueueSaved;
 
             // the realtime servers reject this client, which the user only needs to be told once after installing a version.
             MultiplayerClientExtensions.UnsupportedVersionNotifiedBefore = LocalConfig.Get<string>(OsuSetting.SlopUnsupportedRealtimeNotifiedVersion) == Version;
@@ -658,7 +658,7 @@ namespace osu.Game
             }
         }
 
-        protected virtual IBeatmapUpdater CreateBeatmapUpdater() => new BeatmapUpdater(BeatmapManager, difficultyCache, API, Storage);
+        protected virtual IBeatmapUpdater CreateBeatmapUpdater() => new BeatmapUpdater(BeatmapManager, difficultyCache, API, Storage, realm);
 
         protected override UserInputManager CreateUserInputManager() => new OsuUserInputManager();
 

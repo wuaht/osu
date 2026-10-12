@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -22,14 +23,17 @@ namespace osu.Game.Beatmaps
 
         private readonly BeatmapUpdaterMetadataLookup metadataLookup;
 
+        private readonly RealmAccess realm;
+
         private const int update_queue_request_concurrency = 4;
 
         private readonly ThreadedTaskScheduler updateScheduler = new ThreadedTaskScheduler(update_queue_request_concurrency, nameof(BeatmapUpdaterMetadataLookup));
 
-        public BeatmapUpdater(IWorkingBeatmapCache workingBeatmapCache, BeatmapDifficultyCache difficultyCache, IAPIProvider api, Storage storage)
+        public BeatmapUpdater(IWorkingBeatmapCache workingBeatmapCache, BeatmapDifficultyCache difficultyCache, IAPIProvider api, Storage storage, RealmAccess realm)
         {
             this.workingBeatmapCache = workingBeatmapCache;
             this.difficultyCache = difficultyCache;
+            this.realm = realm;
 
             metadataLookup = new BeatmapUpdaterMetadataLookup(api, storage);
         }
@@ -51,6 +55,21 @@ namespace osu.Game.Beatmaps
         /// </summary>
         public void ProcessSaved(BeatmapSetInfo beatmapSet, BeatmapInfo savedBeatmap)
             => process(beatmapSet, MetadataLookupScope.None, savedBeatmap);
+
+        public void QueueSaved(Guid beatmapSetId, Guid savedBeatmapId)
+        {
+            Task.Factory.StartNew(() =>
+            {
+                realm.Run(r =>
+                {
+                    var beatmapSet = r.Find<BeatmapSetInfo>(beatmapSetId);
+                    if (beatmapSet == null) return;
+
+                    var savedBeatmap = beatmapSet.Beatmaps.FirstOrDefault(b => b.ID == savedBeatmapId);
+                    if (savedBeatmap != null) process(beatmapSet, MetadataLookupScope.None, savedBeatmap);
+                });
+            }, CancellationToken.None, TaskCreationOptions.HideScheduler | TaskCreationOptions.RunContinuationsAsynchronously, updateScheduler);
+        }
 
         private void process(BeatmapSetInfo beatmapSet, MetadataLookupScope lookupScope, BeatmapInfo? onlyBeatmap)
         {

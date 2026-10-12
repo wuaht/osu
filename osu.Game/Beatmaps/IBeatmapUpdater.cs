@@ -34,6 +34,14 @@ namespace osu.Game.Beatmaps
         void ProcessSaved(BeatmapSetInfo beatmapSet, BeatmapInfo savedBeatmap) => Process(beatmapSet, MetadataLookupScope.None);
 
         /// <summary>
+        /// Queue processing of a beatmap set after one of its difficulties was saved, running on a background thread.
+        /// Returns immediately without blocking the caller.
+        /// </summary>
+        /// <param name="beatmapSetId">The ID of the beatmap set to update.</param>
+        /// <param name="savedBeatmapId">The ID of the difficulty which was saved.</param>
+        void QueueSaved(Guid beatmapSetId, Guid savedBeatmapId) { }
+
+        /// <summary>
         /// Runs a subset of processing focused on updating any cached beatmap object counts.
         /// </summary>
         /// <param name="beatmapInfo">The managed beatmap to update. A transaction will be opened to apply changes.</param>

@@ -51,9 +51,10 @@ namespace osu.Game.Beatmaps
         public ProcessBeatmapDelegate? ProcessBeatmap { private get; set; }
 
         /// <summary>
-        /// Processes a beatmap set after one of its difficulties was saved. Falls back to <see cref="ProcessBeatmap"/> if not set.
+        /// Queues processing of a beatmap set after one of its difficulties was saved. Falls back to <see cref="ProcessBeatmap"/> if not set.
+        /// Called with the set ID and saved beatmap ID after the save transaction commits.
         /// </summary>
-        public Action<BeatmapSetInfo, BeatmapInfo>? ProcessSavedBeatmap { private get; set; }
+        public Action<Guid, Guid>? ProcessSavedBeatmap { private get; set; }
 
         public override bool PauseImports
         {
@@ -590,13 +591,13 @@ namespace osu.Game.Beatmaps
 
                 // do not look up metadata.
                 // this is a locally-modified set now, so looking up metadata is busy work at best and harmful at worst.
-                var savedBeatmap = liveBeatmapSet.Beatmaps.Single(b => b.ID == beatmapInfo.ID);
-
-                if (ProcessSavedBeatmap != null)
-                    ProcessSavedBeatmap(liveBeatmapSet, savedBeatmap);
-                else
+                if (ProcessSavedBeatmap == null)
                     ProcessBeatmap?.Invoke(liveBeatmapSet, MetadataLookupScope.None);
             });
+
+            // Queue difficulty recalculation after the save transaction commits so it runs on a background thread
+            // and doesn't block the editor while the player is saving.
+            ProcessSavedBeatmap?.Invoke(setInfo.ID, beatmapInfo.ID);
 
             Debug.Assert(beatmapInfo.BeatmapSet != null);
 
