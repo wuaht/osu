@@ -5,6 +5,7 @@ using osu.Framework.Allocation;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Input.Events;
+using osu.Game.Screens.Edit.Compose.Components.Timeline;
 using osuTK;
 
 namespace osu.Game.Screens.Edit.Hitsounding
@@ -61,5 +62,15 @@ namespace osu.Game.Screens.Edit.Hitsounding
         /// Returns the hitsound column close to the given position, if there is one.
         /// </summary>
         protected HitsoundColumn? FindColumnAt(float x) => HitsoundEditor.Map.FindClosestColumn(XToTime(x), Timeline.PixelsToDuration(INTERACTION_DISTANCE));
+
+        protected override bool OnScroll(ScrollEvent e)
+        {
+            // scrolling without modifiers seeks (handled by the editor), with ctrl+shift it zooms like in the timeline.
+            if (ZoomableScrollContainer.GetZoomScrollAmount(e) is not float zoomAmount)
+                return false;
+
+            Timeline.AdjustZoom(zoomAmount);
+            return true;
+        }
     }
 }

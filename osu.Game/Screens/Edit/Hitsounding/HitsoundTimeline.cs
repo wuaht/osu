@@ -5,17 +5,14 @@ using System;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
-using osu.Framework.Input.Bindings;
-using osu.Framework.Input.Events;
 using osu.Framework.Utils;
-using osu.Game.Input.Bindings;
 
 namespace osu.Game.Screens.Edit.Hitsounding
 {
     /// <summary>
     /// Maps between time and position in the hitsound editor, with the current time at the centre.
     /// </summary>
-    public partial class HitsoundTimeline : Component, IScrollBindingHandler<GlobalAction>
+    public partial class HitsoundTimeline : Component
     {
         public const float MIN_ZOOM = 0.03f;
         public const float MAX_ZOOM = 2.5f;
@@ -70,30 +67,6 @@ namespace osu.Game.Screens.Edit.Hitsounding
         /// Changes the zoom by a number of steps (positive to zoom in).
         /// </summary>
         public void AdjustZoom(float steps) => Zoom.Value *= MathF.Pow(1.25f, steps);
-
-        public bool OnPressed(KeyBindingPressEvent<GlobalAction> e) => adjustZoomViaBinding(e.Action, 1);
-
-        public void OnReleased(KeyBindingReleaseEvent<GlobalAction> e)
-        {
-        }
-
-        public bool OnScroll(KeyBindingScrollEvent<GlobalAction> e) => adjustZoomViaBinding(e.Action, Math.Abs(e.ScrollAmount));
-
-        private bool adjustZoomViaBinding(GlobalAction action, float amount)
-        {
-            switch (action)
-            {
-                case GlobalAction.EditorTimelineZoomIn:
-                    AdjustZoom(amount);
-                    return true;
-
-                case GlobalAction.EditorTimelineZoomOut:
-                    AdjustZoom(-amount);
-                    return true;
-            }
-
-            return false;
-        }
 
         public float TimeToX(double time, float width) => (float)(width / 2 + (time - CentreTime) * CurrentZoom);
 

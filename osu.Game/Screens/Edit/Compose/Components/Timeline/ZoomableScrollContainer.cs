@@ -7,18 +7,16 @@ using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Transforms;
-using osu.Framework.Input.Bindings;
 using osu.Framework.Input.Events;
 using osu.Framework.Layout;
 using osu.Framework.Timing;
 using osu.Framework.Utils;
 using osu.Game.Graphics.Containers;
-using osu.Game.Input.Bindings;
 using osuTK;
 
 namespace osu.Game.Screens.Edit.Compose.Components.Timeline
 {
-    public partial class ZoomableScrollContainer : OsuScrollContainer, IScrollBindingHandler<GlobalAction>
+    public partial class ZoomableScrollContainer : OsuScrollContainer
     {
         /// <summary>
         /// The time to zoom into/out of a point.
@@ -140,6 +138,12 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
 
         protected override bool OnScroll(ScrollEvent e)
         {
+            if (GetZoomScrollAmount(e) is float zoomAmount)
+            {
+                AdjustZoomRelatively(zoomAmount);
+                return true;
+            }
+
             // can't handle scroll correctly while playing.
             // the editor will handle this case for us.
             if (editorClock?.IsRunning == true)
@@ -148,28 +152,16 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
             return base.OnScroll(e);
         }
 
-        public bool OnPressed(KeyBindingPressEvent<GlobalAction> e) => adjustZoomViaBinding(e.Action, 1);
-
-        public void OnReleased(KeyBindingReleaseEvent<GlobalAction> e)
+        /// <summary>
+        /// Returns the amount to zoom by if the given scroll event should zoom the timeline (when holding ctrl+shift), or null otherwise.
+        /// </summary>
+        public static float? GetZoomScrollAmount(ScrollEvent e)
         {
-        }
+            if (!e.ControlPressed || !e.ShiftPressed || e.AltPressed || e.SuperPressed)
+                return null;
 
-        public bool OnScroll(KeyBindingScrollEvent<GlobalAction> e) => adjustZoomViaBinding(e.Action, Math.Abs(e.ScrollAmount));
-
-        private bool adjustZoomViaBinding(GlobalAction action, float amount)
-        {
-            switch (action)
-            {
-                case GlobalAction.EditorTimelineZoomIn:
-                    AdjustZoomRelatively(amount);
-                    return true;
-
-                case GlobalAction.EditorTimelineZoomOut:
-                    AdjustZoomRelatively(-amount);
-                    return true;
-            }
-
-            return false;
+            // non-precise scroll is converted to horizontal scroll while shift is held, with scrolling up arriving as positive x.
+            return e.ScrollDelta.Y != 0 ? e.ScrollDelta.Y : e.ScrollDelta.X;
         }
 
         private void updateZoomedContentWidth()

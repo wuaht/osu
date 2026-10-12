@@ -160,11 +160,6 @@ namespace osu.Game.Input.Bindings
             new KeyBinding(new[] { InputKey.Control, InputKey.Alt, InputKey.MouseWheelUp }, GlobalAction.EditorIncreaseDistanceSpacing),
             new KeyBinding(new[] { InputKey.Control, InputKey.MouseWheelDown }, GlobalAction.EditorCyclePreviousBeatSnapDivisor),
             new KeyBinding(new[] { InputKey.Control, InputKey.MouseWheelUp }, GlobalAction.EditorCycleNextBeatSnapDivisor),
-            // non-precise scroll is converted to horizontal scroll while shift is held, so scrolling the mouse wheel up/down arrives as wheel left/right.
-            new KeyBinding(new[] { InputKey.Shift, InputKey.Alt, InputKey.MouseWheelLeft }, GlobalAction.EditorTimelineZoomIn),
-            new KeyBinding(new[] { InputKey.Shift, InputKey.Alt, InputKey.MouseWheelRight }, GlobalAction.EditorTimelineZoomOut),
-            new KeyBinding(new[] { InputKey.Shift, InputKey.Alt, InputKey.MouseWheelUp }, GlobalAction.EditorTimelineZoomIn),
-            new KeyBinding(new[] { InputKey.Shift, InputKey.Alt, InputKey.MouseWheelDown }, GlobalAction.EditorTimelineZoomOut),
             new KeyBinding(InputKey.None, GlobalAction.EditorToggleMoveControl),
             new KeyBinding(new[] { InputKey.Control, InputKey.R }, GlobalAction.EditorToggleRotateControl),
             new KeyBinding(new[] { InputKey.Control, InputKey.E }, GlobalAction.EditorToggleScaleControl),
@@ -688,12 +683,6 @@ namespace osu.Game.Input.Bindings
 
         [LocalisableDescription(typeof(SlopNominatorsStrings), nameof(SlopNominatorsStrings.NominatorsEditorMode))]
         EditorNominatorsMode,
-
-        [LocalisableDescription(typeof(SlopEditorStrings), nameof(SlopEditorStrings.TimelineZoomIn))]
-        EditorTimelineZoomIn,
-
-        [LocalisableDescription(typeof(SlopEditorStrings), nameof(SlopEditorStrings.TimelineZoomOut))]
-        EditorTimelineZoomOut,
     }
 
     public enum GlobalActionCategory

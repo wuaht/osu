@@ -125,10 +125,10 @@ namespace osu.Game.Tests.Visual.Editing
 
             // Scroll in at 0.25
             AddStep("Move mouse to 0.25x", () => InputManager.MoveMouseTo(new Vector2(scrollQuad.TopLeft.X + 0.25f * scrollQuad.Size.X, scrollQuad.Centre.Y)));
-            AddStep("Press shift+alt down", () =>
+            AddStep("Press ctrl+shift down", () =>
             {
+                InputManager.PressKey(Key.ControlLeft);
                 InputManager.PressKey(Key.ShiftLeft);
-                InputManager.PressKey(Key.AltLeft);
             });
             AddStep("Scroll by 3", () => InputManager.ScrollBy(new Vector2(0, 3)));
             AddAssert("Box not at 0", () => !Precision.AlmostEquals(boxQuad.TopLeft, scrollQuad.TopLeft));
@@ -138,10 +138,10 @@ namespace osu.Game.Tests.Visual.Editing
             AddStep("Scroll by -3", () => InputManager.ScrollBy(new Vector2(0, -3)));
             AddAssert("Box at 0", () => Precision.AlmostEquals(boxQuad.TopLeft, scrollQuad.TopLeft));
             AddAssert("Box 1/2 at 1/2", () => Precision.AlmostEquals(boxQuad.TopLeft.X + 0.5f * boxQuad.Size.X, scrollQuad.TopLeft.X + 0.5f * scrollQuad.Size.X));
-            AddStep("Release shift+alt", () =>
+            AddStep("Release ctrl+shift", () =>
             {
-                InputManager.ReleaseKey(Key.AltLeft);
                 InputManager.ReleaseKey(Key.ShiftLeft);
+                InputManager.ReleaseKey(Key.ControlLeft);
             });
         }
 
@@ -152,16 +152,16 @@ namespace osu.Game.Tests.Visual.Editing
 
             // Scroll in at 0.25
             AddStep("Move mouse to 0.25x", () => InputManager.MoveMouseTo(new Vector2(scrollQuad.TopLeft.X + 0.25f * scrollQuad.Size.X, scrollQuad.Centre.Y)));
-            AddStep("Press shift+alt down", () =>
+            AddStep("Press ctrl+shift down", () =>
             {
+                InputManager.PressKey(Key.ControlLeft);
                 InputManager.PressKey(Key.ShiftLeft);
-                InputManager.PressKey(Key.AltLeft);
             });
             AddStep("Zoom by 3", () => InputManager.ScrollBy(new Vector2(0, 3)));
-            AddStep("Release shift+alt", () =>
+            AddStep("Release ctrl+shift", () =>
             {
-                InputManager.ReleaseKey(Key.AltLeft);
                 InputManager.ReleaseKey(Key.ShiftLeft);
+                InputManager.ReleaseKey(Key.ControlLeft);
             });
 
             AddStep("Scroll far left", () => InputManager.ScrollBy(new Vector2(0, 30)));
@@ -176,10 +176,10 @@ namespace osu.Game.Tests.Visual.Editing
         {
             reset();
 
-            AddStep("Press shift+alt down", () =>
+            AddStep("Press ctrl+shift down", () =>
             {
+                InputManager.PressKey(Key.ControlLeft);
                 InputManager.PressKey(Key.ShiftLeft);
-                InputManager.PressKey(Key.AltLeft);
             });
 
             // Scroll in at 0.25
@@ -204,10 +204,10 @@ namespace osu.Game.Tests.Visual.Editing
             AddStep("Scroll by -1", () => InputManager.ScrollBy(new Vector2(0, -1)));
             AddAssert("Box at 0", () => Precision.AlmostEquals(boxQuad.TopLeft, scrollQuad.TopLeft));
 
-            AddStep("Release shift+alt", () =>
+            AddStep("Release ctrl+shift", () =>
             {
-                InputManager.ReleaseKey(Key.AltLeft);
                 InputManager.ReleaseKey(Key.ShiftLeft);
+                InputManager.ReleaseKey(Key.ControlLeft);
             });
         }
 

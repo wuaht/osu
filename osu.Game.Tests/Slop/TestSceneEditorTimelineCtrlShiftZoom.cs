@@ -11,7 +11,6 @@ using osu.Game.Beatmaps;
 using osu.Game.Configuration;
 using osu.Game.Database;
 using osu.Game.Overlays;
-using osu.Game.Rulesets.Edit;
 using osu.Game.Screens.Edit;
 using osu.Game.Screens.Edit.Compose.Components.Timeline;
 using osu.Game.Screens.Select;
@@ -22,7 +21,7 @@ using osuTK.Input;
 namespace osu.Game.Tests.Slop
 {
     [Category("slop")]
-    public partial class TestSceneEditorTimelineZoomBinding : OsuGameTestScene
+    public partial class TestSceneEditorTimelineCtrlShiftZoom : OsuGameTestScene
     {
         private BeatmapSetInfo beatmapSet = null!;
         private float zoomBefore;
@@ -59,18 +58,11 @@ namespace osu.Game.Tests.Slop
         }
 
         [Test]
-        public void TestZoomBindingOnTimeline()
+        public void TestCtrlShiftScrollOnTimelineZooms()
         {
             AddStep("hover timeline", () => InputManager.MoveMouseTo(timeline));
             checkZoom();
             AddAssert("volume meter not displayed", () => Game.ChildrenOfType<VolumeOverlay>().All(overlay => overlay.State.Value == Visibility.Hidden));
-        }
-
-        [Test]
-        public void TestZoomBindingOutsideTimeline()
-        {
-            AddStep("hover composer", () => InputManager.MoveMouseTo(editor.ChildrenOfType<HitObjectComposer>().First()));
-            checkZoom();
         }
 
         [Test]
@@ -100,21 +92,21 @@ namespace osu.Game.Tests.Slop
             });
             AddStep("store zoom", () => zoomBefore = timeline.Zoom);
 
-            AddStep("shift+alt+scroll up", () => zoomScroll(1));
+            AddStep("ctrl+shift+scroll up", () => zoomScroll(1));
             AddAssert("zoomed in", () => timeline.Zoom, () => Is.GreaterThan(zoomBefore));
 
             AddStep("store zoom", () => zoomBefore = timeline.Zoom);
-            AddStep("shift+alt+scroll down", () => zoomScroll(-1));
+            AddStep("ctrl+shift+scroll down", () => zoomScroll(-1));
             AddAssert("zoomed out", () => timeline.Zoom, () => Is.LessThan(zoomBefore));
         }
 
         private void zoomScroll(float amount)
         {
+            InputManager.PressKey(Key.ControlLeft);
             InputManager.PressKey(Key.ShiftLeft);
-            InputManager.PressKey(Key.AltLeft);
             InputManager.ScrollVerticalBy(amount);
-            InputManager.ReleaseKey(Key.AltLeft);
             InputManager.ReleaseKey(Key.ShiftLeft);
+            InputManager.ReleaseKey(Key.ControlLeft);
         }
     }
 }

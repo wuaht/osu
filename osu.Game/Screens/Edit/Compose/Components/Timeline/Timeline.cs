@@ -304,7 +304,7 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
         protected override bool OnScroll(ScrollEvent e)
         {
             // if this is not a precision scroll event, let the editor handle the seek itself (for snapping support)
-            if (!e.IsPrecise)
+            if (!e.IsPrecise && GetZoomScrollAmount(e) == null)
                 return false;
 
             return base.OnScroll(e);
