@@ -5,16 +5,12 @@ using System;
 using System.IO;
 using System.Linq;
 using NUnit.Framework;
-using osu.Framework.Testing;
 using osu.Game.Beatmaps;
 using osu.Game.IO;
-using osu.Game.Overlays.Dialog;
 using osu.Game.Rulesets;
 using osu.Game.Rulesets.Osu;
-using osu.Game.Screens.Edit;
 using osu.Game.Tests.Resources;
 using osu.Game.Tests.Visual;
-using osuTK.Input;
 
 namespace osu.Game.Tests.Slop
 {
@@ -104,20 +100,18 @@ namespace osu.Game.Tests.Slop
         }
 
         [Test]
-        public void TestOtherDifficultyNameIsConfirmed()
+        public void TestDifficultyNotInSetIsRejected()
         {
-            AddStep("drop file of other difficulty", () => Editor.ImportGuestDifficulty(writeFile(updatedText.Replace("Version:Insane", "Version:Hard"))));
-            AddUntilStep("confirmation shown", () => DialogOverlay.CurrentDialog is GuestDifficultyReplaceDialog);
-            AddAssert("not applied yet", () => EditorBeatmap.Difficulty.ApproachRate, () => Is.EqualTo(9));
+            AddStep("drop file of difficulty not in set", () => Editor.ImportGuestDifficulty(writeFile(updatedText.Replace("Version:Insane", "Version:Hard"))));
+            AddAssert("no dialog", () => DialogOverlay.CurrentDialog, () => Is.Null);
+            AddAssert("approach rate unchanged", () => EditorBeatmap.Difficulty.ApproachRate, () => Is.EqualTo(9));
+            AddAssert("objects unchanged", () => EditorBeatmap.HitObjects.Any(h => h.StartTime == 1285));
+        }
 
-            AddStep("hold confirm", () =>
-            {
-                InputManager.MoveMouseTo(DialogOverlay.CurrentDialog!.ChildrenOfType<PopupDialogDangerousButton>().Single());
-                InputManager.PressButton(MouseButton.Left);
-            });
-            AddUntilStep("dialog closed", () => DialogOverlay.CurrentDialog == null);
-            AddStep("release", () => InputManager.ReleaseButton(MouseButton.Left));
-
+        [Test]
+        public void TestDifficultyNameIsCaseInsensitive()
+        {
+            AddStep("drop file with lowercase name", () => Editor.ImportGuestDifficulty(writeFile(updatedText.Replace("Version:Insane", "Version:insane"))));
             AddAssert("applied", () => EditorBeatmap.Difficulty.ApproachRate, () => Is.EqualTo(7));
             AddAssert("difficulty name kept", () => EditorBeatmap.BeatmapInfo.DifficultyName, () => Is.EqualTo("Insane"));
         }

@@ -65,15 +65,16 @@ namespace osu.Game.Localisation
         public static LocalisableString GuestDifficultyWrongRuleset => new TranslatableString(getKey(@"guest_difficulty_wrong_ruleset"), @"The dropped difficulty is for a different game mode.");
 
         /// <summary>
-        /// "Replace this difficulty?"
+        /// "This beatmap set has no difficulty named "{0}"."
         /// </summary>
-        public static LocalisableString GuestDifficultyNameMismatchHeader => new TranslatableString(getKey(@"guest_difficulty_name_mismatch_header"), @"Replace this difficulty?");
+        public static LocalisableString GuestDifficultyNotInSet(string name) => new TranslatableString(getKey(@"guest_difficulty_not_in_set"),
+            @"This beatmap set has no difficulty named ""{0}"".", name);
 
         /// <summary>
-        /// "The dropped file is the difficulty "{0}", but "{1}" is open. Replace the content of "{1}" with it anyway?"
+        /// "Failed to replace "{0}" with the dropped .osu file."
         /// </summary>
-        public static LocalisableString GuestDifficultyNameMismatchBody(string dropped, string open) => new TranslatableString(getKey(@"guest_difficulty_name_mismatch_body"),
-            @"The dropped file is the difficulty ""{0}"", but ""{1}"" is open. Replace the content of ""{1}"" with it anyway?", dropped, open);
+        public static LocalisableString GuestDifficultyReplaceFailed(string name) => new TranslatableString(getKey(@"guest_difficulty_replace_failed"),
+            @"Failed to replace ""{0}"" with the dropped .osu file.", name);
 
         private static string getKey(string key) => $"{prefix}:{key}";
     }

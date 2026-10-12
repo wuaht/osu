@@ -1535,9 +1535,10 @@ namespace osu.Game.Screens.Edit
         }
 
         /// <summary>
-        /// Replaces the content of this difficulty (hit objects, timing points, breaks, bookmarks, samples and difficulty settings) with that of a .osu file,
-        /// e.g. to update a guest difficulty. The file must belong to this beatmap set and game mode. This can be undone.
-        /// If the file is a difficulty with a different name, this is confirmed first.
+        /// Replaces the content of a difficulty of this beatmap set (hit objects, timing points, breaks, bookmarks, samples and difficulty settings) with that of a .osu file,
+        /// e.g. to update a guest difficulty. The file must belong to this beatmap set and game mode.
+        /// The difficulty of the set with the same name as the file is replaced: if it is this one, this can be undone,
+        /// otherwise this difficulty and the replaced one are saved and the editor is reloaded.
         /// </summary>
         public void ImportGuestDifficulty(string path)
         {
@@ -1585,35 +1586,69 @@ namespace osu.Game.Screens.Edit
             }
 
             string droppedName = dropped.BeatmapInfo.DifficultyName;
-            string openName = editorBeatmap.BeatmapInfo.DifficultyName;
+            var ruleset = editorBeatmap.BeatmapInfo.Ruleset;
 
-            if (string.Equals(droppedName, openName, StringComparison.OrdinalIgnoreCase) || dialogOverlay == null)
+            // the difficulty of the set the file is a version of, regardless of which difficulty is open.
+            var target = string.Equals(droppedName, editorBeatmap.BeatmapInfo.DifficultyName, StringComparison.OrdinalIgnoreCase)
+                ? editorBeatmap.BeatmapInfo
+                : editorBeatmap.BeatmapInfo.BeatmapSet?.Beatmaps.FirstOrDefault(b => b.Ruleset.OnlineID == ruleset.OnlineID
+                                                                                    && string.Equals(b.DifficultyName, droppedName, StringComparison.OrdinalIgnoreCase));
+
+            if (target == null)
             {
-                apply();
+                notifications?.Post(new SimpleErrorNotification { Text = SlopEditorStrings.GuestDifficultyNotInSet(droppedName) });
                 return;
             }
 
-            dialogOverlay.Push(new GuestDifficultyReplaceDialog(droppedName, openName, apply));
+            // the patcher compares the files line by line, so the dropped file is written the same way as the current state
+            // (files written by other clients differ in formatting, and e.g. trailing empty lines would be taken for hit objects).
+            dropped.BeatmapInfo.Ruleset = ruleset;
+            var droppedPlayable = new FlatWorkingBeatmap(dropped).GetPlayableBeatmap(ruleset);
+            droppedPlayable.ControlPointInfo = EditorBeatmap.ConvertControlPoints(droppedPlayable.ControlPointInfo);
 
-            void apply()
+            if (target.Equals(editorBeatmap.BeatmapInfo))
             {
-                byte[] currentBytes = encode(editorBeatmap, editorBeatmap.BeatmapSkin);
-
-                // the patcher compares the files line by line, so the dropped file is written the same way as the current state
-                // (files written by other clients differ in formatting, and e.g. trailing empty lines would be taken for hit objects).
-                dropped.BeatmapInfo.Ruleset = editorBeatmap.BeatmapInfo.Ruleset;
-                var droppedPlayable = new FlatWorkingBeatmap(dropped).GetPlayableBeatmap(editorBeatmap.BeatmapInfo.Ruleset);
-                droppedPlayable.ControlPointInfo = EditorBeatmap.ConvertControlPoints(droppedPlayable.ControlPointInfo);
-                byte[] normalisedDroppedBytes = encode(droppedPlayable, null);
-
-                new LegacyEditorBeatmapPatcher(editorBeatmap).Patch(currentBytes, normalisedDroppedBytes);
-
-                notifications?.Post(new SimpleNotification
-                {
-                    Text = SlopEditorStrings.GuestDifficultyImported(droppedName),
-                    Icon = FontAwesome.Solid.Check,
-                });
+                new LegacyEditorBeatmapPatcher(editorBeatmap).Patch(encode(editorBeatmap, editorBeatmap.BeatmapSkin), encode(droppedPlayable, null));
+                notifyImported();
+                return;
             }
+
+            // this difficulty has to be saved before the other one, as saving it afterwards would write its outdated beatmap set
+            // (including the hash of the other difficulty) back to the database.
+            if (!Save())
+                return;
+
+            try
+            {
+                // a fresh reference, as the beatmap set of the one of this difficulty doesn't contain the files saved since it was loaded.
+                var info = beatmapManager.QueryBeatmap(b => b.ID == target.ID)
+                           ?? throw new InvalidOperationException($@"{target.GetDisplayTitle()} couldn't be found.");
+
+                var working = beatmapManager.GetWorkingBeatmap(info);
+
+                // the name, metadata, skin and storyboard of the difficulty are kept.
+                beatmapManager.Save(info, droppedPlayable, working.GetSkin(), working.Storyboard);
+            }
+            catch (Exception e)
+            {
+                Logger.Error(e, $"Failed to replace {target.GetDisplayTitle()} with the dropped .osu file");
+                notifications?.Post(new SimpleErrorNotification { Text = SlopEditorStrings.GuestDifficultyReplaceFailed(droppedName) });
+                return;
+            }
+
+            notifyImported();
+
+            // reload with a fresh reference, such that the editor's beatmap set contains the replaced difficulty.
+            var current = beatmapManager.QueryBeatmap(b => b.ID == editorBeatmap.BeatmapInfo.ID);
+
+            if (current != null)
+                SwitchToDifficulty(current);
+
+            void notifyImported() => notifications?.Post(new SimpleNotification
+            {
+                Text = SlopEditorStrings.GuestDifficultyImported(droppedName),
+                Icon = FontAwesome.Solid.Check,
+            });
 
             static byte[] encode(IBeatmap beatmap, ISkin skin)
             {
