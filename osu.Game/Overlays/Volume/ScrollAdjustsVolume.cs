@@ -8,7 +8,6 @@ using osu.Framework.Graphics.Containers;
 using osu.Framework.Input.Events;
 using osu.Game.Input;
 using osu.Game.Input.Bindings;
-using osuTK;
 
 namespace osu.Game.Overlays.Volume
 {
@@ -31,29 +30,6 @@ namespace osu.Game.Overlays.Volume
             RelativeSizeAxes = Axes.Both;
         }
 
-        private bool blockedAtLastPosition;
-        private Vector2? lastPosition;
-
-        protected override void Update()
-        {
-            base.Update();
-
-            if (!requireAltPressed)
-                return;
-
-            var inputManager = GetContainingInputManager();
-
-            if (inputManager == null)
-                return;
-
-            // hovered drawables alone aren't enough, as hover stops at the first drawable which handles it,
-            // hiding any drawable behind it (e.g. the editor timeline) even though it would still receive the scroll.
-            // the positional input queue can't be built while a scroll is being propagated through it, so it is checked ahead of time.
-            // this isn't limited to while alt is held, as alt may be pressed in the same frame as the scroll.
-            lastPosition = inputManager.CurrentState.Mouse.Position;
-            blockedAtLastPosition = inputManager.PositionalInputQueue.Any(blocksGlobalAltScrollVolume);
-        }
-
         protected override bool OnScroll(ScrollEvent e)
         {
             if (requireAltPressed)
@@ -61,12 +37,8 @@ namespace osu.Game.Overlays.Volume
                 if (!e.AltPressed || e.ControlPressed || e.ShiftPressed || e.SuperPressed)
                     return false;
 
-                if (lastPosition == e.ScreenSpaceMousePosition && blockedAtLastPosition)
-                    return false;
-
                 var hoveredDrawables = GetContainingInputManager()?.HoveredDrawables;
 
-                // covers the mouse having moved since the last check.
                 // hover only propagates up to the first drawable which handles it (e.g. a hit object on the editor timeline),
                 // so the ancestors of hovered drawables have to be checked as well.
                 if (hoveredDrawables?.Any(blocksGlobalAltScrollVolume) == true)

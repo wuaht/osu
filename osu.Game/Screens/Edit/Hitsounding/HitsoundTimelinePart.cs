@@ -5,7 +5,6 @@ using osu.Framework.Allocation;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Input.Events;
-using osu.Game.Input;
 using osuTK;
 
 namespace osu.Game.Screens.Edit.Hitsounding
@@ -13,7 +12,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
     /// <summary>
     /// A part of the hitsound editor which displays content along the time axis of the <see cref="HitsoundTimeline"/>.
     /// </summary>
-    public abstract partial class HitsoundTimelinePart : CompositeDrawable, IBlockGlobalAltScrollVolume
+    public abstract partial class HitsoundTimelinePart : CompositeDrawable
     {
         /// <summary>
         /// How close (in pixels) the cursor needs to be to a hitsound to interact with it.
@@ -62,15 +61,5 @@ namespace osu.Game.Screens.Edit.Hitsounding
         /// Returns the hitsound column close to the given position, if there is one.
         /// </summary>
         protected HitsoundColumn? FindColumnAt(float x) => HitsoundEditor.Map.FindClosestColumn(XToTime(x), Timeline.PixelsToDuration(INTERACTION_DISTANCE));
-
-        protected override bool OnScroll(ScrollEvent e)
-        {
-            // scrolling without modifiers seeks (handled by the editor), with alt it zooms like in the timeline.
-            if (!e.AltPressed)
-                return false;
-
-            Timeline.AdjustZoom(e.ScrollDelta.Y);
-            return true;
-        }
     }
 }

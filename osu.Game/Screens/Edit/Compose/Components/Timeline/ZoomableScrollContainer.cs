@@ -7,17 +7,18 @@ using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Transforms;
+using osu.Framework.Input.Bindings;
 using osu.Framework.Input.Events;
 using osu.Framework.Layout;
 using osu.Framework.Timing;
 using osu.Framework.Utils;
 using osu.Game.Graphics.Containers;
-using osu.Game.Input;
+using osu.Game.Input.Bindings;
 using osuTK;
 
 namespace osu.Game.Screens.Edit.Compose.Components.Timeline
 {
-    public partial class ZoomableScrollContainer : OsuScrollContainer, IBlockGlobalAltScrollVolume
+    public partial class ZoomableScrollContainer : OsuScrollContainer, IScrollBindingHandler<GlobalAction>
     {
         /// <summary>
         /// The time to zoom into/out of a point.
@@ -139,19 +140,36 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
 
         protected override bool OnScroll(ScrollEvent e)
         {
-            if (e.AltPressed)
-            {
-                // zoom when holding alt.
-                AdjustZoomRelatively(e.ScrollDelta.Y);
-                return true;
-            }
-
             // can't handle scroll correctly while playing.
             // the editor will handle this case for us.
             if (editorClock?.IsRunning == true)
                 return false;
 
             return base.OnScroll(e);
+        }
+
+        public bool OnPressed(KeyBindingPressEvent<GlobalAction> e) => adjustZoomViaBinding(e.Action, 1);
+
+        public void OnReleased(KeyBindingReleaseEvent<GlobalAction> e)
+        {
+        }
+
+        public bool OnScroll(KeyBindingScrollEvent<GlobalAction> e) => adjustZoomViaBinding(e.Action, Math.Abs(e.ScrollAmount));
+
+        private bool adjustZoomViaBinding(GlobalAction action, float amount)
+        {
+            switch (action)
+            {
+                case GlobalAction.EditorTimelineZoomIn:
+                    AdjustZoomRelatively(amount);
+                    return true;
+
+                case GlobalAction.EditorTimelineZoomOut:
+                    AdjustZoomRelatively(-amount);
+                    return true;
+            }
+
+            return false;
         }
 
         private void updateZoomedContentWidth()

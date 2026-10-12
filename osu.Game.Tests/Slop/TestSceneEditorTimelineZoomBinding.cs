@@ -1,29 +1,28 @@
-﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System.Linq;
 using NUnit.Framework;
 using osu.Framework.Extensions;
 using osu.Framework.Extensions.ObjectExtensions;
-using osu.Framework.Graphics;
-using osu.Framework.Input;
-using osu.Framework.Input.Events;
+using osu.Framework.Graphics.Containers;
 using osu.Framework.Testing;
 using osu.Game.Beatmaps;
 using osu.Game.Configuration;
 using osu.Game.Database;
+using osu.Game.Overlays;
+using osu.Game.Rulesets.Edit;
 using osu.Game.Screens.Edit;
 using osu.Game.Screens.Edit.Compose.Components.Timeline;
 using osu.Game.Screens.Select;
 using osu.Game.Tests.Resources;
 using osu.Game.Tests.Visual;
-using osuTK;
 using osuTK.Input;
 
 namespace osu.Game.Tests.Slop
 {
     [Category("slop")]
-    public partial class TestSceneEditorTimelineAltScrollZoom : OsuGameTestScene
+    public partial class TestSceneEditorTimelineZoomBinding : OsuGameTestScene
     {
         private BeatmapSetInfo beatmapSet = null!;
         private float zoomBefore;
@@ -60,28 +59,33 @@ namespace osu.Game.Tests.Slop
         }
 
         [Test]
-        public void TestAltScrollOnTimelineCentre()
+        public void TestZoomBindingOnTimeline()
         {
             AddStep("hover timeline", () => InputManager.MoveMouseTo(timeline));
             checkZoom();
+            AddAssert("volume meter not displayed", () => Game.ChildrenOfType<VolumeOverlay>().All(overlay => overlay.State.Value == Visibility.Hidden));
         }
 
         [Test]
-        public void TestAltScrollOnEmptyTimeline()
+        public void TestZoomBindingOutsideTimeline()
         {
-            AddStep("hover timeline", () => InputManager.MoveMouseTo(timeline.ScreenSpaceDrawQuad.TopLeft + new Vector2(timeline.ScreenSpaceDrawQuad.Width * 0.25f, 5)));
+            AddStep("hover composer", () => InputManager.MoveMouseTo(editor.ChildrenOfType<HitObjectComposer>().First()));
             checkZoom();
         }
 
         [Test]
-        public void TestAltScrollWithHoverHandlerInFront()
+        public void TestAltScrollOnTimelineAdjustsVolume()
         {
-            AddStep("add hover handler over timeline", () => Game.Add(new HoverHandlingBox
+            AddStep("hover timeline", () => InputManager.MoveMouseTo(timeline));
+            AddStep("store zoom", () => zoomBefore = timeline.Zoom);
+            AddStep("alt+scroll", () =>
             {
-                RelativeSizeAxes = Axes.Both,
-            }));
-            AddStep("hover timeline", () => InputManager.MoveMouseTo(timeline));
-            checkZoom();
+                InputManager.PressKey(Key.AltLeft);
+                InputManager.ScrollVerticalBy(1);
+                InputManager.ReleaseKey(Key.AltLeft);
+            });
+            AddAssert("volume meter displayed", () => Game.ChildrenOfType<VolumeOverlay>().Any(overlay => overlay.State.Value == Visibility.Visible));
+            AddAssert("zoom unchanged", () => timeline.Zoom, () => Is.EqualTo(zoomBefore));
         }
 
         private void checkZoom()
@@ -96,27 +100,21 @@ namespace osu.Game.Tests.Slop
             });
             AddStep("store zoom", () => zoomBefore = timeline.Zoom);
 
-            AddStep("alt+scroll up", () => altScroll(1));
+            AddStep("shift+alt+scroll up", () => zoomScroll(1));
             AddAssert("zoomed in", () => timeline.Zoom, () => Is.GreaterThan(zoomBefore));
 
             AddStep("store zoom", () => zoomBefore = timeline.Zoom);
-            AddStep("alt+scroll down", () => altScroll(-1));
+            AddStep("shift+alt+scroll down", () => zoomScroll(-1));
             AddAssert("zoomed out", () => timeline.Zoom, () => Is.LessThan(zoomBefore));
         }
 
-        private void altScroll(float amount)
+        private void zoomScroll(float amount)
         {
+            InputManager.PressKey(Key.ShiftLeft);
             InputManager.PressKey(Key.AltLeft);
             InputManager.ScrollVerticalBy(amount);
             InputManager.ReleaseKey(Key.AltLeft);
-        }
-
-        /// <summary>
-        /// Handles hover without handling scroll, hiding everything behind it from <see cref="InputManager.HoveredDrawables"/>.
-        /// </summary>
-        private partial class HoverHandlingBox : Drawable
-        {
-            protected override bool OnHover(HoverEvent e) => true;
+            InputManager.ReleaseKey(Key.ShiftLeft);
         }
     }
 }

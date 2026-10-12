@@ -57,9 +57,11 @@ namespace osu.Game.Tests.Visual.Editing
             {
                 var timeline = Editor.ChildrenOfType<Timeline>().Single();
                 InputManager.MoveMouseTo(timeline);
+                InputManager.PressKey(Key.ShiftLeft);
                 InputManager.PressKey(Key.AltLeft);
                 InputManager.ScrollVerticalBy(15f);
                 InputManager.ReleaseKey(Key.AltLeft);
+                InputManager.ReleaseKey(Key.ShiftLeft);
             });
             AddAssert("Timeline zoom changed", () => EditorBeatmap.TimelineZoom, () => Is.Not.EqualTo(originalTimelineZoom));
             AddUntilStep("Volume meter not displayed", () => Game.ChildrenOfType<VolumeOverlay>().All(overlay => overlay.State.Value == Visibility.Hidden));

@@ -76,6 +76,16 @@ namespace osu.Game.Localisation
         public static LocalisableString GuestDifficultyReplaceFailed(string name) => new TranslatableString(getKey(@"guest_difficulty_replace_failed"),
             @"Failed to replace ""{0}"" with the dropped .osu file.", name);
 
+        /// <summary>
+        /// "Zoom timeline in"
+        /// </summary>
+        public static LocalisableString TimelineZoomIn => new TranslatableString(getKey(@"timeline_zoom_in"), @"Zoom timeline in");
+
+        /// <summary>
+        /// "Zoom timeline out"
+        /// </summary>
+        public static LocalisableString TimelineZoomOut => new TranslatableString(getKey(@"timeline_zoom_out"), @"Zoom timeline out");
+
         private static string getKey(string key) => $"{prefix}:{key}";
     }
 }
