@@ -17,6 +17,7 @@ using osu.Game.Audio;
 using osu.Game.Beatmaps;
 using osu.Game.Beatmaps.ControlPoints;
 using osu.Game.Configuration;
+using osu.Game.Graphics.Sprites;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Localisation;
 using osu.Game.Overlays.Dialog;
@@ -26,6 +27,7 @@ using osu.Game.Rulesets.Osu;
 using osu.Game.Rulesets.Osu.Objects;
 using osu.Game.Screens.Edit;
 using osu.Game.Screens.Edit.Components;
+using osu.Game.Rulesets.Edit;
 using osu.Game.Screens.Edit.Hitsounding;
 using osu.Game.Storyboards;
 using osu.Game.Tests.Visual;
@@ -330,6 +332,100 @@ namespace osu.Game.Tests.Slop
                 var info = beatmapManager.QueryBeatmap(b => b.DifficultyName == firstDifficultyName)!;
                 return !hasSample(beatmapManager.GetWorkingBeatmap(info, true).Beatmap.HitObjects[0], HitSampleInfo.HIT_FINISH);
             });
+        }
+
+        [TestCase(true)]
+        [TestCase(false)]
+        public void TestHitnormalAndAdditionOfSameBankShareObject(bool additionFirst)
+        {
+            var softNormal = new HitsoundLane(HitSampleInfo.BANK_SOFT, HitSampleInfo.HIT_NORMAL);
+            var softWhistle = new HitsoundLane(HitSampleInfo.BANK_SOFT, HitSampleInfo.HIT_WHISTLE);
+
+            createHitsoundDifficulty();
+
+            AddStep("show all lanes", () => hitsoundEditor.HideUnusedLanes.Value = false);
+            AddStep("seek to empty time", () => EditorClock.Seek(1000));
+            AddWaitStep("wait for seek", 2);
+
+            AddStep("click first lane", () => clickLane(additionFirst ? softWhistle : softNormal, MouseButton.Left));
+            AddAssert("one object created", () => objectsAt(1000).Count(), () => Is.EqualTo(1));
+            AddStep("click second lane", () => clickLane(additionFirst ? softNormal : softWhistle, MouseButton.Left));
+
+            AddAssert("still one object", () => objectsAt(1000).Count(), () => Is.EqualTo(1));
+            AddAssert("soft hitnormal", () => HitsoundSamples.GetNormalBank(objectsAt(1000).Single().Samples), () => Is.EqualTo(HitSampleInfo.BANK_SOFT));
+            AddAssert("soft whistle", () => objectsAt(1000).Single().Samples.Any(s => s.Name == HitSampleInfo.HIT_WHISTLE && s.Bank == HitSampleInfo.BANK_SOFT));
+        }
+
+        [Test]
+        public void TestPastedObjectGetsHitsoundsOfHitsoundDifficulty()
+        {
+            AddStep("enable sync", () => config.SetValue(OsuSetting.SlopEditorAutoApplyHitsoundDifficulty, true));
+
+            createHitsoundDifficulty();
+
+            AddStep("seek to second object", () => EditorClock.Seek(500));
+            AddStep("press E", () => InputManager.Key(Key.E));
+            AddStep("save", () => Editor.Save());
+
+            AddStep("switch to first difficulty", () => screen!.SwitchToDifficulty(beatmapManager.QueryBeatmap(b => b.DifficultyName == firstDifficultyName)!));
+            AddUntilStep("first difficulty loaded", () => Editor.ReadyForUse && EditorBeatmap.BeatmapInfo.DifficultyName == firstDifficultyName);
+
+            AddStep("switch to compose", () => InputManager.Key(Key.F1));
+            AddUntilStep("compose loaded", () => Editor.ChildrenOfType<HitObjectComposer>().SingleOrDefault()?.IsLoaded == true);
+
+            AddStep("give first object a clap", () =>
+            {
+                var first = EditorBeatmap.HitObjects[0];
+                first.Samples = first.Samples.Append(new HitSampleInfo(HitSampleInfo.HIT_CLAP, HitSampleInfo.BANK_DRUM)).ToList();
+                EditorBeatmap.Update(first);
+            });
+            AddStep("delete second object", () => EditorBeatmap.Remove(EditorBeatmap.HitObjects[1]));
+
+            AddStep("select first object", () => EditorBeatmap.SelectedHitObjects.Add(EditorBeatmap.HitObjects[0]));
+            AddStep("press Ctrl+C", () =>
+            {
+                InputManager.PressKey(Key.ControlLeft);
+                InputManager.Key(Key.C);
+                InputManager.ReleaseKey(Key.ControlLeft);
+            });
+            AddStep("seek to second hitsound", () => EditorClock.Seek(500));
+            AddStep("press Ctrl+V", () =>
+            {
+                InputManager.PressKey(Key.ControlLeft);
+                InputManager.Key(Key.V);
+                InputManager.ReleaseKey(Key.ControlLeft);
+            });
+
+            AddUntilStep("pasted", () => objectsAt(500).Count(), () => Is.EqualTo(1));
+            AddAssert("clap of pasted object removed", () => !hasSample(objectsAt(500).Single(), HitSampleInfo.HIT_CLAP));
+            AddAssert("finish of hitsound difficulty", () => hasSample(objectsAt(500).Single(), HitSampleInfo.HIT_FINISH));
+            AddAssert("soft whistle of hitsound difficulty", () => objectsAt(500).Single().Samples.Any(s => s.Name == HitSampleInfo.HIT_WHISTLE && s.Bank == HitSampleInfo.BANK_SOFT));
+        }
+
+        [Test]
+        public void TestTimestampKeepsHitsoundScreen()
+        {
+            AddStep("seek to start", () => EditorClock.Seek(0));
+            AddStep("open link to second object", () => Editor.HandleTimestamp("00:00:500 (2) - "));
+
+            AddAssert("still on hitsound screen", () => Editor.Mode.Value, () => Is.EqualTo(EditorScreenMode.Hitsound));
+            AddUntilStep("seeked to second object", () => EditorClock.CurrentTime, () => Is.EqualTo(500).Within(1));
+
+            AddStep("click time display", () =>
+            {
+                InputManager.MoveMouseTo(Editor.ChildrenOfType<TimeInfoContainer>().Single().ChildrenOfType<OsuSpriteText>().First(t => t.Text.ToString().Contains(':')));
+                InputManager.Click(MouseButton.Left);
+            });
+            AddUntilStep("time box shown", () => Editor.ChildrenOfType<TimeInfoContainer>().Single().ChildrenOfType<OsuTextBox>().Single().HasFocus);
+            AddStep("enter timestamp with selection", () => Editor.ChildrenOfType<TimeInfoContainer>().Single().ChildrenOfType<OsuTextBox>().Single().Text = "00:00:000 (1) -");
+            AddStep("press Enter", () => InputManager.Key(Key.Enter));
+            AddAssert("still on hitsound screen", () => Editor.Mode.Value, () => Is.EqualTo(EditorScreenMode.Hitsound));
+            AddUntilStep("seeked to first object", () => EditorClock.CurrentTime, () => Is.EqualTo(0).Within(1));
+
+            AddStep("switch to compose", () => InputManager.Key(Key.F1));
+            AddUntilStep("compose loaded", () => Editor.ChildrenOfType<HitObjectComposer>().SingleOrDefault()?.IsLoaded == true);
+            AddStep("open link to second object", () => Editor.HandleTimestamp("00:00:500 (2) - "));
+            AddAssert("second object selected", () => EditorBeatmap.SelectedHitObjects, () => Is.EqualTo(new[] { EditorBeatmap.HitObjects[1] }));
         }
 
         private void createHitsoundDifficulty()
