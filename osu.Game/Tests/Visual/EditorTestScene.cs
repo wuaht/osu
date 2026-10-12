@@ -3,7 +3,9 @@
 
 #nullable disable
 
+using System;
 using System.Linq;
+using System.Threading.Tasks;
 using JetBrains.Annotations;
 using osu.Framework.Allocation;
 using osu.Framework.Audio;
@@ -181,6 +183,12 @@ namespace osu.Game.Tests.Visual
             public override void Save(BeatmapInfo info, IBeatmap beatmapContent, ISkin beatmapSkin = null, Storyboard storyboard = null)
             {
                 // don't actually care about saving for this context.
+            }
+
+            public override Task<Action> SaveInBackground(BeatmapInfo info, IBeatmap beatmapContent, ISkin beatmapSkin = null, Storyboard storyboard = null, Action beforeWrite = null)
+            {
+                // don't actually care about saving for this context.
+                return Task.FromResult<Action>(() => { });
             }
         }
     }

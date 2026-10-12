@@ -224,6 +224,12 @@ namespace osu.Game.Database
         }
 
         /// <summary>
+        /// Create a deep copy of a beatmap set (without its files), regardless of whether it is managed by realm.
+        /// Used to hand the state of a detached set to another thread while the original keeps being changed.
+        /// </summary>
+        public static BeatmapSetInfo CreateSnapshot(this BeatmapSetInfo set) => beatmap_set_mapper.Map<BeatmapSetInfo>(set);
+
+        /// <summary>
         /// Copy changes in a detached beatmap back to realm.
         /// This is a temporary method to handle existing flows only. It should not be used going forward if we can avoid it.
         /// </summary>

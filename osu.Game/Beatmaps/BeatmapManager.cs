@@ -398,6 +398,135 @@ namespace osu.Game.Beatmaps
         public virtual void Save(BeatmapInfo beatmapInfo, IBeatmap beatmapContent, ISkin? beatmapSkin = null, Storyboard? storyboard = null) =>
             save(beatmapInfo, beatmapContent, beatmapSkin, storyboard, transferCollections: true);
 
+        private readonly object backgroundSaveLock = new object();
+
+        /// <summary>
+        /// Saves an existing <see cref="IBeatmap"/> file against a given <see cref="BeatmapInfo"/>, writing to disk and database on a background thread.
+        /// </summary>
+        /// <remarks>
+        /// Encoding happens synchronously, so <paramref name="beatmapContent"/> may be changed again as soon as this method returns.
+        /// <paramref name="beatmapInfo"/> and its set are updated immediately where possible, the remaining changes (the stored files and the hash of the set)
+        /// are applied by the action returned by the task, which must be invoked on the update thread.
+        /// Only one background save should be pending for a beatmap set at a time.
+        /// </remarks>
+        /// <param name="beatmapInfo">The <see cref="BeatmapInfo"/> to save the content against. The file referenced by <see cref="BeatmapInfo.Path"/> will be replaced.</param>
+        /// <param name="beatmapContent">The <see cref="IBeatmap"/> content to write.</param>
+        /// <param name="beatmapSkin">The beatmap <see cref="ISkin"/> content to write, null if to be omitted.</param>
+        /// <param name="storyboard">The storyboard content to write, null if to be omitted.</param>
+        /// <param name="beforeWrite">Work to run on the background thread before anything is written.</param>
+        /// <returns>A task resolving to an action which applies the remaining changes to the detached <paramref name="beatmapInfo"/>.</returns>
+        public virtual Task<Action> SaveInBackground(BeatmapInfo beatmapInfo, IBeatmap beatmapContent, ISkin? beatmapSkin = null, Storyboard? storyboard = null, Action? beforeWrite = null)
+        {
+            var setInfo = beatmapInfo.BeatmapSet;
+            Debug.Assert(setInfo != null);
+
+            // see save() for the reasoning behind these.
+            beatmapContent.Difficulty.CopyTo(beatmapInfo.Difficulty);
+            beatmapContent.BeatmapInfo = beatmapInfo;
+            beatmapInfo.LastLocalUpdate = DateTimeOffset.Now;
+            beatmapInfo.Status = BeatmapOnlineStatus.LocallyModified;
+
+            byte[] data;
+
+            using (var stream = new MemoryStream())
+            {
+                using (var sw = new StreamWriter(stream, Encoding.UTF8, 1024, true))
+                    new LegacyBeatmapEncoder(beatmapContent, beatmapSkin, storyboard).Encode(sw);
+
+                data = stream.ToArray();
+            }
+
+            string? existingFilename = beatmapInfo.Path;
+            string targetFilename = createBeatmapFilenameFromMetadata(beatmapInfo);
+
+            // ensure that two difficulties from the set don't point at the same beatmap file.
+            if (setInfo.Beatmaps.Any(b => b.ID != beatmapInfo.ID && string.Equals(b.Path, targetFilename, StringComparison.OrdinalIgnoreCase)))
+                throw new InvalidOperationException($"{setInfo.GetDisplayString()} already has a difficulty with the name of '{beatmapInfo.DifficultyName}'.");
+
+            string oldMd5Hash = beatmapInfo.MD5Hash;
+
+            using (var stream = new MemoryStream(data))
+            {
+                beatmapInfo.MD5Hash = stream.ComputeMD5Hash();
+                beatmapInfo.Hash = stream.ComputeSHA2Hash();
+            }
+
+            // Point the detached set at the new file right away, so that the beatmap's path stays correct until the stored files are applied.
+            var existingFile = existingFilename != null ? setInfo.GetFile(existingFilename) : null;
+            if (existingFile != null)
+                setInfo.Files.Remove(existingFile);
+
+            var replacedFile = setInfo.GetFile(targetFilename);
+            if (replacedFile != null)
+                setInfo.Files.Remove(replacedFile);
+
+            setInfo.Files.Add(new RealmNamedFileUsage(new RealmFile { Hash = beatmapInfo.Hash }, targetFilename));
+            setInfo.Status = BeatmapOnlineStatus.LocallyModified;
+
+            // The detached models keep being used (and changed) on the update thread, so the background write works on a copy.
+            var snapshot = setInfo.CreateSnapshot();
+            var snapshotBeatmap = snapshot.Beatmaps.Single(b => b.ID == beatmapInfo.ID);
+
+            Guid setId = setInfo.ID;
+            Guid beatmapId = beatmapInfo.ID;
+
+            return Task.Run(() =>
+            {
+                beforeWrite?.Invoke();
+
+                string setHash;
+                List<RealmNamedFileUsage> files;
+
+                lock (backgroundSaveLock)
+                {
+                    (setHash, files) = Realm.Write(r =>
+                    {
+                        var liveBeatmapSet = r.Find<BeatmapSetInfo>(setId)!;
+
+                        var liveExistingFile = existingFilename != null ? liveBeatmapSet.GetFile(existingFilename) : null;
+                        if (liveExistingFile != null)
+                            DeleteFile(liveBeatmapSet, liveExistingFile, r);
+
+                        using (var stream = new MemoryStream(data))
+                            AddFile(liveBeatmapSet, stream, targetFilename, r);
+
+                        snapshot.Hash = beatmapImporter.ComputeHash(liveBeatmapSet);
+                        snapshot.Status = BeatmapOnlineStatus.LocallyModified;
+
+                        snapshot.CopyChangesToRealm(liveBeatmapSet);
+
+                        snapshotBeatmap.TransferCollectionReferences(r, oldMd5Hash);
+
+                        liveBeatmapSet.Beatmaps.Single(b => b.ID == beatmapId)
+                                      .UpdateLocalScores(r);
+
+                        // do not look up metadata.
+                        // this is a locally-modified set now, so looking up metadata is busy work at best and harmful at worst.
+                        if (ProcessSavedBeatmap == null)
+                            ProcessBeatmap?.Invoke(liveBeatmapSet, MetadataLookupScope.None);
+
+                        return (liveBeatmapSet.Hash, liveBeatmapSet.Files.Detach());
+                    });
+                }
+
+                ProcessSavedBeatmap?.Invoke(setId, beatmapId);
+
+                return (Action)(() =>
+                {
+                    setInfo.Files.Clear();
+                    setInfo.Files.AddRange(files);
+                    setInfo.Hash = setHash;
+                    setInfo.Status = BeatmapOnlineStatus.LocallyModified;
+                });
+            });
+        }
+
+        private static string createBeatmapFilenameFromMetadata(BeatmapInfo beatmapInfo)
+        {
+            var metadata = beatmapInfo.Metadata;
+            return $"{metadata.Artist} - {metadata.Title} ({metadata.Author.Username}) [{beatmapInfo.DifficultyName}].osu".GetValidFilename();
+        }
+
         public void DeleteAllVideos()
         {
             Realm.Write(r =>
@@ -607,12 +736,6 @@ namespace osu.Game.Beatmaps
             ProcessSavedBeatmap?.Invoke(setInfo.ID, beatmapInfo.ID);
 
             Debug.Assert(beatmapInfo.BeatmapSet != null);
-
-            static string createBeatmapFilenameFromMetadata(BeatmapInfo beatmapInfo)
-            {
-                var metadata = beatmapInfo.Metadata;
-                return $"{metadata.Artist} - {metadata.Title} ({metadata.Author.Username}) [{beatmapInfo.DifficultyName}].osu".GetValidFilename();
-            }
         }
 
         public void MarkPlayed(BeatmapInfo beatmapSetInfo) => Realm.Run(r =>

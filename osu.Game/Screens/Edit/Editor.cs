@@ -16,6 +16,7 @@ using osu.Framework.Allocation;
 using osu.Framework.Audio;
 using osu.Framework.Audio.Track;
 using osu.Framework.Bindables;
+using osu.Framework.Extensions;
 using osu.Framework.Platform;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
@@ -646,6 +647,8 @@ namespace osu.Game.Screens.Edit
 
         private bool performSave(bool isAutosave)
         {
+            completePendingSave();
+
             if (!canSave)
             {
                 notifications?.Post(new SimpleErrorNotification { Text = EditorStrings.RulesetNotSupportSaving });
@@ -671,16 +674,95 @@ namespace osu.Game.Screens.Edit
                 return false;
             }
 
+            onSaveCompleted(isAutosave, changeHandler?.CurrentStateHash);
+            return true;
+        }
+
+        private void onSaveCompleted(bool isAutosave, string savedHash)
+        {
             // no longer new after first user-triggered save.
             isNewBeatmap = false;
-            updateLastSavedHash();
+            lastSavedHash = savedHash;
             onScreenDisplay?.Display(new BeatmapEditorToast(isAutosave ? SlopSettingsStrings.BeatmapAutoSaved : ToastStrings.BeatmapSaved, editorBeatmap.BeatmapInfo.GetDisplayTitle()));
             Saved?.Invoke();
             hitsoundSync.OnSaved();
 
             // This triggers an update to the window title post-save (ie if the difficulty name changed).
             Activity.Value = getCurrentUserActivity();
+        }
+
+        private PendingSave pendingSave;
+
+        private record PendingSave(Task<Action> Task, string StateHash, bool IsAutosave);
+
+        /// <summary>
+        /// Saves the currently edited beatmap, writing it to disk and database in the background, so that the editor doesn't stall on slow drives.
+        /// </summary>
+        /// <returns>Whether the save was started.</returns>
+        private bool saveInBackground(bool isAutosave)
+        {
+            completePendingSave();
+
+            if (!canSave)
+            {
+                notifications?.Post(new SimpleErrorNotification { Text = EditorStrings.RulesetNotSupportSaving });
+                return false;
+            }
+
+            // reset regardless of the outcome, so that a failing autosave isn't retried every frame.
+            lastSaveTime = Time.Current;
+
+            Task<Action> task;
+
+            try
+            {
+                // keep a copy of the previous file before it gets replaced.
+                var backup = backupOnSave.Value ? EditorBeatmapBackup.PrepareBackup(storage, editorBeatmap.BeatmapInfo) : null;
+
+                task = beatmapManager.SaveInBackground(editorBeatmap.BeatmapInfo, editorBeatmap.PlayableBeatmap, editorBeatmap.BeatmapSkin, editorBeatmap.Storyboard, backup);
+            }
+            catch (Exception ex)
+            {
+                // can fail e.g. due to duplicated difficulty names.
+                Logger.Error(ex, ex.Message);
+                return false;
+            }
+
+            var save = pendingSave = new PendingSave(task, changeHandler?.CurrentStateHash, isAutosave);
+            task.ContinueWith(_ => Schedule(() =>
+            {
+                if (pendingSave == save)
+                    completePendingSave();
+            }));
+
             return true;
+        }
+
+        /// <summary>
+        /// Waits for a save running in the background (if any) and applies its outcome.
+        /// Must be called before anything which relies on the beatmap being stored (or changes the stored beatmap set).
+        /// </summary>
+        private void completePendingSave()
+        {
+            var save = pendingSave;
+
+            if (save == null)
+                return;
+
+            pendingSave = null;
+
+            try
+            {
+                save.Task.WaitSafely();
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, ex.Message);
+                return;
+            }
+
+            save.Task.GetResultSafely().Invoke();
+            onSaveCompleted(save.IsAutosave, save.StateHash);
         }
 
         /// <summary>
@@ -722,13 +804,17 @@ namespace osu.Game.Screens.Edit
             if (!canSave || isNewBeatmap || !this.IsCurrentScreen() || MutationTracker.InProgress.Value || changeHandler?.TransactionActive == true || editorBeatmap.TransactionActive)
                 return;
 
+            // a save is still being written.
+            if (pendingSave != null)
+                return;
+
             if (!HasUnsavedChanges)
             {
                 lastSaveTime = Time.Current;
                 return;
             }
 
-            attemptMutationOperation(() => performSave(true));
+            attemptMutationOperation(() => saveInBackground(true));
         }
 
         public bool OnPressed(KeyBindingPressEvent<PlatformAction> e)
@@ -751,7 +837,7 @@ namespace osu.Game.Screens.Edit
                     if (e.Repeat)
                         return false;
 
-                    return attemptMutationOperation(Save);
+                    return attemptMutationOperation(() => saveInBackground(false));
             }
 
             return false;
@@ -975,6 +1061,8 @@ namespace osu.Game.Screens.Edit
 
         public override bool OnExiting(ScreenExitEvent e)
         {
+            completePendingSave();
+
             currentScreen?.OnExiting(e);
 
             if (!ExitConfirmed)
@@ -1020,6 +1108,8 @@ namespace osu.Game.Screens.Edit
 
         public override void OnSuspending(ScreenTransitionEvent e)
         {
+            completePendingSave();
+
             base.OnSuspending(e);
 
             // `resetTrack()` MUST happen before `refetchBeatmap()`, because along other things, `refetchBeatmap()` causes a global working beatmap change,
@@ -1132,6 +1222,8 @@ namespace osu.Game.Screens.Edit
 
         protected void DiscardUnsavedChanges()
         {
+            completePendingSave();
+
             if (!HasUnsavedChanges)
                 return;
 
@@ -1158,6 +1250,8 @@ namespace osu.Game.Screens.Edit
 
                 if (!syncBookmarks && !syncPreviewPoint)
                     return;
+
+                completePendingSave();
 
                 int[] sourceBookmarks = editorBeatmap.Bookmarks.ToArray();
                 int sourcePreviewTime = editorBeatmap.BeatmapInfo.Metadata.PreviewTime;
@@ -1447,7 +1541,7 @@ namespace osu.Game.Screens.Edit
             yield return new EditorMenuItem(EditorStrings.DeleteDifficulty, MenuItemType.Destructive, deleteDifficulty) { Action = { Disabled = Beatmap.Value.BeatmapSetInfo.Beatmaps.Count < 2 } };
             yield return new OsuMenuItemSpacer();
 
-            var save = new EditorMenuItem(WebCommonStrings.ButtonsSave, MenuItemType.Standard, () => attemptMutationOperation(Save)) { Hotkey = new Hotkey(PlatformAction.Save) };
+            var save = new EditorMenuItem(WebCommonStrings.ButtonsSave, MenuItemType.Standard, () => attemptMutationOperation(() => saveInBackground(false))) { Hotkey = new Hotkey(PlatformAction.Save) };
             saveRelatedMenuItems.Add(save);
             yield return save;
 
@@ -1607,6 +1701,8 @@ namespace osu.Game.Screens.Edit
                 notifyImported();
                 return;
             }
+
+            completePendingSave();
 
             // this difficulty has to be saved before the other one, as saving it afterwards would write its outdated beatmap set
             // (including the hash of the other difficulty) back to the database.
@@ -1773,6 +1869,8 @@ namespace osu.Game.Screens.Edit
 
         private void deleteDifficulty()
         {
+            completePendingSave();
+
             if (dialogOverlay == null)
                 delete();
             else

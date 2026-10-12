@@ -34,19 +34,32 @@ namespace osu.Game.Screens.Edit
         /// </remarks>
         /// <param name="storage">The user's data storage.</param>
         /// <param name="beatmapInfo">The beatmap which is about to be saved.</param>
-        public static void CreateBackup(Storage storage, BeatmapInfo beatmapInfo)
+        public static void CreateBackup(Storage storage, BeatmapInfo beatmapInfo) => PrepareBackup(storage, beatmapInfo)?.Invoke();
+
+        /// <summary>
+        /// Captures which file of <paramref name="beatmapInfo"/> is currently stored, returning an action which writes the backup of it.
+        /// The action may run on any thread, which allows the disk access to happen in the background.
+        /// </summary>
+        /// <returns>The action writing the backup, or null if the beatmap has no stored file yet.</returns>
+        public static Action? PrepareBackup(Storage storage, BeatmapInfo beatmapInfo)
+        {
+            string? filename = beatmapInfo.Path;
+            RealmNamedFileUsage? file = filename == null ? null : beatmapInfo.BeatmapSet?.GetFile(filename);
+
+            if (filename == null || file == null)
+                return null;
+
+            string storagePath = file.File.GetStoragePath();
+            return () => createBackup(storage, filename, storagePath);
+        }
+
+        private static void createBackup(Storage storage, string filename, string storagePath)
         {
             try
             {
-                string? filename = beatmapInfo.Path;
-                RealmNamedFileUsage? file = filename == null ? null : beatmapInfo.BeatmapSet?.GetFile(filename);
-
-                if (filename == null || file == null)
-                    return;
-
                 byte[] previousContent;
 
-                using (var stream = storage.GetStorageForDirectory(@"files").GetStream(file.File.GetStoragePath()))
+                using (var stream = storage.GetStorageForDirectory(@"files").GetStream(storagePath))
                 {
                     if (stream == null)
                         return;
