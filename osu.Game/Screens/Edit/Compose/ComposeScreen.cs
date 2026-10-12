@@ -17,6 +17,7 @@ using osu.Game.IO.Serialization;
 using osu.Game.Rulesets;
 using osu.Game.Rulesets.Edit;
 using osu.Game.Screens.Edit.Compose.Components.Timeline;
+using osu.Game.Screens.Edit.Hitsounding;
 
 namespace osu.Game.Screens.Edit.Compose
 {
@@ -33,6 +34,9 @@ namespace osu.Game.Screens.Edit.Compose
 
         [Resolved]
         private IBeatSnapProvider beatSnapProvider { get; set; }
+
+        [Resolved(canBeNull: true)]
+        private HitsoundDifficultyAutoApplier hitsoundAutoApplier { get; set; }
 
         private Bindable<string> clipboard { get; set; }
 
@@ -164,6 +168,7 @@ namespace osu.Game.Screens.Edit.Compose
 
             EditorBeatmap.SelectedHitObjects.Clear();
 
+            hitsoundAutoApplier?.MarkPasted(objects);
             EditorBeatmap.AddRange(objects);
             EditorBeatmap.SelectedHitObjects.AddRange(objects);
 

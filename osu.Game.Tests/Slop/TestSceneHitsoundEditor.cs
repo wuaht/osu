@@ -441,6 +441,47 @@ namespace osu.Game.Tests.Slop
         }
 
         [Test]
+        public void TestPastedObjectWithoutHitsoundInHitsoundDifficultyLosesAdditions()
+        {
+            AddStep("enable sync", () => config.SetValue(OsuSetting.SlopEditorAutoApplyHitsoundDifficulty, true));
+
+            createHitsoundDifficulty();
+
+            AddStep("switch to first difficulty", () => screen!.SwitchToDifficulty(beatmapManager.QueryBeatmap(b => b.DifficultyName == firstDifficultyName)!));
+            AddUntilStep("first difficulty loaded", () => Editor.ReadyForUse && EditorBeatmap.BeatmapInfo.DifficultyName == firstDifficultyName);
+
+            AddStep("switch to compose", () => InputManager.Key(Key.F1));
+            AddUntilStep("compose loaded", () => Editor.ChildrenOfType<HitObjectComposer>().SingleOrDefault()?.IsLoaded == true);
+
+            AddStep("give first object a clap", () =>
+            {
+                var first = EditorBeatmap.HitObjects[0];
+                first.Samples = first.Samples.Append(new HitSampleInfo(HitSampleInfo.HIT_CLAP, HitSampleInfo.BANK_DRUM)).ToList();
+                EditorBeatmap.Update(first);
+            });
+
+            AddStep("select first object", () => EditorBeatmap.SelectedHitObjects.Add(EditorBeatmap.HitObjects[0]));
+            AddStep("press Ctrl+C", () =>
+            {
+                InputManager.PressKey(Key.ControlLeft);
+                InputManager.Key(Key.C);
+                InputManager.ReleaseKey(Key.ControlLeft);
+            });
+            // the hitsound difficulty only has hitsounds at 0 and 500.
+            AddStep("seek to time without hitsound", () => EditorClock.Seek(1000));
+            AddStep("press Ctrl+V", () =>
+            {
+                InputManager.PressKey(Key.ControlLeft);
+                InputManager.Key(Key.V);
+                InputManager.ReleaseKey(Key.ControlLeft);
+            });
+
+            AddUntilStep("pasted", () => objectsAt(1000).Count(), () => Is.EqualTo(1));
+            AddAssert("clap of pasted object removed", () => !hasSample(objectsAt(1000).Single(), HitSampleInfo.HIT_CLAP));
+            AddAssert("clap of copied object kept", () => hasSample(objectsAt(0).Single(), HitSampleInfo.HIT_CLAP));
+        }
+
+        [Test]
         public void TestTimestampKeepsHitsoundScreen()
         {
             AddStep("seek to start", () => EditorClock.Seek(0));

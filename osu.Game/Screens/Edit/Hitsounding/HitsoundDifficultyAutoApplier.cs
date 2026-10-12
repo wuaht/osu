@@ -67,6 +67,18 @@ namespace osu.Game.Screens.Edit.Hitsounding
         /// </summary>
         private readonly List<HitObject> pendingApplication = new List<HitObject>();
 
+        /// <summary>
+        /// Pasted hit objects which haven't had hitsounds applied yet.
+        /// Unlike placed hit objects, their additions are removed when the hitsound difficulty has no hitsound at their time,
+        /// as they were copied from somewhere else rather than chosen for this time.
+        /// </summary>
+        private readonly HashSet<HitObject> pasted = new HashSet<HitObject>();
+
+        /// <summary>
+        /// Marks hit objects which are about to be added as pasted.
+        /// </summary>
+        public void MarkPasted(IEnumerable<HitObject> hitObjects) => pasted.UnionWith(hitObjects);
+
         [BackgroundDependencyLoader]
         private void load(OsuConfigManager config)
         {
@@ -133,9 +145,10 @@ namespace osu.Game.Screens.Edit.Hitsounding
                     if (pendingApplication.Count > 0)
                     {
                         foreach (var h in pendingApplication)
-                            apply(h, false);
+                            apply(h, pasted.Remove(h));
 
                         pendingApplication.Clear();
+                        pasted.Clear();
                         changeHandler?.SaveState();
                     }
                 });
@@ -144,10 +157,15 @@ namespace osu.Game.Screens.Edit.Hitsounding
 
         private void onHitObjectAdded(HitObject hitObject)
         {
-            apply(hitObject, false);
-
             if (source == null)
+            {
+                // pasted hit objects stay marked until the source finished loading.
+                apply(hitObject, false);
                 pendingApplication.Add(hitObject);
+                return;
+            }
+
+            apply(hitObject, pasted.Remove(hitObject));
         }
 
         private void onHitObjectUpdated(HitObject hitObject)
@@ -164,6 +182,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
             lastTimes.Remove(hitObject);
             matched.Remove(hitObject);
             pendingApplication.Remove(hitObject);
+            pasted.Remove(hitObject);
         }
 
         /// <param name="hitObject">The hit object to copy the hitsounds onto.</param>

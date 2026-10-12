@@ -360,7 +360,9 @@ namespace osu.Game.Screens.Edit
             AddInternal(bookmarkController);
 
             AddInternal(new EditorVolumeMuting());
-            AddInternal(new HitsoundDifficultyAutoApplier());
+            var hitsoundAutoApplier = new HitsoundDifficultyAutoApplier();
+            AddInternal(hitsoundAutoApplier);
+            dependencies.Cache(hitsoundAutoApplier);
 
             // hitsound patterns are kept in sync for changes anywhere in the editor, not only in the hitsound screen.
             dependencies.Cache(HitsoundPatterns.Create(dependencies.Get<Storage>(), editorBeatmap));
