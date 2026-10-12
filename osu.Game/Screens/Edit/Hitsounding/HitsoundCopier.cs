@@ -149,8 +149,13 @@ namespace osu.Game.Screens.Edit.Hitsounding
             if (!options.CopyVolumes)
                 return false;
 
-            // muted hitsounds (e.g. slider ends) are usually muted on purpose in the target difficulty.
-            return !options.PreserveMutedVolumes || current.Count == 0 || current.Max(s => s.Volume) > DrawableHitObject.MINIMUM_SAMPLE_VOLUME;
+            if (!options.PreserveMutedVolumes || current.Count == 0)
+                return true;
+
+            // volume 0 means inherit from the timing point, not muted.
+            // muted hitsounds (e.g. slider ends) are explicitly set to at most MINIMUM_SAMPLE_VOLUME.
+            int maxVolume = current.Max(s => s.Volume);
+            return maxVolume == 0 || maxVolume > DrawableHitObject.MINIMUM_SAMPLE_VOLUME;
         }
 
         private static void setSamples(HitsoundTarget target, List<HitSampleInfo> samples, HitsoundCopyResult result)
