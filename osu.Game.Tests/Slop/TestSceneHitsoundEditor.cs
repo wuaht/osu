@@ -4,14 +4,17 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using NUnit.Framework;
 using osu.Framework.Allocation;
 using osu.Framework.Graphics;
+using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Input;
 using osu.Framework.Localisation;
 using osu.Framework.Logging;
 using osu.Framework.Platform;
+using osu.Framework.Screens;
 using osu.Framework.Testing;
 using osu.Game.Audio;
 using osu.Game.Beatmaps;
@@ -27,6 +30,7 @@ using osu.Game.Rulesets.Osu;
 using osu.Game.Rulesets.Osu.Objects;
 using osu.Game.Screens.Edit;
 using osu.Game.Screens.Edit.Components;
+using osu.Game.Screens.Edit.Components.Menus;
 using osu.Game.Rulesets.Edit;
 using osu.Game.Screens.Edit.Hitsounding;
 using osu.Game.Storyboards;
@@ -374,6 +378,155 @@ namespace osu.Game.Tests.Slop
                 return !hasSample(beatmapManager.GetWorkingBeatmap(info, true).Beatmap.HitObjects[0], HitSampleInfo.HIT_FINISH);
             });
         }
+
+        [Test]
+        public void TestCopyShowsProgressAndBlocksEditor()
+        {
+            int saves = 0;
+            void onSaved() => saves++;
+
+            HitsoundCopyProgressOverlay overlay = null!;
+
+            createHitsoundDifficulty();
+
+            AddStep("seek to first object", () => EditorClock.Seek(0));
+            AddStep("press E", () => InputManager.Key(Key.E));
+            // the copy can't load the difficulties until it's released.
+            holdCopies();
+
+            AddStep("copy to other difficulties", () => screen!.CopyToDifficulties(screen.GetOtherDifficulties(), new HitsoundCopyOptions()));
+            AddUntilStep("wait for confirmation", () => DialogOverlay.CurrentDialog is HitsoundCopyConfirmationDialog);
+            AddStep("confirm", () => DialogOverlay.CurrentDialog!.PerformAction<PopupDialogDangerousButton>());
+            AddUntilStep("dialog closed", () => DialogOverlay.CurrentDialog == null);
+
+            // the copy itself saves the difficulty before starting.
+            AddStep("count saves", () => Editor.Saved += onSaved);
+
+            AddAssert("copying", () => screen!.IsCopying.Value);
+            AddAssert("copy running", () => HitsoundDifficultySync.Running?.IsCompleted == false);
+            AddStep("get overlay", () => overlay = screen!.ChildrenOfType<HitsoundCopyProgressOverlay>().Single());
+            AddAssert("overlay shown", () => overlay.State.Value, () => Is.EqualTo(Visibility.Visible));
+            AddUntilStep("loading first difficulty shown", () => overlayTexts(overlay).Any(t => t == $"Loading {firstDifficultyName}"));
+            AddAssert("nothing counted yet", () => overlayTexts(overlay).Any(t => t == "0 of 1 difficulties"));
+            AddAssert("progress at start", () => overlay.ChildrenOfType<ProgressBar>().Single().Current.Value, () => Is.EqualTo(0));
+
+            AddStep("press E", () => InputManager.Key(Key.E));
+            AddAssert("finish not toggled", () => hasSample(EditorBeatmap.HitObjects[0], HitSampleInfo.HIT_FINISH));
+
+            AddStep("press Ctrl+S", () =>
+            {
+                InputManager.PressKey(Key.ControlLeft);
+                InputManager.Key(Key.S);
+                InputManager.ReleaseKey(Key.ControlLeft);
+            });
+            AddAssert("not saved", () => saves, () => Is.EqualTo(0));
+
+            AddStep("click File menu", () =>
+            {
+                InputManager.MoveMouseTo(Editor.ChildrenOfType<EditorMenuBar.DrawableEditorBarMenuItem>().First());
+                InputManager.Click(MouseButton.Left);
+            });
+            AddAssert("no menu opened", () => Editor.ChildrenOfType<EditorMenuBar>().Single().ChildrenOfType<osu.Framework.Graphics.UserInterface.Menu>()
+                                                     .Where(m => m is not EditorMenuBar)
+                                                     .All(m => m.State == osu.Framework.Graphics.UserInterface.MenuState.Closed));
+
+            AddStep("press Escape", () => InputManager.Key(Key.Escape));
+            AddAssert("editor not exited", () => Editor.IsCurrentScreen() && DialogOverlay.CurrentDialog == null);
+
+            AddStep("copy again", () => screen!.CopyToDifficulties(screen.GetOtherDifficulties(), new HitsoundCopyOptions()));
+            AddAssert("no second confirmation", () => DialogOverlay.CurrentDialog == null);
+
+            AddStep("release copies", releaseCopies);
+            AddUntilStep("copy finished", () => HitsoundDifficultySync.Running?.IsCompleted != false);
+            AddStep("stop counting saves", () => Editor.Saved -= onSaved);
+
+            AddUntilStep("editor reloaded", () => Editor.ReadyForUse && Editor.ChildrenOfType<EditorBeatmap>().SingleOrDefault()?.BeatmapInfo.DifficultyName == "Hitsounds");
+            waitForScreen();
+            AddAssert("not copying", () => !screen!.IsCopying.Value);
+            AddAssert("overlay hidden", () => screen!.ChildrenOfType<HitsoundCopyProgressOverlay>().Single().State.Value, () => Is.EqualTo(Visibility.Hidden));
+
+            AddAssert("finish copied to first difficulty", () =>
+            {
+                var info = beatmapManager.QueryBeatmap(b => b.DifficultyName == firstDifficultyName)!;
+                return hasSample(beatmapManager.GetWorkingBeatmap(info, true).Beatmap.HitObjects[0], HitSampleInfo.HIT_FINISH);
+            });
+
+            AddStep("seek to first object", () => EditorClock.Seek(0));
+            AddStep("press E", () => InputManager.Key(Key.E));
+            AddAssert("input works again", () => !hasSample(EditorBeatmap.HitObjects[0], HitSampleInfo.HIT_FINISH));
+            AddStep("count saves", () => Editor.Saved += onSaved);
+            AddStep("press Ctrl+S", () =>
+            {
+                InputManager.PressKey(Key.ControlLeft);
+                InputManager.Key(Key.S);
+                InputManager.ReleaseKey(Key.ControlLeft);
+            });
+            AddUntilStep("saved", () => saves, () => Is.EqualTo(1));
+            AddStep("stop counting saves", () => Editor.Saved -= onSaved);
+
+            AddAssert("database hashes match files", () =>
+            {
+                var set = beatmapManager.QueryBeatmap(b => b.DifficultyName == firstDifficultyName)!.BeatmapSet!;
+                return set.Beatmaps.All(b => b.Hash == b.File!.File.Hash);
+            });
+        }
+
+        [Test]
+        public void TestCopyContinuesAfterFailedDifficulty()
+        {
+            var errors = new List<string>();
+
+            void onEntry(LogEntry e)
+            {
+                if (e.Level == LogLevel.Error)
+                    errors.Add(e.Message);
+            }
+
+            createHitsoundDifficulty();
+
+            AddStep("seek to first object", () => EditorClock.Seek(0));
+            AddStep("press E", () => InputManager.Key(Key.E));
+            AddStep("listen for errors", () => Logger.NewEntry += onEntry);
+
+            AddStep("copy to missing and first difficulty", () =>
+            {
+                var missing = new BeatmapInfo(new OsuRuleset().RulesetInfo, new BeatmapDifficulty(), new BeatmapMetadata()) { DifficultyName = "missing" };
+                screen!.CopyToDifficulties(new[] { missing }.Concat(screen.GetOtherDifficulties()).ToList(), new HitsoundCopyOptions());
+            });
+            AddUntilStep("wait for confirmation", () => DialogOverlay.CurrentDialog is HitsoundCopyConfirmationDialog);
+            AddStep("confirm", () => DialogOverlay.CurrentDialog!.PerformAction<PopupDialogDangerousButton>());
+            AddUntilStep("copy finished", () => HitsoundDifficultySync.Running?.IsCompleted != false);
+            AddStep("stop listening for errors", () => Logger.NewEntry -= onEntry);
+
+            AddAssert("missing difficulty failed", () => errors.Any(e => e.Contains("missing", StringComparison.Ordinal)));
+            AddUntilStep("editor reloaded", () => Editor.ReadyForUse && Editor.ChildrenOfType<EditorBeatmap>().SingleOrDefault()?.BeatmapInfo.DifficultyName == "Hitsounds");
+            waitForScreen();
+            AddAssert("not copying", () => !screen!.IsCopying.Value);
+            AddAssert("overlay hidden", () => screen!.ChildrenOfType<HitsoundCopyProgressOverlay>().Single().State.Value, () => Is.EqualTo(Visibility.Hidden));
+
+            AddAssert("finish copied to first difficulty", () =>
+            {
+                var info = beatmapManager.QueryBeatmap(b => b.DifficultyName == firstDifficultyName)!;
+                return hasSample(beatmapManager.GetWorkingBeatmap(info, true).Beatmap.HitObjects[0], HitSampleInfo.HIT_FINISH);
+            });
+        }
+
+        private static IEnumerable<string> overlayTexts(HitsoundCopyProgressOverlay overlay) => overlay.ChildrenOfType<OsuSpriteText>().Select(t => t.Text.ToString());
+
+        /// <summary>
+        /// Holds background copies before they load each difficulty until <see cref="releaseCopies"/>.
+        /// </summary>
+        private void holdCopies() => AddStep("hold copies", () => HitsoundDifficultySync.CopyGateForTesting = new ManualResetEventSlim());
+
+        private static void releaseCopies()
+        {
+            HitsoundDifficultySync.CopyGateForTesting?.Set();
+            HitsoundDifficultySync.CopyGateForTesting = null;
+        }
+
+        // not a teardown step, as those aren't run after a failed step.
+        [TearDown]
+        public void ReleaseCopies() => releaseCopies();
 
         [TestCase(true)]
         [TestCase(false)]

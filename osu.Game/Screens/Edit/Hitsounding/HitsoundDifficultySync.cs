@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
@@ -78,6 +79,11 @@ namespace osu.Game.Screens.Edit.Hitsounding
         /// The sync which is currently running, if any. Difficulties shouldn't be loaded before it has finished, as they may be about to change.
         /// </summary>
         public static Task? Running { get; private set; }
+
+        /// <summary>
+        /// If set, background copies wait for it before loading each difficulty, so that tests can inspect the editor while a copy is running.
+        /// </summary>
+        internal static ManualResetEventSlim? CopyGateForTesting;
 
         /// <summary>
         /// Copies the saved hitsounds of the hitsound difficulty to the other difficulties, if it has been saved since they were last copied.
@@ -159,6 +165,8 @@ namespace osu.Game.Screens.Edit.Hitsounding
                     {
                         if (onProgress != null)
                             scheduler.Add(() => onProgress(difficulty, false, index));
+
+                        CopyGateForTesting?.Wait(TimeSpan.FromSeconds(30));
                     });
 
                     scheduler.Add(() => saveNext(copies, 0));
