@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
@@ -62,7 +63,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
         }
 
         /// <summary>
-        /// Copies the saved hitsounds of the hitsound difficulty to the other difficulties, if it has been saved since they were last copied.
+        /// Copies the saved hitsounds of the hitsound difficulty to the other difficulties in the background, if it has been saved since they were last copied.
         /// To be called when leaving the difficulty.
         /// </summary>
         public void SyncIfPending()
@@ -78,30 +79,37 @@ namespace osu.Game.Screens.Edit.Hitsounding
             if (targets == null || targets.Count == 0)
                 return;
 
-            try
+            // Capture values from the main thread before handing off to the background.
+            Guid currentId = current.ID;
+            string currentTitle = current.GetDisplayTitle();
+
+            Task.Run(() =>
             {
-                // the saved hitsounds, as unsaved changes may have been discarded when leaving.
-                var info = beatmapManager.QueryBeatmap(b => b.ID == current.ID)
-                           ?? throw new InvalidOperationException($@"{current.GetDisplayTitle()} couldn't be found.");
+                try
+                {
+                    // the saved hitsounds, as unsaved changes may have been discarded when leaving.
+                    var info = beatmapManager.QueryBeatmap(b => b.ID == currentId)
+                               ?? throw new InvalidOperationException($@"{currentTitle} couldn't be found.");
 
-                var playable = beatmapManager.GetWorkingBeatmap(info).GetPlayableBeatmap(info.Ruleset);
-                var map = HitsoundMap.Create(playable.HitObjects, info.Ruleset.OnlineID);
+                    var playable = beatmapManager.GetWorkingBeatmap(info).GetPlayableBeatmap(info.Ruleset);
+                    var map = HitsoundMap.Create(playable.HitObjects, info.Ruleset.OnlineID);
 
-                var (changed, dropped, failed) = CopyToDifficulties(beatmapManager, map.Columns.Select(c => c.GetState()).ToList(), map.Bodies.Select(b => b.GetState()).ToList(), targets,
-                    new HitsoundCopyOptions());
+                    var (changed, dropped, failed) = CopyToDifficulties(beatmapManager, map.Columns.Select(c => c.GetState()).ToList(), map.Bodies.Select(b => b.GetState()).ToList(), targets,
+                        new HitsoundCopyOptions());
 
-                notify(SlopHitsoundEditorStrings.SyncResult(changed, targets.Count - failed), FontAwesome.Solid.Check);
+                    notify(SlopHitsoundEditorStrings.SyncResult(changed, targets.Count - failed), FontAwesome.Solid.Check);
 
-                if (dropped > 0)
-                    notify(SlopHitsoundEditorStrings.CopyDropped(dropped), FontAwesome.Solid.ExclamationTriangle);
+                    if (dropped > 0)
+                        notify(SlopHitsoundEditorStrings.CopyDropped(dropped), FontAwesome.Solid.ExclamationTriangle);
 
-                if (failed > 0)
-                    notify(SlopHitsoundEditorStrings.CopyFailed(failed), FontAwesome.Solid.Times);
-            }
-            catch (Exception e)
-            {
-                Logger.Error(e, $@"Failed to copy the hitsounds of {current.GetDisplayTitle()}");
-            }
+                    if (failed > 0)
+                        notify(SlopHitsoundEditorStrings.CopyFailed(failed), FontAwesome.Solid.Times);
+                }
+                catch (Exception e)
+                {
+                    Logger.Error(e, $@"Failed to copy the hitsounds of {currentTitle}");
+                }
+            });
         }
 
         private void notify(Framework.Localisation.LocalisableString text, IconUsage icon) => notifications?.Post(new SimpleNotification
