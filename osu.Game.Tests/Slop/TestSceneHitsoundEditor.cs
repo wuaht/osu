@@ -240,6 +240,44 @@ namespace osu.Game.Tests.Slop
         }
 
         [Test]
+        public void TestCopyToSeveralDifficultiesKeepsTheirFiles()
+        {
+            AddStep("create copy of difficulty", () => Editor.CreateNewDifficulty(new OsuRuleset().RulesetInfo));
+            AddUntilStep("wait for dialog", () => DialogOverlay.CurrentDialog is CreateNewDifficultyDialog);
+            AddStep("choose copy", () => DialogOverlay.CurrentDialog!.Buttons.ElementAt(1).TriggerClick());
+            AddUntilStep("switched to copy", () => Editor.ReadyForUse && Editor.ChildrenOfType<EditorBeatmap>().SingleOrDefault()?.BeatmapInfo.DifficultyName.EndsWith("(copy)", StringComparison.Ordinal) == true);
+            AddStep("save", () => Editor.Save());
+            AddStep("switch to hitsound screen", () => Editor.Mode.Value = EditorScreenMode.Hitsound);
+            waitForScreen();
+
+            createHitsoundDifficulty();
+
+            AddStep("seek to first object", () => EditorClock.Seek(0));
+            AddStep("press E", () => InputManager.Key(Key.E));
+
+            AddStep("copy to other difficulties", () => screen!.CopyToDifficulties(screen.GetOtherDifficulties(), new HitsoundCopyOptions()));
+            AddUntilStep("wait for confirmation", () => DialogOverlay.CurrentDialog is HitsoundCopyConfirmationDialog);
+            AddStep("confirm", () => DialogOverlay.CurrentDialog!.PerformAction<PopupDialogDangerousButton>());
+            AddUntilStep("editor reloaded", () => Editor.ReadyForUse && Editor.ChildrenOfType<EditorBeatmap>().SingleOrDefault()?.BeatmapInfo.DifficultyName == "Hitsounds");
+
+            AddAssert("every difficulty still has its file and objects", () =>
+            {
+                var set = beatmapManager.QueryBeatmap(b => b.DifficultyName == firstDifficultyName)!.BeatmapSet!;
+
+                return set.Beatmaps.Count == 3
+                       && set.Beatmaps.All(b => b.Path != null && beatmapManager.GetWorkingBeatmap(b, true).Beatmap.HitObjects.Count == 2);
+            });
+
+            AddAssert("finish copied to both difficulties", () =>
+            {
+                var set = beatmapManager.QueryBeatmap(b => b.DifficultyName == firstDifficultyName)!.BeatmapSet!;
+
+                return set.Beatmaps.Where(b => b.DifficultyName != "Hitsounds")
+                          .All(b => hasSample(beatmapManager.GetWorkingBeatmap(b, true).Beatmap.HitObjects[0], HitSampleInfo.HIT_FINISH));
+            });
+        }
+
+        [Test]
         public void TestHitsoundsSyncedWhenLeavingHitsoundDifficulty()
         {
             var errors = new List<string>();

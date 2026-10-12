@@ -193,7 +193,6 @@ namespace osu.Game.Screens.Edit.Hitsounding
 
                 try
                 {
-                    // fetch a fresh detached reference, as each save changes the beatmap set.
                     var info = beatmapManager.QueryBeatmap(b => b.ID == difficulty.ID)
                                ?? throw new InvalidOperationException($@"{difficulty.GetDisplayTitle()} couldn't be found.");
 
@@ -255,13 +254,18 @@ namespace osu.Game.Screens.Edit.Hitsounding
             /// </summary>
             public void Save(BeatmapManager beatmapManager)
             {
-                if (PendingSave is not var (info, playable, skin, storyboard))
+                if (PendingSave is not var (preparedInfo, playable, skin, storyboard))
                     return;
 
                 PendingSave = null;
 
                 try
                 {
+                    // the beatmap set of the reference fetched while preparing doesn't contain the files saved since (e.g. by the other copies),
+                    // and saving it would write its file list back to the database, unlinking those difficulties from their files.
+                    var info = beatmapManager.QueryBeatmap(b => b.ID == preparedInfo.ID)
+                               ?? throw new InvalidOperationException($@"{Difficulty.GetDisplayTitle()} couldn't be found.");
+
                     beatmapManager.Save(info, playable, skin, storyboard);
                     ChangedHitsounds = PendingChangedHitsounds;
                 }
