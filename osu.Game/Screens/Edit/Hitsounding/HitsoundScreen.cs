@@ -16,6 +16,7 @@ using osu.Framework.Input.Events;
 using osu.Framework.Localisation;
 using osu.Framework.Logging;
 using osu.Framework.Platform;
+using osu.Framework.Screens;
 using osu.Game.Audio;
 using osu.Game.Beatmaps;
 using osu.Game.Input.Bindings;
@@ -61,6 +62,14 @@ namespace osu.Game.Screens.Edit.Hitsounding
         private HitsoundTopBar topBar = null!;
         private Container gridContainer = null!;
         private HitsoundToolbox toolbox = null!;
+        private HitsoundCopyProgressOverlay copyProgress = null!;
+
+        private readonly BindableBool isCopying = new BindableBool();
+
+        /// <summary>
+        /// Whether hitsounds are currently being copied to other difficulties.
+        /// </summary>
+        public IBindable<bool> IsCopying => isCopying;
 
         [Resolved]
         private EditorClock clock { get; set; } = null!;
@@ -79,6 +88,9 @@ namespace osu.Game.Screens.Edit.Hitsounding
 
         [Resolved]
         private INotificationOverlay? notifications { get; set; }
+
+        [Resolved]
+        private GameHost host { get; set; } = null!;
 
         public HitsoundScreen()
             : base(EditorScreenMode.Hitsound)
@@ -155,6 +167,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
                             },
                         }
                     },
+                    copyProgress = new HitsoundCopyProgressOverlay(),
                 }
             };
         }
@@ -493,7 +506,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
         /// </summary>
         public void CopyToDifficulties(IReadOnlyList<BeatmapInfo> difficulties, HitsoundCopyOptions options)
         {
-            if (difficulties.Count == 0 || editor == null)
+            if (difficulties.Count == 0 || editor == null || isCopying.Value)
                 return;
 
             var dialog = new HitsoundCopyConfirmationDialog(difficulties.Count, () => performCopy(difficulties, options));
@@ -506,7 +519,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
 
         private void performCopy(IReadOnlyList<BeatmapInfo> difficulties, HitsoundCopyOptions options)
         {
-            if (editor == null)
+            if (editor == null || isCopying.Value)
                 return;
 
             var source = hitsoundEditor.Map.Columns.Select(c => c.GetState()).ToList();
@@ -519,21 +532,47 @@ namespace osu.Game.Screens.Edit.Hitsounding
 
             editor.CancelPendingHitsoundSync();
 
-            var (changedHitsounds, droppedHitsounds, failed) = HitsoundDifficultySync.CopyToDifficulties(beatmapManager, source, sourceBodies, difficulties, options);
+            isCopying.Value = true;
+            copyProgress.Begin(difficulties.Count);
 
-            notify(SlopHitsoundEditorStrings.CopyResult(changedHitsounds, difficulties.Count - failed), FontAwesome.Solid.Check);
+            Guid currentId = EditorBeatmap.BeatmapInfo.ID;
+            var currentEditor = editor;
 
-            if (droppedHitsounds > 0)
-                notify(SlopHitsoundEditorStrings.CopyDropped(droppedHitsounds), FontAwesome.Solid.ExclamationTriangle);
+            // the game's update thread rather than this screen's, such that the copy finishes even if the editor is exited meanwhile.
+            HitsoundDifficultySync.CopyInBackground(beatmapManager, host.UpdateThread.Scheduler, () => (source, sourceBodies), difficulties, options,
+                (difficulty, saving, index) =>
+                {
+                    if (IsLoaded)
+                        copyProgress.SetProgress(difficulty, saving, index);
+                },
+                result =>
+                {
+                    if (result is var (changedHitsounds, droppedHitsounds, failed))
+                    {
+                        notify(SlopHitsoundEditorStrings.CopyResult(changedHitsounds, difficulties.Count - failed), FontAwesome.Solid.Check);
 
-            if (failed > 0)
-                notify(SlopHitsoundEditorStrings.CopyFailed(failed), FontAwesome.Solid.Times);
+                        if (droppedHitsounds > 0)
+                            notify(SlopHitsoundEditorStrings.CopyDropped(droppedHitsounds), FontAwesome.Solid.ExclamationTriangle);
 
-            // reload with a fresh reference, such that the editor's beatmap set contains the changes of the other difficulties.
-            var current = beatmapManager.QueryBeatmap(b => b.ID == EditorBeatmap.BeatmapInfo.ID);
+                        if (failed > 0)
+                            notify(SlopHitsoundEditorStrings.CopyFailed(failed), FontAwesome.Solid.Times);
+                    }
 
-            if (current != null)
-                editor.SwitchToDifficulty(current);
+                    if (!IsLoaded || IsDisposed)
+                        return;
+
+                    copyProgress.End();
+                    isCopying.Value = false;
+
+                    if (!currentEditor.IsCurrentScreen())
+                        return;
+
+                    // reload with a fresh reference, such that the editor's beatmap set contains the changes of the other difficulties.
+                    var current = beatmapManager.QueryBeatmap(b => b.ID == currentId);
+
+                    if (current != null)
+                        currentEditor.SwitchToDifficulty(current);
+                });
         }
 
         /// <summary>

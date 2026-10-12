@@ -557,6 +557,26 @@ Alt + scroll to zoom. Ctrl + click a lane name to preview the skin's sample inst
         public static LocalisableString CopyFailed(int count) => new TranslatableString(getKey(@"copy_failed"), @"Copying to {0} difficulties failed. See the log for details.", count);
 
         /// <summary>
+        /// "Copying hitsounds..."
+        /// </summary>
+        public static LocalisableString CopyProgressHeader => new TranslatableString(getKey(@"copy_progress_header"), @"Copying hitsounds...");
+
+        /// <summary>
+        /// "Loading {0}"
+        /// </summary>
+        public static LocalisableString CopyProgressLoading(string difficulty) => new TranslatableString(getKey(@"copy_progress_loading"), @"Loading {0}", difficulty);
+
+        /// <summary>
+        /// "Saving {0}"
+        /// </summary>
+        public static LocalisableString CopyProgressSaving(string difficulty) => new TranslatableString(getKey(@"copy_progress_saving"), @"Saving {0}", difficulty);
+
+        /// <summary>
+        /// "{0} of {1} difficulties"
+        /// </summary>
+        public static LocalisableString CopyProgressCount(int done, int total) => new TranslatableString(getKey(@"copy_progress_count"), @"{0} of {1} difficulties", done, total);
+
+        /// <summary>
         /// "Imported {0} hitsounds."
         /// </summary>
         public static LocalisableString ImportResult(int count) => new TranslatableString(getKey(@"import_result"), @"Imported {0} hitsounds.", count);

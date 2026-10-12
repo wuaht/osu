@@ -11,6 +11,7 @@ using osu.Framework.Graphics;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Logging;
 using osu.Framework.Platform;
+using osu.Framework.Threading;
 using osu.Game.Beatmaps;
 using osu.Game.Configuration;
 using osu.Game.Localisation;
@@ -100,7 +101,51 @@ namespace osu.Game.Screens.Edit.Hitsounding
             string currentTitle = current.GetDisplayTitle();
 
             // this component is gone once the editor has exited, so the saves are scheduled on the game's update thread instead.
-            var scheduler = host.UpdateThread.Scheduler;
+            CopyInBackground(beatmapManager, host.UpdateThread.Scheduler, () =>
+            {
+                // the saved hitsounds, as unsaved changes may have been discarded when leaving.
+                var info = beatmapManager.QueryBeatmap(b => b.ID == currentId)
+                           ?? throw new InvalidOperationException($@"{currentTitle} couldn't be found.");
+
+                var playable = beatmapManager.GetWorkingBeatmap(info).GetPlayableBeatmap(info.Ruleset);
+                var map = HitsoundMap.Create(playable.HitObjects, info.Ruleset.OnlineID);
+
+                return (map.Columns.Select(c => c.GetState()).ToList(), map.Bodies.Select(b => b.GetState()).ToList());
+            }, targets, new HitsoundCopyOptions(), null, result =>
+            {
+                // the failure has already been logged.
+                if (result == null)
+                    return;
+
+                var (changed, dropped, failed) = result.Value;
+
+                notify(SlopHitsoundEditorStrings.SyncResult(changed, targets.Count - failed), FontAwesome.Solid.Check);
+
+                if (dropped > 0)
+                    notify(SlopHitsoundEditorStrings.CopyDropped(dropped), FontAwesome.Solid.ExclamationTriangle);
+
+                if (failed > 0)
+                    notify(SlopHitsoundEditorStrings.CopyFailed(failed), FontAwesome.Solid.Times);
+            });
+        }
+
+        /// <summary>
+        /// Copies hitsounds onto other difficulties without blocking the update thread: the difficulties are loaded and the hitsounds copied in the background,
+        /// and the difficulties are saved on the update thread afterwards, one per frame. <see cref="Running"/> is set until it has finished.
+        /// </summary>
+        /// <param name="beatmapManager">The beatmap manager.</param>
+        /// <param name="scheduler">The scheduler of the update thread, which the saves and callbacks are run on.</param>
+        /// <param name="getSource">Retrieves the hitsounds to copy. Called from a background thread.</param>
+        /// <param name="difficulties">The difficulties to copy the hitsounds to.</param>
+        /// <param name="options">Which parts of the hitsounds to copy.</param>
+        /// <param name="onProgress">Called with the difficulty being processed, whether it is being saved (rather than loaded), and its index.</param>
+        /// <param name="onCompleted">Called with the number of changed hitsounds, of hitsounds which couldn't be copied, and of difficulties which couldn't be copied to,
+        /// or with null if the hitsounds to copy couldn't be retrieved.</param>
+        public static void CopyInBackground(BeatmapManager beatmapManager, Scheduler scheduler,
+                                            Func<(IReadOnlyList<HitsoundColumnState> columns, IReadOnlyList<HitsoundBodyState> bodies)> getSource,
+                                            IReadOnlyList<BeatmapInfo> difficulties, HitsoundCopyOptions options,
+                                            Action<BeatmapInfo, bool, int>? onProgress, Action<(int changed, int dropped, int failed)?> onCompleted)
+        {
             var completion = new TaskCompletionSource();
             Running = completion.Task;
 
@@ -108,47 +153,51 @@ namespace osu.Game.Screens.Edit.Hitsounding
             {
                 try
                 {
-                    // the saved hitsounds, as unsaved changes may have been discarded when leaving.
-                    var info = beatmapManager.QueryBeatmap(b => b.ID == currentId)
-                               ?? throw new InvalidOperationException($@"{currentTitle} couldn't be found.");
+                    var (columns, bodies) = getSource();
 
-                    var playable = beatmapManager.GetWorkingBeatmap(info).GetPlayableBeatmap(info.Ruleset);
-                    var map = HitsoundMap.Create(playable.HitObjects, info.Ruleset.OnlineID);
+                    var copies = PrepareCopies(beatmapManager, columns, bodies, difficulties, options, (difficulty, index) =>
+                    {
+                        if (onProgress != null)
+                            scheduler.Add(() => onProgress(difficulty, false, index));
+                    });
 
-                    var copies = PrepareCopies(beatmapManager, map.Columns.Select(c => c.GetState()).ToList(), map.Bodies.Select(b => b.GetState()).ToList(), targets,
-                        new HitsoundCopyOptions());
-
-                    scheduler.Add(() => saveNext(copies, 0, targets.Count, completion));
+                    scheduler.Add(() => saveNext(copies, 0));
                 }
                 catch (Exception e)
                 {
-                    Logger.Error(e, $@"Failed to copy the hitsounds of {currentTitle}");
-                    completion.SetResult();
+                    Logger.Error(e, @"Failed to retrieve the hitsounds to copy");
+
+                    scheduler.Add(() =>
+                    {
+                        onCompleted(null);
+                        completion.SetResult();
+                    });
                 }
             });
 
-            void saveNext(List<PreparedCopy> copies, int index, int targetCount, TaskCompletionSource completion)
+            void saveNext(List<PreparedCopy> copies, int index)
             {
                 if (index < copies.Count)
                 {
-                    copies[index].Save(beatmapManager);
-                    scheduler.Add(() => saveNext(copies, index + 1, targetCount, completion));
+                    // the progress is shown for a frame before the save blocks the update thread.
+                    onProgress?.Invoke(copies[index].Difficulty, true, index);
+
+                    scheduler.Add(() =>
+                    {
+                        copies[index].Save(beatmapManager);
+                        saveNext(copies, index + 1);
+                    });
                     return;
                 }
 
-                int failed = copies.Count(c => c.Failed);
-
-                notify(SlopHitsoundEditorStrings.SyncResult(copies.Sum(c => c.ChangedHitsounds), targetCount - failed), FontAwesome.Solid.Check);
-
-                int dropped = copies.Sum(c => c.DroppedHitsounds);
-
-                if (dropped > 0)
-                    notify(SlopHitsoundEditorStrings.CopyDropped(dropped), FontAwesome.Solid.ExclamationTriangle);
-
-                if (failed > 0)
-                    notify(SlopHitsoundEditorStrings.CopyFailed(failed), FontAwesome.Solid.Times);
-
-                completion.SetResult();
+                try
+                {
+                    onCompleted((copies.Sum(c => c.ChangedHitsounds), copies.Sum(c => c.DroppedHitsounds), copies.Count(c => c.Failed)));
+                }
+                finally
+                {
+                    completion.SetResult();
+                }
             }
         }
 
@@ -159,35 +208,18 @@ namespace osu.Game.Screens.Edit.Hitsounding
         });
 
         /// <summary>
-        /// Copies hitsounds onto other difficulties and saves them.
-        /// </summary>
-        /// <remarks>
-        /// If the difficulty being edited belongs to the same beatmap set, it has to be saved before, and the editor has to be reloaded afterwards,
-        /// as saving it would otherwise write its outdated beatmap set (including the hashes of the other difficulties) back to the database.
-        /// </remarks>
-        /// <returns>The number of changed hitsounds, of hitsounds which couldn't be copied, and of difficulties which couldn't be copied to.</returns>
-        public static (int changed, int dropped, int failed) CopyToDifficulties(BeatmapManager beatmapManager, IReadOnlyList<HitsoundColumnState> source,
-                                                                                IReadOnlyList<HitsoundBodyState> sourceBodies, IReadOnlyList<BeatmapInfo> difficulties,
-                                                                                HitsoundCopyOptions options)
-        {
-            var copies = PrepareCopies(beatmapManager, source, sourceBodies, difficulties, options);
-
-            foreach (var copy in copies)
-                copy.Save(beatmapManager);
-
-            return (copies.Sum(c => c.ChangedHitsounds), copies.Sum(c => c.DroppedHitsounds), copies.Count(c => c.Failed));
-        }
-
-        /// <summary>
         /// Loads the difficulties and copies the hitsounds onto them, without saving them yet. Can be called from a background thread.
+        /// <paramref name="onDifficultyStarted"/> is called (on the calling thread) with each difficulty and its index before it is loaded.
         /// </summary>
         public static List<PreparedCopy> PrepareCopies(BeatmapManager beatmapManager, IReadOnlyList<HitsoundColumnState> source, IReadOnlyList<HitsoundBodyState> sourceBodies,
-                                                       IReadOnlyList<BeatmapInfo> difficulties, HitsoundCopyOptions options)
+                                                       IReadOnlyList<BeatmapInfo> difficulties, HitsoundCopyOptions options, Action<BeatmapInfo, int>? onDifficultyStarted = null)
         {
             var copies = new List<PreparedCopy>();
 
             foreach (var difficulty in difficulties)
             {
+                onDifficultyStarted?.Invoke(difficulty, copies.Count);
+
                 var copy = new PreparedCopy(difficulty);
                 copies.Add(copy);
 

@@ -536,6 +536,7 @@ namespace osu.Game.Screens.Edit
                     },
                     bottomBar = new BottomBar(),
                     MutationTracker,
+                    new HitsoundCopyInputBlocker(),
                 }
             });
 
@@ -821,6 +822,10 @@ namespace osu.Game.Screens.Edit
 
             // a save is still being written.
             if (pendingSave != null)
+                return;
+
+            // the beatmap set is about to be changed by copying hitsounds to other difficulties, and the editor reloaded afterwards.
+            if (HitsoundDifficultySync.Running?.IsCompleted == false)
                 return;
 
             if (!HasUnsavedChanges)

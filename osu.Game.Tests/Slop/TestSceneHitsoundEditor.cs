@@ -222,6 +222,7 @@ namespace osu.Game.Tests.Slop
             AddStep("copy to other difficulties", () => screen!.CopyToDifficulties(screen.GetOtherDifficulties(), new HitsoundCopyOptions()));
             AddUntilStep("wait for confirmation", () => DialogOverlay.CurrentDialog is HitsoundCopyConfirmationDialog);
             AddStep("confirm", () => DialogOverlay.CurrentDialog!.PerformAction<PopupDialogDangerousButton>());
+            AddUntilStep("copy finished", () => HitsoundDifficultySync.Running?.IsCompleted != false);
 
             AddUntilStep("finish copied to first difficulty", () =>
             {
@@ -258,6 +259,7 @@ namespace osu.Game.Tests.Slop
             AddStep("copy to other difficulties", () => screen!.CopyToDifficulties(screen.GetOtherDifficulties(), new HitsoundCopyOptions()));
             AddUntilStep("wait for confirmation", () => DialogOverlay.CurrentDialog is HitsoundCopyConfirmationDialog);
             AddStep("confirm", () => DialogOverlay.CurrentDialog!.PerformAction<PopupDialogDangerousButton>());
+            AddUntilStep("copy finished", () => HitsoundDifficultySync.Running?.IsCompleted != false);
             AddUntilStep("editor reloaded", () => Editor.ReadyForUse && Editor.ChildrenOfType<EditorBeatmap>().SingleOrDefault()?.BeatmapInfo.DifficultyName == "Hitsounds");
 
             AddAssert("every difficulty still has its file and objects", () =>
@@ -362,6 +364,7 @@ namespace osu.Game.Tests.Slop
             });
             AddUntilStep("dialog closed", () => DialogOverlay.CurrentDialog == null);
             AddStep("release", () => InputManager.ReleaseButton(MouseButton.Left));
+            AddUntilStep("copy finished", () => HitsoundDifficultySync.Running?.IsCompleted != false);
             AddUntilStep("editor reloaded", () => Editor.ReadyForUse && EditorBeatmap.BeatmapInfo.DifficultyName == "Hitsounds");
             AddWaitStep("wait for any sync", 10);
 
