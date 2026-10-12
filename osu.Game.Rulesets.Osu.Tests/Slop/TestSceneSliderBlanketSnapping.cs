@@ -122,6 +122,89 @@ namespace osu.Game.Rulesets.Osu.Tests.Slop
             AddStep("release", () => InputManager.ReleaseButton(MouseButton.Left));
         }
 
+        /// <remarks>
+        /// Control has to be pressed after starting to drag a slider, as control-clicking a selected slider adds a control point.
+        /// </remarks>
+        [Test]
+        public void TestSliderDoesNotSnapWhileControlHeld()
+        {
+            AddStep("enable all pattern snapping", () =>
+            {
+                config.SetValue(OsuSetting.SlopEditorSliderBlanketSnap, true);
+                config.SetValue(OsuSetting.SlopEditorBlanketSnap, true);
+            });
+
+            AddStep("select slider", () => EditorBeatmap.SelectedHitObjects.Add(outer));
+
+            Vector2 startPosition = default;
+            Vector2 target = default;
+
+            AddStep("move mouse to slider body", () =>
+            {
+                startPosition = outer.Position;
+                target = bodyPoint(outer) + arcCentre(inner) - arcCentre(outer) + new Vector2(2);
+                InputManager.MoveMouseTo(playfield().GamefieldToScreenSpace(bodyPoint(outer)));
+            });
+            AddStep("press", () => InputManager.PressButton(MouseButton.Left));
+            AddStep("drag", () => InputManager.MoveMouseTo(playfield().GamefieldToScreenSpace(target)));
+            AddStep("hold control", () => InputManager.PressKey(Key.ControlLeft));
+            AddStep("drag a bit further", () => InputManager.MoveMouseTo(playfield().GamefieldToScreenSpace(target + new Vector2(0.5f))));
+            AddUntilStep("no guide lines", () => this.ChildrenOfType<PatternSnapGuideOverlay>().Single().ChildrenOfType<Path>().Count(), () => Is.EqualTo(0));
+            AddStep("release", () => InputManager.ReleaseButton(MouseButton.Left));
+            AddStep("release control", () => InputManager.ReleaseKey(Key.ControlLeft));
+
+            AddAssert("slider moved", () => Vector2.Distance(outer.Position, startPosition), () => Is.GreaterThan(10));
+            AddAssert("arcs don't share their centre", () => Precision.AlmostEquals(arcCentre(inner), arcCentre(outer), 0.1f), () => Is.False);
+        }
+
+        [TestCase(null)]
+        [TestCase(true)]
+        [TestCase(false)]
+        public void TestCircleBlanketSnapWithControl(bool? pressControlBeforeDrag)
+        {
+            HitCircle circle = null!;
+            Vector2 target = default;
+
+            AddStep("enable only blanket snapping", () =>
+            {
+                config.SetValue(OsuSetting.SlopEditorBlanketSnap, true);
+                config.SetValue(OsuSetting.SlopEditorSliderBlanketSnap, false);
+            });
+
+            AddStep("add circle", () => EditorBeatmap.Add(circle = new HitCircle { StartTime = 250, Position = new Vector2(380, 320) }));
+            AddStep("select circle", () => EditorBeatmap.SelectedHitObjects.Add(circle));
+            AddStep("move mouse to circle", () =>
+            {
+                target = arcCentre(inner) + new Vector2(2);
+                InputManager.MoveMouseTo(playfield().GamefieldToScreenSpace(circle.Position));
+            });
+
+            if (pressControlBeforeDrag == true)
+                AddStep("hold control", () => InputManager.PressKey(Key.ControlLeft));
+
+            AddStep("press", () => InputManager.PressButton(MouseButton.Left));
+            AddStep("drag", () => InputManager.MoveMouseTo(playfield().GamefieldToScreenSpace(target)));
+
+            if (pressControlBeforeDrag == false)
+            {
+                AddStep("hold control", () => InputManager.PressKey(Key.ControlLeft));
+                AddStep("drag a bit further", () => InputManager.MoveMouseTo(playfield().GamefieldToScreenSpace(target + new Vector2(0.5f))));
+            }
+
+            AddStep("release", () => InputManager.ReleaseButton(MouseButton.Left));
+            AddStep("release control", () => InputManager.ReleaseKey(Key.ControlLeft));
+
+            AddAssert("circle moved near arc centre", () => Vector2.Distance(circle.Position, arcCentre(inner)), () => Is.LessThan(5));
+
+            if (pressControlBeforeDrag == null)
+                AddAssert("snapped onto arc centre", () => Precision.AlmostEquals(circle.Position, arcCentre(inner), 0.1f));
+            else
+            {
+                AddAssert("not snapped", () => Precision.AlmostEquals(circle.Position, arcCentre(inner), 0.1f), () => Is.False);
+                AddAssert("still selected", () => EditorBeatmap.SelectedHitObjects, () => Does.Contain(circle));
+            }
+        }
+
         [Test]
         public void TestNoSnappingWhenDisabled()
         {
