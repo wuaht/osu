@@ -200,6 +200,10 @@ namespace osu.Game.Screens.Edit.Hitsounding
                     var working = beatmapManager.GetWorkingBeatmap(info);
                     var playable = working.GetPlayableBeatmap(info.Ruleset);
 
+                    // like in the editor, the samples are only defined by the hit objects. otherwise the legacy sample points of the file would be
+                    // written back to it, and the encoder could skip the sample points of the copied hitsounds as redundant, reverting their volumes.
+                    playable.ControlPointInfo = EditorBeatmap.ConvertControlPoints(playable.ControlPointInfo);
+
                     var result = HitsoundCopier.Copy(source, sourceBodies, HitsoundMap.Create(playable.HitObjects, info.Ruleset.OnlineID), options);
 
                     copy.DroppedHitsounds = result.DroppedHitsounds;

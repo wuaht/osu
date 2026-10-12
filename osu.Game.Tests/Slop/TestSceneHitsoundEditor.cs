@@ -276,6 +276,34 @@ namespace osu.Game.Tests.Slop
         }
 
         [Test]
+        public void TestSyncedVolumesSurviveSaving()
+        {
+            AddStep("enable sync", () => config.SetValue(OsuSetting.SlopEditorAutoApplyHitsoundDifficulty, true));
+
+            // the file of the first difficulty then has a sample point for the second volume, which the copied volumes must replace.
+            AddStep("set different volumes", () =>
+            {
+                var hitsoundEditor = screen!.ChildrenOfType<HitsoundEditor>().Single();
+                hitsoundEditor.SetVolumes(new[] { (hitsoundEditor.Map.Columns[0], 100), (hitsoundEditor.Map.Columns[1], 50) });
+            });
+            AddStep("save", () => Editor.Save());
+
+            createHitsoundDifficulty();
+
+            AddStep("set same volume everywhere", () =>
+            {
+                var hitsoundEditor = screen!.ChildrenOfType<HitsoundEditor>().Single();
+                hitsoundEditor.SetVolume(hitsoundEditor.Map.Columns.ToList(), 70);
+            });
+            AddStep("save", () => Editor.Save());
+
+            AddStep("switch to first difficulty", () => screen!.SwitchToDifficulty(beatmapManager.QueryBeatmap(b => b.DifficultyName == firstDifficultyName)!));
+            AddUntilStep("first difficulty loaded", () => Editor.ReadyForUse && EditorBeatmap.BeatmapInfo.DifficultyName == firstDifficultyName);
+
+            AddAssert("volumes copied", () => EditorBeatmap.HitObjects.Select(h => HitsoundSamples.GetVolume(h.Samples)), () => Is.EqualTo(new[] { 70, 70 }));
+        }
+
+        [Test]
         public void TestCopyToSelectedIsNotOverriddenBySync()
         {
             AddStep("enable sync", () => config.SetValue(OsuSetting.SlopEditorAutoApplyHitsoundDifficulty, true));
