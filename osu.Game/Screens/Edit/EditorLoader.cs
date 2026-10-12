@@ -16,6 +16,7 @@ using osu.Game.Beatmaps;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Rulesets;
 using osu.Game.Rulesets.Mods;
+using osu.Game.Screens.Edit.Hitsounding;
 using osu.Game.Screens.Menu;
 using osu.Game.Screens.Play;
 
@@ -120,7 +121,21 @@ namespace osu.Game.Screens.Edit
 
             this.MakeCurrent();
 
-            scheduledDifficultySwitch = Schedule(() =>
+            scheduledDifficultySwitch = Schedule(waitForHitsoundSync);
+
+            // the next difficulty may be about to receive the hitsounds of the hitsound difficulty.
+            void waitForHitsoundSync()
+            {
+                if (HitsoundDifficultySync.Running?.IsCompleted == false)
+                {
+                    scheduledDifficultySwitch = Schedule(waitForHitsoundSync);
+                    return;
+                }
+
+                switchDifficulty();
+            }
+
+            void switchDifficulty()
             {
                 var workingBeatmap = nextBeatmap.Invoke();
 
@@ -135,7 +150,7 @@ namespace osu.Game.Screens.Edit
                 ApplyToBackground(b => b.Beatmap = Beatmap.Value);
 
                 pushEditor();
-            });
+            }
         }
 
         private void pushEditor()

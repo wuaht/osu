@@ -681,6 +681,12 @@ namespace osu.Game.Screens.Edit
             return true;
         }
 
+        /// <summary>
+        /// Prevents the hitsounds of the hitsound difficulty from being copied to the other difficulties when leaving it,
+        /// as they have just been copied explicitly (with the chosen difficulties and options).
+        /// </summary>
+        public void CancelPendingHitsoundSync() => hitsoundSync.CancelPending();
+
         protected override void Update()
         {
             base.Update();

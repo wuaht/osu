@@ -10,6 +10,7 @@ using osu.Framework.Graphics;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Input;
 using osu.Framework.Localisation;
+using osu.Framework.Logging;
 using osu.Framework.Platform;
 using osu.Framework.Testing;
 using osu.Game.Audio;
@@ -234,6 +235,81 @@ namespace osu.Game.Tests.Slop
                 var set = beatmapManager.QueryBeatmap(b => b.DifficultyName == firstDifficultyName)!.BeatmapSet!;
                 return set.Beatmaps.All(b => b.Hash == b.File!.File.Hash);
             });
+        }
+
+        [Test]
+        public void TestHitsoundsSyncedWhenLeavingHitsoundDifficulty()
+        {
+            var errors = new List<string>();
+
+            void onEntry(LogEntry e)
+            {
+                if (e.Level == LogLevel.Error)
+                    errors.Add(e.Message);
+            }
+
+            AddStep("enable sync", () => config.SetValue(OsuSetting.SlopEditorAutoApplyHitsoundDifficulty, true));
+            AddStep("listen for errors", () => Logger.NewEntry += onEntry);
+
+            createHitsoundDifficulty();
+
+            AddStep("seek to first object", () => EditorClock.Seek(0));
+            AddStep("press E", () => InputManager.Key(Key.E));
+            AddStep("press Ctrl+S", () =>
+            {
+                InputManager.PressKey(Key.ControlLeft);
+                InputManager.Key(Key.S);
+                InputManager.ReleaseKey(Key.ControlLeft);
+            });
+
+            AddStep("switch to first difficulty", () => screen!.SwitchToDifficulty(beatmapManager.QueryBeatmap(b => b.DifficultyName == firstDifficultyName)!));
+            AddUntilStep("first difficulty loaded", () => Editor.ReadyForUse && EditorBeatmap.BeatmapInfo.DifficultyName == firstDifficultyName);
+
+            AddAssert("loaded with the synced finish", () => hasSample(EditorBeatmap.HitObjects[0], HitSampleInfo.HIT_FINISH));
+            AddAssert("finish saved", () =>
+            {
+                var info = beatmapManager.QueryBeatmap(b => b.DifficultyName == firstDifficultyName)!;
+                return hasSample(beatmapManager.GetWorkingBeatmap(info, true).Beatmap.HitObjects[0], HitSampleInfo.HIT_FINISH);
+            });
+            AddStep("stop listening for errors", () => Logger.NewEntry -= onEntry);
+            AddAssert("no errors", () => errors, () => Is.Empty);
+        }
+
+        [Test]
+        public void TestCopyToSelectedIsNotOverriddenBySync()
+        {
+            AddStep("enable sync", () => config.SetValue(OsuSetting.SlopEditorAutoApplyHitsoundDifficulty, true));
+
+            createHitsoundDifficulty();
+
+            AddStep("seek to first object", () => EditorClock.Seek(0));
+            AddStep("press E", () => InputManager.Key(Key.E));
+
+            AddStep("copy everything but additions", () => screen!.CopyToDifficulties(screen.GetOtherDifficulties(), new HitsoundCopyOptions { CopyAdditions = false }));
+            AddUntilStep("wait for confirmation", () => DialogOverlay.CurrentDialog is HitsoundCopyConfirmationDialog);
+            AddStep("hold confirm", () =>
+            {
+                InputManager.MoveMouseTo(DialogOverlay.CurrentDialog!.ChildrenOfType<PopupDialogDangerousButton>().Single());
+                InputManager.PressButton(MouseButton.Left);
+            });
+            AddUntilStep("dialog closed", () => DialogOverlay.CurrentDialog == null);
+            AddStep("release", () => InputManager.ReleaseButton(MouseButton.Left));
+            AddUntilStep("editor reloaded", () => Editor.ReadyForUse && EditorBeatmap.BeatmapInfo.DifficultyName == "Hitsounds");
+            AddWaitStep("wait for any sync", 10);
+
+            AddAssert("finish not copied", () =>
+            {
+                var info = beatmapManager.QueryBeatmap(b => b.DifficultyName == firstDifficultyName)!;
+                return !hasSample(beatmapManager.GetWorkingBeatmap(info, true).Beatmap.HitObjects[0], HitSampleInfo.HIT_FINISH);
+            });
+        }
+
+        private void createHitsoundDifficulty()
+        {
+            AddStep("create hitsound difficulty", () => screen!.CreateHitsoundDifficulty(HitSampleInfo.BANK_SOFT, 60, false));
+            AddUntilStep("switched to hitsound difficulty", () => Editor.ChildrenOfType<EditorBeatmap>().SingleOrDefault()?.BeatmapInfo.DifficultyName == "Hitsounds");
+            AddUntilStep("wait for editor", () => Editor.ReadyForUse);
+            waitForScreen();
         }
 
         [Test]

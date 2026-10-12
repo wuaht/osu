@@ -517,6 +517,8 @@ namespace osu.Game.Screens.Edit.Hitsounding
             if (!editor.Save())
                 return;
 
+            editor.CancelPendingHitsoundSync();
+
             var (changedHitsounds, droppedHitsounds, failed) = HitsoundDifficultySync.CopyToDifficulties(beatmapManager, source, sourceBodies, difficulties, options);
 
             notify(SlopHitsoundEditorStrings.CopyResult(changedHitsounds, difficulties.Count - failed), FontAwesome.Solid.Check);
