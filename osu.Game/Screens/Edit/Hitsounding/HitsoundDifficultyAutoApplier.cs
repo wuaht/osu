@@ -62,6 +62,11 @@ namespace osu.Game.Screens.Edit.Hitsounding
         /// </summary>
         private readonly HashSet<HitObject> matched = new HashSet<HitObject>();
 
+        /// <summary>
+        /// Hit objects added before the source finished loading that need hitsounds applied once it does.
+        /// </summary>
+        private readonly List<HitObject> pendingApplication = new List<HitObject>();
+
         [BackgroundDependencyLoader]
         private void load(OsuConfigManager config)
         {
@@ -124,6 +129,15 @@ namespace osu.Game.Screens.Edit.Hitsounding
                 {
                     source = columns;
                     sourceBodies = bodies;
+
+                    if (pendingApplication.Count > 0)
+                    {
+                        foreach (var h in pendingApplication)
+                            apply(h, false);
+
+                        pendingApplication.Clear();
+                        changeHandler?.SaveState();
+                    }
                 });
             });
         }
@@ -131,6 +145,9 @@ namespace osu.Game.Screens.Edit.Hitsounding
         private void onHitObjectAdded(HitObject hitObject)
         {
             apply(hitObject, false);
+
+            if (source == null)
+                pendingApplication.Add(hitObject);
         }
 
         private void onHitObjectUpdated(HitObject hitObject)
@@ -146,6 +163,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
         {
             lastTimes.Remove(hitObject);
             matched.Remove(hitObject);
+            pendingApplication.Remove(hitObject);
         }
 
         /// <param name="hitObject">The hit object to copy the hitsounds onto.</param>
