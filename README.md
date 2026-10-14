@@ -31,7 +31,7 @@ The [game's resources](https://github.com/wuaht/osu-resources) are forked from
 ## Online functionality
 Since this is **not** an official client scores will not submit. (only few online features work)
 
-It is possible to create an (or multiple) local offline accounts to track your scores if you would rather stay off of Bancho completely.
+It is possible to create a (or multiple) local offline accounts to track your scores if you would rather stay off of Bancho completely.
 
 The client also has beatmap mirror support (only Mino tested), so you don't even have to login to download maps
 
