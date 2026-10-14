@@ -22,6 +22,8 @@ namespace osu.Game.Overlays.Settings.Sections.Graphics
 
         private bool automaticRendererInUse;
 
+        private SettingsItemV2 customFrameLimitSetting = null!;
+
         [BackgroundDependencyLoader]
         private void load(FrameworkConfigManager config, OsuConfigManager osuConfig, IDialogOverlay? dialogOverlay, OsuGame? game, GameHost host)
         {
@@ -57,6 +59,15 @@ namespace osu.Game.Overlays.Settings.Sections.Graphics
                 {
                     Keywords = new[] { @"fps", @"framerate" },
                 },
+                customFrameLimitSetting = new SettingsItemV2(new FormSliderBar<int>
+                {
+                    Caption = GraphicsSettingsStrings.CustomFrameLimit,
+                    Current = config.GetBindable<int>(FrameworkSetting.CustomFrameLimit),
+                    KeyboardStep = 1,
+                })
+                {
+                    Keywords = new[] { @"fps", @"framerate", @"limit" },
+                },
                 new SettingsItemV2(new FormEnumDropdown<ExecutionMode>
                 {
                     Caption = GraphicsSettingsStrings.ThreadingMode,
@@ -71,6 +82,9 @@ namespace osu.Game.Overlays.Settings.Sections.Graphics
                     Keywords = new[] { @"framerate", @"counter" },
                 },
             };
+
+            var frameSync = config.GetBindable<FrameSync>(FrameworkSetting.FrameSync);
+            frameSync.BindValueChanged(f => customFrameLimitSetting.CanBeShown.Value = f.NewValue == FrameSync.Custom, true);
 
             renderer.BindValueChanged(r =>
             {
