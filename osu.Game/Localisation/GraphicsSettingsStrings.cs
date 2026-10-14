@@ -25,6 +25,11 @@ namespace osu.Game.Localisation
         public static LocalisableString Renderer => new TranslatableString(getKey(@"renderer"), @"Renderer");
 
         /// <summary>
+        /// "Custom frame limit"
+        /// </summary>
+        public static LocalisableString CustomFrameLimit => new TranslatableString(getKey(@"custom_frame_limit"), @"Custom frame limit");
+
+        /// <summary>
         /// "Frame limiter"
         /// </summary>
         public static LocalisableString FrameLimiter => new TranslatableString(getKey(@"frame_limiter"), @"Frame limiter");
