@@ -28,6 +28,13 @@ The [game's resources](https://github.com/wuaht/osu-resources) are forked from
 [ppy/osu-resources](https://github.com/ppy/osu-resources) and are covered by a separate license:
 [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/).
 
+## Online functionality
+Since this is **not** an official client scores will not submit. (only few online features work)
+
+It is possible to create an (or multiple) local offline accounts to track your scores if you would rather stay off of Bancho completely.
+
+The client also has beatmap mirror support (only Mino tested), so you don't even have to login to download maps
+
 ## Features
 full list of features not available yet since i still have stuff i want to implement.
 
