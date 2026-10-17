@@ -30,7 +30,7 @@ namespace osu.Game.Rulesets.Osu.Edit
 
         private readonly OsuGridToolboxGroup gridToolbox;
 
-        private readonly Bindable<PreciseScaleInfo> scaleInfo = new Bindable<PreciseScaleInfo>(new PreciseScaleInfo(1, EditorOrigin.GridCentre, true, true));
+        private readonly Bindable<PreciseScaleInfo> scaleInfo = new Bindable<PreciseScaleInfo>(new PreciseScaleInfo(1, EditorOrigin.GridCentre, true, true, SliderScaleMode.Default));
 
         private FormSliderBar<float> scaleInput { get; set; } = null!;
         private BindableNumber<float> scaleInputBindable = null!;
@@ -39,6 +39,9 @@ namespace osu.Game.Rulesets.Osu.Edit
         private EditorRadioButton gridCentreButton = null!;
         private EditorRadioButton playfieldCentreButton = null!;
         private EditorRadioButton selectionCentreButton = null!;
+
+        private EditorRadioButtonCollection sliderScaleMode = null!;
+        private EditorRadioButton defaultModeButton = null!;
 
         private OsuCheckbox xCheckBox = null!;
         private OsuCheckbox yCheckBox = null!;
@@ -87,6 +90,10 @@ namespace osu.Game.Rulesets.Osu.Edit
                     {
                         RelativeSizeAxes = Axes.X,
                     },
+                    sliderScaleMode = new EditorRadioButtonCollection
+                    {
+                        RelativeSizeAxes = Axes.X,
+                    },
                     new FillFlowContainer
                     {
                         RelativeSizeAxes = Axes.X,
@@ -120,6 +127,16 @@ namespace osu.Game.Rulesets.Osu.Edit
             scaleOrigin.AddButton(selectionCentreButton = new EditorRadioButton("Selection centre",
                 () => setOrigin(EditorOrigin.SelectionCentre),
                 () => new SpriteIcon { Icon = FontAwesome.Solid.VectorSquare }));
+
+            sliderScaleMode.AddButton(defaultModeButton = new EditorRadioButton("Default",
+                () => setMode(SliderScaleMode.Default),
+                () => new SpriteIcon { Icon = FontAwesome.Solid.ExpandArrowsAlt }));
+            sliderScaleMode.AddButton(new EditorRadioButton("Adjust SV",
+                () => setMode(SliderScaleMode.AdjustSV),
+                () => new SpriteIcon { Icon = FontAwesome.Solid.TachometerAlt }));
+            sliderScaleMode.AddButton(new EditorRadioButton("Ignore paths",
+                () => setMode(SliderScaleMode.IgnorePaths),
+                () => new SpriteIcon { Icon = FontAwesome.Solid.ArrowsAlt }));
 
             gridCentreButton.Selected.DisabledChanged += isDisabled =>
             {
@@ -205,6 +222,8 @@ namespace osu.Game.Rulesets.Osu.Edit
             if (!didSelect)
                 scaleOrigin.Items.First(b => !b.Selected.Disabled).Select();
 
+            defaultModeButton.Select();
+
             gridCentreButton.Selected.BindValueChanged(b =>
             {
                 if (b.NewValue) configScaleOrigin.Value = EditorOrigin.GridCentre;
@@ -225,6 +244,7 @@ namespace osu.Game.Rulesets.Osu.Edit
                     return;
 
                 var newScale = new Vector2(scale.NewValue.Scale, scale.NewValue.Scale);
+                scaleHandler.ScaleMode.Value = scale.NewValue.Mode;
                 scaleHandler.Update(newScale, getOriginPosition(scale.NewValue), getAdjustAxis(scale.NewValue), getRotation(scale.NewValue));
             });
         }
@@ -292,6 +312,14 @@ namespace osu.Game.Rulesets.Osu.Edit
             updateAxisCheckBoxesEnabled();
         }
 
+        private void setMode(SliderScaleMode mode)
+        {
+            // set ahead of the update so that the playfield bounds clamping below already considers the new mode.
+            scaleHandler.ScaleMode.Value = mode;
+            scaleInfo.Value = scaleInfo.Value with { Mode = mode };
+            updateMinMaxScale();
+        }
+
         private Vector2? getOriginPosition(PreciseScaleInfo scale)
         {
             switch (scale.Origin)
@@ -354,5 +382,5 @@ namespace osu.Game.Rulesets.Osu.Edit
         }
     }
 
-    public record PreciseScaleInfo(float Scale, EditorOrigin Origin, bool XAxis, bool YAxis);
+    public record PreciseScaleInfo(float Scale, EditorOrigin Origin, bool XAxis, bool YAxis, SliderScaleMode Mode);
 }

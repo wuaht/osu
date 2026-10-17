@@ -20,6 +20,7 @@ using osu.Game.Screens.Edit;
 using osu.Game.Screens.Edit.Compose.Components;
 using osu.Game.Utils;
 using osuTK;
+using osuTK.Input;
 
 namespace osu.Game.Rulesets.Osu.Edit
 {
@@ -34,6 +35,17 @@ namespace osu.Game.Rulesets.Osu.Edit
         /// Whether a single slider is currently selected, which results in a different scaling behaviour.
         /// </summary>
         public Bindable<bool> IsScalingSlider { get; private set; } = new BindableBool();
+
+        /// <summary>
+        /// How slider paths are treated by the current scale operation.
+        /// Reset to <see cref="SliderScaleMode.Default"/> when the operation is committed.
+        /// </summary>
+        /// <remarks>
+        /// While dragging a selection box scale handle, holding <see cref="ignore_paths_key"/> or Control overrides this.
+        /// </remarks>
+        public Bindable<SliderScaleMode> ScaleMode { get; } = new Bindable<SliderScaleMode>();
+
+        private const Key ignore_paths_key = Key.P;
 
         [Resolved]
         private IEditorChangeHandler? changeHandler { get; set; }
@@ -82,6 +94,11 @@ namespace osu.Game.Rulesets.Osu.Edit
         private Vector2? defaultOrigin;
         private List<Vector2>? originalConvexHull;
 
+        /// <summary>
+        /// Whether any slider's path or velocity may have been changed from its original state by the current operation.
+        /// </summary>
+        private bool slidersModified;
+
         public override void Begin()
         {
             if (OperationInProgress.Value)
@@ -107,11 +124,21 @@ namespace osu.Game.Rulesets.Osu.Edit
             Vector2 actualOrigin = origin ?? defaultOrigin.Value;
             scale = clampScaleToAdjustAxis(scale, adjustAxis);
 
-            // for the time being, allow resizing of slider paths only if the slider is
+            var mode = currentScaleMode;
+
+            // the mode may change mid-operation, so always start from the original slider shapes.
+            restoreSliders();
+
+            if (mode == SliderScaleMode.AdjustSV && objectsInScale.Keys.Any(h => h is Slider))
+            {
+                scaleAdjustingVelocity(scale, actualOrigin, adjustAxis, axisRotation);
+            }
+            // in the default mode, allow resizing of slider paths only if the slider is
             // the only hit object selected. with a group selection, it's likely the user
             // is not looking to change the duration of the slider but expand the whole pattern.
-            if (objectsInScale.Count == 1 && objectsInScale.First().Key is Slider slider)
+            else if (mode == SliderScaleMode.Default && objectsInScale.Count == 1 && objectsInScale.First().Key is Slider slider)
             {
+                slidersModified = true;
                 scaleSlider(slider, scale, actualOrigin, objectsInScale[slider], axisRotation);
             }
             else
@@ -139,6 +166,118 @@ namespace osu.Game.Rulesets.Osu.Edit
             objectsInScale = null;
             OriginalSurroundingQuad = null;
             defaultOrigin = null;
+            slidersModified = false;
+            ScaleMode.Value = SliderScaleMode.Default;
+        }
+
+        /// <summary>
+        /// The <see cref="SliderScaleMode"/> to use, taking keys held during a selection box drag into account.
+        /// </summary>
+        private SliderScaleMode currentScaleMode
+        {
+            get
+            {
+                var keys = HeldDragKeys;
+
+                if (keys != null)
+                {
+                    if (keys.IsPressed(ignore_paths_key))
+                        return SliderScaleMode.IgnorePaths;
+
+                    if (keys.IsPressed(Key.ControlLeft) || keys.IsPressed(Key.ControlRight))
+                        return SliderScaleMode.AdjustSV;
+                }
+
+                return ScaleMode.Value;
+            }
+        }
+
+        /// <summary>
+        /// Restores the paths and velocities of all sliders in the current operation to their original state.
+        /// </summary>
+        private void restoreSliders()
+        {
+            if (!slidersModified)
+                return;
+
+            foreach (var (ho, originalState) in objectsInScale!)
+            {
+                if (ho is not Slider slider)
+                    continue;
+
+                Debug.Assert(originalState.PathControlPointPositions != null && originalState.PathControlPointTypes != null);
+
+                for (int i = 0; i < slider.Path.ControlPoints.Count; i++)
+                {
+                    slider.Path.ControlPoints[i].Position = originalState.PathControlPointPositions[i];
+                    slider.Path.ControlPoints[i].Type = originalState.PathControlPointTypes[i];
+                }
+
+                slider.Path.ExpectedDistance.Value = originalState.ExpectedDistance;
+                slider.SliderVelocityMultiplier = originalState.SliderVelocityMultiplier;
+                editorBeatmap.Update(slider);
+            }
+
+            slidersModified = false;
+        }
+
+        /// <summary>
+        /// Scales the selection including the paths of all selected sliders,
+        /// adjusting the sliders' velocities such that their durations remain unchanged.
+        /// </summary>
+        private void scaleAdjustingVelocity(Vector2 scale, Vector2 origin, Axes adjustAxis, float axisRotation)
+        {
+            bool isSingleSlider = objectsInScale!.Count == 1;
+
+            if (!isSingleSlider)
+                scale = ClampScaleToPlayfieldBounds(scale, origin, adjustAxis, axisRotation);
+
+            Vector2 pathScale = Vector2.ComponentMax(scale, new Vector2(Precision.FLOAT_EPSILON));
+
+            slidersModified = true;
+
+            foreach (var (ho, originalState) in objectsInScale)
+            {
+                if (ho is Slider slider)
+                    scalePathAdjustingVelocity(slider, pathScale, originalState, axisRotation);
+
+                ho.Position = GeometryUtils.GetScaledPosition(scale, origin, originalState.Position, axisRotation);
+            }
+
+            if (!isSingleSlider)
+                return;
+
+            // if a lone slider ends up outside the playfield, revert scaling.
+            var singleSlider = (Slider)objectsInScale.Keys.Single();
+            (bool xInBounds, bool yInBounds) = isQuadInBounds(GeometryUtils.GetSurroundingQuad(new OsuHitObject[] { singleSlider }));
+
+            if (xInBounds && yInBounds && singleSlider.Path.HasValidLengthForPlacement)
+                return;
+
+            restoreSliders();
+            singleSlider.Position = objectsInScale[singleSlider].Position;
+        }
+
+        private void scalePathAdjustingVelocity(Slider slider, Vector2 scale, OriginalHitObjectState originalState, float axisRotation)
+        {
+            Debug.Assert(originalState.PathControlPointPositions != null && originalState.PathControlPointTypes != null);
+
+            for (int i = 0; i < slider.Path.ControlPoints.Count; i++)
+            {
+                slider.Path.ControlPoints[i].Position = GeometryUtils.GetScaledPosition(scale, Vector2.Zero, originalState.PathControlPointPositions[i], axisRotation);
+                slider.Path.ControlPoints[i].Type = originalState.PathControlPointTypes[i];
+            }
+
+            double newCalculatedDistance = slider.Path.CalculatedDistance;
+
+            if (originalState.CalculatedDistance <= 0 || newCalculatedDistance <= 0)
+                return;
+
+            // the velocity changes by the same factor as the path's length, so that the duration stays the same.
+            // the multiplier is clamped to its valid range by its bindable, so the actually applied value is read back for the expected distance.
+            slider.SliderVelocityMultiplier = originalState.SliderVelocityMultiplier * newCalculatedDistance / originalState.CalculatedDistance;
+            slider.Path.ExpectedDistance.Value = originalState.Distance * slider.SliderVelocityMultiplier / originalState.SliderVelocityMultiplier;
+            editorBeatmap.Update(slider);
         }
 
         private IEnumerable<OsuHitObject> selectedMovableObjects => selectedItems.Cast<OsuHitObject>()
@@ -223,7 +362,7 @@ namespace osu.Game.Rulesets.Osu.Edit
 
             Debug.Assert(defaultOrigin != null && OriginalSurroundingQuad != null);
 
-            if (objectsInScale.Count == 1 && objectsInScale.First().Key is Slider slider)
+            if (currentScaleMode != SliderScaleMode.IgnorePaths && objectsInScale.Count == 1 && objectsInScale.First().Key is Slider slider)
                 origin = slider.Position;
 
             float cos = MathF.Cos(float.DegreesToRadians(-axisRotation));
@@ -342,12 +481,30 @@ namespace osu.Game.Rulesets.Osu.Edit
             public Vector2 Position { get; }
             public Vector2[]? PathControlPointPositions { get; }
             public PathType?[]? PathControlPointTypes { get; }
+            public double? ExpectedDistance { get; }
+            public double Distance { get; }
+            public double CalculatedDistance { get; }
+            public double SliderVelocityMultiplier { get; }
 
             public OriginalHitObjectState(OsuHitObject hitObject)
             {
                 Position = hitObject.Position;
                 PathControlPointPositions = (hitObject as IHasPath)?.Path.ControlPoints.Select(p => p.Position).ToArray();
                 PathControlPointTypes = (hitObject as IHasPath)?.Path.ControlPoints.Select(p => p.Type).ToArray();
+
+                if (hitObject is Slider slider)
+                {
+                    ExpectedDistance = slider.Path.ExpectedDistance.Value;
+                    Distance = slider.Path.Distance;
+                    CalculatedDistance = slider.Path.CalculatedDistance;
+                    SliderVelocityMultiplier = slider.SliderVelocityMultiplier;
+                }
+                else
+                {
+                    ExpectedDistance = null;
+                    Distance = CalculatedDistance = 0;
+                    SliderVelocityMultiplier = 1;
+                }
             }
         }
 

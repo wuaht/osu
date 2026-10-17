@@ -78,14 +78,14 @@ namespace osu.Game.Screens.Edit.Compose.Components
 
             rawScale = convertDragEventToScaleMultiplier(e);
 
-            applyScale(shouldLockAspectRatio: isCornerAnchor(originalAnchor) && e.ShiftPressed, useDefaultOrigin: e.AltPressed);
+            applyScale(e);
         }
 
         protected override bool OnKeyDown(KeyDownEvent e)
         {
             if (IsDragged)
             {
-                applyScale(shouldLockAspectRatio: isCornerAnchor(originalAnchor) && e.ShiftPressed, useDefaultOrigin: e.AltPressed);
+                applyScale(e);
                 return true;
             }
 
@@ -97,12 +97,15 @@ namespace osu.Game.Screens.Edit.Compose.Components
             base.OnKeyUp(e);
 
             if (IsDragged)
-                applyScale(shouldLockAspectRatio: isCornerAnchor(originalAnchor) && e.ShiftPressed, useDefaultOrigin: e.AltPressed);
+                applyScale(e);
         }
 
         protected override void OnDragEnd(DragEndEvent e)
         {
-            scaleHandler?.Commit();
+            if (scaleHandler == null) return;
+
+            scaleHandler.HeldDragKeys = null;
+            scaleHandler.Commit();
         }
 
         private Vector2 convertDragEventToScaleMultiplier(DragEvent e)
@@ -128,8 +131,13 @@ namespace osu.Game.Screens.Edit.Compose.Components
             if ((originalAnchor & Anchor.y0) > 0) scale.Y = -scale.Y;
         }
 
-        private void applyScale(bool shouldLockAspectRatio, bool useDefaultOrigin = false)
+        private void applyScale(UIEvent e)
         {
+            bool shouldLockAspectRatio = isCornerAnchor(originalAnchor) && e.ShiftPressed;
+            bool useDefaultOrigin = e.AltPressed;
+
+            scaleHandler!.HeldDragKeys = e.CurrentState.Keyboard.Keys;
+
             var newScale = shouldLockAspectRatio
                 ? new Vector2((rawScale.X + rawScale.Y) * 0.5f)
                 : rawScale;

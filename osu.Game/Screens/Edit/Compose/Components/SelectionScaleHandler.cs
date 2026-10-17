@@ -4,7 +4,9 @@
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Primitives;
+using osu.Framework.Input.States;
 using osuTK;
+using osuTK.Input;
 
 namespace osu.Game.Screens.Edit.Compose.Components
 {
@@ -38,6 +40,12 @@ namespace osu.Game.Screens.Edit.Compose.Components
         public Bindable<bool> CanScaleDiagonally { get; private set; } = new BindableBool();
 
         public Quad? OriginalSurroundingQuad { get; protected set; }
+
+        /// <summary>
+        /// The keys currently held while dragging a selection box scale handle, or <see langword="null"/> if the operation does not originate from such a drag.
+        /// Rulesets may use these to offer alternative scaling behaviours while the keys are held.
+        /// </summary>
+        public ButtonStates<Key>? HeldDragKeys { get; set; }
 
         /// <summary>
         /// Performs a single, instant, atomic scale operation.
