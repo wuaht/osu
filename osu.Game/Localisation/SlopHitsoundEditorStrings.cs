@@ -486,9 +486,9 @@ Alt + scroll to zoom. Ctrl + click a lane name to preview the skin's sample inst
         public static LocalisableString ExpandLaneHint => new TranslatableString(getKey(@"expand_lane_hint"), @"Right click to show or hide the custom sample sets.");
 
         /// <summary>
-        /// "Double click or right click to rename."
+        /// "Right click to rename."
         /// </summary>
-        public static LocalisableString RenameLaneHint => new TranslatableString(getKey(@"rename_lane_hint"), @"Double click or right click to rename.");
+        public static LocalisableString RenameLaneHint => new TranslatableString(getKey(@"rename_lane_hint"), @"Right click to rename.");
 
         /// <summary>
         /// "Mute lane"

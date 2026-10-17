@@ -255,8 +255,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
                             TooltipText = getTooltip(),
                             Action = preview,
                             // expanding is done with right click, so that left click can be spammed to preview the sample.
-                            // sub-lanes keep right click for their context menu, and are renamed with a double click.
-                            DoubleClickAction = lane.IsSubLane ? beginRename : null,
+                            // sub-lanes keep right click for their context menu, from which they are renamed.
                             RightClickAction = lane.IsSubLane ? null : toggleExpandedIfPossible,
                             Child = name,
                         },
@@ -336,25 +335,13 @@ namespace osu.Game.Screens.Edit.Hitsounding
 
             /// <summary>
             /// The name of the lane, which previews the sample when clicked.
-            /// Double click events are only received by the drawable which handled the click, so they are handled here as well.
-            /// Right clicks are handled here too, before they reach the context menu container.
+            /// Right clicks are handled here, before they reach the context menu container.
             /// </summary>
             private partial class NameButton : OsuClickableContainer, IHasHitsoundTooltip
             {
 
                 // clicking plays the sample of the lane, which the click sound of the interface would play over.
                 protected override HoverSounds CreateHoverSounds(HoverSampleSet sampleSet) => new HoverSounds(sampleSet) { Enabled = { BindTarget = Enabled } };
-
-                public Action? DoubleClickAction { get; init; }
-
-                protected override bool OnDoubleClick(DoubleClickEvent e)
-                {
-                    if (DoubleClickAction == null)
-                        return false;
-
-                    DoubleClickAction();
-                    return true;
-                }
 
                 public Action? RightClickAction { get; init; }
 
