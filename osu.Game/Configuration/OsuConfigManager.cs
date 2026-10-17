@@ -289,7 +289,7 @@ namespace osu.Game.Configuration
 
             // defaults of McOsu's FPoSu.
             SetDefault(OsuSetting.SlopFposuMouseDpi, 400, 50, 32000);
-            SetDefault(OsuSetting.SlopFposuCmPer360, 30f, 1f, 200f, 0.1f);
+            SetDefault(OsuSetting.SlopFposuCmPer360, 30.0, 1.0, 200.0, 0.000001);
             SetDefault(OsuSetting.SlopFposuFov, 103f, 20f, 150f, 1f);
             SetDefault(OsuSetting.SlopFposuDistance, 0.5f, 0.1f, 2f, 0.01f);
             SetDefault(OsuSetting.SlopFposuCurved, true);

@@ -20,7 +20,7 @@ namespace osu.Game.Rulesets.Fposu.Tests
     public partial class TestSceneFposuGameplay : PlayerTestScene
     {
         private const int dpi = 400;
-        private const float cm_per_360 = 30;
+        private const double cm_per_360 = 30;
 
         [Resolved]
         private OsuConfigManager config { get; set; } = null!;

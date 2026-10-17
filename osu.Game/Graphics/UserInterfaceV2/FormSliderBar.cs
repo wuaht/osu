@@ -110,6 +110,11 @@ namespace osu.Game.Graphics.UserInterfaceV2
         /// </summary>
         public bool PlaySamplesOnAdjust { get; init; } = true;
 
+        /// <summary>
+        /// The maximum number of decimal digits shown in the value label, tooltip and text box.
+        /// </summary>
+        public int MaxDecimalDigits { get; init; } = OsuSliderBar<T>.MAX_DECIMAL_DIGITS;
+
         private Func<T, LocalisableString> labelFormat;
 
         /// <summary>
@@ -430,15 +435,15 @@ namespace osu.Game.Graphics.UserInterfaceV2
                 if (currentNumberInstantaneous.Value is not int)
                     floatValue *= 100;
 
-                TextBox.Text = floatValue.ToStandardFormattedString(Math.Max(0, OsuSliderBar<T>.MAX_DECIMAL_DIGITS - 2));
+                TextBox.Text = floatValue.ToStandardFormattedString(Math.Max(0, MaxDecimalDigits - 2));
             }
             else
-                TextBox.Text = currentNumberInstantaneous.Value.ToStandardFormattedString(OsuSliderBar<T>.MAX_DECIMAL_DIGITS);
+                TextBox.Text = currentNumberInstantaneous.Value.ToStandardFormattedString(MaxDecimalDigits);
 
             valueLabel.Text = LabelFormat(currentNumberInstantaneous.Value);
         }
 
-        public LocalisableString DefaultLabelFormat(T value) => DefaultLabelFormat(value, DisplayAsPercentage);
+        public LocalisableString DefaultLabelFormat(T value) => value.ToStandardFormattedString(MaxDecimalDigits, DisplayAsPercentage);
 
         public static LocalisableString DefaultLabelFormat(T value, bool displayAsPercentage) => value.ToStandardFormattedString(OsuSliderBar<T>.MAX_DECIMAL_DIGITS, displayAsPercentage);
 

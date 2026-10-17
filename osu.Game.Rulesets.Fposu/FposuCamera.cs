@@ -103,7 +103,7 @@ namespace osu.Game.Rulesets.Fposu
         /// </summary>
         /// <param name="dpi">The counts per inch of the mouse.</param>
         /// <param name="cmPer360">The distance in centimetres for a full turn.</param>
-        public static float DegreesPerCount(int dpi, float cmPer360)
+        public static float DegreesPerCount(int dpi, double cmPer360)
         {
             double countsPer360 = cmPer360 * (dpi / 2.54);
             return countsPer360 > 0 ? (float)(360 / countsPer360) : 0;

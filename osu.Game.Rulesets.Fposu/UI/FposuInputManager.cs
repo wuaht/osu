@@ -33,7 +33,7 @@ namespace osu.Game.Rulesets.Fposu.UI
         public FposuMouseInput MouseInput => mouseInput;
 
         private Bindable<int> mouseDpi = null!;
-        private Bindable<float> cmPer360 = null!;
+        private Bindable<double> cmPer360 = null!;
         private Bindable<bool> invertHorizontal = null!;
         private Bindable<bool> invertVertical = null!;
         private Bindable<bool> absoluteMode = null!;
@@ -60,7 +60,7 @@ namespace osu.Game.Rulesets.Fposu.UI
             AddInternal(mouseInput = new FposuMouseInput());
 
             mouseDpi = config.GetBindable<int>(OsuSetting.SlopFposuMouseDpi);
-            cmPer360 = config.GetBindable<float>(OsuSetting.SlopFposuCmPer360);
+            cmPer360 = config.GetBindable<double>(OsuSetting.SlopFposuCmPer360);
             invertHorizontal = config.GetBindable<bool>(OsuSetting.SlopFposuInvertHorizontal);
             invertVertical = config.GetBindable<bool>(OsuSetting.SlopFposuInvertVertical);
             absoluteMode = config.GetBindable<bool>(OsuSetting.SlopFposuAbsoluteMode);

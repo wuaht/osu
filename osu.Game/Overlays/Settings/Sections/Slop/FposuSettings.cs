@@ -40,12 +40,14 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                     Current = config.GetBindable<int>(OsuSetting.SlopFposuMouseDpi),
                     KeyboardStep = 50,
                 }),
-                new SettingsItemV2(new FormSliderBar<float>
+                new SettingsItemV2(new FormSliderBar<double>
                 {
                     Caption = SlopSettingsStrings.FposuCmPer360,
                     HintText = SlopSettingsStrings.FposuCmPer360Description,
-                    Current = config.GetBindable<float>(OsuSetting.SlopFposuCmPer360),
+                    Current = config.GetBindable<double>(OsuSetting.SlopFposuCmPer360),
                     KeyboardStep = 0.1f,
+                    // McOsu allows six decimal places.
+                    MaxDecimalDigits = 6,
                 }),
                 new SettingsItemV2(new FormSliderBar<float>
                 {
