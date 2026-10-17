@@ -346,6 +346,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
                         AutoSizeAxes = Axes.Both,
                         Direction = FillDirection.Vertical,
                         Spacing = new Vector2(8),
+                        Padding = new MarginPadding { Bottom = 10 },
                         Children = new Drawable[]
                         {
                             new OsuColourPicker
@@ -354,8 +355,10 @@ namespace osu.Game.Screens.Edit.Hitsounding
                             },
                             new RoundedButton
                             {
-                                RelativeSizeAxes = Axes.X,
-                                Height = 30,
+                                Anchor = Anchor.TopCentre,
+                                Origin = Anchor.TopCentre,
+                                Width = 130,
+                                Height = 26,
                                 Text = SlopHitsoundEditorStrings.RandomColour,
                                 Action = () => colour.Value = randomColour(),
                             },
