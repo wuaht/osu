@@ -5,7 +5,7 @@
 # independently of an official osu!(lazer) installation.
 #
 # osu!fps (the osu-fps submodule) is released alongside it: its commit is tagged with the same version on wuaht/osu-fps,
-# whose CI then publishes the ruleset DLL for official osu!lazer. This is skipped if that commit was already released.
+# whose CI then publishes the ruleset DLL for official osu!lazer. This is skipped if the ruleset hasn't changed since its last release.
 #
 # Platforms (-Platforms, default: win):
 #   win    Velopack installer + updates (channel "win").
@@ -393,11 +393,14 @@ Write-Host "Published slop! $Version to $repoUrl/releases/tag/$Version" -Foregro
 Invoke-Checked 'Fetch osu-fps tags' { git -C $fpsDir fetch origin --tags --quiet }
 
 $fpsCommit = git -C $fpsDir rev-parse HEAD
-$fpsExistingTag = git -C $fpsDir tag --points-at $fpsCommit | Select-Object -First 1
+# Only changes to what goes into the DLL count, not e.g. tests, CI or the readme.
+$fpsLastRelease = git -C $fpsDir tag --merged $fpsCommit --sort=-v:refname | Select-Object -First 1
+$fpsChanges = $null
+if ($fpsLastRelease) { $fpsChanges = git -C $fpsDir diff --name-only $fpsLastRelease $fpsCommit -- osu.Game.Rulesets.Fposu Directory.Build.props }
 
-if ($fpsExistingTag)
+if ($fpsLastRelease -and -not $fpsChanges)
 {
-    Write-Host "osu!fps hasn't changed since its release $fpsExistingTag, skipping its release." -ForegroundColor Yellow
+    Write-Host "osu!fps hasn't changed since its release $fpsLastRelease, skipping its release." -ForegroundColor Yellow
 }
 elseif (git -C $fpsDir tag --list $Version)
 {
