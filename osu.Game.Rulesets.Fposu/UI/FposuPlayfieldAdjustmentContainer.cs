@@ -3,18 +3,14 @@
 
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
-using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
-using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
 using osu.Game.Beatmaps;
 using osu.Game.Configuration;
 using osu.Game.Graphics;
 using osu.Game.Rulesets.Osu.UI;
 using osu.Game.Rulesets.UI;
-using osuTK;
-using osuTK.Graphics;
 
 namespace osu.Game.Rulesets.Fposu.UI
 {
@@ -59,8 +55,6 @@ namespace osu.Game.Rulesets.Fposu.UI
                     }
                 },
                 DepthLayer = new FposuDepthLayer(Screen),
-                // above everything, including objects displayed in 3D.
-                new Crosshair(),
             };
         }
 
@@ -88,35 +82,6 @@ namespace osu.Game.Rulesets.Fposu.UI
 
                 transparent = config.GetBindable<bool>(OsuSetting.SlopFposuTransparentBackground);
                 transparent.BindValueChanged(t => Alpha = t.NewValue ? 0 : 1, true);
-            }
-        }
-
-        /// <summary>
-        /// A small dot at the centre of the view, which is where the cursor is.
-        /// </summary>
-        private partial class Crosshair : CompositeDrawable
-        {
-            public Crosshair()
-            {
-                Anchor = Anchor.Centre;
-                Origin = Anchor.Centre;
-                Size = new Vector2(4);
-
-                InternalChildren = new Drawable[]
-                {
-                    new Box
-                    {
-                        RelativeSizeAxes = Axes.Both,
-                        Colour = Color4.Black.Opacity(0.5f),
-                    },
-                    new Box
-                    {
-                        Anchor = Anchor.Centre,
-                        Origin = Anchor.Centre,
-                        Size = new Vector2(2),
-                        Colour = Color4.White,
-                    },
-                };
             }
         }
     }
