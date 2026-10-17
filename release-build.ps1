@@ -4,6 +4,9 @@
 # The first release's "slop-win-Setup.exe" is the installer. It installs to %LocalAppData%\slop,
 # independently of an official osu!(lazer) installation.
 #
+# osu!fps (the osu-fps submodule) is released alongside it: its commit is tagged with the same version on wuaht/osu-fps,
+# whose CI then publishes the ruleset DLL for official osu!lazer. This is skipped if that commit was already released.
+#
 # Platforms (-Platforms, default: win):
 #   win    Velopack installer + updates (channel "win").
 #   linux  Velopack AppImage (x64) + updates (channel "linux"). Velopack can cross-pack Linux packages on Windows.
@@ -14,13 +17,14 @@
 #
 # Usage:
 #   ./release-build.ps1                    # build and publish the next version (e.g. 2026.1008.0)
-#   ./release-build.ps1 -SkipUpload        # only build the installer locally (in .slop-release/)
+#   ./release-build.ps1 -SkipUpload        # only build the installer locally (in .slop-release/), without releasing osu!fps
 #   ./release-build.ps1 -Platforms win,linux,osx
 #   ./release-build.ps1 -Version 2026.1008.1
 #   ./release-build.ps1 -Force             # skip the checks for uncommitted / unpushed changes
 #   ./release-build.ps1 -OfficialSchemaVersion 52   # don't look up the realm schema version of the latest official release
 #
-# Requirements: .NET SDK, GitHub CLI (gh, logged in), and the osu-framework / osu-resources checkouts next to this repository.
+# Requirements: .NET SDK, GitHub CLI (gh, logged in), the osu-framework / osu-resources checkouts next to this repository,
+# the osu-fps submodule, and push access to wuaht/osu-fps.
 
 param(
     [string]$Version,
@@ -34,11 +38,14 @@ $ErrorActionPreference = 'Stop'
 
 $repoUrl = 'https://github.com/wuaht/osu'
 $repoName = 'wuaht/osu'
+$fpsRepoName = 'wuaht/osu-fps'
+$fpsBranch = 'master'
 $packId = 'slop'
 $packTitle = 'slop!'
 $branch = 'slop'
 
 $root = $PSScriptRoot
+$fpsDir = Join-Path $root 'osu-fps'
 $outputDir = Join-Path $root '.slop-release'
 $publishDir = Join-Path $outputDir 'publish'
 $releasesDir = Join-Path $outputDir 'releases'
@@ -56,7 +63,7 @@ function Get-RelevantChanges([string]$path)
     git -C $path status --porcelain | Where-Object { $_ -notmatch '\.idea/' }
 }
 
-function Assert-Pushed([string]$path, [string]$name)
+function Assert-Pushed([string]$path, [string]$name, [string]$remoteBranch = $branch)
 {
     if (Get-RelevantChanges $path)
     {
@@ -64,10 +71,10 @@ function Assert-Pushed([string]$path, [string]$name)
     }
 
     git -C $path fetch origin --quiet
-    $unpushed = git -C $path log --oneline "origin/$branch..HEAD"
+    $unpushed = git -C $path log --oneline "origin/$remoteBranch..HEAD"
     if ($unpushed)
     {
-        throw "$name has commits which are not pushed to origin/$branch. Push them first, or use -Force."
+        throw "$name has commits which are not pushed to origin/$remoteBranch. Push them first, or use -Force."
     }
 }
 
@@ -90,6 +97,8 @@ foreach ($dependency in @('osu-framework', 'osu-resources'))
     if (-not (Test-Path (Join-Path $root "../$dependency"))) { throw "../$dependency is missing (see README)." }
 }
 
+if (-not (Test-Path (Join-Path $fpsDir 'osu.Game.Rulesets.Fposu'))) { throw "The osu-fps submodule is not checked out. Run 'git submodule update --init' first." }
+
 if (-not $SkipUpload)
 {
     gh auth status *> $null
@@ -101,6 +110,8 @@ if (-not $SkipUpload)
         Assert-Pushed $root 'osu'
         Assert-Pushed (Join-Path $root '../osu-framework') 'osu-framework'
         Assert-Pushed (Join-Path $root '../osu-resources') 'osu-resources'
+        # osu!fps is released by tagging the submodule's commit, so it must be on GitHub as well.
+        Assert-Pushed $fpsDir 'osu-fps' $fpsBranch
     }
 }
 
@@ -373,3 +384,28 @@ else
 Invoke-Checked 'Set release notes' { gh release edit $Version --repo $repoName --notes-file $notesFile }
 
 Write-Host "Published slop! $Version to $repoUrl/releases/tag/$Version" -ForegroundColor Green
+
+# --- osu!fps ---
+
+# osu!fps is also released as a standalone ruleset for official osu!lazer. Pushing a tag to its repository makes its CI
+# (osu-fps/.github/workflows/build.yml) build the DLL against the official packages and publish it as a GitHub release.
+# It can't be built here, because inside this repository it's built against the client's source instead.
+Invoke-Checked 'Fetch osu-fps tags' { git -C $fpsDir fetch origin --tags --quiet }
+
+$fpsCommit = git -C $fpsDir rev-parse HEAD
+$fpsExistingTag = git -C $fpsDir tag --points-at $fpsCommit | Select-Object -First 1
+
+if ($fpsExistingTag)
+{
+    Write-Host "osu!fps hasn't changed since its release $fpsExistingTag, skipping its release." -ForegroundColor Yellow
+}
+elseif (git -C $fpsDir tag --list $Version)
+{
+    Write-Host "osu-fps already has a tag $Version on another commit, skipping its release." -ForegroundColor Yellow
+}
+else
+{
+    Invoke-Checked "Tag osu-fps $Version" { git -C $fpsDir tag $Version $fpsCommit }
+    Invoke-Checked "Push osu-fps tag $Version" { git -C $fpsDir push origin "refs/tags/$Version" }
+    Write-Host "Tagged osu!fps $Version, its release will be published to https://github.com/$fpsRepoName/releases/tag/$Version by GitHub Actions." -ForegroundColor Green
+}
