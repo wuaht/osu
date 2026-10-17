@@ -101,7 +101,7 @@ namespace osu.Game.Input.Bindings
 
             new KeyBinding(InputKey.None, GlobalAction.ToggleFPSDisplay),
             new KeyBinding(new[] { InputKey.Control, InputKey.T }, GlobalAction.ToggleToolbar),
-            new KeyBinding(new[] { InputKey.Control, InputKey.Shift, InputKey.S }, GlobalAction.ToggleSkinEditor),
+            new KeyBinding(new[] { InputKey.Control, InputKey.Shift, InputKey.K }, GlobalAction.ToggleSkinEditor),
 
             new KeyBinding(new[] { InputKey.Control, InputKey.Alt, InputKey.R }, GlobalAction.ResetInputSettings),
 
@@ -162,7 +162,7 @@ namespace osu.Game.Input.Bindings
             new KeyBinding(new[] { InputKey.Control, InputKey.MouseWheelUp }, GlobalAction.EditorCycleNextBeatSnapDivisor),
             new KeyBinding(InputKey.None, GlobalAction.EditorToggleMoveControl),
             new KeyBinding(new[] { InputKey.Control, InputKey.R }, GlobalAction.EditorToggleRotateControl),
-            new KeyBinding(new[] { InputKey.Control, InputKey.E }, GlobalAction.EditorToggleScaleControl),
+            new KeyBinding(new[] { InputKey.Control, InputKey.Shift, InputKey.S }, GlobalAction.EditorToggleScaleControl),
 
             new KeyBinding(new[] { InputKey.Left }, GlobalAction.EditorSeekBackwards),
             new KeyBinding(new[] { InputKey.Right }, GlobalAction.EditorSeekForwards),

@@ -454,7 +454,7 @@ namespace osu.Game.Tests.Visual.Navigation
             {
                 InputManager.PressKey(Key.ControlLeft);
                 InputManager.PressKey(Key.ShiftLeft);
-                InputManager.Key(Key.S);
+                InputManager.Key(Key.K);
                 InputManager.ReleaseKey(Key.ControlLeft);
                 InputManager.ReleaseKey(Key.ShiftLeft);
             });
