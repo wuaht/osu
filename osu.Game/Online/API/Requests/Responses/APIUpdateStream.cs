@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using Newtonsoft.Json;
 using osu.Framework.Graphics.Colour;
+using osu.Game.Overlays.Changelog;
 using osuTK.Graphics;
 
 namespace osu.Game.Online.API.Requests.Responses
@@ -41,7 +42,9 @@ namespace osu.Game.Online.API.Requests.Responses
             ["cuttingedge"] = new Color4(238, 170, 0, 255),
             ["lazer"] = new Color4(237, 18, 33, 255),
             ["tachyon"] = new Color4(206, 0, 255, 255),
-            ["web"] = new Color4(136, 102, 238, 255)
+            ["web"] = new Color4(136, 102, 238, 255),
+            // the blue of this client's logo.
+            [ClientChangelog.STREAM_NAME] = new Color4(4, 102, 200, 255),
         };
 
         public ColourInfo Colour => KNOWN_STREAMS.TryGetValue(Name, out var colour) ? colour : new Color4(0, 0, 0, 255);

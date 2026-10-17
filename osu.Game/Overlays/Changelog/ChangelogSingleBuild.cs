@@ -34,6 +34,13 @@ namespace osu.Game.Overlays.Changelog
         [BackgroundDependencyLoader]
         private void load(CancellationToken? cancellation, IAPIProvider api, OverlayColourProvider colourProvider)
         {
+            // builds of this client only exist locally, so there are no online details or comments for them.
+            if (ClientChangelog.IsLocal(build))
+            {
+                Child = new ChangelogBuildWithNavigation(build) { SelectBuild = SelectBuild };
+                return;
+            }
+
             bool complete = false;
 
             APIChangelogBuild? onlineBuildDetails = null;

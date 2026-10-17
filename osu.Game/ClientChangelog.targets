@@ -1,0 +1,67 @@
+<Project>
+  <!--
+    Embeds the commits of this client (those not on master, which mirrors upstream) as a resource,
+    so that the changelog overlay can show them as their own update stream (see ClientChangelog).
+  -->
+  <UsingTask TaskName="WriteClientChangelog" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <RepositoryDirectory ParameterType="System.String" Required="true" />
+      <OutputFile ParameterType="System.String" Required="true" />
+    </ParameterGroup>
+    <Task>
+      <Using Namespace="System.Diagnostics" />
+      <Using Namespace="System.IO" />
+      <Using Namespace="System.Text" />
+      <Code Type="Fragment" Language="cs">
+        <![CDATA[
+        string log = string.Empty;
+
+        try
+        {
+            // only the commits made on the branch itself, not the upstream ones merged into it.
+            var startInfo = new ProcessStartInfo("git", "log --first-parent --no-merges --name-only --format=%x1e%H%x1f%aI%x1f%an%x1f%s master..HEAD")
+            {
+                WorkingDirectory = RepositoryDirectory,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                StandardOutputEncoding = Encoding.UTF8,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+            };
+
+            using (var process = Process.Start(startInfo))
+            {
+                string output = process.StandardOutput.ReadToEnd();
+                process.StandardError.ReadToEnd();
+                process.WaitForExit();
+
+                if (process.ExitCode == 0)
+                    log = output;
+            }
+        }
+        catch
+        {
+            // without git (or a master branch) the changelog of this client is just empty.
+        }
+
+        Directory.CreateDirectory(Path.GetDirectoryName(OutputFile));
+
+        // only written when changed, so that unchanged builds stay incremental.
+        if (!File.Exists(OutputFile) || File.ReadAllText(OutputFile, Encoding.UTF8) != log)
+            File.WriteAllText(OutputFile, log, new UTF8Encoding(false));
+        ]]>
+      </Code>
+    </Task>
+  </UsingTask>
+
+  <Target Name="EmbedClientChangelog" BeforeTargets="PrepareForBuild;AssignTargetPaths">
+    <PropertyGroup>
+      <ClientChangelogFile>$(MSBuildProjectDirectory)/$(IntermediateOutputPath)ClientChangelog.txt</ClientChangelogFile>
+    </PropertyGroup>
+    <WriteClientChangelog RepositoryDirectory="$(MSBuildProjectDirectory)" OutputFile="$(ClientChangelogFile)" />
+    <ItemGroup>
+      <EmbeddedResource Include="$(ClientChangelogFile)" LogicalName="osu.Game.ClientChangelog.txt" />
+      <FileWrites Include="$(ClientChangelogFile)" />
+    </ItemGroup>
+  </Target>
+</Project>

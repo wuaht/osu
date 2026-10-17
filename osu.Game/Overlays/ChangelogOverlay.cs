@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
@@ -162,24 +163,49 @@ namespace osu.Game.Overlays
                     res.Builds.ForEach(b => b.UpdateStream = res.Streams.Find(s => s.Id == b.UpdateStream.Id));
                     res.Streams.ForEach(s => s.LatestBuild.UpdateStream = res.Streams.Find(s2 => s2.Id == s.LatestBuild.UpdateStream.Id));
 
-                    builds = res.Builds;
-                    Streams = res.Streams;
-
-                    Header.Populate(res.Streams);
+                    populate(res.Streams, res.Builds);
 
                     tcs.SetResult(true);
                 });
 
-                req.Failure += e =>
+                req.Failure += e => Schedule(() =>
                 {
                     initialFetchTask = null;
-                    tcs.SetException(e);
-                };
+
+                    // the changelog of this client is still available offline.
+                    if (ClientChangelog.Stream != null)
+                    {
+                        populate(new List<APIUpdateStream>(), new List<APIChangelogBuild>());
+                        tcs.SetResult(true);
+                    }
+                    else
+                        tcs.SetException(e);
+                });
 
                 await API.PerformAsync(req).ConfigureAwait(false);
 
                 return tcs.Task;
             }).Unwrap();
+        }
+
+        private void populate(List<APIUpdateStream> onlineStreams, List<APIChangelogBuild> onlineBuilds)
+        {
+            Streams = onlineStreams;
+            builds = onlineBuilds;
+
+            if (ClientChangelog.Stream != null)
+            {
+                Streams.Add(ClientChangelog.Stream);
+
+                // only as far back as the online listing goes, so that it isn't flooded by older builds of this client.
+                DateTimeOffset oldest = builds.Count > 0 ? builds.Min(b => b.CreatedAt.Date) : DateTimeOffset.MinValue;
+
+                builds = builds.Concat(ClientChangelog.Builds.Where(b => b.CreatedAt >= oldest))
+                               .OrderByDescending(b => b.CreatedAt)
+                               .ToList();
+            }
+
+            Header.Populate(Streams);
         }
 
         private CancellationTokenSource loadContentCancellation;

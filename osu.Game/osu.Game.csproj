@@ -56,4 +56,5 @@
       <_Parameter2>$(OfficialRealmSchemaVersion)</_Parameter2>
     </AssemblyAttribute>
   </ItemGroup>
+  <Import Project="ClientChangelog.targets" />
 </Project>
