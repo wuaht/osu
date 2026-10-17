@@ -216,6 +216,18 @@ namespace osu.Game.Screens.Edit.Hitsounding
         }
 
         /// <summary>
+        /// Changes the colour of a pattern from the default one of <see cref="HitsoundPatterns.COLOURS"/>.
+        /// </summary>
+        public void SetColour(HitsoundPattern pattern, Colour4 colour)
+        {
+            if (pattern.Colour == colour)
+                return;
+
+            pattern.CustomColour = colour;
+            onChanged();
+        }
+
+        /// <summary>
         /// Remembers the hitsounds of a pattern, which are used when it's placed while it isn't used anywhere.
         /// </summary>
         public void SetStates(HitsoundPattern pattern, IReadOnlyList<HitsoundColumnState> states)
@@ -517,6 +529,12 @@ namespace osu.Game.Screens.Edit.Hitsounding
             [JsonProperty(@"colour")]
             public int ColourIndex { get; set; }
 
+            /// <summary>
+            /// The colour chosen by the user as hex code, or <c>null</c> to use <see cref="ColourIndex"/>.
+            /// </summary>
+            [JsonProperty(@"custom_colour", NullValueHandling = NullValueHandling.Ignore)]
+            public string? CustomColour { get; set; }
+
             [JsonProperty(@"length")]
             public double Length { get; set; }
 
@@ -531,6 +549,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
                 ID = pattern.ID,
                 Name = pattern.Name,
                 ColourIndex = pattern.ColourIndex,
+                CustomColour = pattern.CustomColour?.ToHex(),
                 Length = pattern.Length,
                 States = pattern.States.Select(StateEntry.FromState).ToList(),
                 SubPatterns = pattern.SubPatterns.ToList(),
@@ -540,6 +559,10 @@ namespace osu.Game.Screens.Edit.Hitsounding
             {
                 var pattern = new HitsoundPattern(ID, Name, ColourIndex, Length, States.Select(s => s.ToState()).ToList());
                 pattern.SubPatterns.AddRange(SubPatterns);
+
+                if (CustomColour != null && Colour4.TryParseHex(CustomColour, out var colour))
+                    pattern.CustomColour = colour;
+
                 return pattern;
             }
         }
@@ -645,6 +668,11 @@ namespace osu.Game.Screens.Edit.Hitsounding
         public readonly int ColourIndex;
 
         /// <summary>
+        /// The colour chosen by the user, which replaces the one of <see cref="ColourIndex"/>.
+        /// </summary>
+        public Colour4? CustomColour { get; set; }
+
+        /// <summary>
         /// The length in milliseconds.
         /// </summary>
         public readonly double Length;
@@ -660,7 +688,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
         /// </summary>
         public readonly List<HitsoundSubPattern> SubPatterns = new List<HitsoundSubPattern>();
 
-        public Colour4 Colour => HitsoundPatterns.COLOURS[ColourIndex % HitsoundPatterns.COLOURS.Length];
+        public Colour4 Colour => CustomColour ?? HitsoundPatterns.COLOURS[ColourIndex % HitsoundPatterns.COLOURS.Length];
 
         public HitsoundPattern(Guid id, string name, int colourIndex, double length, IReadOnlyList<HitsoundColumnState> states)
         {

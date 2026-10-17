@@ -714,6 +714,16 @@ Alt + scroll to zoom. Ctrl + click a lane name to preview the skin's sample inst
         public static LocalisableString DeletePatternTooltip => new TranslatableString(getKey(@"delete_pattern_tooltip"), @"Deletes the pattern. Its hitsounds are kept.");
 
         /// <summary>
+        /// "Click to change the colour of the pattern."
+        /// </summary>
+        public static LocalisableString PatternColourTooltip => new TranslatableString(getKey(@"pattern_colour_tooltip"), @"Click to change the colour of the pattern.");
+
+        /// <summary>
+        /// "Random colour"
+        /// </summary>
+        public static LocalisableString RandomColour => new TranslatableString(getKey(@"random_colour"), @"Random colour");
+
+        /// <summary>
         /// "Remove from here"
         /// </summary>
         public static LocalisableString RemovePatternInstance => new TranslatableString(getKey(@"remove_pattern_instance"), @"Remove from here");

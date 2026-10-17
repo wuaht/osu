@@ -4,15 +4,22 @@
 using System.Globalization;
 using System.Linq;
 using osu.Framework.Allocation;
+using osu.Framework.Bindables;
+using osu.Framework.Extensions;
 using osu.Framework.Extensions.ObjectExtensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
+using osu.Framework.Graphics.Cursor;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
+using osu.Framework.Graphics.UserInterface;
+using osu.Framework.Input.Events;
+using osu.Framework.Utils;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.Sprites;
 using osu.Game.Graphics.UserInterface;
+using osu.Game.Graphics.UserInterfaceV2;
 using osu.Game.Localisation;
 using osuTK;
 
@@ -211,7 +218,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
                     AutoSizeAxes = Axes.Y,
                     ColumnDimensions = new[]
                     {
-                        new Dimension(GridSizeMode.Absolute, 6),
+                        new Dimension(GridSizeMode.Absolute, 10),
                         new Dimension(GridSizeMode.Absolute, 6),
                         new Dimension(),
                         new Dimension(GridSizeMode.Absolute, 4),
@@ -223,17 +230,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
                     {
                         new Drawable[]
                         {
-                            new Container
-                            {
-                                RelativeSizeAxes = Axes.Both,
-                                Masking = true,
-                                CornerRadius = 3,
-                                Child = new Box
-                                {
-                                    RelativeSizeAxes = Axes.Both,
-                                    Colour = pattern.Colour,
-                                },
-                            },
+                            new PatternColourStrip(pattern),
                             Empty(),
                             new FillFlowContainer
                             {
@@ -283,6 +280,103 @@ namespace osu.Game.Screens.Edit.Hitsounding
                     textBox.Text = pattern.Name;
                 };
             }
+        }
+
+        /// <summary>
+        /// The colour of a pattern, which can be clicked to pick another colour or a random one (like in FL Studio).
+        /// </summary>
+        private partial class PatternColourStrip : OsuClickableContainer, IHasPopover
+        {
+            private readonly HitsoundPattern pattern;
+
+            /// <summary>
+            /// The colour being picked, which is only applied to the pattern once the popover is closed,
+            /// as changing the pattern recreates the list of patterns (and so would close the popover) and adds an undo step.
+            /// </summary>
+            private readonly Bindable<Colour4> colour;
+
+            [Resolved]
+            private HitsoundPatterns patterns { get; set; } = null!;
+
+            private Box fill = null!;
+
+            public PatternColourStrip(HitsoundPattern pattern)
+            {
+                this.pattern = pattern;
+                colour = new Bindable<Colour4>(pattern.Colour);
+
+                RelativeSizeAxes = Axes.Both;
+                Masking = true;
+                CornerRadius = 3;
+                Action = this.ShowPopover;
+                TooltipText = SlopHitsoundEditorStrings.PatternColourTooltip;
+            }
+
+            [BackgroundDependencyLoader]
+            private void load()
+            {
+                Child = fill = new Box { RelativeSizeAxes = Axes.Both };
+            }
+
+            protected override void LoadComplete()
+            {
+                base.LoadComplete();
+
+                colour.BindValueChanged(c => fill.Colour = c.NewValue, true);
+            }
+
+            protected override bool OnHover(HoverEvent e)
+            {
+                fill.FadeColour(colour.Value.Lighten(0.3f), 100);
+                return base.OnHover(e);
+            }
+
+            protected override void OnHoverLost(HoverLostEvent e)
+            {
+                fill.FadeColour(colour.Value, 100);
+                base.OnHoverLost(e);
+            }
+
+            public Popover GetPopover()
+            {
+                var popover = new OsuPopover(false)
+                {
+                    Child = new FillFlowContainer
+                    {
+                        AutoSizeAxes = Axes.Both,
+                        Direction = FillDirection.Vertical,
+                        Spacing = new Vector2(8),
+                        Children = new Drawable[]
+                        {
+                            new OsuColourPicker
+                            {
+                                Current = { BindTarget = colour },
+                            },
+                            new RoundedButton
+                            {
+                                RelativeSizeAxes = Axes.X,
+                                Height = 30,
+                                Text = SlopHitsoundEditorStrings.RandomColour,
+                                Action = () => colour.Value = randomColour(),
+                            },
+                        },
+                    },
+                };
+
+                popover.State.BindValueChanged(s =>
+                {
+                    if (s.NewValue == Visibility.Hidden)
+                        patterns.SetColour(pattern, colour.Value);
+                });
+
+                return popover;
+            }
+
+            /// <summary>
+            /// A random colour which is bright and saturated enough to be readable like the default colours.
+            /// </summary>
+            private static Colour4 randomColour()
+                => Colour4.FromHSV(RNG.NextSingle(), 0.45f + RNG.NextSingle() * 0.3f, 0.85f + RNG.NextSingle() * 0.15f);
         }
     }
 }
