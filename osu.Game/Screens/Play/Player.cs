@@ -779,7 +779,21 @@ namespace osu.Game.Screens.Play
                 return;
 
             samplePlaybackDisabled.Value = true;
+
+            if (frameStablePlaybackResetDelegate?.Cancelled == false && !frameStablePlaybackResetDelegate.Completed)
+                frameStablePlaybackResetDelegate.RunTask();
+
+            // a frame-stable seek past the gameplay start time would only advance one frame at a time
+            // (and is ignored entirely in release builds as a likely invalid audio time), freezing gameplay.
+            // breaks contain no judgements, so jumping directly to the target is safe.
+            bool wasFrameStable = DrawableRuleset.FrameStablePlayback;
+            DrawableRuleset.FrameStablePlayback = false;
+
             Seek(skipTarget);
+
+            // Delay resetting frame-stable playback for one frame to give the FrameStabilityContainer a chance to seek.
+            frameStablePlaybackResetDelegate = ScheduleAfterChildren(() => DrawableRuleset.FrameStablePlayback = wasFrameStable);
+
             updateSampleDisabledState();
         }
 
