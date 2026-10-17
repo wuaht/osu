@@ -15,6 +15,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          submodules: recursive
 
       - name: Install .NET 10.0.x
         uses: actions/setup-dotnet@v5
@@ -78,6 +80,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          submodules: recursive
 
       - name: Install .NET 10.0.x
         uses: actions/setup-dotnet@v5
@@ -110,6 +114,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          submodules: recursive
 
       - name: Download results
         uses: actions/download-artifact@v8
@@ -134,6 +140,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          submodules: recursive
 
       - name: Setup JDK 11
         uses: actions/setup-java@v5
@@ -159,6 +167,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          submodules: recursive
 
       - name: Install .NET 10.0.x
         uses: actions/setup-dotnet@v5

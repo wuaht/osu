@@ -1,0 +1,3 @@
+[submodule "osu-fps"]
+	path = osu-fps
+	url = https://github.com/wuaht/osu-fps

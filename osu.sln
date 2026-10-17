@@ -110,9 +110,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "osu.Framework.Android", "..
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "osu.Framework.iOS", "..\osu-framework\osu.Framework.iOS\osu.Framework.iOS.csproj", "{508CA6ED-2E0C-4F0C-9763-713FA208A9BE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "osu.Game.Rulesets.Fposu", "osu.Game.Rulesets.Fposu\osu.Game.Rulesets.Fposu.csproj", "{D7AC98DB-FB28-4840-BA99-3F0DA002950D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "osu.Game.Rulesets.Fposu", "osu-fps\osu.Game.Rulesets.Fposu\osu.Game.Rulesets.Fposu.csproj", "{D7AC98DB-FB28-4840-BA99-3F0DA002950D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "osu.Game.Rulesets.Fposu.Tests", "osu.Game.Rulesets.Fposu.Tests\osu.Game.Rulesets.Fposu.Tests.csproj", "{7266B977-8A56-4688-A549-359531B4AA21}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "osu.Game.Rulesets.Fposu.Tests", "osu-fps\osu.Game.Rulesets.Fposu.Tests\osu.Game.Rulesets.Fposu.Tests.csproj", "{7266B977-8A56-4688-A549-359531B4AA21}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

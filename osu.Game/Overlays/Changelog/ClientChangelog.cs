@@ -156,7 +156,7 @@ namespace osu.Game.Overlays.Changelog
             if (file.Contains(@".Tests/", StringComparison.Ordinal) || file.StartsWith(@"osu.Game/Localisation/", StringComparison.Ordinal))
                 return null;
 
-            if (file.StartsWith(@"osu.Game.Rulesets.Fposu", StringComparison.Ordinal))
+            if (file.StartsWith(@"osu-fps", StringComparison.Ordinal))
                 return @"osu!fps";
             if (file.StartsWith(@"osu.Game.Rulesets.Osu", StringComparison.Ordinal))
                 return @"osu!";

@@ -45,6 +45,8 @@ But there is *osu!fps* (first person osu!) and a *new* editor look with a hitsou
 Building this client requires local osu-framework and osu-resources checkouts:** clone [wuaht/osu-framework](https://github.com/wuaht/osu-framework) and [wuaht/osu-resources](https://github.com/wuaht/osu-resources) (both on branch `slop`) next to this repository (`../osu-framework` and `../osu-resources`), as it references them directly instead of the NuGet packages (needed for features like frosted sliders and custom assets).
 Btw for a proper environment check out the [original readme](https://github.com/ppy/osu/blob/master/README.md#developing-osu) on how to set it up.
 
+osu!fps lives in its own repository ([wuaht/osu-fps](https://github.com/wuaht/osu-fps), where it can also be downloaded as a ruleset for osu!lazer) and is included as the `osu-fps` submodule, so clone with `--recurse-submodules` (or run `git submodule update --init` afterwards).
+
 ```shell
 git clone -b slop https://github.com/wuaht/osu-framework ../osu-framework
 git clone -b slop https://github.com/wuaht/osu-resources ../osu-resources
