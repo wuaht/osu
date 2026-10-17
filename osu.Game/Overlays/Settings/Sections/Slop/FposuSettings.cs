@@ -4,11 +4,17 @@
 using System.Collections.Generic;
 using System.Linq;
 using osu.Framework.Allocation;
+using osu.Framework.Bindables;
 using osu.Framework.Graphics;
+using osu.Framework.Graphics.Containers;
+using osu.Framework.Graphics.Shapes;
 using osu.Framework.Localisation;
 using osu.Game.Configuration;
+using osu.Game.Graphics;
+using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.UserInterfaceV2;
 using osu.Game.Localisation;
+using osu.Game.Online.Chat;
 
 namespace osu.Game.Overlays.Settings.Sections.Slop
 {
@@ -26,6 +32,7 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
         {
             Children = new Drawable[]
             {
+                new SensitivityConverterNote(),
                 new SettingsItemV2(new FormSliderBar<int>
                 {
                     Caption = SlopSettingsStrings.FposuMouseDpi,
@@ -95,6 +102,70 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                     Current = config.GetBindable<bool>(OsuSetting.SlopFposuAbsoluteMode),
                 }),
             };
+        }
+
+        /// <summary>
+        /// An informational note with a clickable link to a sensitivity converter, like McOsu has.
+        /// </summary>
+        private partial class SensitivityConverterNote : CompositeDrawable
+        {
+            private const string url = @"https://www.mouse-sensitivity.com/";
+
+            private IBindable<string> noteText = new Bindable<string>();
+            private LinkFlowContainer linkContainer = null!;
+
+            [Resolved]
+            private LocalisationManager localisation { get; set; } = null!;
+
+            [BackgroundDependencyLoader]
+            private void load(OverlayColourProvider colourProvider)
+            {
+                RelativeSizeAxes = Axes.X;
+                AutoSizeAxes = Axes.Y;
+                Padding = SettingsPanel.CONTENT_PADDING;
+
+                InternalChild = new Container
+                {
+                    RelativeSizeAxes = Axes.X,
+                    AutoSizeAxes = Axes.Y,
+                    CornerRadius = 5,
+                    CornerExponent = 2.5f,
+                    Masking = true,
+                    Children = new Drawable[]
+                    {
+                        new Box
+                        {
+                            RelativeSizeAxes = Axes.Both,
+                            Colour = colourProvider.Dark2,
+                        },
+                        linkContainer = new LinkFlowContainer(s =>
+                        {
+                            s.Font = OsuFont.Style.Caption1.With(weight: FontWeight.SemiBold);
+                            s.Colour = colourProvider.Content2;
+                        })
+                        {
+                            Padding = new MarginPadding(8),
+                            RelativeSizeAxes = Axes.X,
+                            AutoSizeAxes = Axes.Y,
+                        },
+                    }
+                };
+
+                noteText = localisation.GetLocalisedBindableString(SlopSettingsStrings.FposuSensitivityConverterNote(url));
+            }
+
+            protected override void LoadComplete()
+            {
+                base.LoadComplete();
+
+                noteText.BindValueChanged(_ =>
+                {
+                    linkContainer.Clear();
+
+                    var formatted = MessageFormatter.FormatText(noteText.Value);
+                    linkContainer.AddLinks(formatted.Text, formatted.Links);
+                }, true);
+            }
         }
     }
 }
