@@ -133,13 +133,16 @@ namespace osu.Game.Rulesets.Osu.Edit
             {
                 scaleAdjustingVelocity(scale, actualOrigin, adjustAxis, axisRotation);
             }
-            // in the default mode, allow resizing of slider paths only if the slider is
-            // the only hit object selected. with a group selection, it's likely the user
-            // is not looking to change the duration of the slider but expand the whole pattern.
             else if (mode == SliderScaleMode.Default && objectsInScale.Count == 1 && objectsInScale.First().Key is Slider slider)
             {
                 slidersModified = true;
                 scaleSlider(slider, scale, actualOrigin, objectsInScale[slider], axisRotation);
+            }
+            // like stable, the default mode also scales the paths of all sliders in a group selection.
+            // their lengths are snapped to the beat divisor, so their durations may change.
+            else if (mode == SliderScaleMode.Default && objectsInScale.Keys.Any(h => h is Slider))
+            {
+                scaleWithPaths(scale, actualOrigin, adjustAxis, axisRotation);
             }
             else
             {
@@ -256,6 +259,37 @@ namespace osu.Game.Rulesets.Osu.Edit
 
             restoreSliders();
             singleSlider.Position = objectsInScale[singleSlider].Position;
+        }
+
+        /// <summary>
+        /// Scales a group selection including the paths of all selected sliders,
+        /// snapping the sliders' lengths to the current beat divisor.
+        /// </summary>
+        private void scaleWithPaths(Vector2 scale, Vector2 origin, Axes adjustAxis, float axisRotation)
+        {
+            scale = ClampScaleToPlayfieldBounds(scale, origin, adjustAxis, axisRotation);
+
+            Vector2 pathScale = Vector2.ComponentMax(scale, new Vector2(Precision.FLOAT_EPSILON));
+
+            slidersModified = true;
+
+            foreach (var (ho, originalState) in objectsInScale!)
+            {
+                if (ho is Slider slider)
+                {
+                    Debug.Assert(originalState.PathControlPointPositions != null && originalState.PathControlPointTypes != null);
+
+                    for (int i = 0; i < slider.Path.ControlPoints.Count; i++)
+                    {
+                        slider.Path.ControlPoints[i].Position = GeometryUtils.GetScaledPosition(pathScale, Vector2.Zero, originalState.PathControlPointPositions[i], axisRotation);
+                        slider.Path.ControlPoints[i].Type = originalState.PathControlPointTypes[i];
+                    }
+
+                    slider.SnapTo(snapProvider);
+                }
+
+                ho.Position = GeometryUtils.GetScaledPosition(scale, origin, originalState.Position, axisRotation);
+            }
         }
 
         private void scalePathAdjustingVelocity(Slider slider, Vector2 scale, OriginalHitObjectState originalState, float axisRotation)

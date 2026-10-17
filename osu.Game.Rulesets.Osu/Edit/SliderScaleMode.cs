@@ -11,8 +11,7 @@ namespace osu.Game.Rulesets.Osu.Edit
     public enum SliderScaleMode
     {
         /// <summary>
-        /// The path of a lone selected slider is scaled and snapped to the beat divisor.
-        /// With multiple objects selected, only object positions are scaled.
+        /// Slider paths are scaled along with object positions, and their lengths are snapped to the beat divisor.
         /// </summary>
         [Description("Default")]
         Default,
