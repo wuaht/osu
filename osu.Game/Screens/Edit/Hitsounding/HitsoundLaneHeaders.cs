@@ -24,6 +24,7 @@ using osu.Game.Graphics.UserInterface;
 using osu.Game.Localisation;
 using osu.Game.Overlays;
 using osuTK;
+using osuTK.Input;
 
 namespace osu.Game.Screens.Edit.Hitsounding
 {
@@ -253,7 +254,10 @@ namespace osu.Game.Screens.Edit.Hitsounding
                             RelativeSizeAxes = Axes.Both,
                             TooltipText = getTooltip(),
                             Action = preview,
-                            DoubleClickAction = lane.IsSubLane ? beginRename : toggleExpandedIfPossible,
+                            // expanding is done with right click, so that left click can be spammed to preview the sample.
+                            // sub-lanes keep right click for their context menu, and are renamed with a double click.
+                            DoubleClickAction = lane.IsSubLane ? beginRename : null,
+                            RightClickAction = lane.IsSubLane ? null : toggleExpandedIfPossible,
                             Child = name,
                         },
                     },
@@ -333,6 +337,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
             /// <summary>
             /// The name of the lane, which previews the sample when clicked.
             /// Double click events are only received by the drawable which handled the click, so they are handled here as well.
+            /// Right clicks are handled here too, before they reach the context menu container.
             /// </summary>
             private partial class NameButton : OsuClickableContainer, IHasHitsoundTooltip
             {
@@ -349,6 +354,19 @@ namespace osu.Game.Screens.Edit.Hitsounding
 
                     DoubleClickAction();
                     return true;
+                }
+
+                public Action? RightClickAction { get; init; }
+
+                protected override bool OnMouseDown(MouseDownEvent e)
+                {
+                    if (e.Button == MouseButton.Right && RightClickAction != null)
+                    {
+                        RightClickAction();
+                        return true;
+                    }
+
+                    return base.OnMouseDown(e);
                 }
             }
 
