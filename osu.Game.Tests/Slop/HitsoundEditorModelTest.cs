@@ -198,6 +198,53 @@ namespace osu.Game.Tests.Slop
         }
 
         [Test]
+        public void TestUnmatchedSliderPartsGetActiveBank()
+        {
+            // placed sliders get the bank of the previous hit object on all nodes and the body.
+            var slider = createSlider(1000, repeats: 1);
+            var map = HitsoundMap.Create(new[] { slider }, 0);
+
+            var source = new[]
+            {
+                state(500, HitSampleInfo.BANK_NORMAL, HitSampleInfo.BANK_NORMAL, 100),
+                state(map.Columns[0].Time, HitSampleInfo.BANK_SOFT, HitSampleInfo.BANK_SOFT, 100),
+            };
+
+            HitsoundCopier.Copy(source, [], map, new HitsoundCopyOptions { OverwriteUnmatched = false });
+
+            Assert.That(slider.NodeSamples.Select(HitsoundSamples.GetNormalBank), Is.All.EqualTo(HitSampleInfo.BANK_SOFT));
+            Assert.That(HitsoundSamples.GetNormalBank(slider.Samples), Is.EqualTo(HitSampleInfo.BANK_SOFT));
+        }
+
+        [Test]
+        public void TestFullyUnmatchedSliderKeepsBankWithoutOverwriting()
+        {
+            var slider = createSlider(1000);
+            var map = HitsoundMap.Create(new[] { slider }, 0);
+
+            var source = new[] { state(500, HitSampleInfo.BANK_SOFT, HitSampleInfo.BANK_SOFT, 100) };
+
+            HitsoundCopier.Copy(source, [], map, new HitsoundCopyOptions { OverwriteUnmatched = false });
+
+            Assert.That(slider.NodeSamples.Select(HitsoundSamples.GetNormalBank), Is.All.EqualTo(HitSampleInfo.BANK_NORMAL));
+            Assert.That(HitsoundSamples.GetNormalBank(slider.Samples), Is.EqualTo(HitSampleInfo.BANK_NORMAL));
+        }
+
+        [Test]
+        public void TestUnmatchedSliderGetsActiveBankWhenOverwriting()
+        {
+            var slider = createSlider(1000);
+            var map = HitsoundMap.Create(new[] { slider }, 0);
+
+            var source = new[] { state(500, HitSampleInfo.BANK_DRUM, HitSampleInfo.BANK_DRUM, 100) };
+
+            HitsoundCopier.Copy(source, [], map, new HitsoundCopyOptions());
+
+            Assert.That(slider.NodeSamples.Select(HitsoundSamples.GetNormalBank), Is.All.EqualTo(HitSampleInfo.BANK_DRUM));
+            Assert.That(HitsoundSamples.GetNormalBank(slider.Samples), Is.EqualTo(HitSampleInfo.BANK_DRUM));
+        }
+
+        [Test]
         public void TestMapCreatesSliderTargets()
         {
             var slider = createSlider(1000, repeats: 1);
