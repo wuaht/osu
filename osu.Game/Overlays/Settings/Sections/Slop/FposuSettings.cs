@@ -19,7 +19,7 @@ using osu.Game.Online.Chat;
 namespace osu.Game.Overlays.Settings.Sections.Slop
 {
     /// <summary>
-    /// Settings of the FPoSu ruleset (a first person mode based on McOsu's FPoSu).
+    /// Settings of the osu!fps ruleset (a first person mode based on McOsu's FPoSu).
     /// </summary>
     public partial class FposuSettings : SettingsSubsection
     {

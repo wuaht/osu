@@ -323,9 +323,9 @@ namespace osu.Game.Localisation
             @"Outlines circles and sliders in red which go offscreen on a 4:3 screen, including any part of a slider's body. Offscreen objects aren't allowed in ranked beatmaps.");
 
         /// <summary>
-        /// "FPoSu"
+        /// "osu!fps"
         /// </summary>
-        public static LocalisableString FposuHeader => new TranslatableString(getKey(@"fposu_header"), @"FPoSu");
+        public static LocalisableString FposuHeader => new TranslatableString(getKey(@"fposu_header"), @"osu!fps");
 
         /// <summary>
         /// "Convert your sensitivity: [mouse-sensitivity.com]({0})"

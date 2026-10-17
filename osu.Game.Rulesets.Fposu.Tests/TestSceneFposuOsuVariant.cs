@@ -11,7 +11,7 @@ using osu.Game.Tests.Visual;
 namespace osu.Game.Rulesets.Fposu.Tests
 {
     /// <summary>
-    /// FPoSu plays osu! beatmaps as they are, with the configuration and settings of osu!.
+    /// osu!fps plays osu! beatmaps as they are, with the configuration and settings of osu!.
     /// </summary>
     [Category("slop")]
     public partial class TestSceneFposuOsuVariant : OsuTestScene
@@ -26,7 +26,7 @@ namespace osu.Game.Rulesets.Fposu.Tests
             AddAssert("osu! beatmap native", () => osuBeatmap().IsNativeTo(new FposuRuleset().RulesetInfo));
             AddAssert("other beatmaps not allowed without conversion",
                 () => new BeatmapInfo(new CatchRuleset().RulesetInfo).AllowGameplayWithRuleset(new FposuRuleset().RulesetInfo, false), () => Is.False);
-            AddAssert("FPoSu not native to osu!", () => new BeatmapInfo(new FposuRuleset().RulesetInfo).IsNativeTo(new OsuRuleset().RulesetInfo), () => Is.False);
+            AddAssert("osu!fps not native to osu!", () => new BeatmapInfo(new FposuRuleset().RulesetInfo).IsNativeTo(new OsuRuleset().RulesetInfo), () => Is.False);
         }
 
         [Test]

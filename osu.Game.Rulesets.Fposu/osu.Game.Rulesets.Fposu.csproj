@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <PropertyGroup Label="Nuget">
-    <Title>FPoSu (ruleset)</Title>
+    <Title>osu!fps (ruleset)</Title>
     <PackageId>ppy.osu.Game.Rulesets.Fposu</PackageId>
     <IsPackable>false</IsPackable>
   </PropertyGroup>

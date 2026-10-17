@@ -13,7 +13,7 @@ using osuTK;
 namespace osu.Game.Rulesets.Fposu.UI
 {
     /// <summary>
-    /// The icon of the FPoSu ruleset, which is white on transparent (like the icons of the other rulesets) so that it can be coloured.
+    /// The icon of the osu!fps ruleset, which is white on transparent (like the icons of the other rulesets) so that it can be coloured.
     /// </summary>
     public partial class FposuRulesetIcon : Sprite
     {

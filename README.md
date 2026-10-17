@@ -38,7 +38,7 @@ The client also has beatmap mirror support (only Mino tested), so you don't even
 ## Features
 full list of features not available yet since i still have stuff i want to implement.
 
-But there is *FPoSu!* (3rd Person osu!) and a *new* editor look with a hitsound editor and a BN manager. And also frosted sliders and hit circles.
+But there is *osu!fps* (first person osu!) and a *new* editor look with a hitsound editor and a BN manager. And also frosted sliders and hit circles.
 
 ## Building/Installing
 

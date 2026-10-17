@@ -46,7 +46,7 @@ namespace osu.Game.Rulesets.Fposu
         /// </summary>
         private readonly OsuRuleset osuRuleset = new OsuRuleset();
 
-        public override string Description => "FPoSu";
+        public override string Description => "osu!fps";
 
         public override string ShortName => SHORT_NAME;
 
@@ -70,7 +70,7 @@ namespace osu.Game.Rulesets.Fposu
 
         public override DifficultyCalculator CreateDifficultyCalculator(IWorkingBeatmap beatmap) => new OsuDifficultyCalculator(RulesetInfo, beatmap);
 
-        // like McOsu, FPoSu awards the same performance as osu!.
+        // like McOsu, osu!fps awards the same performance as osu!.
         public override PerformanceCalculator CreatePerformanceCalculator() => osuRuleset.CreatePerformanceCalculator();
 
         public override IEnumerable<Mod> GetModsFor(ModType type) => osuRuleset.GetModsFor(type).Select(replaceMod);
@@ -101,12 +101,12 @@ namespace osu.Game.Rulesets.Fposu
         /// </summary>
         public RulesetInfo OsuRulesetInfo => osuRuleset.RulesetInfo;
 
-        // the key bindings of osu! are used (see DrawableFposuRuleset), so FPoSu has none of its own.
+        // the key bindings of osu! are used (see DrawableFposuRuleset), so osu!fps has none of its own.
         public override IEnumerable<int> GameplayVariants => Array.Empty<int>();
 
         public override IConvertibleReplayFrame CreateConvertibleReplayFrame() => new OsuReplayFrame();
 
-        // the configuration and settings of osu! are used (see IRulesetVariant), so FPoSu has none of its own.
+        // the configuration and settings of osu! are used (see IRulesetVariant), so osu!fps has none of its own.
 
         public override ISkin? CreateSkinTransformer(ISkin skin, IBeatmap beatmap) => osuRuleset.CreateSkinTransformer(skin, beatmap);
 

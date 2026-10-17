@@ -716,57 +716,57 @@ namespace osu.Game.Configuration
         SlopEditorShowOffscreenObjects,
 
         /// <summary>
-        /// The DPI (counts per inch) of the mouse, used for the sensitivity of the FPoSu ruleset.
+        /// The DPI (counts per inch) of the mouse, used for the sensitivity of the osu!fps ruleset.
         /// </summary>
         SlopFposuMouseDpi,
 
         /// <summary>
-        /// The distance in centimetres the mouse has to be moved for a full turn in the FPoSu ruleset.
+        /// The distance in centimetres the mouse has to be moved for a full turn in the osu!fps ruleset.
         /// </summary>
         SlopFposuCmPer360,
 
         /// <summary>
-        /// The horizontal field of view in degrees in the FPoSu ruleset.
+        /// The horizontal field of view in degrees in the osu!fps ruleset.
         /// </summary>
         SlopFposuFov,
 
         /// <summary>
-        /// The distance of the playfield screen from the camera in the FPoSu ruleset.
+        /// The distance of the playfield screen from the camera in the osu!fps ruleset.
         /// </summary>
         SlopFposuDistance,
 
         /// <summary>
-        /// Whether the playfield screen is curved around the camera in the FPoSu ruleset.
+        /// Whether the playfield screen is curved around the camera in the osu!fps ruleset.
         /// </summary>
         SlopFposuCurved,
 
         /// <summary>
-        /// Whether horizontal mouse movement is inverted in the FPoSu ruleset.
+        /// Whether horizontal mouse movement is inverted in the osu!fps ruleset.
         /// </summary>
         SlopFposuInvertHorizontal,
 
         /// <summary>
-        /// Whether vertical mouse movement is inverted in the FPoSu ruleset.
+        /// Whether vertical mouse movement is inverted in the osu!fps ruleset.
         /// </summary>
         SlopFposuInvertVertical,
 
         /// <summary>
-        /// Whether the camera looks at the cursor (e.g. for tablets) instead of being turned by mouse movement in the FPoSu ruleset.
+        /// Whether the camera looks at the cursor (e.g. for tablets) instead of being turned by mouse movement in the osu!fps ruleset.
         /// </summary>
         SlopFposuAbsoluteMode,
 
         /// <summary>
-        /// Whether a grid cube is displayed around the camera in the FPoSu ruleset.
+        /// Whether a grid cube is displayed around the camera in the osu!fps ruleset.
         /// </summary>
         SlopFposuBackgroundCube,
 
         /// <summary>
-        /// Whether a skybox is displayed around the camera in the FPoSu ruleset, instead of the background cube.
+        /// Whether a skybox is displayed around the camera in the osu!fps ruleset, instead of the background cube.
         /// </summary>
         SlopFposuSkybox,
 
         /// <summary>
-        /// Whether the beatmap background, storyboard and video are shown on the screen in the FPoSu ruleset. When disabled, the objects float in front of the skybox or background cube.
+        /// Whether the beatmap background, storyboard and video are shown on the screen in the osu!fps ruleset. When disabled, the objects float in front of the skybox or background cube.
         /// </summary>
         SlopFposuShowBackground,
 
