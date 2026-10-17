@@ -328,10 +328,10 @@ namespace osu.Game.Localisation
         public static LocalisableString FposuHeader => new TranslatableString(getKey(@"fposu_header"), @"FPoSu");
 
         /// <summary>
-        /// "Want to use the same sensitivity as in other games? Convert it on [mouse-sensitivity.com]({0})."
+        /// "Convert your sensitivity: [mouse-sensitivity.com]({0})"
         /// </summary>
         public static LocalisableString FposuSensitivityConverterNote(string url) => new TranslatableString(getKey(@"fposu_sensitivity_converter_note"),
-            @"Want to use the same sensitivity as in other games? Convert it on [mouse-sensitivity.com]({0}).", url);
+            @"Convert your sensitivity: [mouse-sensitivity.com]({0})", url);
 
         /// <summary>
         /// "Mouse DPI"
