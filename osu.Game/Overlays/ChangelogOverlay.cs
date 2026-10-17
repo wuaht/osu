@@ -45,6 +45,8 @@ namespace osu.Game.Overlays
             {
                 if (e.NewValue != null)
                     loadContent(new ChangelogSingleBuild(e.NewValue));
+                else if (Header.ShowingClientListing)
+                    loadContent(new ChangelogListing(ClientChangelog.Builds.ToList()));
                 else
                     loadContent(new ChangelogListing(builds));
             });
@@ -53,13 +55,30 @@ namespace osu.Game.Overlays
         protected override ChangelogHeader CreateHeader() => new ChangelogHeader
         {
             ListingSelected = ShowListing,
+            ClientListingSelected = ShowClientListing,
         };
 
         protected override Color4 BackgroundColour => ColourProvider.Background4;
 
-        public void ShowListing()
+        public void ShowListing() => showListing(false);
+
+        /// <summary>
+        /// Shows the listing of this client's own changes.
+        /// </summary>
+        public void ShowClientListing() => showListing(true);
+
+        private void showListing(bool client)
         {
-            Current.Value = null;
+            if (Header.ShowingClientListing != client || Current.Value != null)
+            {
+                Header.ShowingClientListing = client;
+
+                if (Current.Value == null)
+                    Current.TriggerChange();
+                else
+                    Current.Value = null;
+            }
+
             Show();
         }
 
@@ -115,7 +134,8 @@ namespace osu.Game.Overlays
                     }
                     else
                     {
-                        Current.Value = null;
+                        // builds of this client go back to their own listing.
+                        showListing(ClientChangelog.IsLocal(Current.Value));
                     }
 
                     return true;
@@ -163,49 +183,28 @@ namespace osu.Game.Overlays
                     res.Builds.ForEach(b => b.UpdateStream = res.Streams.Find(s => s.Id == b.UpdateStream.Id));
                     res.Streams.ForEach(s => s.LatestBuild.UpdateStream = res.Streams.Find(s2 => s2.Id == s.LatestBuild.UpdateStream.Id));
 
-                    populate(res.Streams, res.Builds);
+                    builds = res.Builds;
+                    Streams = res.Streams;
+
+                    // this client's changes are only listed in their own tab, but its stream can still be selected like any other.
+                    if (ClientChangelog.Stream != null)
+                        Streams.Add(ClientChangelog.Stream);
+
+                    Header.Populate(Streams);
 
                     tcs.SetResult(true);
                 });
 
-                req.Failure += e => Schedule(() =>
+                req.Failure += e =>
                 {
                     initialFetchTask = null;
-
-                    // the changelog of this client is still available offline.
-                    if (ClientChangelog.Stream != null)
-                    {
-                        populate(new List<APIUpdateStream>(), new List<APIChangelogBuild>());
-                        tcs.SetResult(true);
-                    }
-                    else
-                        tcs.SetException(e);
-                });
+                    tcs.SetException(e);
+                };
 
                 await API.PerformAsync(req).ConfigureAwait(false);
 
                 return tcs.Task;
             }).Unwrap();
-        }
-
-        private void populate(List<APIUpdateStream> onlineStreams, List<APIChangelogBuild> onlineBuilds)
-        {
-            Streams = onlineStreams;
-            builds = onlineBuilds;
-
-            if (ClientChangelog.Stream != null)
-            {
-                Streams.Add(ClientChangelog.Stream);
-
-                // only as far back as the online listing goes, so that it isn't flooded by older builds of this client.
-                DateTimeOffset oldest = builds.Count > 0 ? builds.Min(b => b.CreatedAt.Date) : DateTimeOffset.MinValue;
-
-                builds = builds.Concat(ClientChangelog.Builds.Where(b => b.CreatedAt >= oldest))
-                               .OrderByDescending(b => b.CreatedAt)
-                               .ToList();
-            }
-
-            Header.Populate(Streams);
         }
 
         private CancellationTokenSource loadContentCancellation;

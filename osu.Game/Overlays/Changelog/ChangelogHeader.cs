@@ -25,9 +25,21 @@ namespace osu.Game.Overlays.Changelog
 
         public Action ListingSelected;
 
+        /// <summary>
+        /// Invoked when the listing of this client's own changes is selected.
+        /// </summary>
+        public Action ClientListingSelected;
+
+        /// <summary>
+        /// Whether the listing of this client's own changes is shown instead of the official one, while no build is selected.
+        /// </summary>
+        public bool ShowingClientListing;
+
         public ChangelogUpdateStreamControl Streams;
 
         public static LocalisableString ListingString => LayoutStrings.HeaderChangelogIndex;
+
+        public static LocalisableString ClientListingString => @"slop!";
 
         private readonly Bindable<APIUpdateStream> currentStream = new Bindable<APIUpdateStream>();
 
@@ -36,10 +48,16 @@ namespace osu.Game.Overlays.Changelog
         public ChangelogHeader()
         {
             TabControl.AddItem(ListingString);
+
+            if (ClientChangelog.Stream != null)
+                TabControl.AddItem(ClientListingString);
+
             Current.ValueChanged += e =>
             {
                 if (e.NewValue == ListingString)
                     ListingSelected?.Invoke();
+                else if (e.NewValue == ClientListingString)
+                    ClientListingSelected?.Invoke();
             };
 
             Build.ValueChanged += showBuild;
@@ -71,7 +89,7 @@ namespace osu.Game.Overlays.Changelog
             }
             else
             {
-                Current.Value = ListingString;
+                Current.Value = ShowingClientListing ? ClientListingString : ListingString;
                 currentStream.Value = null;
             }
         }
