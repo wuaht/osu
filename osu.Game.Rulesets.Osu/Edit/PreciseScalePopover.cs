@@ -8,17 +8,14 @@ using osu.Framework.Bindables;
 using osu.Framework.Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
-using osu.Framework.Graphics.Sprites;
 using osu.Framework.Input.Events;
 using osu.Game.Configuration;
-using osu.Game.Graphics.UserInterface;
 using osu.Game.Graphics.UserInterfaceV2;
 using osu.Game.Input.Bindings;
 using osu.Game.Rulesets.Objects;
 using osu.Game.Rulesets.Osu.Objects;
 using osu.Game.Rulesets.Osu.UI;
 using osu.Game.Screens.Edit;
-using osu.Game.Screens.Edit.Components.RadioButtons;
 using osu.Game.Screens.Edit.Compose.Components;
 using osuTK;
 
@@ -34,17 +31,17 @@ namespace osu.Game.Rulesets.Osu.Edit
 
         private FormSliderBar<float> scaleInput { get; set; } = null!;
         private BindableNumber<float> scaleInputBindable = null!;
-        private EditorRadioButtonCollection scaleOrigin = null!;
+        private readonly CompactRadioButtonGroup scaleOrigin = new CompactRadioButtonGroup();
 
-        private EditorRadioButton gridCentreButton = null!;
-        private EditorRadioButton playfieldCentreButton = null!;
-        private EditorRadioButton selectionCentreButton = null!;
+        private CompactRadioButton gridCentreButton = null!;
+        private CompactRadioButton playfieldCentreButton = null!;
+        private CompactRadioButton selectionCentreButton = null!;
 
-        private EditorRadioButtonCollection sliderScaleMode = null!;
-        private EditorRadioButton defaultModeButton = null!;
+        private readonly CompactRadioButtonGroup sliderScaleMode = new CompactRadioButtonGroup();
+        private CompactRadioButton defaultModeButton = null!;
 
-        private OsuCheckbox xCheckBox = null!;
-        private OsuCheckbox yCheckBox = null!;
+        private CompactCheckbox xCheckBox = null!;
+        private CompactCheckbox yCheckBox = null!;
 
         private Bindable<EditorOrigin> configScaleOrigin = null!;
 
@@ -67,9 +64,10 @@ namespace osu.Game.Rulesets.Osu.Edit
 
             Child = new FillFlowContainer
             {
-                Width = 220,
+                Width = 300,
                 AutoSizeAxes = Axes.Y,
-                Spacing = new Vector2(5),
+                Direction = FillDirection.Vertical,
+                Spacing = new Vector2(6),
                 Children = new Drawable[]
                 {
                     scaleInput = new FormSliderBar<float>
@@ -86,57 +84,65 @@ namespace osu.Game.Rulesets.Osu.Edit
                         KeyboardStep = 0.01f,
                         TabbableContentContainer = this
                     },
-                    scaleOrigin = new EditorRadioButtonCollection
-                    {
-                        RelativeSizeAxes = Axes.X,
-                    },
-                    sliderScaleMode = new EditorRadioButtonCollection
-                    {
-                        RelativeSizeAxes = Axes.X,
-                    },
-                    new FillFlowContainer
+                    new GridContainer
                     {
                         RelativeSizeAxes = Axes.X,
                         AutoSizeAxes = Axes.Y,
-                        Spacing = new Vector2(4),
+                        ColumnDimensions = new[]
+                        {
+                            new Dimension(),
+                            new Dimension(GridSizeMode.Absolute, 6),
+                            new Dimension(GridSizeMode.Absolute, 100),
+                        },
+                        RowDimensions = new[] { new Dimension(GridSizeMode.AutoSize) },
+                        Content = new[]
+                        {
+                            new Drawable[]
+                            {
+                                new PopoverGroupBox("Origin")
+                                {
+                                    RelativeSizeAxes = Axes.X,
+                                    AutoSizeAxes = Axes.Y,
+                                    Children = new Drawable[]
+                                    {
+                                        gridCentreButton = scaleOrigin.Add(new CompactRadioButton("Grid centre", () => setOrigin(EditorOrigin.GridCentre))),
+                                        playfieldCentreButton = scaleOrigin.Add(new CompactRadioButton("Playfield centre", () => setOrigin(EditorOrigin.PlayfieldCentre))),
+                                        selectionCentreButton = scaleOrigin.Add(new CompactRadioButton("Selection centre", () => setOrigin(EditorOrigin.SelectionCentre))),
+                                    }
+                                },
+                                Empty(),
+                                // matches the height of the origin box, so that both boxes line up.
+                                new PopoverGroupBox("Apply to")
+                                {
+                                    RelativeSizeAxes = Axes.Both,
+                                    Children = new Drawable[]
+                                    {
+                                        xCheckBox = new CompactCheckbox("X-axis") { Current = { Value = true } },
+                                        yCheckBox = new CompactCheckbox("Y-axis") { Current = { Value = true } },
+                                    }
+                                },
+                            }
+                        }
+                    },
+                    new PopoverGroupBox("Slider paths", FillDirection.Horizontal)
+                    {
+                        RelativeSizeAxes = Axes.X,
+                        AutoSizeAxes = Axes.Y,
                         Children = new Drawable[]
                         {
-                            xCheckBox = new OsuCheckbox(false)
+                            defaultModeButton = sliderScaleMode.Add(new CompactRadioButton("Default", () => setMode(SliderScaleMode.Default))),
+                            sliderScaleMode.Add(new CompactRadioButton("Adjust SV", () => setMode(SliderScaleMode.AdjustSV))
                             {
-                                RelativeSizeAxes = Axes.X,
-                                LabelText = "X-axis",
-                                Current = { Value = true },
-                            },
-                            yCheckBox = new OsuCheckbox(false)
+                                TooltipText = "Scale slider paths and keep their durations by adjusting slider velocity. Hold Ctrl while dragging to use this mode.",
+                            }),
+                            sliderScaleMode.Add(new CompactRadioButton("Ignore paths", () => setMode(SliderScaleMode.IgnorePaths))
                             {
-                                RelativeSizeAxes = Axes.X,
-                                LabelText = "Y-axis",
-                                Current = { Value = true },
-                            },
+                                TooltipText = "Only scale object positions, leaving slider paths untouched. Hold P while dragging to use this mode.",
+                            }),
                         }
                     },
                 }
             };
-
-            scaleOrigin.AddButton(gridCentreButton = new EditorRadioButton("Grid centre",
-                () => setOrigin(EditorOrigin.GridCentre),
-                () => new SpriteIcon { Icon = FontAwesome.Regular.PlusSquare }));
-            scaleOrigin.AddButton(playfieldCentreButton = new EditorRadioButton("Playfield centre",
-                () => setOrigin(EditorOrigin.PlayfieldCentre),
-                () => new SpriteIcon { Icon = FontAwesome.Regular.Square }));
-            scaleOrigin.AddButton(selectionCentreButton = new EditorRadioButton("Selection centre",
-                () => setOrigin(EditorOrigin.SelectionCentre),
-                () => new SpriteIcon { Icon = FontAwesome.Solid.VectorSquare }));
-
-            sliderScaleMode.AddButton(defaultModeButton = new EditorRadioButton("Default",
-                () => setMode(SliderScaleMode.Default),
-                () => new SpriteIcon { Icon = FontAwesome.Solid.ExpandArrowsAlt }));
-            sliderScaleMode.AddButton(new EditorRadioButton("Adjust SV",
-                () => setMode(SliderScaleMode.AdjustSV),
-                () => new SpriteIcon { Icon = FontAwesome.Solid.TachometerAlt }));
-            sliderScaleMode.AddButton(new EditorRadioButton("Ignore paths",
-                () => setMode(SliderScaleMode.IgnorePaths),
-                () => new SpriteIcon { Icon = FontAwesome.Solid.ArrowsAlt }));
 
             gridCentreButton.Selected.DisabledChanged += isDisabled =>
             {
