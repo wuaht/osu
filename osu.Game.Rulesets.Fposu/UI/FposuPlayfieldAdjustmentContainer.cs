@@ -11,6 +11,7 @@ using osu.Game.Configuration;
 using osu.Game.Graphics;
 using osu.Game.Rulesets.Osu.UI;
 using osu.Game.Rulesets.UI;
+using osu.Game.Screens.Play;
 
 namespace osu.Game.Rulesets.Fposu.UI
 {
@@ -36,7 +37,19 @@ namespace osu.Game.Rulesets.Fposu.UI
         /// </summary>
         public readonly Container BreakAndSkipOverlays;
 
+        /// <summary>
+        /// Contains the storyboard (and video), so that it is displayed on the screen behind the playfield.
+        /// </summary>
+        public readonly Container Storyboard;
+
+        /// <summary>
+        /// Contains the overlay layer of the storyboard, so that it is displayed on the screen above the playfield.
+        /// </summary>
+        public readonly Container StoryboardOverlayLayer;
+
         private readonly OsuPlayfieldAdjustmentContainer content;
+
+        private IBindable<bool> showBackground = null!;
 
         protected override Container<Drawable> Content => content;
 
@@ -49,7 +62,9 @@ namespace osu.Game.Rulesets.Fposu.UI
                     Children = new Drawable[]
                     {
                         new BeatmapBackground(),
+                        Storyboard = new Container { RelativeSizeAxes = Axes.Both },
                         content = new OsuPlayfieldAdjustmentContainer { AlignWithStoryboard = true },
+                        StoryboardOverlayLayer = new Container { RelativeSizeAxes = Axes.Both },
                         RulesetOverlays = new Container { RelativeSizeAxes = Axes.Both },
                         BreakAndSkipOverlays = new Container { RelativeSizeAxes = Axes.Both },
                     }
@@ -58,17 +73,32 @@ namespace osu.Game.Rulesets.Fposu.UI
             };
         }
 
+        [BackgroundDependencyLoader]
+        private void load(OsuConfigManager config)
+        {
+            showBackground = config.GetBindable<bool>(OsuSetting.SlopFposuShowBackground);
+            showBackground.BindValueChanged(show =>
+            {
+                Storyboard.Alpha = show.NewValue ? 1 : 0;
+                StoryboardOverlayLayer.Alpha = show.NewValue ? 1 : 0;
+            }, true);
+        }
+
         /// <summary>
         /// The background of the beatmap, dimmed according to the background dim setting.
-        /// The regular background is hidden behind the 3D environment. Hidden with <see cref="OsuSetting.SlopFposuTransparentBackground"/>.
+        /// The regular background is hidden behind the 3D environment. Hidden with <see cref="OsuSetting.SlopFposuShowBackground"/>,
+        /// or when the storyboard replaces it (like the regular background).
         /// </summary>
         private partial class BeatmapBackground : Sprite
         {
             private IBindable<double> dimLevel = null!;
-            private IBindable<bool> transparent = null!;
+            private IBindable<bool> showBackground = null!;
+            private IBindable<bool> showStoryboard = null!;
+
+            private bool storyboardReplacesBackground;
 
             [BackgroundDependencyLoader]
-            private void load(IBindable<WorkingBeatmap> beatmap, OsuConfigManager config)
+            private void load(IBindable<WorkingBeatmap> beatmap, OsuConfigManager config, GameplayState? gameplayState)
             {
                 RelativeSizeAxes = Axes.Both;
                 FillMode = FillMode.Fill;
@@ -80,9 +110,16 @@ namespace osu.Game.Rulesets.Fposu.UI
                 dimLevel = config.GetBindable<double>(OsuSetting.DimLevel);
                 dimLevel.BindValueChanged(dim => Colour = OsuColour.Gray(1 - (float)dim.NewValue), true);
 
-                transparent = config.GetBindable<bool>(OsuSetting.SlopFposuTransparentBackground);
-                transparent.BindValueChanged(t => Alpha = t.NewValue ? 0 : 1, true);
+                storyboardReplacesBackground = gameplayState != null && gameplayState.Storyboard.ReplacesBackground && gameplayState.Storyboard.HasDrawable;
+
+                showBackground = config.GetBindable<bool>(OsuSetting.SlopFposuShowBackground);
+                showStoryboard = config.GetBindable<bool>(OsuSetting.ShowStoryboard);
+
+                showBackground.BindValueChanged(_ => updateVisibility());
+                showStoryboard.BindValueChanged(_ => updateVisibility(), true);
             }
+
+            private void updateVisibility() => Alpha = showBackground.Value && !(showStoryboard.Value && storyboardReplacesBackground) ? 1 : 0;
         }
     }
 }

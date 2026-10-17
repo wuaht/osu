@@ -569,6 +569,18 @@ namespace osu.Game.Rulesets.UI
         public virtual Container BreakAndSkipOverlayContainer => null;
 
         /// <summary>
+        /// A container to display the storyboard (and video) in, instead of behind the ruleset.
+        /// This allows rulesets to display it as part of the gameplay, e.g. when displaying it in 3D.
+        /// </summary>
+        public virtual Container StoryboardContainer => null;
+
+        /// <summary>
+        /// A container to display the overlay layer of the storyboard in, instead of above the ruleset.
+        /// Only used along with <see cref="StoryboardContainer"/>.
+        /// </summary>
+        public virtual Container StoryboardOverlayLayerContainer => null;
+
+        /// <summary>
         /// On mobile devices, this specifies whether this ruleset requires the device to be in portrait orientation.
         /// </summary>
         public virtual bool RequiresPortraitOrientation => false;

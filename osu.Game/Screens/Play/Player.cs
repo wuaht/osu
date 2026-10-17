@@ -523,12 +523,21 @@ namespace osu.Game.Screens.Play
                 rulesetOverlayContainer.AddRange(skipBreakOverlays);
             }
 
+            // rulesets may display the storyboard as part of the gameplay (e.g. when displaying it in 3D).
+            var rulesetStoryboardContainer = DrawableRuleset.StoryboardContainer;
+
+            if (rulesetStoryboardContainer != null)
+            {
+                rulesetStoryboardContainer.Add(DimmableStoryboard.CreateProxy());
+                DrawableRuleset.StoryboardOverlayLayerContainer?.Add(DimmableStoryboard.OverlayLayerContainer.CreateProxy());
+            }
+
             var container = new Container
             {
                 RelativeSizeAxes = Axes.Both,
                 Children = new[]
                 {
-                    DimmableStoryboard.OverlayLayerContainer.CreateProxy(),
+                    rulesetStoryboardContainer == null ? DimmableStoryboard.OverlayLayerContainer.CreateProxy() : new Container(),
                     HUDOverlay = new HUDOverlay(DrawableRuleset, GameplayState.Mods, Configuration)
                     {
                         HoldToQuit =

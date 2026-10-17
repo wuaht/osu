@@ -83,9 +83,9 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                 }),
                 new SettingsItemV2(new FormCheckBox
                 {
-                    Caption = SlopSettingsStrings.FposuTransparentBackground,
-                    HintText = SlopSettingsStrings.FposuTransparentBackgroundDescription,
-                    Current = config.GetBindable<bool>(OsuSetting.SlopFposuTransparentBackground),
+                    Caption = SlopSettingsStrings.FposuShowBackground,
+                    HintText = SlopSettingsStrings.FposuShowBackgroundDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopFposuShowBackground),
                 }),
                 new SettingsItemV2(new FormCheckBox
                 {

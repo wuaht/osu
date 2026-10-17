@@ -86,6 +86,11 @@ namespace osu.Game.Rulesets.Fposu.UI
         // displayed on the screen like the playfield, where the skip button can be clicked by looking at it.
         public override Container? BreakAndSkipOverlayContainer => mainAdjustmentContainer?.BreakAndSkipOverlays;
 
+        // the storyboard (and video) is displayed on the screen as the background, instead of being hidden behind the 3D environment.
+        public override Container? StoryboardContainer => mainAdjustmentContainer?.Storyboard;
+
+        public override Container? StoryboardOverlayLayerContainer => mainAdjustmentContainer?.StoryboardOverlayLayer;
+
         /// <summary>
         /// The input manager of the resume overlay, which is a countdown and so doesn't need positional input.
         /// It's displayed above the game, so it would otherwise block clicks on the screen (e.g. on the skip button) while mouse buttons are disabled.

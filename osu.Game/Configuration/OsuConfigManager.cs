@@ -298,7 +298,7 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopFposuAbsoluteMode, false);
             SetDefault(OsuSetting.SlopFposuBackgroundCube, true);
             SetDefault(OsuSetting.SlopFposuSkybox, true);
-            SetDefault(OsuSetting.SlopFposuTransparentBackground, false);
+            SetDefault(OsuSetting.SlopFposuShowBackground, true);
 
             SetDefault(OsuSetting.SlopSkipBreaks, false);
 
@@ -766,9 +766,9 @@ namespace osu.Game.Configuration
         SlopFposuSkybox,
 
         /// <summary>
-        /// Whether the beatmap background is hidden in the FPoSu ruleset, so that the objects float in front of the skybox or background cube.
+        /// Whether the beatmap background, storyboard and video are shown on the screen in the FPoSu ruleset. When disabled, the objects float in front of the skybox or background cube.
         /// </summary>
-        SlopFposuTransparentBackground,
+        SlopFposuShowBackground,
 
         /// <summary>
         /// Whether a skip button is displayed during breaks, like the one at the start of a beatmap.

@@ -425,15 +425,15 @@ namespace osu.Game.Localisation
             @"Displays a sky around you instead of the background cube. Skins can provide their own as skybox.png, a cubemap in the horizontal cross layout.");
 
         /// <summary>
-        /// "Transparent background"
+        /// "Show background"
         /// </summary>
-        public static LocalisableString FposuTransparentBackground => new TranslatableString(getKey(@"fposu_transparent_background"), @"Transparent background");
+        public static LocalisableString FposuShowBackground => new TranslatableString(getKey(@"fposu_show_background"), @"Show background");
 
         /// <summary>
-        /// "Hides the beatmap background, so that the objects float in front of the skybox or background cube."
+        /// "Shows the beatmap background, storyboard and video on the screen. When disabled, the objects float in front of the skybox or background cube."
         /// </summary>
-        public static LocalisableString FposuTransparentBackgroundDescription => new TranslatableString(getKey(@"fposu_transparent_background_description"),
-            @"Hides the beatmap background, so that the objects float in front of the skybox or background cube.");
+        public static LocalisableString FposuShowBackgroundDescription => new TranslatableString(getKey(@"fposu_show_background_description"),
+            @"Shows the beatmap background, storyboard and video on the screen. When disabled, the objects float in front of the skybox or background cube.");
 
         /// <summary>
         /// "Displays a grid around you, which helps with orientation."
