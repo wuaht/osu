@@ -60,11 +60,15 @@ namespace osu.Game.Rulesets.Osu.Tests.Slop
         }
 
         [Test]
-        public void TestVisualSpacingIgnoresHeadAndTailOfSameSlider()
+        public void TestVisualSpacingWithHeadAndTailOfSameSlider()
         {
             var slider = createSlider(new Vector2(100, 200), new PathControlPoint(Vector2.Zero, PathType.LINEAR), new PathControlPoint(new Vector2(150, 0)));
 
-            Assert.That(visualSpacing(slider), Is.Empty);
+            var points = visualSpacing(slider);
+
+            Assert.That(points, Has.Count.EqualTo(2));
+            assertContains(points, new Vector2(175, 200 - triangle_height));
+            assertContains(points, new Vector2(175, 200 + triangle_height));
         }
 
         [Test]

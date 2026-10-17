@@ -192,10 +192,7 @@ namespace osu.Game.Rulesets.Osu.Edit
                     var a = positions[i];
                     var b = positions[j];
 
-                    // a slider's head and tail don't form a pattern with each other.
-                    if (a.owner == b.owner)
-                        continue;
-
+                    // a slider's head and tail are included, as the third corner can be formed with both of them.
                     float radius = (float)objects[a.owner].Radius;
                     float distance = Vector2.Distance(a.position, b.position);
 
