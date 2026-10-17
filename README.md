@@ -52,6 +52,8 @@ git clone -b slop https://github.com/wuaht/osu-resources ../osu-resources
 
 Install the client with `slop-win-Setup.exe` from the [latest release](https://github.com/wuaht/osu/releases/latest); it updates itself from these releases and installs independently of osu!(lazer). <- hopefully
 
+On Linux, use `slop.AppImage` from the same release (it also updates itself). For macOS there are untested, unsigned portable builds (`slop-osx-arm64-portable.zip` for Apple Silicon, `slop-osx-x64-portable.zip` for Intel) without auto-updates; after extracting, run `xattr -cr slop` once, then start `slop/osu!`. Releases are built with `release-build.ps1` (`-Platforms win,linux,osx`).
+
 ## Contributing
 
 Not accepting contributions unless you know what I'm building (this is a personal fork after all).
