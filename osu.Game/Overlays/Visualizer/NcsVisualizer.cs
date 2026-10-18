@@ -256,7 +256,7 @@ namespace osu.Game.Overlays.Visualizer
             /// <summary>
             /// The colour of the glow. Dots facing the camera are lighter.
             /// </summary>
-            public Color4 AccentColour { get; set; } = Color4.White;
+            public Colour4 AccentColour { get; set; } = Colour4.White;
 
             private readonly SpectrumAnalyser analyser;
 
