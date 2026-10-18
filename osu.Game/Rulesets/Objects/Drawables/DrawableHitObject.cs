@@ -18,6 +18,7 @@ using osu.Framework.Lists;
 using osu.Framework.Utils;
 using osu.Game.Audio;
 using osu.Game.Configuration;
+using osu.Game.Graphics.ColourEffects;
 using osu.Game.Graphics;
 using osu.Game.Rulesets.Judgements;
 using osu.Game.Rulesets.Objects.Pooling;
@@ -159,6 +160,18 @@ namespace osu.Game.Rulesets.Objects.Drawables
         [Resolved(CanBeNull = true)]
         [CanBeNull]
         private GameplayState gameplayState { get; set; }
+
+        [Resolved(CanBeNull = true)]
+        [CanBeNull]
+        private ColourEffectProvider colourEffectProvider { get; set; }
+
+        private bool comboColourEffectApplied;
+
+        /// <summary>
+        /// Whether the combo colour is currently driven by the rainbow / gradient combo colour effect.
+        /// Only applies during gameplay, so that the editor keeps showing the actual combo colours.
+        /// </summary>
+        private bool comboColourEffectActive => gameplayState != null && colourEffectProvider?.IsEnabled(ColourEffectTarget.ComboColours) == true;
 
         /// <summary>
         /// Whether the initialization logic in <see cref="Playfield" /> has applied.
@@ -575,6 +588,12 @@ namespace osu.Game.Rulesets.Objects.Drawables
         {
             if (!(HitObject is IHasComboInformation combo)) return;
 
+            if (comboColourEffectActive)
+            {
+                AccentColour.Value = colourEffectProvider.GetColour(ColourEffectTarget.ComboColours);
+                return;
+            }
+
             Color4 colour = combo.GetComboColour(CurrentSkin);
 
             // Normalise the combo colour to the given brightness level.
@@ -584,6 +603,23 @@ namespace osu.Game.Rulesets.Objects.Drawables
             }
 
             AccentColour.Value = colour;
+        }
+
+        private void updateComboColourEffect()
+        {
+            if (!(HitObject is IHasComboInformation))
+                return;
+
+            if (comboColourEffectActive)
+            {
+                AccentColour.Value = colourEffectProvider.GetColour(ColourEffectTarget.ComboColours);
+                comboColourEffectApplied = true;
+            }
+            else if (comboColourEffectApplied)
+            {
+                comboColourEffectApplied = false;
+                UpdateComboColour();
+            }
         }
 
         /// <summary>
@@ -637,6 +673,8 @@ namespace osu.Game.Rulesets.Objects.Drawables
 
         protected override void Update()
         {
+            updateComboColourEffect();
+
             // We use a flag here to load samples only when they are required to be played.
             // Why in Update and not PlaySamples? Because some hit object implementations may expect LoadSamples to be called to load custom samples
             // (slider slide sound as an example).

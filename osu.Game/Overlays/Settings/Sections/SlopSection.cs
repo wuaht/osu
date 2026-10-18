@@ -25,6 +25,7 @@ namespace osu.Game.Overlays.Settings.Sections
             Children = new Drawable[]
             {
                 new GraphicsSettings(),
+                new ColourEffectSettings(),
                 new GameplaySettings(),
                 new EditorSettings(),
                 new OfflineProfileSettings(),

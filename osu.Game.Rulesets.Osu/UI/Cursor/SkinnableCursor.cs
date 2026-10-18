@@ -23,6 +23,13 @@ namespace osu.Game.Rulesets.Osu.UI.Cursor
         }
 
         /// <summary>
+        /// Applies a colour effect to this cursor, or resets it when <paramref name="colour"/> is <c>null</c>.
+        /// By default, the whole cursor is tinted. Cursors with coloured parts should override this,
+        /// as tinting multiplies with the existing colours and makes them darker.
+        /// </summary>
+        public virtual void ApplyColourEffect(Colour4? colour) => Colour = colour ?? Colour4.White;
+
+        /// <summary>
         /// The an optional piece of the cursor to expand when in a clicked state.
         /// If null, the whole cursor will be affected by expansion.
         /// </summary>

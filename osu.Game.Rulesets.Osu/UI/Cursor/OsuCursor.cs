@@ -128,6 +128,11 @@ namespace osu.Game.Rulesets.Osu.UI.Cursor
         public void Contract() => skinnableCursor.Contract();
 
         /// <summary>
+        /// Applies a colour effect to the cursor, or resets it when <paramref name="colour"/> is <c>null</c>.
+        /// </summary>
+        public void ApplyColourEffect(Colour4? colour) => skinnableCursor.ApplyColourEffect(colour);
+
+        /// <summary>
         /// Get the scale applicable to the ActiveCursor based on a beatmap's circle size.
         /// </summary>
         public static float GetScaleForCircleSize(float circleSize) =>
@@ -135,6 +140,12 @@ namespace osu.Game.Rulesets.Osu.UI.Cursor
 
         private partial class DefaultCursor : SkinnableCursor
         {
+            private static readonly Color4 centre_colour = new Color4(34, 93, 204, 255);
+
+            private readonly CircularContainer outerRing;
+            private readonly CircularContainer innerRing;
+            private readonly Circle centre;
+
             public DefaultCursor()
             {
                 RelativeSizeAxes = Axes.Both;
@@ -144,7 +155,7 @@ namespace osu.Game.Rulesets.Osu.UI.Cursor
 
                 InternalChildren = new[]
                 {
-                    ExpandTarget = new CircularContainer
+                    ExpandTarget = outerRing = new CircularContainer
                     {
                         Anchor = Anchor.Centre,
                         Origin = Anchor.Centre,
@@ -166,7 +177,7 @@ namespace osu.Game.Rulesets.Osu.UI.Cursor
                                 Alpha = 0,
                                 AlwaysPresent = true,
                             },
-                            new CircularContainer
+                            innerRing = new CircularContainer
                             {
                                 Origin = Anchor.Centre,
                                 Anchor = Anchor.Centre,
@@ -186,13 +197,13 @@ namespace osu.Game.Rulesets.Osu.UI.Cursor
                             },
                         },
                     },
-                    new Circle
+                    centre = new Circle
                     {
                         Origin = Anchor.Centre,
                         Anchor = Anchor.Centre,
                         RelativeSizeAxes = Axes.Both,
                         Scale = new Vector2(0.14f),
-                        Colour = new Color4(34, 93, 204, 255),
+                        Colour = centre_colour,
                         EdgeEffect = new EdgeEffectParameters
                         {
                             Type = EdgeEffectType.Glow,
@@ -201,6 +212,23 @@ namespace osu.Game.Rulesets.Osu.UI.Cursor
                         },
                     },
                 };
+            }
+
+            public override void ApplyColourEffect(Colour4? colour)
+            {
+                Color4 ring = colour ?? Color4.White;
+
+                outerRing.BorderColour = ring;
+                outerRing.EdgeEffect = new EdgeEffectParameters
+                {
+                    Type = EdgeEffectType.Shadow,
+                    Colour = (colour ?? Color4.Pink).Opacity(0.5f),
+                    Radius = 5,
+                };
+                innerRing.BorderColour = ring.Opacity(0.5f);
+
+                // a white centre keeps the cursor bright, whatever the effect colour is.
+                centre.Colour = colour == null ? centre_colour : Color4.White;
             }
         }
     }

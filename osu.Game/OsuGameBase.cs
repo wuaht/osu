@@ -42,6 +42,7 @@ using osu.Game.Configuration;
 using osu.Game.Database;
 using osu.Game.Extensions;
 using osu.Game.Graphics;
+using osu.Game.Graphics.ColourEffects;
 using osu.Game.Graphics.Cursor;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Input;
@@ -372,6 +373,10 @@ namespace osu.Game
             var offlineProfileManager = new OfflineProfileManager(Storage);
             dependencies.Cache(offlineProfileManager);
             base.Content.Add(offlineProfileManager);
+
+            var colourEffectProvider = new ColourEffectProvider();
+            dependencies.Cache(colourEffectProvider);
+            base.Content.Add(colourEffectProvider);
 
             var bnTrackerClient = new BnTrackerClient();
             dependencies.Cache(bnTrackerClient);

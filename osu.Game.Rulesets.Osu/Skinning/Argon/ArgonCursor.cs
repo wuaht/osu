@@ -15,6 +15,14 @@ namespace osu.Game.Rulesets.Osu.Skinning.Argon
 {
     public partial class ArgonCursor : SkinnableCursor
     {
+        private static readonly ColourInfo border_colour = ColourInfo.GradientVertical(Colour4.FromHex("FC618F"), Colour4.FromHex("BB1A41"));
+        private static readonly Color4 fill_colour = Colour4.FromHex("FC618F").Darken(0.6f);
+        private static readonly Color4 glow_colour = new Color4(171, 255, 255, 100);
+
+        private readonly CircularContainer border;
+        private readonly Box fill;
+        private readonly Circle centre;
+
         public ArgonCursor()
         {
             RelativeSizeAxes = Axes.Both;
@@ -24,21 +32,21 @@ namespace osu.Game.Rulesets.Osu.Skinning.Argon
 
             InternalChildren = new[]
             {
-                ExpandTarget = new CircularContainer
+                ExpandTarget = border = new CircularContainer
                 {
                     Anchor = Anchor.Centre,
                     Origin = Anchor.Centre,
                     RelativeSizeAxes = Axes.Both,
                     Masking = true,
                     BorderThickness = 6,
-                    BorderColour = ColourInfo.GradientVertical(Colour4.FromHex("FC618F"), Colour4.FromHex("BB1A41")),
+                    BorderColour = border_colour,
                     Children = new Drawable[]
                     {
-                        new Box
+                        fill = new Box
                         {
                             RelativeSizeAxes = Axes.Both,
                             Alpha = 0.4f,
-                            Colour = Colour4.FromHex("FC618F").Darken(0.6f),
+                            Colour = fill_colour,
                         },
                         new CircularContainer
                         {
@@ -60,7 +68,7 @@ namespace osu.Game.Rulesets.Osu.Skinning.Argon
                         },
                     },
                 },
-                new Circle
+                centre = new Circle
                 {
                     Origin = Anchor.Centre,
                     Anchor = Anchor.Centre,
@@ -71,10 +79,35 @@ namespace osu.Game.Rulesets.Osu.Skinning.Argon
                     {
                         Type = EdgeEffectType.Glow,
                         Radius = 20,
-                        Colour = new Color4(171, 255, 255, 100),
+                        Colour = glow_colour,
                     },
                 },
             };
         }
+
+        public override void ApplyColourEffect(Colour4? colour)
+        {
+            if (colour == null)
+            {
+                border.BorderColour = border_colour;
+                fill.Colour = fill_colour;
+                setGlow(glow_colour);
+                return;
+            }
+
+            Colour4 c = colour.Value;
+
+            // colour the parts directly instead of tinting, as the default colours would darken the effect colour.
+            border.BorderColour = c;
+            fill.Colour = c.Darken(0.3f);
+            setGlow(c.Opacity(100 / 255f));
+        }
+
+        private void setGlow(Color4 colour) => centre.EdgeEffect = new EdgeEffectParameters
+        {
+            Type = EdgeEffectType.Glow,
+            Radius = 20,
+            Colour = colour,
+        };
     }
 }

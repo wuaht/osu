@@ -11,6 +11,7 @@ using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Textures;
 using osu.Framework.Input.Bindings;
 using osu.Framework.Input.Events;
+using osu.Game.Graphics.ColourEffects;
 using osu.Game.Rulesets.Osu.Configuration;
 using osu.Game.Rulesets.UI;
 using osu.Game.Skinning;
@@ -32,6 +33,9 @@ namespace osu.Game.Rulesets.Osu.UI.Cursor
         private readonly SkinnableDrawable cursorTrail;
 
         private readonly CursorRippleVisualiser rippleVisualiser;
+
+        [Resolved(CanBeNull = true)]
+        private ColourEffectProvider colourEffectProvider { get; set; }
 
         public OsuCursorContainer()
         {
@@ -92,6 +96,44 @@ namespace osu.Game.Rulesets.Osu.UI.Cursor
             {
                 trail.NewPartScale = ActiveCursor.CurrentExpandedScale;
                 trail.PartRotation = ActiveCursor.CurrentRotation;
+            }
+
+            updateColourEffects();
+        }
+
+        private bool cursorColourEffectApplied;
+        private bool trailColourEffectApplied;
+
+        private void updateColourEffects()
+        {
+            if (colourEffectProvider == null)
+                return;
+
+            if (colourEffectProvider.TryGetColour(ColourEffectTarget.Cursor, out var cursorColour))
+            {
+                ActiveCursor.ApplyColourEffect(cursorColour);
+                cursorColourEffectApplied = true;
+            }
+            else if (cursorColourEffectApplied)
+            {
+                ActiveCursor.ApplyColourEffect(null);
+                cursorColourEffectApplied = false;
+            }
+
+            applyColourEffect(cursorTrail, ColourEffectTarget.CursorTrail, ref trailColourEffectApplied);
+        }
+
+        private void applyColourEffect(Drawable drawable, ColourEffectTarget target, ref bool applied)
+        {
+            if (colourEffectProvider.TryGetColour(target, out var colour))
+            {
+                drawable.Colour = colour;
+                applied = true;
+            }
+            else if (applied)
+            {
+                drawable.Colour = Colour4.White;
+                applied = false;
             }
         }
 

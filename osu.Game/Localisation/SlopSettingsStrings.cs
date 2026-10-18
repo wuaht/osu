@@ -482,6 +482,86 @@ namespace osu.Game.Localisation
         public static LocalisableString FrostedBnTrackerPanelsDescription => new TranslatableString(getKey(@"frosted_bn_tracker_panels_description"),
             @"The panels of the ""request"" screen have a frosted glass background, through which the background of the beatmap shows.");
 
+        /// <summary>
+        /// "Colour effects"
+        /// </summary>
+        public static LocalisableString ColourEffectsHeader => new TranslatableString(getKey(@"colour_effects_header"), @"Colour effects");
+
+        /// <summary>
+        /// "Chroma cursor"
+        /// </summary>
+        public static LocalisableString CursorColourEffect => new TranslatableString(getKey(@"cursor_colour_effect"), @"Chroma cursor");
+
+        /// <summary>
+        /// "The gameplay cursor smoothly cycles through rainbow or gradient colours."
+        /// </summary>
+        public static LocalisableString CursorColourEffectDescription => new TranslatableString(getKey(@"cursor_colour_effect_description"), @"The gameplay cursor smoothly cycles through rainbow or gradient colours.");
+
+        /// <summary>
+        /// "Chroma cursor trail"
+        /// </summary>
+        public static LocalisableString CursorTrailColourEffect => new TranslatableString(getKey(@"cursor_trail_colour_effect"), @"Chroma cursor trail");
+
+        /// <summary>
+        /// "The cursor trail smoothly cycles through rainbow or gradient colours."
+        /// </summary>
+        public static LocalisableString CursorTrailColourEffectDescription => new TranslatableString(getKey(@"cursor_trail_colour_effect_description"), @"The cursor trail smoothly cycles through rainbow or gradient colours.");
+
+        /// <summary>
+        /// "Chroma combo colours"
+        /// </summary>
+        public static LocalisableString ComboColourEffect => new TranslatableString(getKey(@"combo_colour_effect"), @"Chroma combo colours");
+
+        /// <summary>
+        /// "Combo colours of hit objects are replaced by smoothly cycling rainbow or gradient colours."
+        /// </summary>
+        public static LocalisableString ComboColourEffectDescription => new TranslatableString(getKey(@"combo_colour_effect_description"), @"Combo colours of hit objects are replaced by smoothly cycling rainbow or gradient colours.");
+
+        /// <summary>
+        /// "Style"
+        /// </summary>
+        public static LocalisableString ColourEffectMode => new TranslatableString(getKey(@"colour_effect_mode"), @"Style");
+
+        /// <summary>
+        /// "Gradient colours"
+        /// </summary>
+        public static LocalisableString ColourEffectGradient => new TranslatableString(getKey(@"colour_effect_gradient"), @"Gradient colours");
+
+        /// <summary>
+        /// "The colours which are cycled through, in order. Right-click a colour to remove it."
+        /// </summary>
+        public static LocalisableString ColourEffectGradientDescription => new TranslatableString(getKey(@"colour_effect_gradient_description"), @"The colours which are cycled through, in order. Right-click a colour to remove it.");
+
+        /// <summary>
+        /// "Colour effect speed"
+        /// </summary>
+        public static LocalisableString ColourEffectSpeed => new TranslatableString(getKey(@"colour_effect_speed"), @"Colour effect speed");
+
+        /// <summary>
+        /// "How fast all rainbow and gradient colours cycle. All effects share this speed, so they stay in sync."
+        /// </summary>
+        public static LocalisableString ColourEffectSpeedDescription => new TranslatableString(getKey(@"colour_effect_speed_description"), @"How fast all rainbow and gradient colours cycle. All effects share this speed, so they stay in sync.");
+
+        /// <summary>
+        /// "Rainbow"
+        /// </summary>
+        public static LocalisableString ColourEffectModeRainbow => new TranslatableString(getKey(@"colour_effect_mode_rainbow"), @"Rainbow");
+
+        /// <summary>
+        /// "Gradient"
+        /// </summary>
+        public static LocalisableString ColourEffectModeGradient => new TranslatableString(getKey(@"colour_effect_mode_gradient"), @"Gradient");
+
+        /// <summary>
+        /// "Rainbow saturation"
+        /// </summary>
+        public static LocalisableString ColourEffectRainbowSaturation => new TranslatableString(getKey(@"colour_effect_rainbow_saturation"), @"Rainbow saturation");
+
+        /// <summary>
+        /// "How saturated rainbow colours are. Lower values make dark colours like blue and purple brighter."
+        /// </summary>
+        public static LocalisableString ColourEffectRainbowSaturationDescription => new TranslatableString(getKey(@"colour_effect_rainbow_saturation_description"), @"How saturated rainbow colours are. Lower values make dark colours like blue and purple brighter.");
+
         private static string getKey(string key) => $"{prefix}:{key}";
     }
 }

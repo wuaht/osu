@@ -11,6 +11,7 @@ using osu.Framework.Extensions.LocalisationExtensions;
 using osu.Framework.Localisation;
 using osu.Framework.Platform;
 using osu.Game.Beatmaps.Drawables.Cards;
+using osu.Game.Graphics.ColourEffects;
 using osu.Game.Graphics.Cursor;
 using osu.Game.Input;
 using osu.Game.Input.Bindings;
@@ -259,6 +260,17 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopFrostedSlidersAlwaysColoured, true);
             SetDefault(OsuSetting.SlopFrostedHitCircles, true);
             SetDefault(OsuSetting.SlopMenuCursorStyle, MenuCursorStyle.Default);
+            SetDefault(OsuSetting.SlopCursorColourEffect, false);
+            SetDefault(OsuSetting.SlopCursorColourEffectMode, ColourEffectMode.Rainbow);
+            SetDefault(OsuSetting.SlopCursorColourEffectGradient, ColourEffect.DEFAULT_GRADIENT);
+            SetDefault(OsuSetting.SlopCursorTrailColourEffect, false);
+            SetDefault(OsuSetting.SlopCursorTrailColourEffectMode, ColourEffectMode.Rainbow);
+            SetDefault(OsuSetting.SlopCursorTrailColourEffectGradient, ColourEffect.DEFAULT_GRADIENT);
+            SetDefault(OsuSetting.SlopComboColourEffect, false);
+            SetDefault(OsuSetting.SlopComboColourEffectMode, ColourEffectMode.Rainbow);
+            SetDefault(OsuSetting.SlopComboColourEffectGradient, ColourEffect.DEFAULT_COMBO_GRADIENT);
+            SetDefault(OsuSetting.SlopColourEffectSpeed, 1f, 0.1f, 5f, 0.05f);
+            SetDefault(OsuSetting.SlopColourEffectRainbowSaturation, 0.7f, 0f, 1f, 0.01f);
 
             SetDefault(OsuSetting.SlopEditorSkin, string.Empty);
             SetDefault(OsuSetting.SlopEditorSkinInTestMode, false);
@@ -590,6 +602,61 @@ namespace osu.Game.Configuration
         /// The cursor used in menus and the editor.
         /// </summary>
         SlopMenuCursorStyle,
+
+        /// <summary>
+        /// Whether the gameplay cursor cycles through rainbow or gradient colours.
+        /// </summary>
+        SlopCursorColourEffect,
+
+        /// <summary>
+        /// The <see cref="ColourEffectMode"/> of the gameplay cursor colours.
+        /// </summary>
+        SlopCursorColourEffectMode,
+
+        /// <summary>
+        /// The colours the gameplay cursor cycles through in <see cref="ColourEffectMode.Gradient"/> mode, as comma-separated hex codes.
+        /// </summary>
+        SlopCursorColourEffectGradient,
+
+        /// <summary>
+        /// Whether the cursor trail cycles through rainbow or gradient colours.
+        /// </summary>
+        SlopCursorTrailColourEffect,
+
+        /// <summary>
+        /// The <see cref="ColourEffectMode"/> of the cursor trail colours.
+        /// </summary>
+        SlopCursorTrailColourEffectMode,
+
+        /// <summary>
+        /// The colours the cursor trail cycles through in <see cref="ColourEffectMode.Gradient"/> mode, as comma-separated hex codes.
+        /// </summary>
+        SlopCursorTrailColourEffectGradient,
+
+        /// <summary>
+        /// Whether combo colours of hit objects are replaced by cycling rainbow or gradient colours.
+        /// </summary>
+        SlopComboColourEffect,
+
+        /// <summary>
+        /// The <see cref="ColourEffectMode"/> of the combo colours.
+        /// </summary>
+        SlopComboColourEffectMode,
+
+        /// <summary>
+        /// The colours combo colours cycle through in <see cref="ColourEffectMode.Gradient"/> mode, as comma-separated hex codes.
+        /// </summary>
+        SlopComboColourEffectGradient,
+
+        /// <summary>
+        /// How fast all rainbow and gradient colour effects cycle. Shared so that all effects stay in sync.
+        /// </summary>
+        SlopColourEffectSpeed,
+
+        /// <summary>
+        /// The saturation of all rainbow colour effects. Lower values make dark hues like blue and purple brighter.
+        /// </summary>
+        SlopColourEffectRainbowSaturation,
 
         /// <summary>
         /// The ID of the skin to use exclusively inside the beatmap editor.
