@@ -66,8 +66,8 @@ namespace osu.Game.Rulesets.Osu.Skinning.Legacy
             base.ApplyColourEffect(colour);
 
             // skin textures may have their own colour, which would otherwise mix with the effect colour.
-            cursorSprite.Monochrome = colour != null;
-            cursorMiddleSprite.Monochrome = colour != null;
+            cursorSprite.Tinted = colour != null;
+            cursorMiddleSprite.Tinted = colour != null;
         }
 
         public override void Expand()
@@ -84,24 +84,25 @@ namespace osu.Game.Rulesets.Osu.Skinning.Legacy
         private partial class CursorSprite : NonPlayfieldSprite
         {
             private IShader defaultShader = null!;
-            private IShader monochromeShader = null!;
+            private IShader tintShader = null!;
 
-            private bool monochrome;
+            private bool tinted;
 
             /// <summary>
-            /// Whether to discard the colour of the texture, so that only <see cref="Drawable.Colour"/> is displayed.
+            /// Whether to replace the colour of the texture with <see cref="Drawable.Colour"/>, while keeping white parts of the texture white.
             /// </summary>
-            public bool Monochrome
+            public bool Tinted
             {
-                get => monochrome;
+                get => tinted;
                 set
                 {
-                    if (monochrome == value)
+                    if (tinted == value)
                         return;
 
-                    monochrome = value;
+                    tinted = value;
 
-                    if (IsLoaded)
+                    // the colour effect may already be applied after the shaders have been loaded, but before this sprite is marked as loaded.
+                    if (tintShader != null)
                         updateShader();
                 }
             }
@@ -110,13 +111,13 @@ namespace osu.Game.Rulesets.Osu.Skinning.Legacy
             private void load(ShaderManager shaders)
             {
                 defaultShader = TextureShader;
-                monochromeShader = shaders.Load(VertexShaderDescriptor.TEXTURE_2, @"TextureMonochrome");
+                tintShader = shaders.Load(VertexShaderDescriptor.TEXTURE_2, @"TextureTint");
                 updateShader();
             }
 
             private void updateShader()
             {
-                TextureShader = monochrome ? monochromeShader : defaultShader;
+                TextureShader = tinted ? tintShader : defaultShader;
                 Invalidate(Invalidation.DrawNode);
             }
         }
