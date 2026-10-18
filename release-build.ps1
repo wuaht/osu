@@ -50,10 +50,26 @@ $outputDir = Join-Path $root '.slop-release'
 $publishDir = Join-Path $outputDir 'publish'
 $releasesDir = Join-Path $outputDir 'releases'
 
+# Commands run at below normal priority, so that building and packing (which use every core) don't make the whole PC lag.
+# Windows passes a below normal priority class on to child processes, so this covers everything the command starts.
+# It's restored afterwards, so that the shell which ran this script isn't left at a lower priority.
 function Invoke-Checked([string]$description, [scriptblock]$command)
 {
     Write-Host "==> $description" -ForegroundColor Cyan
-    & $command
+
+    $process = [System.Diagnostics.Process]::GetCurrentProcess()
+    $originalPriority = $process.PriorityClass
+    $process.PriorityClass = [System.Diagnostics.ProcessPriorityClass]::BelowNormal
+
+    try
+    {
+        & $command
+    }
+    finally
+    {
+        $process.PriorityClass = $originalPriority
+    }
+
     if ($LASTEXITCODE -ne 0) { throw "$description failed (exit code $LASTEXITCODE)." }
 }
 
@@ -211,8 +227,10 @@ $extraAssets = @()
 
 function Publish-Desktop([string]$runtime, [string]$outputPath)
 {
+    # -lowPriority makes MSBuild use its own low priority nodes instead of reusing normal priority ones (e.g. from the IDE).
     Invoke-Checked "Publish osu.Desktop ($runtime)" {
         dotnet publish (Join-Path $root 'osu.Desktop/osu.Desktop.csproj') `
+            -lowPriority `
             --configuration Release `
             --runtime $runtime `
             --self-contained true `
