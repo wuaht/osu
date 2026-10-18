@@ -2,13 +2,14 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Collections.Generic;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Extensions.Color4Extensions;
+using osu.Framework.Extensions.LocalisationExtensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Colour;
 using osu.Framework.Graphics.Containers;
-using osu.Framework.Graphics.Effects;
 using osu.Framework.Graphics.Primitives;
 using osu.Framework.Graphics.Rendering;
 using osu.Framework.Graphics.Rendering.Vertices;
@@ -16,6 +17,7 @@ using osu.Framework.Graphics.Shaders;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Textures;
 using osu.Framework.Localisation;
+using osu.Framework.Utils;
 using osu.Game.Beatmaps;
 using osu.Game.Configuration;
 using osu.Game.Graphics;
@@ -26,90 +28,96 @@ using osuTK.Graphics;
 namespace osu.Game.Overlays.Visualizer
 {
     /// <summary>
-    /// A visualizer in the style of NoCopyrightSounds: a title on the left and a breathing ring of dots on the right.
+    /// A visualizer in the style of NoCopyrightSounds: a title on the left and a rotating, audio reactive sphere of dots on the right.
     /// </summary>
+    /// <remarks>
+    /// Modelled after the "NCS Spectrum" After Effects template, which renders a layered particle sphere with Trapcode Form.
+    /// </remarks>
     public partial class NcsVisualizer : VisualizerDrawable
     {
         /// <summary>
-        /// The horizontal position of the centre of the ring, relative to the width of the screen.
+        /// The horizontal position of the centre of the sphere, relative to the width of the screen.
         /// </summary>
-        private const float ring_position = 0.7f;
+        private const float sphere_position = 0.7f;
 
         /// <summary>
-        /// The size of the ring, relative to the smaller dimension of the screen.
+        /// The radius of the sphere, relative to the height of the screen.
         /// </summary>
-        private const float ring_size = 0.34f;
+        private const float sphere_radius = 0.2f;
+
+        /// <summary>
+        /// The horizontal position of the centre of the text, relative to the width of the screen.
+        /// </summary>
+        private const float text_position = 0.25f;
+
+        /// <summary>
+        /// The screen height the text is designed at. It scales with the screen beyond that.
+        /// </summary>
+        private const float design_height = 1080;
 
         private const double colour_fade_duration = 800;
 
         public override float BackgroundDim => 0.15f;
 
-        public override float BackgroundZoom => 0.02f;
+        public override float BackgroundZoom => 0.015f;
 
         private readonly Bindable<NcsTitle> titleSetting = new Bindable<NcsTitle>();
 
         private readonly Container textContainer;
         private readonly OsuSpriteText brandText;
+        private readonly Container trackBar;
+        private readonly Box trackBarBackground;
         private readonly TruncatingSpriteText trackText;
 
-        private readonly CircularContainer glow;
-        private readonly DotRing ring;
+        private readonly DotSphere sphere;
 
         public NcsVisualizer(SpectrumAnalyser analyser)
             : base(analyser)
         {
             InternalChildren = new Drawable[]
             {
-                glow = new CircularContainer
-                {
-                    RelativePositionAxes = Axes.X,
-                    X = ring_position,
-                    Anchor = Anchor.CentreLeft,
-                    Origin = Anchor.Centre,
-                    Masking = true,
-                    EdgeEffect = new EdgeEffectParameters
-                    {
-                        Type = EdgeEffectType.Glow,
-                        Colour = Color4.White,
-                        Radius = 80,
-                        Hollow = true,
-                    },
-                    Child = new Box
-                    {
-                        RelativeSizeAxes = Axes.Both,
-                        Alpha = 0,
-                        AlwaysPresent = true,
-                    },
-                },
-                ring = new DotRing(analyser) { RelativeSizeAxes = Axes.Both },
+                sphere = new DotSphere(analyser) { RelativeSizeAxes = Axes.Both },
                 textContainer = new Container
                 {
-                    RelativeSizeAxes = Axes.Both,
-                    Width = 0.5f,
-                    Padding = new MarginPadding { Left = 100, Right = 40 },
+                    RelativePositionAxes = Axes.X,
+                    X = text_position,
+                    Anchor = Anchor.CentreLeft,
+                    Origin = Anchor.Centre,
+                    AutoSizeAxes = Axes.Both,
                     Child = new FillFlowContainer
                     {
-                        Anchor = Anchor.CentreLeft,
-                        Origin = Anchor.CentreLeft,
-                        RelativeSizeAxes = Axes.X,
-                        AutoSizeAxes = Axes.Y,
+                        AutoSizeAxes = Axes.Both,
                         Direction = FillDirection.Vertical,
+                        Spacing = new Vector2(0, 12),
                         Children = new Drawable[]
                         {
                             brandText = new OsuSpriteText
                             {
-                                Font = OsuFont.Torus.With(size: 150, weight: FontWeight.Bold),
+                                Anchor = Anchor.TopCentre,
+                                Origin = Anchor.TopCentre,
+                                Font = OsuFont.Torus.With(size: 190, weight: FontWeight.Bold),
+                                Spacing = new Vector2(-6, 0),
                                 Shadow = false,
                             },
-                            trackText = new TruncatingSpriteText
+                            trackBar = new Container
                             {
-                                RelativeSizeAxes = Axes.X,
-                                // align with the left edge of the glyphs above, which have a side bearing at their size.
-                                Margin = new MarginPadding { Left = 8 },
-                                Font = OsuFont.Torus.With(size: 30, weight: FontWeight.SemiBold),
-                                Shadow = false,
+                                Anchor = Anchor.TopCentre,
+                                Origin = Anchor.TopCentre,
+                                AutoSizeAxes = Axes.Both,
+                                Children = new Drawable[]
+                                {
+                                    trackBarBackground = new Box { RelativeSizeAxes = Axes.Both },
+                                    trackText = new TruncatingSpriteText
+                                    {
+                                        Margin = new MarginPadding { Horizontal = 18, Vertical = 6 },
+                                        MaxWidth = 640,
+                                        Font = OsuFont.Torus.With(size: 26, weight: FontWeight.Bold),
+                                        Spacing = new Vector2(3, 0),
+                                        Shadow = false,
+                                    },
+                                },
                             },
-                        }
+                        },
                     },
                 },
             };
@@ -136,113 +144,192 @@ namespace osu.Game.Overlays.Visualizer
         {
             base.ApplyMetadata(metadata);
 
-            trackText.Text = LocalisableString.Interpolate($"{new RomanisableString(metadata.ArtistUnicode, metadata.Artist)} - {new RomanisableString(metadata.TitleUnicode, metadata.Title)}");
+            LocalisableString track = LocalisableString.Interpolate($"{new RomanisableString(metadata.ArtistUnicode, metadata.Artist)} - {new RomanisableString(metadata.TitleUnicode, metadata.Title)}");
+            trackText.Text = track.ToUpper();
         }
 
         public override void ApplyPalette(BackgroundPalette palette, int seed)
         {
             base.ApplyPalette(palette, seed);
 
-            textContainer.FadeColour(palette.PrefersDarkText(BackgroundDim) ? Color4.Black : Color4.White, colour_fade_duration, Easing.OutQuint);
+            bool darkText = palette.PrefersDarkText(BackgroundDim);
+            Color4 textColour = darkText ? Color4.Black : Color4.White;
 
-            Color4 accent = palette.ChooseAccentColour(seed);
+            // the track is written in the background colour, cut out of a bar in the text colour.
+            brandText.FadeColour(textColour, colour_fade_duration, Easing.OutQuint);
+            trackBarBackground.FadeColour(textColour, colour_fade_duration, Easing.OutQuint);
+            trackText.FadeColour(darkText ? Color4.White : Color4.Black, colour_fade_duration, Easing.OutQuint);
 
-            ring.FadeColour(accent, colour_fade_duration, Easing.OutQuint);
-            glow.FadeEdgeEffectTo(accent.Opacity(0.35f), colour_fade_duration, Easing.OutQuint);
+            sphere.TransformTo(nameof(DotSphere.AccentColour), palette.ChooseAccentColour(seed), colour_fade_duration, Easing.OutQuint);
         }
 
         protected override void Update()
         {
             base.Update();
 
-            float size = ring_size * Math.Min(DrawWidth, DrawHeight);
+            sphere.Centre = new Vector2(sphere_position * DrawWidth, DrawHeight / 2);
+            // keeps a margin to the edge of narrow screens, where the height alone would make the sphere too large.
+            sphere.Radius = Math.Min(sphere_radius * DrawHeight, (1 - sphere_position) * DrawWidth * 0.7f);
 
-            ring.Centre = new Vector2(ring_position * DrawWidth, DrawHeight / 2);
-            ring.RingSize = size;
-
-            glow.Size = new Vector2(size * 1.3f * (1 + Analyser.Bass * 0.15f));
-            glow.Alpha = 0.5f + Analyser.Bass * 0.5f;
+            // the text scales with the screen, but never grows past the left half.
+            float scale = Math.Min(DrawHeight / design_height, DrawWidth * text_position * 1.8f / Math.Max(1, textContainer.DrawWidth));
 
             // a subtle pulse, enough to feel the beat without distracting from reading.
-            textContainer.Scale = new Vector2(1 + Analyser.Beat * 0.015f);
+            textContainer.Scale = new Vector2(scale * (1 + Analyser.Beat * 0.01f));
         }
 
         /// <summary>
-        /// Layers of dots on a circle, pushed outwards by the spectrum and displaced by noise.
-        /// Dots are tinted by <see cref="Drawable.Colour"/>.
+        /// Concentric shells of dots forming a sphere, which rotates slowly in perspective and is pushed outwards by the spectrum.
         /// </summary>
-        private partial class DotRing : Drawable
+        private partial class DotSphere : Drawable
         {
-            private const int layer_count = 3;
-            private const int dots_per_layer = 300;
+            /// <summary>
+            /// The radii of the shells, relative to <see cref="Radius"/>, from the outside in.
+            /// </summary>
+            private static readonly float[] shell_radii = { 1, 0.82f, 0.64f };
 
             /// <summary>
-            /// The radius of dots when silent, relative to <see cref="RingSize"/>.
+            /// The opacity of the shells, from the outside in.
             /// </summary>
-            private const float min_radius = 0.675f;
+            private static readonly float[] shell_opacity = { 1, 0.55f, 0.3f };
 
             /// <summary>
-            /// The radius of dots at full amplitude, relative to <see cref="RingSize"/>.
+            /// The number of rings of latitude on the outermost shell. Inner shells have proportionally fewer.
             /// </summary>
-            private const float max_radius = 0.9f;
+            private const int latitude_count = 56;
 
             /// <summary>
-            /// How far noise displaces dots, relative to <see cref="RingSize"/>.
+            /// The distance of the camera from the centre of the sphere, relative to <see cref="Radius"/>.
             /// </summary>
-            private const float noise_displacement = 0.05f;
+            private const float camera_distance = 3.5f;
+
+            /// <summary>
+            /// The rotation around the vertical axis, in radians per millisecond.
+            /// </summary>
+            private const float rotation_speed = 0.00012f;
+
+            /// <summary>
+            /// How far the sphere is tilted towards the camera, in radians.
+            /// </summary>
+            private const float tilt = 0.4f;
+
+            /// <summary>
+            /// How far the spectrum pushes dots outwards at full amplitude, relative to <see cref="Radius"/>.
+            /// </summary>
+            private const float spectrum_displacement = 0.2f;
+
+            /// <summary>
+            /// Shapes the response to the spectrum, so quiet bands barely move the dots.
+            /// </summary>
+            private const float response_curve = 1.5f;
+
+            /// <summary>
+            /// How far noise displaces dots, relative to <see cref="Radius"/>.
+            /// </summary>
+            private const float noise_displacement = 0.035f;
 
             /// <summary>
             /// How fast the noise evolves, per millisecond.
             /// </summary>
-            private const float noise_speed = 0.00035f;
+            private const float noise_speed = 0.0003f;
 
             /// <summary>
-            /// How far each layer lags behind the previous one, in milliseconds.
+            /// The radius of a dot at the centre of the sphere, in pixels.
             /// </summary>
-            private const double layer_lag = 45;
+            private const float dot_radius = 1.7f;
 
             /// <summary>
-            /// The position of the centre of the ring.
+            /// The radius of the glow around each dot, relative to the dot.
+            /// </summary>
+            private const float dot_glow_size = 5;
+
+            /// <summary>
+            /// The position of the centre of the sphere.
             /// </summary>
             public Vector2 Centre;
 
             /// <summary>
-            /// The size of the ring, in pixels.
+            /// The radius of the outermost shell, in pixels.
             /// </summary>
-            public float RingSize;
+            public float Radius;
+
+            /// <summary>
+            /// The colour of the glow. Dots facing the camera are lighter.
+            /// </summary>
+            public Color4 AccentColour { get; set; } = Color4.White;
 
             private readonly SpectrumAnalyser analyser;
 
-            /// <summary>
-            /// The time-smoothed band levels per layer.
-            /// </summary>
-            private readonly float[][] layerLevels;
+            private readonly Vector3[] points;
+            private readonly int[] pointShells;
 
             /// <summary>
-            /// The spatially smoothed band levels of the layer being computed.
+            /// The position of each point in the spectrum, as a fractional band index.
+            /// </summary>
+            private readonly float[] pointBands;
+
+            private readonly Dot[] dots;
+
+            /// <summary>
+            /// The spatially smoothed band levels.
             /// </summary>
             private readonly float[] smoothed;
 
-            private readonly Dot[] dots = new Dot[layer_count * dots_per_layer];
-
             private IShader shader = null!;
-            private Texture texture = null!;
+            private Texture dotTexture = null!;
+            private Texture glowTexture = null!;
 
-            public DotRing(SpectrumAnalyser analyser)
+            public DotSphere(SpectrumAnalyser analyser)
             {
                 this.analyser = analyser;
 
-                layerLevels = new float[layer_count][];
-                for (int i = 0; i < layer_count; i++)
-                    layerLevels[i] = new float[analyser.BandCount];
-
                 smoothed = new float[analyser.BandCount];
+
+                var pointList = new List<Vector3>();
+                var shellList = new List<int>();
+
+                for (int shell = 0; shell < shell_radii.Length; shell++)
+                {
+                    int latitudes = Math.Max(8, (int)MathF.Round(latitude_count * shell_radii[shell]));
+
+                    for (int i = 0; i < latitudes; i++)
+                    {
+                        // excludes the poles themselves, where a ring would collapse into a single bright point.
+                        float polar = MathF.PI * (i + 0.5f) / latitudes;
+                        float ringRadius = MathF.Sin(polar);
+                        float y = MathF.Cos(polar);
+
+                        // keeps the spacing between dots equal along every ring.
+                        int count = Math.Max(3, (int)MathF.Round(latitudes * 2 * ringRadius));
+                        // staggers alternate rings, so the dots don't line up in visible meridians.
+                        float offset = (i % 2) * 0.5f;
+
+                        for (int j = 0; j < count; j++)
+                        {
+                            float azimuth = MathF.Tau * (j + offset) / count;
+
+                            pointList.Add(new Vector3(ringRadius * MathF.Cos(azimuth), y, ringRadius * MathF.Sin(azimuth)));
+                            shellList.Add(shell);
+                        }
+                    }
+                }
+
+                points = pointList.ToArray();
+                pointShells = shellList.ToArray();
+                pointBands = new float[points.Length];
+
+                // mirrored around the equator, with the bass at the equator and the treble at the poles.
+                for (int i = 0; i < points.Length; i++)
+                    pointBands[i] = MathF.Abs(points[i].Y) * (analyser.BandCount - 1);
+
+                dots = new Dot[points.Length];
             }
 
             [BackgroundDependencyLoader]
             private void load(IRenderer renderer, ShaderManager shaders)
             {
-                texture = SoftDotTexture.Create(renderer);
+                dotTexture = SoftDotTexture.Create(renderer);
+                glowTexture = SoftDotTexture.CreateGlow(renderer);
                 shader = shaders.Load(VertexShaderDescriptor.TEXTURE_2, FragmentShaderDescriptor.TEXTURE);
             }
 
@@ -251,58 +338,69 @@ namespace osu.Game.Overlays.Visualizer
                 base.Update();
 
                 var bands = analyser.Bands;
-                float time = (float)Time.Current * noise_speed;
 
-                for (int layer = 0; layer < layer_count; layer++)
+                for (int i = 0; i < smoothed.Length; i++)
+                    smoothed[i] = 0.25f * bands[Math.Max(0, i - 1)] + 0.5f * bands[i] + 0.25f * bands[Math.Min(bands.Length - 1, i + 1)];
+
+                float time = (float)Time.Current;
+                float noiseTime = time * noise_speed;
+
+                float rotation = time * rotation_speed;
+                float cosRotation = MathF.Cos(rotation);
+                float sinRotation = MathF.Sin(rotation);
+                float cosTilt = MathF.Cos(tilt);
+                float sinTilt = MathF.Sin(tilt);
+
+                // the whole sphere breathes with the bass.
+                float pulse = 1 + analyser.Bass * 0.06f + analyser.Beat * 0.02f;
+
+                for (int i = 0; i < points.Length; i++)
                 {
-                    float[] levels = layerLevels[layer];
-                    float factor = layer == 0 ? 1 : (float)(1 - Math.Exp(-Time.Elapsed / (layer * layer_lag)));
+                    var point = points[i];
+                    int shell = pointShells[i];
 
-                    for (int i = 0; i < levels.Length; i++)
-                        levels[i] += (bands[i] - levels[i]) * factor;
+                    float bandPosition = pointBands[i];
+                    int band = Math.Min((int)bandPosition, smoothed.Length - 2);
+                    float level = Math.Clamp(float.Lerp(smoothed[band], smoothed[band + 1], bandPosition - band), 0, 1);
 
-                    for (int i = 0; i < levels.Length; i++)
-                        smoothed[i] = 0.25f * levels[Math.Max(0, i - 1)] + 0.5f * levels[i] + 0.25f * levels[Math.Min(levels.Length - 1, i + 1)];
+                    // inner shells react less, so the sphere keeps its shape.
+                    float reaction = MathF.Pow(level, response_curve) * spectrum_displacement * shell_radii[shell];
+                    float noise = PerlinNoise.Sample(point.X * 1.8f + shell * 7.3f, point.Y * 1.8f, point.Z * 1.8f + noiseTime);
 
-                    for (int i = 0; i < dots_per_layer; i++)
+                    float distance = shell_radii[shell] * pulse + reaction + noise * noise_displacement * (1 + level * 2);
+                    var position = point * distance;
+
+                    // rotates around the vertical axis, then tilts towards the camera.
+                    float x = position.X * cosRotation + position.Z * sinRotation;
+                    float z = -position.X * sinRotation + position.Z * cosRotation;
+                    float y = position.Y * cosTilt - z * sinTilt;
+                    z = position.Y * sinTilt + z * cosTilt;
+
+                    float perspective = camera_distance / (camera_distance - z);
+
+                    // dots facing the camera are larger and brighter.
+                    float facing = Math.Clamp((z + 1) / 2, 0, 1);
+
+                    dots[i] = new Dot
                     {
-                        float angle = MathF.Tau * i / dots_per_layer;
-
-                        // mirrored left to right, with the bass at the top.
-                        float bandPosition = MathF.Abs(MathF.PI - angle) / MathF.PI;
-                        bandPosition = (1 - bandPosition) * (smoothed.Length - 1);
-
-                        int band = Math.Min((int)bandPosition, smoothed.Length - 2);
-                        float level = float.Lerp(smoothed[band], smoothed[band + 1], bandPosition - band);
-                        float amplitude = Math.Clamp(level * 0.8f + analyser.Bass * 0.35f, 0, 1);
-
-                        var direction = new Vector2(MathF.Sin(angle), -MathF.Cos(angle));
-
-                        // sampled on a circle in noise space, so the displacement is seamless around the ring.
-                        float noise = PerlinNoise.Sample(direction.X * 1.6f + 10, direction.Y * 1.6f + 10, time + layer * 4.7f);
-
-                        float radius = float.Lerp(min_radius, max_radius, amplitude) + noise * noise_displacement * (0.5f + amplitude);
-
-                        dots[layer * dots_per_layer + i] = new Dot
-                        {
-                            Position = direction * radius * RingSize / 2,
-                            Radius = 1.6f + amplitude * 1.6f,
-                            // later layers lag behind and are fainter, forming a trail.
-                            Alpha = 0.95f - layer * 0.25f,
-                        };
-                    }
+                        Position = new Vector2(x, -y) * Radius * perspective,
+                        Radius = dot_radius * perspective * (0.7f + facing * 0.5f + level * 0.6f),
+                        Alpha = shell_opacity[shell] * (0.15f + facing * 0.85f),
+                        Lightness = facing,
+                    };
                 }
 
                 Invalidate(Invalidation.DrawNode);
             }
 
-            protected override DrawNode CreateDrawNode() => new DotRingDrawNode(this);
+            protected override DrawNode CreateDrawNode() => new DotSphereDrawNode(this);
 
             protected override void Dispose(bool isDisposing)
             {
                 base.Dispose(isDisposing);
 
-                texture?.Dispose();
+                dotTexture?.Dispose();
+                glowTexture?.Dispose();
             }
 
             private struct Dot
@@ -310,23 +408,38 @@ namespace osu.Game.Overlays.Visualizer
                 public Vector2 Position;
                 public float Radius;
                 public float Alpha;
+
+                /// <summary>
+                /// How far the dot is lightened towards white.
+                /// </summary>
+                public float Lightness;
             }
 
-            private class DotRingDrawNode : DrawNode
+            private class DotSphereDrawNode : DrawNode
             {
-                protected new DotRing Source => (DotRing)base.Source;
+                protected new DotSphere Source => (DotSphere)base.Source;
+
+                /// <summary>
+                /// The radius of the halo behind the sphere, relative to the sphere.
+                /// </summary>
+                private const float halo_size = 1.9f;
 
                 private IShader shader = null!;
-                private Texture texture = null!;
+                private Texture dotTexture = null!;
+                private Texture glowTexture = null!;
                 private Vector2 centre;
+                private float radius;
+                private float bass;
+                private Color4 accent;
 
-                private readonly Dot[] dots = new Dot[layer_count * dots_per_layer];
+                private readonly Dot[] dots;
 
                 private IVertexBatch<TexturedVertex2D>? vertexBatch;
 
-                public DotRingDrawNode(DotRing source)
+                public DotSphereDrawNode(DotSphere source)
                     : base(source)
                 {
+                    dots = new Dot[source.dots.Length];
                 }
 
                 public override void ApplyState()
@@ -334,8 +447,12 @@ namespace osu.Game.Overlays.Visualizer
                     base.ApplyState();
 
                     shader = Source.shader;
-                    texture = Source.texture;
+                    dotTexture = Source.dotTexture;
+                    glowTexture = Source.glowTexture;
                     centre = Source.Centre;
+                    radius = Source.Radius;
+                    bass = Source.analyser.Bass;
+                    accent = Source.AccentColour;
 
                     Source.dots.AsSpan().CopyTo(dots);
                 }
@@ -344,33 +461,45 @@ namespace osu.Game.Overlays.Visualizer
                 {
                     base.Draw(renderer);
 
-                    if (!texture.Available)
+                    if (!dotTexture.Available || !glowTexture.Available)
                         return;
 
-                    vertexBatch ??= renderer.CreateQuadBatch<TexturedVertex2D>(dots.Length, 2);
+                    // the batch is drawn in several parts if it fills up.
+                    vertexBatch ??= renderer.CreateQuadBatch<TexturedVertex2D>(8192, 4);
 
                     shader.Bind();
 
-                    // drawn back to front, so the most responsive layer is on top.
-                    for (int i = dots.Length - 1; i >= 0; i--)
+                    // additive, so overlapping dots and glows bloom like the light of the original.
+                    renderer.SetBlend(BlendingParameters.Additive);
+
+                    drawSprite(renderer, glowTexture, centre, radius * halo_size, accent.Opacity(0.12f + bass * 0.1f));
+
+                    foreach (var dot in dots)
+                        drawSprite(renderer, glowTexture, centre + dot.Position, dot.Radius * dot_glow_size, accent.Opacity(dot.Alpha * 0.07f));
+
+                    foreach (var dot in dots)
                     {
-                        var dot = dots[i];
-                        var position = centre + dot.Position;
-                        float r = dot.Radius;
-
-                        var quad = new Quad(
-                            Vector2Extensions.Transform(position + new Vector2(-r, -r), DrawInfo.Matrix),
-                            Vector2Extensions.Transform(position + new Vector2(r, -r), DrawInfo.Matrix),
-                            Vector2Extensions.Transform(position + new Vector2(-r, r), DrawInfo.Matrix),
-                            Vector2Extensions.Transform(position + new Vector2(r, r), DrawInfo.Matrix));
-
-                        ColourInfo colour = DrawColourInfo.Colour;
-                        colour.ApplyChild(Color4.White.Opacity(dot.Alpha));
-
-                        renderer.DrawQuad(texture, quad, colour, vertexAction: vertexBatch.AddAction);
+                        var colour = Interpolation.ValueAt(dot.Lightness * 0.65f, accent, Color4.White, 0, 1);
+                        drawSprite(renderer, dotTexture, centre + dot.Position, dot.Radius, colour.Opacity(dot.Alpha));
                     }
 
+                    renderer.SetBlend(DrawColourInfo.Blending);
+
                     shader.Unbind();
+                }
+
+                private void drawSprite(IRenderer renderer, Texture texture, Vector2 position, float size, Color4 tint)
+                {
+                    var quad = new Quad(
+                        Vector2Extensions.Transform(position + new Vector2(-size, -size), DrawInfo.Matrix),
+                        Vector2Extensions.Transform(position + new Vector2(size, -size), DrawInfo.Matrix),
+                        Vector2Extensions.Transform(position + new Vector2(-size, size), DrawInfo.Matrix),
+                        Vector2Extensions.Transform(position + new Vector2(size, size), DrawInfo.Matrix));
+
+                    ColourInfo colour = DrawColourInfo.Colour;
+                    colour.ApplyChild(tint);
+
+                    renderer.DrawQuad(texture, quad, colour, vertexAction: vertexBatch!.AddAction);
                 }
 
                 protected override void Dispose(bool isDisposing)

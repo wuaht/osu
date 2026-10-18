@@ -92,6 +92,14 @@ namespace osu.Game.Overlays.Visualizer
         [Resolved]
         private OsuColour colours { get; set; } = null!;
 
+        [Resolved]
+        private OsuGame? game { get; set; }
+
+        /// <summary>
+        /// Whether the toolbar was hidden by this overlay while idle, and should be shown again on interaction.
+        /// </summary>
+        private bool toolbarHiddenByIdle;
+
         private readonly SpectrumAnalyser analyser = new SpectrumAnalyser(band_count);
 
         private readonly Bindable<VisualizerStyle> style = new Bindable<VisualizerStyle>();
@@ -692,13 +700,34 @@ namespace osu.Game.Overlays.Visualizer
             if (shouldKeepChrome())
                 lastInteractionTime = Time.Current;
 
-            bool hide = Time.Current - lastInteractionTime > idle_hide_delay;
+            // never hide anything while closing, so the toolbar is not left hidden.
+            bool hide = State.Value == Visibility.Visible && Time.Current - lastInteractionTime > idle_hide_delay;
 
             if (hide == chromeHidden)
                 return;
 
             chromeHidden = hide;
             chrome.FadeTo(hide ? 0 : 1, chrome_fade_duration, Easing.OutQuint);
+
+            if (hide)
+            {
+                if (game?.Toolbar.State.Value == Visibility.Visible)
+                {
+                    game.Toolbar.Hide();
+                    toolbarHiddenByIdle = true;
+                }
+            }
+            else
+                restoreToolbar();
+        }
+
+        private void restoreToolbar()
+        {
+            if (!toolbarHiddenByIdle)
+                return;
+
+            toolbarHiddenByIdle = false;
+            game?.Toolbar.Show();
         }
 
         private bool shouldKeepChrome()
@@ -727,6 +756,15 @@ namespace osu.Game.Overlays.Visualizer
 
             playlist?.Hide();
             this.FadeOut(transition_duration, Easing.OutQuint);
+
+            if (chromeHidden)
+            {
+                chromeHidden = false;
+                chrome.FadeIn(chrome_fade_duration, Easing.OutQuint);
+            }
+
+            restoreToolbar();
+
         }
 
         protected override void Dispose(bool isDisposing)

@@ -18,6 +18,9 @@ using osu.Framework.Graphics.Sprites;
 using osu.Framework.Graphics.Textures;
 using osu.Framework.Utils;
 using osu.Game.Configuration;
+using osu.Game.Graphics.Backgrounds;
+using osu.Game.Screens.Menu;
+
 using osuTK;
 using osuTK.Graphics;
 
@@ -39,15 +42,20 @@ namespace osu.Game.Overlays.Visualizer
         private const float logo_design_size = 300;
 
         /// <summary>
+        /// The size of the main menu logo's texture.
+        /// </summary>
+        private const float menu_logo_texture_size = 1024;
+
+        /// <summary>
         /// How far the logo shakes on beats, in pixels.
         /// </summary>
-        private const float logo_shake = 6;
+        private const float logo_shake = 2.5f;
 
         public override float BackgroundDim => 0.35f;
 
-        public override float BackgroundZoom => 0.04f;
+        public override float BackgroundZoom => 0.025f;
 
-        public override float BackgroundShake => 10;
+        public override float BackgroundShake => 3;
 
         private readonly SpectrumRing ring;
         private readonly CircularContainer logoContainer;
@@ -55,6 +63,8 @@ namespace osu.Game.Overlays.Visualizer
         private readonly Bindable<TrapNationLogo> logo = new Bindable<TrapNationLogo>();
 
         private TextureStore textures = null!;
+
+        private TrianglesV2? slopTriangles;
 
         public TrapNationVisualizer(SpectrumAnalyser analyser)
             : base(analyser)
@@ -93,25 +103,14 @@ namespace osu.Game.Overlays.Visualizer
 
             logo.BindValueChanged(e =>
             {
+                slopTriangles = null;
+
                 bool trapNation = e.NewValue == TrapNationLogo.TrapNation;
                 Drawable content = trapNation ? createTrapNationLogo() : createSlopLogo();
 
-                // the slop! logo brings its own ring.
+                // the main menu logo brings its own ring and background.
                 logoContainer.BorderThickness = trapNation ? 16 : 0;
-
-                logoContainer.Child = new Container
-                {
-                    RelativeSizeAxes = Axes.Both,
-                    Children = new[]
-                    {
-                        new Box
-                        {
-                            RelativeSizeAxes = Axes.Both,
-                            Colour = Color4.Black,
-                        },
-                        content,
-                    },
-                };
+                logoContainer.Child = content;
 
                 content.FadeInFromZero(300, Easing.OutQuint);
             }, true);
@@ -121,7 +120,7 @@ namespace osu.Game.Overlays.Visualizer
         {
             base.Update();
 
-            float diameter = logo_size * Math.Min(DrawWidth, DrawHeight) * (1 + Analyser.Bass * 0.12f + Analyser.Beat * 0.05f);
+            float diameter = logo_size * Math.Min(DrawWidth, DrawHeight) * (1 + Analyser.Bass * 0.06f + Analyser.Beat * 0.025f);
 
             // noise rather than random offsets, so the shake is jittery but still continuous.
             float time = (float)Time.Current * 0.02f;
@@ -133,15 +132,55 @@ namespace osu.Game.Overlays.Visualizer
             // starts slightly inside the logo, so the base of the spectrum is hidden under the logo's border.
             ring.Radius = diameter / 2 - 4;
             ring.CentreOffset = shake;
+
+            if (slopTriangles != null)
+                slopTriangles.Velocity = (float)Interpolation.Damp(slopTriangles.Velocity, 0.5f + Analyser.Loudness * 4 + Analyser.Beat * 4, 0.9f, Time.Elapsed);
         }
 
-        private Drawable createSlopLogo() => new Sprite
+        /// <summary>
+        /// The logo of the main menu (see <see cref="OsuLogo"/>), without its interactivity.
+        /// </summary>
+        private Drawable createSlopLogo() => new Container
         {
             RelativeSizeAxes = Axes.Both,
-            Anchor = Anchor.Centre,
-            Origin = Anchor.Centre,
-            FillMode = FillMode.Fit,
-            Texture = textures.Get(@"Icons/SlopLogo"),
+            Children = new Drawable[]
+            {
+                new CircularContainer
+                {
+                    RelativeSizeAxes = Axes.Both,
+                    Anchor = Anchor.Centre,
+                    Origin = Anchor.Centre,
+                    // the coloured background ends under the logo's ring.
+                    Scale = OsuLogo.SCALE_ADJUST,
+                    Masking = true,
+                    Children = new Drawable[]
+                    {
+                        new Box
+                        {
+                            RelativeSizeAxes = Axes.Both,
+                            Colour = ColourInfo.GradientVertical(Color4Extensions.FromHex(@"023e7d"), Color4Extensions.FromHex(@"0466c8")),
+                        },
+                        slopTriangles = new TrianglesV2
+                        {
+                            RelativeSizeAxes = Axes.Both,
+                            Anchor = Anchor.Centre,
+                            Origin = Anchor.Centre,
+                            Thickness = 0.009f,
+                            // matches the triangle size of the main menu logo, which is designed at a larger size.
+                            ScaleAdjust = 3 * logo_design_size / menu_logo_texture_size,
+                            SpawnRatio = 1.4f,
+                            Colour = ColourInfo.GradientVertical(Color4Extensions.FromHex(@"0466c8"), Color4Extensions.FromHex(@"023e7d")),
+                        },
+                    },
+                },
+                new Sprite
+                {
+                    RelativeSizeAxes = Axes.Both,
+                    Anchor = Anchor.Centre,
+                    Origin = Anchor.Centre,
+                    Texture = textures.Get(@"Menu/logo"),
+                },
+            },
         };
 
         private static Drawable createTrapNationLogo()
@@ -152,12 +191,24 @@ namespace osu.Game.Overlays.Visualizer
             return new Container
             {
                 RelativeSizeAxes = Axes.Both,
-                // the triangles are positioned by their centroids, which sit low in their bounding boxes. move up a little for optical balance.
-                Y = -8,
-                Children = new[]
+                Children = new Drawable[]
                 {
-                    createTriangle(outer_width, Color4.White),
-                    createTriangle(inner_width, Color4.Black),
+                    new Box
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Colour = Color4.Black,
+                    },
+                    new Container
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        // the triangles are positioned by their centroids, which sit low in their bounding boxes. move up a little for optical balance.
+                        Y = -8,
+                        Children = new[]
+                        {
+                            createTriangle(outer_width, Color4.White),
+                            createTriangle(inner_width, Color4.Black),
+                        },
+                    },
                 },
             };
 
@@ -207,7 +258,27 @@ namespace osu.Game.Overlays.Visualizer
             /// <summary>
             /// The maximum height of the spectrum, relative to <see cref="Radius"/>.
             /// </summary>
-            private const float max_height = 0.75f;
+            private const float max_height = 0.38f;
+
+            /// <summary>
+            /// The exponent applied to band levels. Values above 1 keep the spectrum calm and only let strong bands reach full height.
+            /// </summary>
+            private const float response_curve = 1.35f;
+
+            /// <summary>
+            /// The width of the glow outside of each layer, relative to <see cref="Radius"/>.
+            /// </summary>
+            private const float glow_size = 0.16f;
+
+            /// <summary>
+            /// The opacity of the glow when silent.
+            /// </summary>
+            private const float glow_opacity = 0.18f;
+
+            /// <summary>
+            /// The additional opacity of the glow at full bass.
+            /// </summary>
+            private const float glow_bass_opacity = 0.22f;
 
             /// <summary>
             /// The height of the spectrum when silent, in pixels.
@@ -285,6 +356,7 @@ namespace osu.Game.Overlays.Visualizer
 
                 private Vector2 centre;
                 private float radius;
+                private float bass;
 
                 private float[][] layers = Array.Empty<float[]>();
 
@@ -313,6 +385,7 @@ namespace osu.Game.Overlays.Visualizer
                     texture = Source.texture;
                     centre = Source.DrawSize / 2 + Source.CentreOffset;
                     radius = Source.Radius;
+                    bass = Source.analyser.Bass;
 
                     if (layers.Length != Source.layers.Length)
                         layers = new float[Source.layers.Length][];
@@ -344,18 +417,35 @@ namespace osu.Game.Overlays.Visualizer
                         heights = new float[segments + 1];
                     }
 
-                    vertexBatch ??= renderer.CreateQuadBatch<TexturedVertex2D>(segments * 2 * layer_colours.Length, 2);
+                    // per layer and side: one solid quad and two glow quads per segment.
+                    vertexBatch ??= renderer.CreateQuadBatch<TexturedVertex2D>(segments * 2 * 3 * layer_colours.Length, 2);
 
                     shader.Bind();
+
+                    // the glow goes behind all layers and is added onto the background, so the glows of different layers blend into each other.
+                    renderer.SetBlend(BlendingParameters.Additive);
+
+                    float glowWidth = radius * glow_size;
+                    float glowAlpha = glow_opacity + bass * glow_bass_opacity;
+
+                    for (int layer = 0; layer < layers.Length; layer++)
+                    {
+                        computeHeights(layers[layer], layerScale(layer));
+
+                        for (int k = 0; k < segments; k++)
+                        {
+                            drawGlowSegment(renderer, k, segments, 1, layer_colours[layer], glowWidth, glowAlpha);
+                            drawGlowSegment(renderer, k, segments, -1, layer_colours[layer], glowWidth, glowAlpha);
+                        }
+                    }
+
+                    renderer.SetBlend(DrawColourInfo.Blending);
 
                     Vector2 inflation = DrawInfo.MatrixInverse.ExtractScale().Xy;
 
                     for (int layer = 0; layer < layers.Length; layer++)
                     {
-                        int depth = layers.Length - 1 - layer;
-                        float scale = radius * max_height * (1 + depth * layer_growth);
-
-                        computeHeights(layers[layer], scale);
+                        computeHeights(layers[layer], layerScale(layer));
 
                         ColourInfo colour = DrawColourInfo.Colour;
                         colour.ApplyChild(layer_colours[layer]);
@@ -372,6 +462,12 @@ namespace osu.Game.Overlays.Visualizer
                     }
 
                     shader.Unbind();
+                }
+
+                private float layerScale(int layer)
+                {
+                    int depth = layers.Length - 1 - layer;
+                    return radius * max_height * (1 + depth * layer_growth);
                 }
 
                 /// <summary>
@@ -399,7 +495,7 @@ namespace osu.Game.Overlays.Visualizer
                                               + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t * t
                                               + (3 * p1 - p0 - 3 * p2 + p3) * t * t * t);
 
-                        heights[k] = min_height + Math.Max(0, level) * scale;
+                        heights[k] = min_height + MathF.Pow(Math.Max(0, level), response_curve) * scale;
                     }
                 }
 
@@ -433,6 +529,44 @@ namespace osu.Game.Overlays.Visualizer
 
                     // only smooth the outer edge. smoothing between segments would leave visible seams.
                     renderer.DrawQuad(texture, quad, colour, null, vertexBatch!.AddAction, new Vector2(inflation.X / Math.Max(height1, height2), 0));
+                }
+
+                /// <summary>
+                /// Draws a soft halo outside of segment <paramref name="k"/> of the current <see cref="heights"/>.
+                /// </summary>
+                private void drawGlowSegment(IRenderer renderer, int k, int segments, float side, Color4 layerColour, float width, float alpha)
+                {
+                    // two linear ramps approximate an exponential falloff, which looks much softer than a single linear one.
+                    const float knee_position = 0.3f;
+                    const float knee_alpha = 0.35f;
+
+                    float angle1 = MathF.PI * k / segments;
+                    float angle2 = MathF.PI * (k + 1) / segments;
+
+                    var direction1 = new Vector2(side * MathF.Sin(angle1), -MathF.Cos(angle1));
+                    var direction2 = new Vector2(side * MathF.Sin(angle2), -MathF.Cos(angle2));
+
+                    // starts slightly inside the layer, so there is no gap between the layer's smoothed edge and the glow.
+                    float start1 = radius + heights[k] - 2;
+                    float start2 = radius + heights[k + 1] - 2;
+
+                    drawRamp(0, knee_position, alpha, alpha * knee_alpha);
+                    drawRamp(knee_position, 1, alpha * knee_alpha, 0);
+
+                    void drawRamp(float from, float to, float innerAlpha, float outerAlpha)
+                    {
+                        var quad = new Quad(
+                            Vector2Extensions.Transform(centre + direction1 * (start1 + width * from), DrawInfo.Matrix),
+                            Vector2Extensions.Transform(centre + direction1 * (start1 + width * to), DrawInfo.Matrix),
+                            Vector2Extensions.Transform(centre + direction2 * (start2 + width * from), DrawInfo.Matrix),
+                            Vector2Extensions.Transform(centre + direction2 * (start2 + width * to), DrawInfo.Matrix));
+
+                        // the quad's "left" vertices lie on its inner edge, its "right" vertices on its outer edge.
+                        ColourInfo colour = DrawColourInfo.Colour;
+                        colour.ApplyChild(ColourInfo.GradientHorizontal(layerColour.Opacity(innerAlpha), layerColour.Opacity(outerAlpha)));
+
+                        renderer.DrawQuad(texture, quad, colour, vertexAction: vertexBatch!.AddAction);
+                    }
                 }
 
                 protected override void Dispose(bool isDisposing)
