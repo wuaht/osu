@@ -78,6 +78,7 @@ namespace osu.Game.Rulesets.Osu.UI.Cursor
         private Anchor trailOrigin = Anchor.Centre;
         private int currentIndex;
         private IShader shader;
+        private IShader monochromeShader;
         private double timeOffset;
         private float time;
 
@@ -100,6 +101,25 @@ namespace osu.Game.Rulesets.Osu.UI.Cursor
         {
             texture ??= renderer.WhitePixel;
             shader = shaders.Load(@"CursorTrail", FragmentShaderDescriptor.TEXTURE);
+            monochromeShader = shaders.Load(@"CursorTrail", @"TextureMonochrome");
+        }
+
+        private bool monochrome;
+
+        /// <summary>
+        /// Whether to discard the colour of the texture, so that only <see cref="Drawable.Colour"/> is displayed.
+        /// </summary>
+        public bool Monochrome
+        {
+            get => monochrome;
+            set
+            {
+                if (monochrome == value)
+                    return;
+
+                monochrome = value;
+                Invalidate(Invalidation.DrawNode);
+            }
         }
 
         protected override void LoadComplete()
@@ -261,7 +281,7 @@ namespace osu.Game.Rulesets.Osu.UI.Cursor
             {
                 base.ApplyState();
 
-                shader = Source.shader;
+                shader = Source.monochrome ? Source.monochromeShader : Source.shader;
                 texture = Source.texture;
                 time = Source.time;
                 fadeExponent = Source.FadeExponent;

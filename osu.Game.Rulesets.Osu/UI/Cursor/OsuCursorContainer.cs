@@ -195,6 +195,12 @@ namespace osu.Game.Rulesets.Osu.UI.Cursor
             }
 
             applyColourEffect(trailContainer, ColourEffectTarget.CursorTrail, ref trailColourEffectApplied);
+
+            // skin textures may have their own colour, which would otherwise mix with the effect colour.
+            // applied every frame, as the skin trail is recreated on skin changes.
+            if (cursorTrail.Drawable is CursorTrail skinTrail)
+                skinTrail.Monochrome = trailColourEffectApplied;
+            argonCursorTrail.Monochrome = trailColourEffectApplied;
         }
 
         private void applyColourEffect(Drawable drawable, ColourEffectTarget target, ref bool applied)
