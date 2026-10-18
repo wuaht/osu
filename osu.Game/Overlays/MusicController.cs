@@ -18,6 +18,7 @@ using osu.Framework.Threading;
 using osu.Framework.Utils;
 using osu.Game.Audio.Effects;
 using osu.Game.Beatmaps;
+using osu.Game.Collections;
 using osu.Game.Configuration;
 using osu.Game.Database;
 using osu.Game.Rulesets.Mods;
@@ -51,6 +52,12 @@ namespace osu.Game.Overlays
         public readonly BindableBool AllowTrackControl = new BindableBool(true);
 
         public readonly BindableBool Shuffle = new BindableBool(true);
+
+        /// <summary>
+        /// The <see cref="BeatmapCollection"/> which next / previous track selection is restricted to.
+        /// A <c>null</c> value, or a collection which no longer exists, allows all beatmap sets to be played.
+        /// </summary>
+        public readonly Bindable<Guid?> PlaylistCollection = new Bindable<Guid?>();
 
         /// <summary>
         /// Fired when the global <see cref="WorkingBeatmap"/> has changed.
@@ -100,6 +107,13 @@ namespace osu.Game.Overlays
                     changeBeatmap(b.NewValue);
             }, true);
             mods.BindValueChanged(_ => ResetTrackAdjustments(), true);
+
+            PlaylistCollection.BindValueChanged(_ =>
+            {
+                // the random history may reference sets outside of the new playlist.
+                randomHistory.Clear();
+                currentRandomHistoryPosition = null;
+            });
         }
 
         /// <summary>
@@ -266,7 +280,7 @@ namespace osu.Game.Overlays
 
             if (playableSet != null)
             {
-                changeBeatmap(beatmaps.GetWorkingBeatmap(playableSet.Value.Beatmaps.First()));
+                changeBeatmap(beatmaps.GetWorkingBeatmap(getPlayableBeatmap(playableSet.Value)));
                 restartTrack();
                 return PreviousTrackResult.Previous;
             }
@@ -360,7 +374,7 @@ namespace osu.Game.Overlays
                               ?? getBeatmapSets(allowProtectedTracks).FirstOrDefault();
             }
 
-            var playableBeatmap = playableSet?.Value.Beatmaps.FirstOrDefault();
+            var playableBeatmap = playableSet == null ? null : getPlayableBeatmap(playableSet.Value);
 
             if (playableBeatmap != null)
             {
@@ -456,12 +470,39 @@ namespace osu.Game.Overlays
 
         private TrackChangeDirection? queuedDirection;
 
-        private IEnumerable<Live<BeatmapSetInfo>> getBeatmapSets(bool allowProtectedTracks) =>
-            realm.Realm.All<BeatmapSetInfo>().Where(s => !s.DeletePending)
-                 .AsEnumerable()
-                 .Select(s => new RealmLive<BeatmapSetInfo>(s, realm))
-                 .Where(i => (allowProtectedTracks || !i.Value.Protected)
-                             && (SeasonalUIConfig.ENABLED || i.Value.Hash != IntroChristmas.CHRISTMAS_BEATMAP_SET_HASH));
+        private IEnumerable<Live<BeatmapSetInfo>> getBeatmapSets(bool allowProtectedTracks)
+        {
+            var collectionHashes = getPlaylistCollectionHashes();
+
+            return realm.Realm.All<BeatmapSetInfo>().Where(s => !s.DeletePending)
+                        .AsEnumerable()
+                        .Where(s => collectionHashes == null || s.Beatmaps.Any(b => collectionHashes.Contains(b.MD5Hash)))
+                        .Select(s => new RealmLive<BeatmapSetInfo>(s, realm))
+                        .Where(i => (allowProtectedTracks || !i.Value.Protected)
+                                    && (SeasonalUIConfig.ENABLED || i.Value.Hash != IntroChristmas.CHRISTMAS_BEATMAP_SET_HASH));
+        }
+
+        /// <summary>
+        /// Returns the beatmap hashes of the current <see cref="PlaylistCollection"/>, or <c>null</c> if playback is not restricted to a collection.
+        /// </summary>
+        private HashSet<string>? getPlaylistCollectionHashes()
+        {
+            if (PlaylistCollection.Value is not Guid collectionId)
+                return null;
+
+            return realm.Realm.Find<BeatmapCollection>(collectionId)?.BeatmapMD5Hashes.ToHashSet();
+        }
+
+        /// <summary>
+        /// Chooses the difficulty of a set to play, preferring one which is part of the current <see cref="PlaylistCollection"/>.
+        /// </summary>
+        private BeatmapInfo? getPlayableBeatmap(BeatmapSetInfo set)
+        {
+            var collectionHashes = getPlaylistCollectionHashes();
+
+            return (collectionHashes == null ? null : set.Beatmaps.FirstOrDefault(b => collectionHashes.Contains(b.MD5Hash)))
+                   ?? set.Beatmaps.FirstOrDefault();
+        }
 
         private void changeBeatmap(WorkingBeatmap newWorking)
         {

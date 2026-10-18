@@ -123,6 +123,7 @@ namespace osu.Game.Input.Bindings
             new KeyBinding(new[] { InputKey.Control, InputKey.O }, GlobalAction.ToggleSettings),
             new KeyBinding(new[] { InputKey.Control, InputKey.N }, GlobalAction.ToggleNotifications),
             new KeyBinding(new[] { InputKey.Control, InputKey.P }, GlobalAction.ToggleProfile),
+            new KeyBinding(InputKey.None, GlobalAction.ToggleVisualizer),
         };
 
         private static IEnumerable<KeyBinding> editorKeyBindings => new[]
@@ -683,6 +684,9 @@ namespace osu.Game.Input.Bindings
 
         [LocalisableDescription(typeof(SlopNominatorsStrings), nameof(SlopNominatorsStrings.NominatorsEditorMode))]
         EditorNominatorsMode,
+
+        [LocalisableDescription(typeof(SlopVisualizerStrings), nameof(SlopVisualizerStrings.ToggleVisualizer))]
+        ToggleVisualizer,
     }
 
     public enum GlobalActionCategory

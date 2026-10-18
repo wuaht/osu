@@ -482,6 +482,59 @@ namespace osu.Game.Localisation
         public static LocalisableString FrostedBnTrackerPanelsDescription => new TranslatableString(getKey(@"frosted_bn_tracker_panels_description"),
             @"The panels of the ""request"" screen have a frosted glass background, through which the background of the beatmap shows.");
 
+        /// <summary>
+        /// "Visualizer"
+        /// </summary>
+        public static LocalisableString VisualizerHeader => new TranslatableString(getKey(@"visualizer_header"), @"Visualizer");
+
+        /// <summary>
+        /// "Visualizer style"
+        /// </summary>
+        public static LocalisableString VisualizerStyle => new TranslatableString(getKey(@"visualizer_style"), @"Visualizer style");
+
+        /// <summary>
+        /// "The visualizer displayed by the music player, which is opened from the toolbar."
+        /// </summary>
+        public static LocalisableString VisualizerStyleDescription => new TranslatableString(getKey(@"visualizer_style_description"),
+            @"The visualizer displayed by the music player, which is opened from the toolbar.");
+
+        /// <summary>
+        /// "Trap Nation"
+        /// </summary>
+        public static LocalisableString VisualizerStyleTrapNation => new TranslatableString(getKey(@"visualizer_style_trap_nation"), @"Trap Nation");
+
+        /// <summary>
+        /// "NCS"
+        /// </summary>
+        public static LocalisableString VisualizerStyleNcs => new TranslatableString(getKey(@"visualizer_style_ncs"), @"NCS");
+
+        /// <summary>
+        /// "slop!"
+        /// </summary>
+        public static LocalisableString VisualizerBrandingSlop => new TranslatableString(getKey(@"visualizer_branding_slop"), @"slop!");
+
+        /// <summary>
+        /// "Trap Nation logo"
+        /// </summary>
+        public static LocalisableString TrapNationLogo => new TranslatableString(getKey(@"trap_nation_logo"), @"Trap Nation logo");
+
+        /// <summary>
+        /// "The logo in the centre of the Trap Nation visualizer, which pulses and shakes with the beat."
+        /// </summary>
+        public static LocalisableString TrapNationLogoDescription => new TranslatableString(getKey(@"trap_nation_logo_description"),
+            @"The logo in the centre of the Trap Nation visualizer, which pulses and shakes with the beat.");
+
+        /// <summary>
+        /// "NCS title"
+        /// </summary>
+        public static LocalisableString NcsTitle => new TranslatableString(getKey(@"ncs_title"), @"NCS title");
+
+        /// <summary>
+        /// "The title next to the ring of the NCS visualizer. It is black or white, depending on the brightness of the background."
+        /// </summary>
+        public static LocalisableString NcsTitleDescription => new TranslatableString(getKey(@"ncs_title_description"),
+            @"The title next to the ring of the NCS visualizer. It is black or white, depending on the brightness of the background.");
+
         private static string getKey(string key) => $"{prefix}:{key}";
     }
 }

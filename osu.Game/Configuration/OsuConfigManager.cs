@@ -21,6 +21,7 @@ using osu.Game.Online.Leaderboards;
 using osu.Game.Overlays;
 using osu.Game.Overlays.Dashboard.Friends;
 using osu.Game.Overlays.Mods.Input;
+using osu.Game.Overlays.Visualizer;
 using osu.Game.Rulesets.Scoring;
 using osu.Game.Screens.Edit.Components;
 using osu.Game.Screens.Edit.Compose.Components.Timeline;
@@ -304,6 +305,10 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopFposuScaleCursorWithDistance, false);
 
             SetDefault(OsuSetting.SlopSkipBreaks, false);
+
+            SetDefault(OsuSetting.SlopVisualizerStyle, VisualizerStyle.TrapNation);
+            SetDefault(OsuSetting.SlopVisualizerTrapNationLogo, TrapNationLogo.Slop);
+            SetDefault(OsuSetting.SlopVisualizerNcsTitle, NcsTitle.Slop);
 
             SetDefault(OsuSetting.SlopActiveOfflineProfile, string.Empty);
             SetDefault(OsuSetting.SlopOfflineProfilesIncludeUnranked, false);
@@ -837,5 +842,20 @@ namespace osu.Game.Configuration
         /// Whether the panels of the "request" screen of the beatmap editor have a frosted glass background, instead of an opaque one.
         /// </summary>
         SlopBnTrackerFrostedPanels,
+
+        /// <summary>
+        /// The <see cref="Overlays.Visualizer.VisualizerStyle"/> displayed by the music visualizer.
+        /// </summary>
+        SlopVisualizerStyle,
+
+        /// <summary>
+        /// The <see cref="Overlays.Visualizer.TrapNationLogo"/> in the centre of the Trap Nation visualizer.
+        /// </summary>
+        SlopVisualizerTrapNationLogo,
+
+        /// <summary>
+        /// The <see cref="Overlays.Visualizer.NcsTitle"/> next to the ring of the NCS visualizer.
+        /// </summary>
+        SlopVisualizerNcsTitle,
     }
 }

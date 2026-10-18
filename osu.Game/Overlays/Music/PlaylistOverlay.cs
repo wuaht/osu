@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
@@ -11,6 +12,7 @@ using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Effects;
 using osu.Framework.Graphics.Shapes;
 using osu.Game.Beatmaps;
+using osu.Game.Collections;
 using osu.Game.Database;
 using osu.Game.Graphics;
 using osuTK;
@@ -37,7 +39,18 @@ namespace osu.Game.Overlays.Music
         [Resolved]
         private RealmAccess realm { get; set; } = null!;
 
+        [Resolved(canBeNull: true)]
+        private MusicController? musicController { get; set; }
+
         private IDisposable? beatmapSubscription;
+        private IDisposable? collectionSubscription;
+
+        private IRealmCollection<BeatmapSetInfo>? allBeatmapSets;
+
+        /// <summary>
+        /// The beatmap hashes of <see cref="MusicController.PlaylistCollection"/>, or <c>null</c> if the playlist is not restricted to a collection.
+        /// </summary>
+        private HashSet<string>? collectionHashes;
 
         private Playlist list = null!;
 
@@ -82,17 +95,20 @@ namespace osu.Game.Overlays.Music
 
             beatmapSubscription = realm.RegisterForNotifications(r => r.All<BeatmapSetInfo>().Where(s => !s.DeletePending && !s.Protected), beatmapsChanged);
 
+            musicController?.PlaylistCollection.BindValueChanged(c => playlistCollectionChanged(c.NewValue), true);
+
             list.RowData.BindTo(beatmapSets);
             beatmap.BindValueChanged(working => SelectedSet.Value = working.NewValue.BeatmapSetInfo.ToLive(realm), true);
         }
 
         private void beatmapsChanged(IRealmCollection<BeatmapSetInfo> sender, ChangeSet? changes)
         {
-            if (changes == null)
+            allBeatmapSets = sender;
+
+            // indices of the change set refer to the unfiltered collection, so a filtered playlist is always rebuilt.
+            if (changes == null || collectionHashes != null)
             {
-                beatmapSets.Clear();
-                // must use AddRange to avoid RearrangeableList sort overhead per add op.
-                beatmapSets.AddRange(sender.Select(b => b.ToLive(realm)));
+                rebuildBeatmapSets();
                 return;
             }
 
@@ -101,6 +117,47 @@ namespace osu.Game.Overlays.Music
 
             foreach (int i in changes.DeletedIndices.OrderDescending())
                 beatmapSets.RemoveAt(i);
+        }
+
+        private void playlistCollectionChanged(Guid? collectionId)
+        {
+            collectionSubscription?.Dispose();
+            collectionSubscription = null;
+
+            updateCollectionHashes(collectionId == null ? null : realm.Realm.Find<BeatmapCollection>(collectionId.Value));
+            rebuildBeatmapSets();
+
+            if (collectionId is Guid id)
+                collectionSubscription = realm.RegisterForNotifications(r => r.All<BeatmapCollection>().Where(c => c.ID == id), collectionChanged);
+        }
+
+        private void collectionChanged(IRealmCollection<BeatmapCollection> sender, ChangeSet? changes)
+        {
+            // the initial callback carries no information which wasn't already applied in playlistCollectionChanged().
+            if (changes == null)
+                return;
+
+            updateCollectionHashes(sender.FirstOrDefault());
+            rebuildBeatmapSets();
+        }
+
+        /// <remarks>
+        /// A collection which no longer exists does not restrict the playlist, matching the behaviour of <see cref="MusicController"/>.
+        /// </remarks>
+        private void updateCollectionHashes(BeatmapCollection? collection) => collectionHashes = collection?.BeatmapMD5Hashes.ToHashSet();
+
+        private void rebuildBeatmapSets()
+        {
+            if (allBeatmapSets == null)
+                return;
+
+            var hashes = collectionHashes;
+
+            beatmapSets.Clear();
+            // must use AddRange to avoid RearrangeableList sort overhead per add op.
+            beatmapSets.AddRange(allBeatmapSets.AsEnumerable()
+                                               .Where(set => hashes == null || set.Beatmaps.Any(b => hashes.Contains(b.MD5Hash)))
+                                               .Select(b => b.ToLive(realm)));
         }
 
         protected override void PopIn()
@@ -125,7 +182,11 @@ namespace osu.Game.Overlays.Music
                     return;
                 }
 
-                beatmap.Value = beatmaps.GetWorkingBeatmap(set.Beatmaps.First());
+                var hashes = collectionHashes;
+                var playableBeatmap = (hashes == null ? null : set.Beatmaps.FirstOrDefault(b => hashes.Contains(b.MD5Hash)))
+                                      ?? set.Beatmaps.First();
+
+                beatmap.Value = beatmaps.GetWorkingBeatmap(playableBeatmap);
                 beatmap.Value.Track.Restart();
             });
         }
@@ -134,6 +195,7 @@ namespace osu.Game.Overlays.Music
         {
             base.Dispose(isDisposing);
             beatmapSubscription?.Dispose();
+            collectionSubscription?.Dispose();
         }
     }
 }
