@@ -301,6 +301,7 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopFposuBackgroundCube, true);
             SetDefault(OsuSetting.SlopFposuSkybox, true);
             SetDefault(OsuSetting.SlopFposuShowBackground, true);
+            SetDefault(OsuSetting.SlopFposuScaleCursorWithDistance, false);
 
             SetDefault(OsuSetting.SlopSkipBreaks, false);
 
@@ -781,6 +782,11 @@ namespace osu.Game.Configuration
         /// Whether the beatmap background, storyboard and video are shown on the screen in the osu!fps ruleset. When disabled, the objects float in front of the skybox or background cube.
         /// </summary>
         SlopFposuShowBackground,
+
+        /// <summary>
+        /// Whether the cursor is scaled with the distance of the playfield in the osu!fps ruleset, instead of keeping its size when the distance changes.
+        /// </summary>
+        SlopFposuScaleCursorWithDistance,
 
         /// <summary>
         /// Whether a skip button is displayed during breaks, like the one at the start of a beatmap.
