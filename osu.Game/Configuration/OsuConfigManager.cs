@@ -261,6 +261,7 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopFrostedHitCircles, true);
             SetDefault(OsuSetting.SlopMenuCursorStyle, MenuCursorStyle.Default);
             SetDefault(OsuSetting.SlopForceArgonCursorTrail, false);
+            SetDefault(OsuSetting.SlopSliderBorderComboColour, false);
             SetDefault(OsuSetting.SlopCursorColourEffect, false);
             SetDefault(OsuSetting.SlopCursorColourEffectMode, ColourEffectMode.Rainbow);
             SetDefault(OsuSetting.SlopCursorColourEffectGradient, ColourEffect.DEFAULT_GRADIENT);
@@ -865,6 +866,7 @@ namespace osu.Game.Configuration
         /// Whether the cursor trail is always replaced with the argon cursor trail, regardless of the current skin.
         /// </summary>
         SlopForceArgonCursorTrail,
+        SlopSliderBorderComboColour,
 
         /// <summary>
         /// The ID of the offline profile which is the local user while not logged in, or empty to play as a guest.

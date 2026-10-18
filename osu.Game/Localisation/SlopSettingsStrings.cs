@@ -420,6 +420,17 @@ namespace osu.Game.Localisation
             @"Replaces the cursor trail of the current skin with the argon cursor trail.");
 
         /// <summary>
+        /// "Use combo colour for slider borders"
+        /// </summary>
+        public static LocalisableString SliderBorderComboColour => new TranslatableString(getKey(@"slider_border_combo_colour"), @"Use combo colour for slider borders");
+
+        /// <summary>
+        /// "Colours slider borders with the combo colour of the slider instead of the border colour of the skin."
+        /// </summary>
+        public static LocalisableString SliderBorderComboColourDescription => new TranslatableString(getKey(@"slider_border_combo_colour_description"),
+            @"Colours slider borders with the combo colour of the slider instead of the border colour of the skin.");
+
+        /// <summary>
         /// "Gameplay"
         /// </summary>
         public static LocalisableString GameplayHeader => new TranslatableString(getKey(@"gameplay_header"), @"Gameplay");

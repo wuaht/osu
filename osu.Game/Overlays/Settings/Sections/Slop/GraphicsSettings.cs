@@ -17,7 +17,7 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
     {
         protected override LocalisableString Header => SlopSettingsStrings.GraphicsHeader;
 
-        public override IEnumerable<LocalisableString> FilterTerms => base.FilterTerms.Concat(new LocalisableString[] { "frosted", "frostiness", "blur", "slider", "cursor", "system", "skin", "trail", "argon" });
+        public override IEnumerable<LocalisableString> FilterTerms => base.FilterTerms.Concat(new LocalisableString[] { "frosted", "frostiness", "blur", "slider", "cursor", "system", "skin", "trail", "argon", "border", "combo", "colour", "color" });
 
         [BackgroundDependencyLoader]
         private void load(OsuConfigManager config)
@@ -57,6 +57,12 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                     Caption = SlopSettingsStrings.FrostedHitCircles,
                     HintText = SlopSettingsStrings.FrostedHitCirclesDescription,
                     Current = config.GetBindable<bool>(OsuSetting.SlopFrostedHitCircles),
+                }),
+                new SettingsItemV2(new FormCheckBox
+                {
+                    Caption = SlopSettingsStrings.SliderBorderComboColour,
+                    HintText = SlopSettingsStrings.SliderBorderComboColourDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopSliderBorderComboColour),
                 }),
                 new SettingsItemV2(new FormEnumDropdown<MenuCursorStyle>
                 {

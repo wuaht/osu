@@ -3,6 +3,7 @@
 
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
+using osu.Game.Configuration;
 using osu.Game.Rulesets.Objects.Drawables;
 using osu.Game.Rulesets.Osu.Configuration;
 using osu.Game.Rulesets.Osu.Objects;
@@ -25,9 +26,18 @@ namespace osu.Game.Rulesets.Osu.Skinning.Default
 
         private readonly Bindable<bool> configSnakingOut = new Bindable<bool>();
 
+        [Resolved(CanBeNull = true)]
+        private OsuConfigManager? gameConfig { get; set; }
+
+        private readonly Bindable<bool> borderComboColour = new Bindable<bool>();
+
+        private ISkinSource skin = null!;
+
         [BackgroundDependencyLoader]
         private void load(ISkinSource skin, DrawableHitObject drawableObject)
         {
+            this.skin = skin;
+
             var drawableSlider = (DrawableSlider)drawableObject;
 
             ScaleBindable = drawableSlider.ScaleBindable.GetBoundCopy();
@@ -44,8 +54,30 @@ namespace osu.Game.Rulesets.Osu.Skinning.Default
 
             SnakingOut.BindTo(configSnakingOut);
 
-            BorderColour = GetBorderColour(skin);
+            gameConfig?.BindWith(OsuSetting.SlopSliderBorderComboColour, borderComboColour);
+
+            AccentColourBindable.BindValueChanged(_ => updateBorderColour());
+            borderComboColour.BindValueChanged(_ => updateBorderColour(), true);
         }
+
+        private void updateBorderColour()
+        {
+            BorderColour = borderComboColour.Value
+                ? getComboBorderColour(AccentColourBindable.Value)
+                : GetBorderColour(skin);
+        }
+
+        /// <summary>
+        /// The amount the combo colour is blended towards white for the border.
+        /// The edge of the body uses the combo colour as well, so the border would otherwise barely stand out.
+        /// </summary>
+        private const float combo_border_whiteness = 0.5f;
+
+        private static Color4 getComboBorderColour(Color4 comboColour) => new Color4(
+            comboColour.R + (1 - comboColour.R) * combo_border_whiteness,
+            comboColour.G + (1 - comboColour.G) * combo_border_whiteness,
+            comboColour.B + (1 - comboColour.B) * combo_border_whiteness,
+            1);
 
         protected virtual Color4 GetBorderColour(ISkinSource skin) => Color4.White;
 
