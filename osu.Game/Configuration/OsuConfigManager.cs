@@ -290,6 +290,8 @@ namespace osu.Game.Configuration
             // defaults of McOsu's FPoSu.
             SetDefault(OsuSetting.SlopFposuMouseDpi, 400, 50, 32000);
             SetDefault(OsuSetting.SlopFposuCmPer360, 30.0, 1.0, 200.0, 0.000001);
+            SetDefault(OsuSetting.SlopFposuSensitivityGame, 0, 0, 7);
+            SetDefault(OsuSetting.SlopFposuGameSensitivity, 1.0, 0.0, 200.0, 0.000001);
             SetDefault(OsuSetting.SlopFposuFov, 103f, 20f, 150f, 1f);
             SetDefault(OsuSetting.SlopFposuDistance, 0.5f, 0.1f, 2f, 0.01f);
             SetDefault(OsuSetting.SlopFposuCurved, true);
@@ -724,6 +726,16 @@ namespace osu.Game.Configuration
         /// The distance in centimetres the mouse has to be moved for a full turn in the osu!fps ruleset.
         /// </summary>
         SlopFposuCmPer360,
+
+        /// <summary>
+        /// The game (as an index) whose sensitivity is entered instead of cm/360 in the osu!fps ruleset.
+        /// </summary>
+        SlopFposuSensitivityGame,
+
+        /// <summary>
+        /// The sensitivity in the selected game, which is converted to cm/360 in the osu!fps ruleset.
+        /// </summary>
+        SlopFposuGameSensitivity,
 
         /// <summary>
         /// The horizontal field of view in degrees in the osu!fps ruleset.
