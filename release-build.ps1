@@ -9,16 +9,16 @@
 #
 # Platforms (-Platforms, default: win):
 #   win    Velopack installer + updates (channel "win").
-#   linux  Velopack AppImage (x64) + updates (channel "linux"). Velopack can cross-pack Linux packages on Windows.
 #   osx    Portable, unsigned zips for Apple Silicon (osx-arm64) and Intel (osx-x64), without auto-updates.
 #          Velopack can only pack (and sign / notarize) macOS packages on macOS.
+# Linux builds aren't released anymore (building them lags the whole PC), the README explains how to build one yourself.
 # Android and iOS are not supported: iOS can only be built on a Mac (Xcode + Apple signing), and Android
 # requires the .NET Android workload, Android SDK / JDK and a signing keystore.
 #
 # Usage:
 #   ./release-build.ps1                    # build and publish the next version (e.g. 2026.1008.0)
 #   ./release-build.ps1 -SkipUpload        # only build the installer locally (in .slop-release/), without releasing osu!fps
-#   ./release-build.ps1 -Platforms win,linux,osx
+#   ./release-build.ps1 -Platforms win,osx
 #   ./release-build.ps1 -Version 2026.1008.1
 #   ./release-build.ps1 -Force             # skip the checks for uncommitted / unpushed changes
 #   ./release-build.ps1 -OfficialSchemaVersion 52   # don't look up the realm schema version of the latest official release
@@ -82,11 +82,12 @@ Set-Location $root
 
 # --- Checks ---
 
-# "-Platforms win,linux" arrives as a single string when the script is run with "powershell -File".
+# "-Platforms win,osx" arrives as a single string when the script is run with "powershell -File".
 $Platforms = @($Platforms | ForEach-Object { $_ -split ',' } | ForEach-Object { $_.Trim().ToLowerInvariant() } | Where-Object { $_ } | Select-Object -Unique)
 foreach ($platform in $Platforms)
 {
-    if ($platform -notin @('win', 'linux', 'osx')) { throw "Unknown platform '$platform'. Supported platforms: win, linux, osx." }
+    if ($platform -eq 'linux') { throw "Linux builds aren't released anymore, see the README on how to build one yourself." }
+    if ($platform -notin @('win', 'osx')) { throw "Unknown platform '$platform'. Supported platforms: win, osx." }
 }
 if ($Platforms.Count -eq 0) { throw 'No platforms given.' }
 
@@ -259,12 +260,6 @@ foreach ($platform in $Platforms)
             Publish-Desktop 'win-x64' $platformPublishDir
         }
 
-        'linux'
-        {
-            $platformPublishDir = Join-Path $publishDir 'linux-x64'
-            Publish-Desktop 'linux-x64' $platformPublishDir
-        }
-
         'osx'
         {
             foreach ($runtime in @('osx-arm64', 'osx-x64'))
@@ -292,35 +287,16 @@ foreach ($platform in $Platforms)
         if ($LASTEXITCODE -ne 0) { Write-Host "No previous release found for $platform, skipping delta updates." -ForegroundColor Yellow }
     }
 
-    if ($platform -eq 'win')
-    {
-        Invoke-Checked 'Pack (win)' {
-            vpk pack `
-                --packId $packId `
-                --packVersion $Version `
-                --packDir $platformPublishDir `
-                --mainExe 'osu!.exe' `
-                --packTitle $packTitle `
-                --packAuthors 'worte' `
-                --icon (Join-Path $root 'osu.Desktop/lazer.ico') `
-                --outputDir $releasesDir
-        }
-    }
-    else
-    {
-        # The "[linux]" directive makes vpk cross-pack for Linux when run on Windows.
-        Invoke-Checked 'Pack (linux)' {
-            vpk '[linux]' pack `
-                --packId $packId `
-                --packVersion $Version `
-                --packDir $platformPublishDir `
-                --mainExe 'osu!' `
-                --packTitle $packTitle `
-                --packAuthors 'worte' `
-                --icon (Join-Path $root 'assets/lazer.png') `
-                --categories 'Game' `
-                --outputDir $releasesDir
-        }
+    Invoke-Checked 'Pack (win)' {
+        vpk pack `
+            --packId $packId `
+            --packVersion $Version `
+            --packDir $platformPublishDir `
+            --mainExe 'osu!.exe' `
+            --packTitle $packTitle `
+            --packAuthors 'worte' `
+            --icon (Join-Path $root 'osu.Desktop/lazer.ico') `
+            --outputDir $releasesDir
     }
 }
 
@@ -378,7 +354,7 @@ if ($previousTag)
 }
 else
 {
-    Set-Content -Path $notesFile -Encoding utf8 -Value 'First release of slop!. Run slop-win-Setup.exe to install on Windows, or slop.AppImage on Linux.'
+    Set-Content -Path $notesFile -Encoding utf8 -Value 'First release of slop!. Run slop-win-Setup.exe to install on Windows.'
 }
 
 Invoke-Checked 'Set release notes' { gh release edit $Version --repo $repoName --notes-file $notesFile }

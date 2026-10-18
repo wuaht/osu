@@ -54,7 +54,31 @@ git clone -b slop https://github.com/wuaht/osu-resources ../osu-resources
 
 Install the client with `slop-win-Setup.exe` from the [latest release](https://github.com/wuaht/osu/releases/latest); it updates itself from these releases and installs independently of osu!(lazer). <- hopefully
 
-On Linux, use `slop.AppImage` from the same release (it also updates itself). For macOS there are untested, unsigned portable builds (`slop-osx-arm64-portable.zip` for Apple Silicon, `slop-osx-x64-portable.zip` for Intel) without auto-updates; after extracting, run `xattr -cr slop` once, then start `slop/osu!`. Releases are built with `release-build.ps1` (`-Platforms win,linux,osx`).
+For macOS there are untested, unsigned portable builds (`slop-osx-arm64-portable.zip` for Apple Silicon, `slop-osx-x64-portable.zip` for Intel) without auto-updates; after extracting, run `xattr -cr slop` once, then start `slop/osu!`. Releases are built with `release-build.ps1` (`-Platforms win,osx`).
+
+### Linux
+
+There are no Linux releases (building them lags my whole PC), so you'll have to build it yourself (it won't update itself either).
+
+1. Install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) (e.g. `sudo apt install dotnet-sdk-10.0`, `sudo pacman -S dotnet-sdk` or via [dotnet-install](https://learn.microsoft.com/dotnet/core/install/linux-scripted-manual#scripted-install)) and git.
+2. Clone everything next to each other:
+
+```shell
+git clone -b slop https://github.com/wuaht/osu-framework
+git clone -b slop https://github.com/wuaht/osu-resources
+git clone -b slop --recurse-submodules https://github.com/wuaht/osu
+```
+
+3. Build it (this creates a self-contained build in `~/slop`):
+
+```shell
+cd osu
+dotnet publish osu.Desktop/osu.Desktop.csproj -c Release -r linux-x64 --self-contained true -o ~/slop
+```
+
+4. Start it with `~/slop/osu!`.
+
+To update, run `git pull` in all three folders (plus `git submodule update` in `osu`) and run the `dotnet publish` command again.
 
 ## Contributing
 
