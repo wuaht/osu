@@ -51,8 +51,16 @@ namespace osu.Game.Graphics.ColourEffects
         public bool IsEnabled(ColourEffectTarget target) => targets[target].Enabled.Value;
 
         /// <summary>
+        /// The effect mode of the given target.
+        /// </summary>
+        public ColourEffectMode GetMode(ColourEffectTarget target) => targets[target].Mode.Value;
+
+        /// <summary>
         /// Gets the current colour of the given target, regardless of whether its effect is enabled.
         /// </summary>
+        /// <remarks>
+        /// <see cref="ColourEffectMode.ComboColours"/> depends on the beatmap, see <see cref="ColourEffect.GetComboColourTimeline"/>.
+        /// </remarks>
         public Colour4 GetColour(ColourEffectTarget target)
         {
             var state = targets[target];

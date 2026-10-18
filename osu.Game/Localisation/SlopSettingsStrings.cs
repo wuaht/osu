@@ -409,6 +409,17 @@ namespace osu.Game.Localisation
         public static LocalisableString OnlineHeader => new TranslatableString(getKey(@"online_header"), @"Online");
 
         /// <summary>
+        /// "Always use argon cursor trail"
+        /// </summary>
+        public static LocalisableString ForceArgonCursorTrail => new TranslatableString(getKey(@"force_argon_cursor_trail"), @"Always use argon cursor trail");
+
+        /// <summary>
+        /// "Replaces the cursor trail of the current skin with the argon cursor trail."
+        /// </summary>
+        public static LocalisableString ForceArgonCursorTrailDescription => new TranslatableString(getKey(@"force_argon_cursor_trail_description"),
+            @"Replaces the cursor trail of the current skin with the argon cursor trail.");
+
+        /// <summary>
         /// "Gameplay"
         /// </summary>
         public static LocalisableString GameplayHeader => new TranslatableString(getKey(@"gameplay_header"), @"Gameplay");
@@ -551,6 +562,11 @@ namespace osu.Game.Localisation
         /// "Gradient"
         /// </summary>
         public static LocalisableString ColourEffectModeGradient => new TranslatableString(getKey(@"colour_effect_mode_gradient"), @"Gradient");
+
+        /// <summary>
+        /// "Combo colours"
+        /// </summary>
+        public static LocalisableString ColourEffectModeComboColours => new TranslatableString(getKey(@"colour_effect_mode_combo_colours"), @"Combo colours");
 
         /// <summary>
         /// "Rainbow saturation"

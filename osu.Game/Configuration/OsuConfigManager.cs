@@ -1,4 +1,4 @@
-﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
@@ -260,6 +260,7 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopFrostedSlidersAlwaysColoured, true);
             SetDefault(OsuSetting.SlopFrostedHitCircles, true);
             SetDefault(OsuSetting.SlopMenuCursorStyle, MenuCursorStyle.Default);
+            SetDefault(OsuSetting.SlopForceArgonCursorTrail, false);
             SetDefault(OsuSetting.SlopCursorColourEffect, false);
             SetDefault(OsuSetting.SlopCursorColourEffectMode, ColourEffectMode.Rainbow);
             SetDefault(OsuSetting.SlopCursorColourEffectGradient, ColourEffect.DEFAULT_GRADIENT);
@@ -859,6 +860,11 @@ namespace osu.Game.Configuration
         /// Whether a skip button is displayed during breaks, like the one at the start of a beatmap.
         /// </summary>
         SlopSkipBreaks,
+
+        /// <summary>
+        /// Whether the cursor trail is always replaced with the argon cursor trail, regardless of the current skin.
+        /// </summary>
+        SlopForceArgonCursorTrail,
 
         /// <summary>
         /// The ID of the offline profile which is the local user while not logged in, or empty to play as a guest.

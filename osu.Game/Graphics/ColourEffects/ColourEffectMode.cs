@@ -13,5 +13,8 @@ namespace osu.Game.Graphics.ColourEffects
 
         [LocalisableDescription(typeof(SlopSettingsStrings), nameof(SlopSettingsStrings.ColourEffectModeGradient))]
         Gradient,
+
+        [LocalisableDescription(typeof(SlopSettingsStrings), nameof(SlopSettingsStrings.ColourEffectModeComboColours))]
+        ComboColours,
     }
 }

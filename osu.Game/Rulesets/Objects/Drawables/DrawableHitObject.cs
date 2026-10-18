@@ -168,6 +168,12 @@ namespace osu.Game.Rulesets.Objects.Drawables
         private bool comboColourEffectApplied;
 
         /// <summary>
+        /// The combo colours of the beatmap over time, used by the <see cref="ColourEffectMode.ComboColours"/> effect mode.
+        /// Keeps the colour pattern of the beatmap (e.g. colour hax) intact.
+        /// </summary>
+        private ColourEffect.ComboColourTimeline comboColourTimeline = ColourEffect.ComboColourTimeline.EMPTY;
+
+        /// <summary>
         /// Whether the combo colour is currently driven by the rainbow / gradient combo colour effect.
         /// Only applies during gameplay, so that the editor keeps showing the actual combo colours.
         /// </summary>
@@ -227,6 +233,7 @@ namespace osu.Game.Rulesets.Objects.Drawables
 
             CurrentSkin = skinSource;
             CurrentSkin.SourceChanged += skinSourceChanged;
+            updateComboColourEffectColours();
         }
 
         protected override void LoadAsyncComplete()
@@ -576,6 +583,8 @@ namespace osu.Game.Rulesets.Objects.Drawables
 
         private void skinChanged()
         {
+            updateComboColourEffectColours();
+
             UpdateComboColour();
 
             ApplySkin(CurrentSkin, true);
@@ -590,7 +599,7 @@ namespace osu.Game.Rulesets.Objects.Drawables
 
             if (comboColourEffectActive)
             {
-                AccentColour.Value = colourEffectProvider.GetColour(ColourEffectTarget.ComboColours);
+                AccentColour.Value = getComboColourEffectColour();
                 return;
             }
 
@@ -605,6 +614,19 @@ namespace osu.Game.Rulesets.Objects.Drawables
             AccentColour.Value = colour;
         }
 
+        private void updateComboColourEffectColours()
+            => comboColourTimeline = ColourEffect.GetComboColourTimeline(CurrentSkin, gameplayState?.Beatmap);
+
+        private Colour4 getComboColourEffectColour()
+        {
+            if (colourEffectProvider.GetMode(ColourEffectTarget.ComboColours) != ColourEffectMode.ComboColours)
+                return colourEffectProvider.GetColour(ColourEffectTarget.ComboColours);
+
+            // nested objects take the colour of their parent, so that e.g. a slider keeps a single colour.
+            var hitObject = ParentHitObject?.HitObject ?? HitObject;
+            return comboColourTimeline.GetColourAt(hitObject.StartTime);
+        }
+
         private void updateComboColourEffect()
         {
             if (!(HitObject is IHasComboInformation))
@@ -612,7 +634,7 @@ namespace osu.Game.Rulesets.Objects.Drawables
 
             if (comboColourEffectActive)
             {
-                AccentColour.Value = colourEffectProvider.GetColour(ColourEffectTarget.ComboColours);
+                AccentColour.Value = getComboColourEffectColour();
                 comboColourEffectApplied = true;
             }
             else if (comboColourEffectApplied)
