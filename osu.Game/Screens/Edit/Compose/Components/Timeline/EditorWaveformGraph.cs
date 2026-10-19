@@ -27,9 +27,14 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
     /// </remarks>
     public partial class EditorWaveformGraph : Drawable
     {
-        private static readonly Color4 low_colour = new Color4(1f, 0.3f, 0.3f, 1f);
-        private static readonly Color4 mid_colour = new Color4(0.35f, 0.9f, 0.35f, 1f);
-        private static readonly Color4 high_colour = new Color4(0.35f, 0.47f, 1f, 1f);
+        private static readonly Color4 low_colour = new Color4(255, 128, 128, 255);
+        private static readonly Color4 mid_colour = new Color4(128, 255, 128, 255);
+        private static readonly Color4 high_colour = new Color4(128, 128, 255, 255);
+
+        /// <summary>
+        /// The opacity of the <see cref="EditorWaveformStyle.Spectral"/> waveform.
+        /// </summary>
+        private const float spectral_alpha = 224 / 255f;
 
         private IShader shader = null!;
         private Texture texture = null!;
@@ -250,29 +255,29 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
 
                         case EditorWaveformStyle.ThreeBand:
                         {
-                            // Each band is normalised on its own, so that a dominant band extends beyond the full waveform.
+                            // Each band is normalised on its own and displayed instead of the full waveform.
                             float lowHeight = level.Low[i] / data.LowMax;
                             float midHeight = level.Mid[i] / data.MidMax;
                             float highHeight = level.High[i] / data.HighMax;
 
-                            // Draw the largest band first, so that all of them remain visible.
-                            drawBandsSorted(left, right, peak, (lowHeight, low), (midHeight, mid), (highHeight, high));
-                            drawRange(left, right, max, min, white);
+                            drawBands(left, right, (lowHeight, low), (midHeight, mid), (highHeight, high));
                             break;
                         }
 
                         case EditorWaveformStyle.Spectral:
                         {
-                            float lowHeight = level.Low[i] / data.LowMax;
-                            float midHeight = level.Mid[i] / data.MidMax;
-                            float highHeight = level.High[i] / data.HighMax;
-                            float strongest = Math.Max(lowHeight, Math.Max(midHeight, highHeight));
+                            // The colour is based on the actual (not normalised) level of each band, and the waveform isn't normalised either.
+                            float lowLevel = level.Low[i];
+                            float midLevel = level.Mid[i];
+                            float highLevel = level.High[i];
+                            float strongest = Math.Max(lowLevel, Math.Max(midLevel, highLevel));
 
                             Color4 colour = strongest > 0
-                                ? new Color4(lowHeight / strongest, midHeight / strongest, highHeight / strongest, 1)
-                                : Color4.White;
+                                ? new Color4(lowLevel / strongest, midLevel / strongest, highLevel / strongest, spectral_alpha)
+                                : new Color4(1, 1, 1, spectral_alpha);
 
-                            drawRange(left, right, max, min, applyDrawColour(colour));
+                            float actualPeak = peak * data.PeakMax;
+                            drawRange(left, right, actualPeak, -actualPeak, applyDrawColour(colour));
                             break;
                         }
                     }
@@ -309,17 +314,18 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
                     }
                 }
 
-                void drawBandsSorted(float x0, float x1, float peakHeight, (float height, ColourInfo colour) a, (float height, ColourInfo colour) b, (float height, ColourInfo colour) c)
+                void drawBands(float x0, float x1, (float height, ColourInfo colour) a, (float height, ColourInfo colour) b, (float height, ColourInfo colour) c)
                 {
                     if (a.height < b.height) (a, b) = (b, a);
                     if (b.height < c.height) (b, c) = (c, b);
                     if (a.height < b.height) (a, b) = (b, a);
 
-                    // Bands which don't extend beyond the full waveform are covered by it entirely.
-                    // The bands are only a visual aid and drawn symmetrically.
-                    if (a.height > peakHeight) drawRange(x0, x1, a.height, -a.height, a.colour);
-                    if (b.height > peakHeight) drawRange(x0, x1, b.height, -b.height, b.colour);
-                    if (c.height > peakHeight) drawRange(x0, x1, c.height, -c.height, c.colour);
+                    // The bands are added onto each other, and the sum of any two band colours is white.
+                    // So only the part of the largest band beyond the second largest one keeps its colour.
+                    drawRange(x0, x1, a.height, -a.height, a.colour);
+
+                    if (b.height > 0)
+                        drawRange(x0, x1, b.height, -b.height, white);
                 }
 
                 ColourInfo applyDrawColour(Color4 colour)

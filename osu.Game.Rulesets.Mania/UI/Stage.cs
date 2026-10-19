@@ -94,6 +94,7 @@ namespace osu.Game.Rulesets.Mania.UI
                             Name = "Column backgrounds",
                             RelativeSizeAxes = Axes.Both,
                         },
+                        CreateUnderlay() ?? Empty(),
                         new Container
                         {
                             Name = "Barlines mask",
@@ -218,6 +219,11 @@ namespace osu.Game.Rulesets.Mania.UI
             judgements.Clear(false);
             judgements.Add(judgementPooler.Get(result.Type, j => j.Apply(result, judgedObject))!);
         }
+
+        /// <summary>
+        /// Creates a drawable displayed above the column backgrounds and below the hit objects.
+        /// </summary>
+        protected virtual Drawable? CreateUnderlay() => null;
 
         protected override void Update()
         {

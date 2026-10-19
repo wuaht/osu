@@ -24,13 +24,13 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
         Simple,
 
         /// <summary>
-        /// A white waveform with the low (red), mid (green) and high (blue) frequency bands behind it.
+        /// The waveforms of the low (red), mid (green) and high (blue) frequency bands, where they overlap they are white.
         /// </summary>
         [LocalisableDescription(typeof(SlopSettingsStrings), nameof(SlopSettingsStrings.WaveformStyleThreeBand))]
         ThreeBand,
 
         /// <summary>
-        /// A waveform coloured by its frequency content: low frequencies red, mid frequencies green and high frequencies blue.
+        /// A waveform which isn't normalised, coloured by its frequency content: low frequencies red, mid frequencies green and high frequencies blue.
         /// </summary>
         [LocalisableDescription(typeof(SlopSettingsStrings), nameof(SlopSettingsStrings.WaveformStyleSpectral))]
         Spectral,

@@ -103,6 +103,13 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
         /// </summary>
         private bool isTimingScreen;
 
+        /// <summary>
+        /// Whether the waveform is displayed under the osu!mania playfield instead, see <see cref="OsuSetting.SlopEditorManiaPlayfieldWaveform"/>.
+        /// </summary>
+        private bool isManiaComposeScreen;
+
+        private Bindable<bool> maniaPlayfieldWaveform = null!;
+
         private TimelineTickDisplay ticks = null!;
 
         private TimelineTimingChangeDisplay controlPoints = null!;
@@ -191,6 +198,7 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
 
             waveformOpacity = config.GetBindable<float>(OsuSetting.EditorWaveformOpacity);
             waveformStyle = config.GetBindable<EditorWaveformStyle>(OsuSetting.SlopEditorWaveformStyle);
+            maniaPlayfieldWaveform = config.GetBindable<bool>(OsuSetting.SlopEditorManiaPlayfieldWaveform);
             controlPointsVisible = config.GetBindable<bool>(OsuSetting.EditorTimelineShowTimingChanges);
             ticksVisible = config.GetBindable<bool>(OsuSetting.EditorTimelineShowTicks);
 
@@ -249,9 +257,11 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
             base.LoadComplete();
 
             isTimingScreen = this.FindClosestParent<TimingScreen>() != null;
+            isManiaComposeScreen = this.FindClosestParent<ComposeScreen>() != null && editorBeatmap.BeatmapInfo.Ruleset.ShortName == @"mania";
 
             waveformOpacity.BindValueChanged(_ => updateWaveformOpacity(), true);
             waveformStyle.BindValueChanged(_ => updateWaveformStyle());
+            maniaPlayfieldWaveform.BindValueChanged(_ => updateWaveformOpacity());
 
             ticksVisible.BindValueChanged(visible => ticks.FadeTo(visible.NewValue ? 1 : 0, 200, Easing.OutQuint), true);
 
@@ -268,6 +278,9 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
         {
             bool useStyledWaveform = waveformStyle.Value != EditorWaveformStyle.Default;
             float opacity = isTimingScreen ? 1 : waveformOpacity.Value;
+
+            if (isManiaComposeScreen && maniaPlayfieldWaveform.Value)
+                opacity = 0;
 
             waveform.FadeTo(useStyledWaveform ? 0 : opacity, 200, Easing.OutQuint);
             styledWaveform.FadeTo(useStyledWaveform ? opacity : 0, 200, Easing.OutQuint);

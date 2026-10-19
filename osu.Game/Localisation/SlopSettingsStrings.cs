@@ -1074,6 +1074,16 @@ namespace osu.Game.Localisation
         /// </summary>
         public static LocalisableString EditorPreviewModsDescription => new TranslatableString(getKey(@"editor_preview_mods_description"), @"Loads the map with the currently selected mods. Only supports DT/HT/HD for now");
 
+        /// <summary>
+        /// "Show waveform under Mania playfield"
+        /// </summary>
+        public static LocalisableString EditorManiaPlayfieldWaveform => new TranslatableString(getKey(@"editor_mania_playfield_waveform"), @"Show waveform under Mania playfield");
+
+        /// <summary>
+        /// "Requires the timeline waveform to be visible. Shows the waveform under the playfield instead of the timeline in Mania compose mode"
+        /// </summary>
+        public static LocalisableString EditorManiaPlayfieldWaveformDescription => new TranslatableString(getKey(@"editor_mania_playfield_waveform_description"), @"Requires the timeline waveform to be visible. Shows the waveform under the playfield instead of the timeline in Mania compose mode");
+
         private static string getKey(string key) => $"{prefix}:{key}";
     }
 }

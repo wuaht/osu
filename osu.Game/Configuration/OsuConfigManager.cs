@@ -375,6 +375,7 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopEditorSliderPartOnFirstClick, false);
             SetDefault(OsuSetting.SlopEditorNoAudioStretch, false);
             SetDefault(OsuSetting.SlopEditorPreviewMods, false);
+            SetDefault(OsuSetting.SlopEditorManiaPlayfieldWaveform, true);
         }
 
         protected override bool CheckLookupContainsPrivateInformation(OsuSetting lookup)
@@ -1176,5 +1177,10 @@ namespace osu.Game.Configuration
         /// Whether the editor keeps the selected rate adjust mods (and Hidden in osu!) for playback and test play.
         /// </summary>
         SlopEditorPreviewMods,
+
+        /// <summary>
+        /// Whether the waveform is displayed under the playfield instead of in the timeline in the osu!mania compose screen.
+        /// </summary>
+        SlopEditorManiaPlayfieldWaveform,
     }
 }
