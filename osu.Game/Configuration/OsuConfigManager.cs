@@ -376,6 +376,7 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopEditorNoAudioStretch, false);
             SetDefault(OsuSetting.SlopEditorPreviewMods, false);
             SetDefault(OsuSetting.SlopEditorManiaPlayfieldWaveform, true);
+            SetDefault(OsuSetting.SlopEditorTextEditor, @"notepad.exe");
         }
 
         protected override bool CheckLookupContainsPrivateInformation(OsuSetting lookup)
@@ -1182,5 +1183,10 @@ namespace osu.Game.Configuration
         /// Whether the waveform is displayed under the playfield instead of in the timeline in the osu!mania compose screen.
         /// </summary>
         SlopEditorManiaPlayfieldWaveform,
+
+        /// <summary>
+        /// The program used to open beatmap files in a text editor from the editor.
+        /// </summary>
+        SlopEditorTextEditor,
     }
 }

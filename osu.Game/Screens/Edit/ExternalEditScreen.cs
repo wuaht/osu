@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -16,6 +17,7 @@ using osu.Framework.Platform;
 using osu.Framework.Screens;
 using osu.Framework.Testing;
 using osu.Game.Beatmaps;
+using osu.Game.Configuration;
 using osu.Game.Database;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Containers;
@@ -48,6 +50,14 @@ namespace osu.Game.Screens.Edit
         [Resolved]
         private EditorBeatmap editorBeatmap { get; set; } = null!;
 
+        [Resolved]
+        private OsuConfigManager config { get; set; } = null!;
+
+        /// <summary>
+        /// Whether the beatmap file is opened in the configured text editor instead of opening the beatmap folder.
+        /// </summary>
+        private readonly bool openInTextEditor;
+
         private Task? fileMountOperation;
 
         public ExternalEditOperation<BeatmapSetInfo>? EditOperation { get; private set; }
@@ -56,6 +66,11 @@ namespace osu.Game.Screens.Edit
         private bool operationFinished;
 
         private FillFlowContainer flow = null!;
+
+        public ExternalEditScreen(bool openInTextEditor = false)
+        {
+            this.openInTextEditor = openInTextEditor;
+        }
 
         [BackgroundDependencyLoader]
         private void load()
@@ -179,7 +194,11 @@ namespace osu.Game.Screens.Edit
             {
                 foreach (var b in flow.ChildrenOfType<RoundedButton>())
                     b.Enabled.Value = true;
-                openDirectory();
+
+                if (openInTextEditor)
+                    openTextEditor();
+                else
+                    openDirectory();
             }, 1000);
         }
 
@@ -190,6 +209,36 @@ namespace osu.Game.Screens.Edit
 
             // Ensure the trailing separator is present in order to show the folder contents.
             gameHost.OpenFileExternally(EditOperation.MountedPath.TrimDirectorySeparator() + Path.DirectorySeparatorChar);
+        }
+
+        private void openTextEditor()
+        {
+            if (EditOperation == null)
+                return;
+
+            string? filename = editorBeatmap.BeatmapInfo.Path;
+
+            if (string.IsNullOrEmpty(filename))
+            {
+                openDirectory();
+                return;
+            }
+
+            string file = Path.Combine(EditOperation.MountedPath, filename);
+            string editor = config.Get<string>(OsuSetting.SlopEditorTextEditor);
+
+            try
+            {
+                if (string.IsNullOrWhiteSpace(editor))
+                    throw new InvalidOperationException("No text editor configured.");
+
+                Process.Start(new ProcessStartInfo(editor, $"\"{file}\"") { UseShellExecute = true });
+            }
+            catch (Exception e)
+            {
+                Logger.Error(e, $"Failed to open the beatmap file with \"{editor}\", opening it with the default program instead.");
+                gameHost.OpenFileExternally(file);
+            }
         }
 
         private async Task finish()

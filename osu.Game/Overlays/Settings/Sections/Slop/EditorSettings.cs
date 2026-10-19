@@ -23,7 +23,7 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
     {
         protected override LocalisableString Header => SlopSettingsStrings.EditorHeader;
 
-        public override IEnumerable<LocalisableString> FilterTerms => base.FilterTerms.Concat(new LocalisableString[] { "skin", "backup", "autosave", "snap", "blanket", "triangle", "waveform", "hitsound", "frosted", "bn", "nominator", "request", "alias", "break", "own", "border", "fps", "star", "difficulty", "bezier", "curve", "colour", "color", "alt", "pitch", "speed", "stretch", "mods", "preview", "mania", "playfield" });
+        public override IEnumerable<LocalisableString> FilterTerms => base.FilterTerms.Concat(new LocalisableString[] { "skin", "backup", "autosave", "snap", "blanket", "triangle", "waveform", "hitsound", "frosted", "bn", "nominator", "request", "alias", "break", "own", "border", "fps", "star", "difficulty", "bezier", "curve", "colour", "color", "alt", "pitch", "speed", "stretch", "mods", "preview", "mania", "playfield", "text editor", "notepad" });
 
         /// <summary>
         /// Dropdown entry representing "use the regular gameplay skin".
@@ -285,6 +285,12 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                     Caption = SlopSettingsStrings.EditorManiaPlayfieldWaveform,
                     HintText = SlopSettingsStrings.EditorManiaPlayfieldWaveformDescription,
                     Current = config.GetBindable<bool>(OsuSetting.SlopEditorManiaPlayfieldWaveform),
+                }),
+                new SettingsItemV2(new FormTextBox
+                {
+                    Caption = SlopSettingsStrings.EditorTextEditor,
+                    HintText = SlopSettingsStrings.EditorTextEditorDescription,
+                    Current = config.GetBindable<string>(OsuSetting.SlopEditorTextEditor),
                 }),
             };
         }

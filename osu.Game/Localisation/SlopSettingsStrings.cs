@@ -1084,6 +1084,21 @@ namespace osu.Game.Localisation
         /// </summary>
         public static LocalisableString EditorManiaPlayfieldWaveformDescription => new TranslatableString(getKey(@"editor_mania_playfield_waveform_description"), @"Requires the timeline waveform to be visible. Shows the waveform under the playfield instead of the timeline in Mania compose mode");
 
+        /// <summary>
+        /// "Text editor"
+        /// </summary>
+        public static LocalisableString EditorTextEditor => new TranslatableString(getKey(@"editor_text_editor"), @"Text editor");
+
+        /// <summary>
+        /// "The program used by "Open .osu in text editor" in the editor's file menu"
+        /// </summary>
+        public static LocalisableString EditorTextEditorDescription => new TranslatableString(getKey(@"editor_text_editor_description"), @"The program used by ""Open .osu in text editor"" in the editor's file menu");
+
+        /// <summary>
+        /// "Open .osu in text editor"
+        /// </summary>
+        public static LocalisableString OpenInTextEditor => new TranslatableString(getKey(@"open_in_text_editor"), @"Open .osu in text editor");
+
         private static string getKey(string key) => $"{prefix}:{key}";
     }
 }

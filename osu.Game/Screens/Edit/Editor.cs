@@ -1778,12 +1778,16 @@ namespace osu.Game.Screens.Edit
 
             if (RuntimeInfo.IsDesktop)
             {
-                var externalEdit = new EditorMenuItem(EditorStrings.EditExternally, MenuItemType.Standard, editExternally)
+                var externalEdit = new EditorMenuItem(EditorStrings.EditExternally, MenuItemType.Standard, () => editExternally())
                 {
                     Hotkey = new Hotkey(GlobalAction.EditorEditExternally)
                 };
                 saveRelatedMenuItems.Add(externalEdit);
                 yield return externalEdit;
+
+                var textEditorEdit = new EditorMenuItem(SlopSettingsStrings.OpenInTextEditor, MenuItemType.Standard, () => editExternally(true));
+                saveRelatedMenuItems.Add(textEditorEdit);
+                yield return textEditorEdit;
             }
 
             bool isSetMadeOfLegacyRulesetBeatmaps = (isNewBeatmap && Ruleset.Value.IsLegacyRuleset())
@@ -1826,7 +1830,7 @@ namespace osu.Game.Screens.Edit
             return new EditorMenuItem(CommonStrings.Export) { Items = exportItems };
         }
 
-        private void editExternally()
+        private void editExternally(bool openInTextEditor = false)
         {
             if (HasUnsavedChanges)
             {
@@ -1846,7 +1850,7 @@ namespace osu.Game.Screens.Edit
 
             void startEdit()
             {
-                this.Push(new ExternalEditScreen());
+                this.Push(new ExternalEditScreen(openInTextEditor));
             }
         }
 
