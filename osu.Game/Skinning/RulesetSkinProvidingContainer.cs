@@ -3,6 +3,7 @@
 
 #nullable disable
 
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -15,6 +16,7 @@ using osu.Framework.Graphics.Containers;
 using osu.Framework.IO.Stores;
 using osu.Framework.Platform;
 using osu.Game.Beatmaps;
+using osu.Game.Configuration;
 using osu.Game.Rulesets;
 using osu.Game.Rulesets.UI;
 
@@ -41,6 +43,14 @@ namespace osu.Game.Skinning
         /// Therefore disallow falling back to any parent <see cref="ISkinSource"/> any further.
         /// </remarks>
         protected override bool AllowFallingBackToParent => false;
+
+        /// <summary>
+        /// Whether the skin chosen for this ruleset in the settings should be used in place of the main skin.
+        /// </summary>
+        public bool UseRulesetSkinPreference { get; init; }
+
+        [CanBeNull]
+        private Skin rulesetSkin;
 
         protected override Container<Drawable> Content { get; } = new Container
         {
@@ -73,6 +83,9 @@ namespace osu.Game.Skinning
             if (Ruleset.CreateResourceStore() is IResourceStore<byte[]> resources)
                 rulesetResourcesSkin = new ResourceStoreBackedSkin(resources, parent.Get<GameHost>(), parent.Get<AudioManager>());
 
+            if (UseRulesetSkinPreference)
+                rulesetSkin = getRulesetSkin(parent.Get<SkinManager>(), parent.Get<OsuConfigManager>());
+
             return base.CreateChildDependencies(parent);
         }
 
@@ -83,7 +96,11 @@ namespace osu.Game.Skinning
 
             Debug.Assert(ParentSource != null);
 
-            foreach (var source in ParentSource.AllSources)
+            var parentSources = rulesetSkin != null && ParentSource is SkinManager skinManager
+                ? skinManager.GetAllSources(rulesetSkin)
+                : ParentSource.AllSources;
+
+            foreach (var source in parentSources)
             {
                 switch (source)
                 {
@@ -111,6 +128,30 @@ namespace osu.Game.Skinning
             SetSources(sources);
         }
 
+        [CanBeNull]
+        private Skin getRulesetSkin([CanBeNull] SkinManager skinManager, [CanBeNull] OsuConfigManager config)
+        {
+            if (skinManager == null || config == null)
+                return null;
+
+            OsuSetting? setting = Ruleset.ShortName switch
+            {
+                @"taiko" => OsuSetting.SlopTaikoSkin,
+                @"fruits" => OsuSetting.SlopCatchSkin,
+                @"mania" => OsuSetting.SlopManiaSkin,
+                _ => null
+            };
+
+            if (setting == null || !Guid.TryParse(config.Get<string>(setting.Value), out Guid id))
+                return null;
+
+            // the main skin is already provided by the parent.
+            if (id == skinManager.CurrentSkinInfo.Value.ID)
+                return null;
+
+            return skinManager.Query(s => s.ID == id && !s.DeletePending)?.PerformRead(skinManager.GetSkin);
+        }
+
         protected ISkin GetRulesetTransformedSkin(ISkin skin)
         {
             if (skin == null)
@@ -128,6 +169,7 @@ namespace osu.Game.Skinning
             base.Dispose(isDisposing);
 
             rulesetResourcesSkin?.Dispose();
+            rulesetSkin?.Dispose();
         }
     }
 }

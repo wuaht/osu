@@ -864,6 +864,71 @@ namespace osu.Game.Localisation
         /// </summary>
         public static LocalisableString SmootherCursorTrailDescription => new TranslatableString(getKey(@"smoother_cursor_trail_description"), @"Halves the required movement to make new trail points.");
 
+        /// <summary>
+        /// "Mania judgement counter"
+        /// </summary>
+        public static LocalisableString ManiaJudgementCounter => new TranslatableString(getKey(@"mania_judgement_counter"), @"Mania judgement counter");
+
+        /// <summary>
+        /// "Disabled"
+        /// </summary>
+        public static LocalisableString ManiaJudgementCounterDisabled => new TranslatableString(getKey(@"mania_judgement_counter_disabled"), @"Disabled");
+
+        /// <summary>
+        /// "Bottom left"
+        /// </summary>
+        public static LocalisableString ManiaJudgementCounterBottomLeft => new TranslatableString(getKey(@"mania_judgement_counter_bottom_left"), @"Bottom left");
+
+        /// <summary>
+        /// "Stage left"
+        /// </summary>
+        public static LocalisableString ManiaJudgementCounterStageLeft => new TranslatableString(getKey(@"mania_judgement_counter_stage_left"), @"Stage left");
+
+        /// <summary>
+        /// "Disable Mania judgement animations"
+        /// </summary>
+        public static LocalisableString NoManiaJudgementAnimations => new TranslatableString(getKey(@"no_mania_judgement_animations"), @"Disable Mania judgement animations");
+
+        /// <summary>
+        /// "Removes the scaling animation from Mania judgements"
+        /// </summary>
+        public static LocalisableString NoManiaJudgementAnimationsDescription => new TranslatableString(getKey(@"no_mania_judgement_animations_description"), @"Removes the scaling animation from Mania judgements");
+
+        /// <summary>
+        /// "Disable Taiko judgement animations"
+        /// </summary>
+        public static LocalisableString NoTaikoJudgementAnimations => new TranslatableString(getKey(@"no_taiko_judgement_animations"), @"Disable Taiko judgement animations");
+
+        /// <summary>
+        /// "Removes the scaling animation from Taiko judgements"
+        /// </summary>
+        public static LocalisableString NoTaikoJudgementAnimationsDescription => new TranslatableString(getKey(@"no_taiko_judgement_animations_description"), @"Removes the scaling animation from Taiko judgements");
+
+        /// <summary>
+        /// "Skins"
+        /// </summary>
+        public static LocalisableString SkinsHeader => new TranslatableString(getKey(@"skins_header"), @"Skins");
+
+        /// <summary>
+        /// "Taiko skin"
+        /// </summary>
+        public static LocalisableString TaikoSkin => new TranslatableString(getKey(@"taiko_skin"), @"Taiko skin");
+
+        /// <summary>
+        /// "Catch skin"
+        /// </summary>
+        public static LocalisableString CatchSkin => new TranslatableString(getKey(@"catch_skin"), @"Catch skin");
+
+        /// <summary>
+        /// "Mania skin"
+        /// </summary>
+        public static LocalisableString ManiaSkin => new TranslatableString(getKey(@"mania_skin"), @"Mania skin");
+
+        /// <summary>
+        /// "&lt;Use main skin&gt;"
+        /// </summary>
+        public static LocalisableString UseMainSkin => new TranslatableString(getKey(@"use_main_skin"), @"<Use main skin>");
+
         private static string getKey(string key) => $"{prefix}:{key}";
     }
 }

@@ -16,7 +16,7 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
     {
         protected override LocalisableString Header => SlopSettingsStrings.AnimationsHeader;
 
-        public override IEnumerable<LocalisableString> FilterTerms => base.FilterTerms.Concat(new LocalisableString[] { "kiai", "instafade", "fade", "overlay", "follow circle", "reverse arrow", "cursor", "expand" });
+        public override IEnumerable<LocalisableString> FilterTerms => base.FilterTerms.Concat(new LocalisableString[] { "kiai", "instafade", "fade", "overlay", "follow circle", "reverse arrow", "cursor", "expand", "judgement", "mania", "taiko" });
 
         [BackgroundDependencyLoader]
         private void load(OsuConfigManager config)
@@ -62,6 +62,18 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                     Caption = SlopSettingsStrings.ForceDisableCursorExpand,
                     HintText = SlopSettingsStrings.ForceDisableCursorExpandDescription,
                     Current = config.GetBindable<bool>(OsuSetting.SlopForceDisableCursorExpand),
+                }),
+                new SettingsItemV2(new FormCheckBox
+                {
+                    Caption = SlopSettingsStrings.NoManiaJudgementAnimations,
+                    HintText = SlopSettingsStrings.NoManiaJudgementAnimationsDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopNoManiaJudgementAnimations),
+                }),
+                new SettingsItemV2(new FormCheckBox
+                {
+                    Caption = SlopSettingsStrings.NoTaikoJudgementAnimations,
+                    HintText = SlopSettingsStrings.NoTaikoJudgementAnimationsDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopNoTaikoJudgementAnimations),
                 }),
             };
         }

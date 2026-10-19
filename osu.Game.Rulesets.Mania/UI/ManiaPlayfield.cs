@@ -81,6 +81,8 @@ namespace osu.Game.Rulesets.Mania.UI
 
                 firstColumnIndex += newStage.Columns.Length;
             }
+
+            AddInternal(new ManiaJudgementCounter(this));
         }
 
         [Pure]

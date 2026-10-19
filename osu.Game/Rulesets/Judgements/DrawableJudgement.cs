@@ -3,12 +3,14 @@
 
 using System;
 using System.Diagnostics;
+using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Pooling;
 using osu.Framework.Logging;
+using osu.Framework.Testing;
 using osu.Game.Configuration;
 using osu.Game.Rulesets.Objects;
 using osu.Game.Rulesets.Objects.Drawables;
@@ -151,11 +153,37 @@ namespace osu.Game.Rulesets.Judgements
                 if (JudgementBody.Drawable is IAnimatableJudgement animatable)
                     animatable.PlayAnimation();
 
+                if (DisableScaleAnimations)
+                    removeScaleAnimations(JudgementBody.Drawable);
+
                 // a derived version of DrawableJudgement may be proposing a lifetime.
                 // if not adjusted (or the skinned portion requires greater bounds than calculated) use the skinned source's lifetime.
                 double lastTransformTime = JudgementBody.Drawable.LatestTransformEndTime;
                 if (LifetimeEnd == double.MaxValue || lastTransformTime > LifetimeEnd)
                     LifetimeEnd = lastTransformTime;
+            }
+        }
+
+        /// <summary>
+        /// Whether the scale and rotation animations of the judgement body should be removed, leaving only its fades.
+        /// </summary>
+        protected virtual bool DisableScaleAnimations => false;
+
+        private static void removeScaleAnimations(Drawable body)
+        {
+            foreach (var drawable in body.ChildrenOfType<Drawable>().Prepend(body))
+            {
+                if (drawable.Transforms.Any(t => t.TargetMember == nameof(Scale)))
+                {
+                    drawable.ClearTransforms(false, nameof(Scale));
+                    drawable.Scale = Vector2.One;
+                }
+
+                if (drawable.Transforms.Any(t => t.TargetMember == nameof(Rotation)))
+                {
+                    drawable.ClearTransforms(false, nameof(Rotation));
+                    drawable.Rotation = 0;
+                }
             }
         }
 

@@ -355,6 +355,12 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopFastBackgroundDim, false);
             SetDefault(OsuSetting.SlopCursorTrailStyle, CursorTrailStyle.Default);
             SetDefault(OsuSetting.SlopSmootherCursorTrail, false);
+            SetDefault(OsuSetting.SlopManiaJudgementCounter, ManiaJudgementCounterPosition.Disabled);
+            SetDefault(OsuSetting.SlopNoManiaJudgementAnimations, false);
+            SetDefault(OsuSetting.SlopNoTaikoJudgementAnimations, false);
+            SetDefault(OsuSetting.SlopTaikoSkin, string.Empty);
+            SetDefault(OsuSetting.SlopCatchSkin, string.Empty);
+            SetDefault(OsuSetting.SlopManiaSkin, string.Empty);
         }
 
         protected override bool CheckLookupContainsPrivateInformation(OsuSetting lookup)
@@ -1056,5 +1062,35 @@ namespace osu.Game.Configuration
         /// Whether the cursor trail should create new trail points after half the usual movement.
         /// </summary>
         SlopSmootherCursorTrail,
+
+        /// <summary>
+        /// Where the osu!mania judgement counter is displayed.
+        /// </summary>
+        SlopManiaJudgementCounter,
+
+        /// <summary>
+        /// Whether the scaling animation of osu!mania judgements should be removed.
+        /// </summary>
+        SlopNoManiaJudgementAnimations,
+
+        /// <summary>
+        /// Whether the scaling animation of osu!taiko judgements should be removed.
+        /// </summary>
+        SlopNoTaikoJudgementAnimations,
+
+        /// <summary>
+        /// The ID of the skin used during osu!taiko gameplay, or empty to use the main skin.
+        /// </summary>
+        SlopTaikoSkin,
+
+        /// <summary>
+        /// The ID of the skin used during osu!catch gameplay, or empty to use the main skin.
+        /// </summary>
+        SlopCatchSkin,
+
+        /// <summary>
+        /// The ID of the skin used during osu!mania gameplay, or empty to use the main skin.
+        /// </summary>
+        SlopManiaSkin,
     }
 }

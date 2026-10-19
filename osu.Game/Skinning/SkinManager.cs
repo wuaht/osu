@@ -326,22 +326,24 @@ namespace osu.Game.Skinning
             return null;
         }
 
-        public IEnumerable<ISkin> AllSources
+        public IEnumerable<ISkin> AllSources => GetAllSources(CurrentSkin.Value);
+
+        /// <summary>
+        /// Returns the given skin along with the default fallbacks which would be used if it was the current skin.
+        /// </summary>
+        public IEnumerable<ISkin> GetAllSources(Skin skin)
         {
-            get
-            {
-                yield return CurrentSkin.Value;
+            yield return skin;
 
-                // Skin manager provides default fallbacks.
-                // This handles cases where a user skin doesn't have the required resources for complete display of
-                // certain elements.
+            // Skin manager provides default fallbacks.
+            // This handles cases where a user skin doesn't have the required resources for complete display of
+            // certain elements.
 
-                if (CurrentSkin.Value is LegacySkin && CurrentSkin.Value != DefaultClassicSkin)
-                    yield return DefaultClassicSkin;
+            if (skin is LegacySkin && skin != DefaultClassicSkin)
+                yield return DefaultClassicSkin;
 
-                if (CurrentSkin.Value != trianglesSkin)
-                    yield return trianglesSkin;
-            }
+            if (skin != trianglesSkin)
+                yield return trianglesSkin;
         }
 
         private T lookupWithFallback<T>(Func<ISkin, T> lookupFunction)

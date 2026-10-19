@@ -16,7 +16,7 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
     {
         protected override LocalisableString Header => SlopSettingsStrings.GameplayHeader;
 
-        public override IEnumerable<LocalisableString> FilterTerms => base.FilterTerms.Concat(new LocalisableString[] { "skip", "break", "fail", "multiplayer", "hitsound", "volume", "mute", "flashlight" });
+        public override IEnumerable<LocalisableString> FilterTerms => base.FilterTerms.Concat(new LocalisableString[] { "skip", "break", "fail", "multiplayer", "hitsound", "volume", "mute", "flashlight", "mania", "judgement", "counter" });
 
         [BackgroundDependencyLoader]
         private void load(OsuConfigManager config)
@@ -81,6 +81,11 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                     Caption = SlopSettingsStrings.FastBackgroundDim,
                     HintText = SlopSettingsStrings.FastBackgroundDimDescription,
                     Current = config.GetBindable<bool>(OsuSetting.SlopFastBackgroundDim),
+                }),
+                new SettingsItemV2(new FormEnumDropdown<ManiaJudgementCounterPosition>
+                {
+                    Caption = SlopSettingsStrings.ManiaJudgementCounter,
+                    Current = config.GetBindable<ManiaJudgementCounterPosition>(OsuSetting.SlopManiaJudgementCounter),
                 }),
             };
         }
