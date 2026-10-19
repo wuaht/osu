@@ -20,6 +20,9 @@ namespace osu.Game.Rulesets.Osu.Skinning.Legacy
             InternalChild = animationContent;
         }
 
+        // Note that the scale adjust here is 2 instead of DrawableSliderBall.FOLLOW_AREA to match legacy behaviour.
+        protected override float TrackingScale => 2f;
+
         protected override void OnSliderPress()
         {
             Debug.Assert(DrawableObject != null);

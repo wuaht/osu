@@ -1,4 +1,4 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
@@ -11,6 +11,7 @@ using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Graphics.Textures;
 using osu.Framework.Utils;
+using osu.Game.Configuration;
 using osu.Game.Rulesets.Objects.Drawables;
 using osu.Game.Rulesets.Osu.Objects;
 using osu.Game.Rulesets.Osu.Objects.Drawables;
@@ -29,9 +30,13 @@ namespace osu.Game.Rulesets.Osu.Skinning.Argon
         private Container main = null!;
         private Sprite side = null!;
 
+        private readonly Bindable<bool> disableAnimations = new Bindable<bool>();
+
         [BackgroundDependencyLoader]
-        private void load(DrawableHitObject drawableObject, TextureStore textures)
+        private void load(DrawableHitObject drawableObject, TextureStore textures, OsuConfigManager? config)
         {
+            config?.BindWith(OsuSetting.SlopDisableReverseArrowAnimations, disableAnimations);
+
             drawableRepeat = (DrawableSliderRepeat)drawableObject;
 
             Anchor = Anchor.Centre;
@@ -91,6 +96,13 @@ namespace osu.Game.Rulesets.Osu.Skinning.Argon
             }
 
             Scale = Vector2.One;
+
+            if (disableAnimations.Value)
+            {
+                main.Scale = Vector2.One;
+                side.X = 0;
+                return;
+            }
 
             const float move_distance = -12;
             const float scale_amount = 1.3f;

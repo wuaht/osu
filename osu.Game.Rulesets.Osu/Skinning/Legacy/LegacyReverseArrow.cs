@@ -1,4 +1,4 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
@@ -10,6 +10,7 @@ using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Utils;
+using osu.Game.Configuration;
 using osu.Game.Rulesets.Objects.Drawables;
 using osu.Game.Rulesets.Osu.Objects;
 using osu.Game.Rulesets.Osu.Objects.Drawables;
@@ -33,9 +34,13 @@ namespace osu.Game.Rulesets.Osu.Skinning.Legacy
 
         private bool shouldRotate;
 
+        private readonly Bindable<bool> disableAnimations = new Bindable<bool>();
+
         [BackgroundDependencyLoader]
-        private void load(DrawableHitObject drawableObject, ISkinSource skinSource)
+        private void load(DrawableHitObject drawableObject, ISkinSource skinSource, OsuConfigManager? config)
         {
+            config?.BindWith(OsuSetting.SlopDisableReverseArrowAnimations, disableAnimations);
+
             const string lookup_name = @"reversearrow";
 
             drawableRepeat = (DrawableSliderRepeat)drawableObject;
@@ -88,6 +93,11 @@ namespace osu.Game.Rulesets.Osu.Skinning.Legacy
             {
                 double animDuration = Math.Min(300, drawableRepeat.HitObject.SpanDuration);
                 arrow.Scale = new Vector2(Interpolation.ValueAt(Time.Current, 1, 1.4f, drawableRepeat.HitStateUpdateTime, drawableRepeat.HitStateUpdateTime + animDuration, Easing.Out));
+            }
+            else if (disableAnimations.Value)
+            {
+                arrow.Rotation = 0;
+                arrow.Scale = Vector2.One;
             }
             else
             {

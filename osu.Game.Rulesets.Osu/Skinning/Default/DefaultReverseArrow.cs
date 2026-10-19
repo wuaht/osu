@@ -1,12 +1,14 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
 using osu.Framework.Allocation;
+using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Utils;
+using osu.Game.Configuration;
 using osu.Game.Rulesets.Objects.Drawables;
 using osu.Game.Rulesets.Osu.Objects;
 using osu.Game.Rulesets.Osu.Objects.Drawables;
@@ -17,6 +19,8 @@ namespace osu.Game.Rulesets.Osu.Skinning.Default
     public partial class DefaultReverseArrow : CompositeDrawable
     {
         private DrawableSliderRepeat drawableRepeat { get; set; } = null!;
+
+        private readonly Bindable<bool> disableAnimations = new Bindable<bool>();
 
         public DefaultReverseArrow()
         {
@@ -37,9 +41,10 @@ namespace osu.Game.Rulesets.Osu.Skinning.Default
         }
 
         [BackgroundDependencyLoader]
-        private void load(DrawableHitObject drawableObject)
+        private void load(DrawableHitObject drawableObject, OsuConfigManager? config)
         {
             drawableRepeat = (DrawableSliderRepeat)drawableObject;
+            config?.BindWith(OsuSetting.SlopDisableReverseArrowAnimations, disableAnimations);
         }
 
         protected override void Update()
@@ -51,6 +56,8 @@ namespace osu.Game.Rulesets.Osu.Skinning.Default
                 double animDuration = Math.Min(300, drawableRepeat.HitObject.SpanDuration);
                 Scale = new Vector2(Interpolation.ValueAt(Time.Current, 1, 1.5f, drawableRepeat.HitStateUpdateTime, drawableRepeat.HitStateUpdateTime + animDuration, Easing.Out));
             }
+            else if (disableAnimations.Value)
+                Scale = Vector2.One;
             else
             {
                 const float scale_amount = 1.3f;

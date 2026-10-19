@@ -16,6 +16,7 @@ using osu.Game.Rulesets.Osu.Configuration;
 using osu.Game.Rulesets.Osu.Objects;
 using osu.Game.Rulesets.Osu.Objects.Drawables;
 using osu.Game.Rulesets.Osu.Skinning.Default;
+using osu.Game.Screens.Edit;
 using osu.Game.Skinning;
 using osuTK;
 using osuTK.Graphics;
@@ -34,7 +35,7 @@ namespace osu.Game.Rulesets.Osu.Skinning.Legacy
         private readonly bool hasNumber;
 
         protected LegacyKiaiFlashingDrawable CircleSprite = null!;
-        protected Sprite OverlaySprite = null!;
+        protected Drawable OverlaySprite = null!;
 
         protected Container OverlayLayer { get; private set; } = null!;
 
@@ -55,6 +56,9 @@ namespace osu.Game.Rulesets.Osu.Skinning.Legacy
 
         [Resolved(canBeNull: true)]
         private OsuConfigManager? gameConfig { get; set; }
+
+        [Resolved(canBeNull: true)]
+        private EditorBeatmap? editorBeatmap { get; set; }
 
         public LegacyMainCirclePiece(string? priorityLookupPrefix = null, bool hasNumber = true)
         {
@@ -117,12 +121,7 @@ namespace osu.Game.Rulesets.Osu.Skinning.Legacy
                 {
                     Anchor = Anchor.Centre,
                     Origin = Anchor.Centre,
-                    Child = OverlaySprite = new Sprite
-                    {
-                        Texture = skin.GetTexture(@$"{circleName}overlay")?.WithMaximumSize(maxSize),
-                        Anchor = Anchor.Centre,
-                        Origin = Anchor.Centre,
-                    },
+                    Child = OverlaySprite = createOverlay(circleName, maxSize),
                 },
                 CircleSprite.FlashingDrawable.CreateProxy(),
             };
@@ -150,6 +149,29 @@ namespace osu.Game.Rulesets.Osu.Skinning.Legacy
                 accentColour.BindTo(drawableOsuObject.AccentColour);
                 indexInCurrentCombo.BindTo(drawableOsuObject.IndexInCurrentComboBindable);
             }
+        }
+
+        private Drawable createOverlay(string circleName, Vector2 maxSize)
+        {
+            // Animated overlays use the skin's configured framerate rather than being displayed statically.
+            if (gameConfig?.Get<bool>(OsuSetting.SlopAnimateHitCircleOverlay) == true)
+            {
+                var animation = skin.GetAnimation(@$"{circleName}overlay", true, true, applyConfigFrameRate: true, maxSize: maxSize);
+
+                if (animation != null)
+                {
+                    animation.Anchor = Anchor.Centre;
+                    animation.Origin = Anchor.Centre;
+                    return animation;
+                }
+            }
+
+            return new Sprite
+            {
+                Texture = skin.GetTexture(@$"{circleName}overlay")?.WithMaximumSize(maxSize),
+                Anchor = Anchor.Centre,
+                Origin = Anchor.Centre,
+            };
         }
 
         protected override void LoadComplete()
@@ -213,7 +235,9 @@ namespace osu.Game.Rulesets.Osu.Skinning.Legacy
                                 // if the new hit animation setting is disabled, the fade is bypassed here to avoid users abusing this to achieve "even better" results.
                                 // note that this means the number fades slightly slower than other components when hit animations are off.
                                 // in practice, the fade is so short this is not perceivable.
-                                if (osuConfig?.Get<bool>(OsuRulesetSetting.HitAnimations) != false)
+                                if (gameConfig?.Get<bool>(OsuSetting.SlopInstafadeNumbers) == true && editorBeatmap == null)
+                                    hitCircleText.FadeOut();
+                                else if (osuConfig?.Get<bool>(OsuRulesetSetting.HitAnimations) != false)
                                     hitCircleText.FadeOut(legacy_fade_duration / 4);
                             }
                             else

@@ -1,4 +1,4 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 #nullable disable
@@ -251,6 +251,12 @@ namespace osu.Game.Screens.Play
 
             if (playableBeatmap == null)
                 return;
+
+            if (config.Get<bool>(OsuSetting.SlopDisableKiaiEffects))
+            {
+                GameplayKiaiRemoval.RemoveKiai(playableBeatmap.ControlPointInfo);
+                GameplayKiaiRemoval.RemoveKiai(playableBeatmap.HitObjects);
+            }
 
             if (!ModUtils.CheckModsBelongToRuleset(ruleset, gameplayMods))
             {

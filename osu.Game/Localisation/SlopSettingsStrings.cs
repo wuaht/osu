@@ -644,6 +644,71 @@ namespace osu.Game.Localisation
         /// </summary>
         public static LocalisableString WhiteApproachCirclesDescription => new TranslatableString(getKey(@"white_approach_circles_description"), @"Makes approach circles white instead of using combo colours.");
 
+        /// <summary>
+        /// "Animations"
+        /// </summary>
+        public static LocalisableString AnimationsHeader => new TranslatableString(getKey(@"animations_header"), @"Animations");
+
+        /// <summary>
+        /// "Disable kiai effects"
+        /// </summary>
+        public static LocalisableString DisableKiaiEffects => new TranslatableString(getKey(@"disable_kiai_effects"), @"Disable kiai effects");
+
+        /// <summary>
+        /// "Disables all kiai time effects during gameplay."
+        /// </summary>
+        public static LocalisableString DisableKiaiEffectsDescription => new TranslatableString(getKey(@"disable_kiai_effects_description"), @"Disables all kiai time effects during gameplay.");
+
+        /// <summary>
+        /// "Increase framerate of hitcircleoverlay animation"
+        /// </summary>
+        public static LocalisableString AnimateHitCircleOverlay => new TranslatableString(getKey(@"animate_hit_circle_overlay"), @"Increase framerate of hitcircleoverlay animation");
+
+        /// <summary>
+        /// "Uses the skin's AnimationFramerate for hitcircleoverlay animations instead of a fixed 2 frames per second. Only applies to legacy skins."
+        /// </summary>
+        public static LocalisableString AnimateHitCircleOverlayDescription => new TranslatableString(getKey(@"animate_hit_circle_overlay_description"), @"Uses the skin's AnimationFramerate for hitcircleoverlay animations instead of a fixed 2 frames per second. Only applies to legacy skins.");
+
+        /// <summary>
+        /// "Disable slider fade-out animation"
+        /// </summary>
+        public static LocalisableString InstafadeSliders => new TranslatableString(getKey(@"instafade_sliders"), @"Disable slider fade-out animation");
+
+        /// <summary>
+        /// "Disable follow circle animations"
+        /// </summary>
+        public static LocalisableString DisableFollowCircleAnimations => new TranslatableString(getKey(@"disable_follow_circle_animations"), @"Disable follow circle animations");
+
+        /// <summary>
+        /// "Disables pulsing on slider ticks and the fade in/out."
+        /// </summary>
+        public static LocalisableString DisableFollowCircleAnimationsDescription => new TranslatableString(getKey(@"disable_follow_circle_animations_description"), @"Disables pulsing on slider ticks and the fade in/out.");
+
+        /// <summary>
+        /// "Disable reverse arrow animations"
+        /// </summary>
+        public static LocalisableString DisableReverseArrowAnimations => new TranslatableString(getKey(@"disable_reverse_arrow_animations"), @"Disable reverse arrow animations");
+
+        /// <summary>
+        /// "Disables pulsing and rotating."
+        /// </summary>
+        public static LocalisableString DisableReverseArrowAnimationsDescription => new TranslatableString(getKey(@"disable_reverse_arrow_animations_description"), @"Disables pulsing and rotating.");
+
+        /// <summary>
+        /// "Disable fade-out on numbers"
+        /// </summary>
+        public static LocalisableString InstafadeNumbers => new TranslatableString(getKey(@"instafade_numbers"), @"Disable fade-out on numbers");
+
+        /// <summary>
+        /// "Force disable cursor expand"
+        /// </summary>
+        public static LocalisableString ForceDisableCursorExpand => new TranslatableString(getKey(@"force_disable_cursor_expand"), @"Force disable cursor expand");
+
+        /// <summary>
+        /// "Prevents the cursor from expanding on click, even if the skin enables it."
+        /// </summary>
+        public static LocalisableString ForceDisableCursorExpandDescription => new TranslatableString(getKey(@"force_disable_cursor_expand_description"), @"Prevents the cursor from expanding on click, even if the skin enables it.");
+
         private static string getKey(string key) => $"{prefix}:{key}";
     }
 }

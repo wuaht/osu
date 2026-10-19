@@ -1,4 +1,4 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
@@ -11,6 +11,7 @@ using osu.Framework.Logging;
 using osu.Framework.Timing;
 using osu.Game.Beatmaps;
 using osu.Game.Beatmaps.ControlPoints;
+using osu.Game.Configuration;
 using osu.Game.Overlays;
 using osu.Game.Storyboards;
 
@@ -56,6 +57,11 @@ namespace osu.Game.Screens.Play
 
         private readonly IBeatmap beatmap;
 
+        /// <summary>
+        /// The control points used for beat syncing, with kiai removed if kiai effects are disabled.
+        /// </summary>
+        private ControlPointInfo? beatSyncControlPoints;
+
         private Track track;
 
         [Resolved]
@@ -74,6 +80,16 @@ namespace osu.Game.Screens.Play
 
             GameplayStartTime = gameplayStartTime;
             StartTime = findEarliestStartTime(gameplayStartTime, beatmap, working.Storyboard);
+        }
+
+        [BackgroundDependencyLoader]
+        private void load(OsuConfigManager? config)
+        {
+            if (config?.Get<bool>(OsuSetting.SlopDisableKiaiEffects) == true)
+            {
+                beatSyncControlPoints = beatmap.ControlPointInfo.DeepClone();
+                GameplayKiaiRemoval.RemoveKiai(beatSyncControlPoints);
+            }
         }
 
         private static double findEarliestStartTime(double gameplayStartTime, IBeatmap beatmap, Storyboard storyboard)
@@ -229,7 +245,7 @@ namespace osu.Game.Screens.Play
             removeAdjustmentsFromTrack();
         }
 
-        ControlPointInfo IBeatSyncProvider.ControlPoints => beatmap.ControlPointInfo;
+        ControlPointInfo IBeatSyncProvider.ControlPoints => beatSyncControlPoints ?? beatmap.ControlPointInfo;
         ChannelAmplitudes IHasAmplitudes.CurrentAmplitudes => track.CurrentAmplitudes;
         IClock IBeatSyncProvider.Clock => this;
     }

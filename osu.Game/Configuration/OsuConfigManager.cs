@@ -337,6 +337,13 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopHideFollowPoints, false);
             SetDefault(OsuSetting.SlopHideSliderBodies, false);
             SetDefault(OsuSetting.SlopWhiteApproachCircles, false);
+            SetDefault(OsuSetting.SlopDisableKiaiEffects, false);
+            SetDefault(OsuSetting.SlopAnimateHitCircleOverlay, false);
+            SetDefault(OsuSetting.SlopInstafadeSliders, false);
+            SetDefault(OsuSetting.SlopDisableFollowCircleAnimations, false);
+            SetDefault(OsuSetting.SlopDisableReverseArrowAnimations, false);
+            SetDefault(OsuSetting.SlopInstafadeNumbers, false);
+            SetDefault(OsuSetting.SlopForceDisableCursorExpand, false);
         }
 
         protected override bool CheckLookupContainsPrivateInformation(OsuSetting lookup)
@@ -948,5 +955,40 @@ namespace osu.Game.Configuration
         /// Whether approach circles are white instead of using the combo colour.
         /// </summary>
         SlopWhiteApproachCircles,
+
+        /// <summary>
+        /// Whether kiai time effects should be ignored during gameplay.
+        /// </summary>
+        SlopDisableKiaiEffects,
+
+        /// <summary>
+        /// Whether legacy hitcircleoverlay animations should use the skin's configured framerate.
+        /// </summary>
+        SlopAnimateHitCircleOverlay,
+
+        /// <summary>
+        /// Whether sliders should disappear instantly after they end.
+        /// </summary>
+        SlopInstafadeSliders,
+
+        /// <summary>
+        /// Whether follow circle animations should be disabled.
+        /// </summary>
+        SlopDisableFollowCircleAnimations,
+
+        /// <summary>
+        /// Whether reverse arrow animations should be disabled.
+        /// </summary>
+        SlopDisableReverseArrowAnimations,
+
+        /// <summary>
+        /// Whether combo numbers should disappear instantly when a circle is hit.
+        /// </summary>
+        SlopInstafadeNumbers,
+
+        /// <summary>
+        /// Whether the cursor should never expand on click, regardless of skin.
+        /// </summary>
+        SlopForceDisableCursorExpand,
     }
 }

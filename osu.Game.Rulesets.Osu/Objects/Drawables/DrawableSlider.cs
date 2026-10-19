@@ -13,6 +13,7 @@ using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Layout;
 using osu.Game.Audio;
+using osu.Game.Configuration;
 using osu.Game.Graphics.Containers;
 using osu.Game.Rulesets.Judgements;
 using osu.Game.Rulesets.Objects;
@@ -20,6 +21,7 @@ using osu.Game.Rulesets.Objects.Drawables;
 using osu.Game.Rulesets.Osu.Judgements;
 using osu.Game.Rulesets.Osu.Skinning.Default;
 using osu.Game.Rulesets.Scoring;
+using osu.Game.Screens.Edit;
 using osu.Game.Skinning;
 using osuTK;
 
@@ -91,6 +93,14 @@ namespace osu.Game.Rulesets.Osu.Objects.Drawables
             };
             AddLayout(relativeAnchorPositionLayout = new LayoutValue(Invalidation.DrawSize | Invalidation.MiscGeometry));
         }
+
+        [Resolved(CanBeNull = true)]
+        [CanBeNull]
+        private OsuConfigManager gameConfig { get; set; }
+
+        [Resolved(CanBeNull = true)]
+        [CanBeNull]
+        private EditorBeatmap editorBeatmap { get; set; }
 
         [BackgroundDependencyLoader]
         private void load()
@@ -361,6 +371,10 @@ namespace osu.Game.Rulesets.Osu.Objects.Drawables
                         Body.FadeOut(40); // short fade to allow for any body colour to smoothly disappear.
                     break;
             }
+
+            // Instantly hide the slider body once the slider ends, outside of the editor.
+            if (gameConfig?.Get<bool>(OsuSetting.SlopInstafadeSliders) == true && editorBeatmap == null)
+                Body.FadeOut();
 
             this.FadeOut(fade_out_time).Expire();
         }

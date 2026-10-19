@@ -83,7 +83,7 @@ namespace osu.Game.Rulesets.Objects
         /// Whether this <see cref="HitObject"/> is in Kiai time.
         /// </summary>
         [JsonIgnore]
-        public bool Kiai { get; private set; }
+        public bool Kiai { get; internal set; }
 
         /// <summary>
         /// The hit windows for this <see cref="HitObject"/>.

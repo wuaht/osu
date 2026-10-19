@@ -1,4 +1,4 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 #nullable disable
@@ -52,6 +52,7 @@ namespace osu.Game.Rulesets.Osu.UI.Cursor
 
         private Bindable<float> userCursorScale = null!;
         private Bindable<bool> autoCursorScale = null!;
+        private Bindable<bool> forceDisableExpand = null!;
 
         [Resolved(canBeNull: true)]
         private GameplayState state { get; set; }
@@ -76,6 +77,8 @@ namespace osu.Game.Rulesets.Osu.UI.Cursor
 
             autoCursorScale = config.GetBindable<bool>(OsuSetting.AutoCursorSize);
             autoCursorScale.ValueChanged += _ => cursorScale.Value = CalculateCursorScale();
+
+            forceDisableExpand = config.GetBindable<bool>(OsuSetting.SlopForceDisableCursorExpand);
 
             ModScaleAdjust.ValueChanged += _ => cursorScale.Value = CalculateCursorScale();
 
@@ -120,7 +123,7 @@ namespace osu.Game.Rulesets.Osu.UI.Cursor
 
         public void Expand()
         {
-            if (!cursorExpand) return;
+            if (!cursorExpand || forceDisableExpand.Value) return;
 
             skinnableCursor.Expand();
         }

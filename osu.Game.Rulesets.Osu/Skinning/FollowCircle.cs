@@ -7,6 +7,7 @@ using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
+using osu.Game.Configuration;
 using osu.Game.Rulesets.Objects.Drawables;
 using osu.Game.Rulesets.Osu.Objects.Drawables;
 
@@ -18,14 +19,23 @@ namespace osu.Game.Rulesets.Osu.Skinning
 
         private readonly IBindable<bool> tracking = new Bindable<bool>();
 
+        private readonly Bindable<bool> disableAnimations = new Bindable<bool>();
+
+        /// <summary>
+        /// The scale of this follow circle while the slider is being tracked.
+        /// </summary>
+        protected virtual float TrackingScale => DrawableSliderBall.FOLLOW_AREA;
+
         protected FollowCircle()
         {
             RelativeSizeAxes = Axes.Both;
         }
 
         [BackgroundDependencyLoader]
-        private void load(DrawableHitObject? hitObject)
+        private void load(DrawableHitObject? hitObject, OsuConfigManager? config)
         {
+            config?.BindWith(OsuSetting.SlopDisableFollowCircleAnimations, disableAnimations);
+
             DrawableObject = hitObject as DrawableSlider;
 
             if (DrawableObject != null)
@@ -39,9 +49,9 @@ namespace osu.Game.Rulesets.Osu.Skinning
                     using (BeginAbsoluteSequence(Math.Max(Time.Current, DrawableObject.HitObject?.StartTime ?? 0)))
                     {
                         if (tracking.NewValue)
-                            OnSliderPress();
+                            onSliderPress();
                         else
-                            OnSliderRelease();
+                            onSliderRelease();
                     }
                 }, true);
             }
@@ -85,13 +95,13 @@ namespace osu.Game.Rulesets.Osu.Skinning
                             // HitStateUpdateTime is ~36ms before the actual slider end (aka slider
                             // tail leniency)
                             using (BeginAbsoluteSequence(DrawableObject.HitStateUpdateTime))
-                                OnSliderEnd();
+                                onSliderEnd();
                             break;
 
                         case DrawableSliderTick:
                         case DrawableSliderRepeat:
                             using (BeginAbsoluteSequence(d.HitStateUpdateTime))
-                                OnSliderTick();
+                                onSliderTick();
                             break;
                     }
 
@@ -107,12 +117,52 @@ namespace osu.Game.Rulesets.Osu.Skinning
                             // here, since on stable, the break anim plays right when the tail is
                             // missed, not when the slider ends
                             using (BeginAbsoluteSequence(d.HitStateUpdateTime))
-                                OnSliderBreak();
+                                onSliderBreak();
                             break;
                     }
 
                     break;
             }
+        }
+
+        // Without animations, the follow circle appears and disappears instantly and doesn't pulse on ticks.
+
+        private void onSliderPress()
+        {
+            if (disableAnimations.Value)
+                this.ScaleTo(TrackingScale).FadeIn();
+            else
+                OnSliderPress();
+        }
+
+        private void onSliderRelease()
+        {
+            if (disableAnimations.Value)
+                this.FadeOut();
+            else
+                OnSliderRelease();
+        }
+
+        private void onSliderEnd()
+        {
+            if (disableAnimations.Value)
+                this.FadeOut();
+            else
+                OnSliderEnd();
+        }
+
+        private void onSliderTick()
+        {
+            if (!disableAnimations.Value)
+                OnSliderTick();
+        }
+
+        private void onSliderBreak()
+        {
+            if (disableAnimations.Value)
+                this.FadeOut();
+            else
+                OnSliderBreak();
         }
 
         protected override void Dispose(bool isDisposing)
