@@ -377,6 +377,9 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopEditorPreviewMods, false);
             SetDefault(OsuSetting.SlopEditorManiaPlayfieldWaveform, true);
             SetDefault(OsuSetting.SlopEditorTextEditor, @"notepad.exe");
+            SetDefault(OsuSetting.SlopMinimalReplayFrames, false);
+            SetDefault(OsuSetting.SlopSkipIntro, false);
+            SetDefault(OsuSetting.SlopInstantScreenTransitions, false);
         }
 
         protected override bool CheckLookupContainsPrivateInformation(OsuSetting lookup)
@@ -1188,5 +1191,20 @@ namespace osu.Game.Configuration
         /// The program used to open beatmap files in a text editor from the editor.
         /// </summary>
         SlopEditorTextEditor,
+
+        /// <summary>
+        /// Whether replays only record frames which contain important data, such as key presses and judgements.
+        /// </summary>
+        SlopMinimalReplayFrames,
+
+        /// <summary>
+        /// Whether the intro sequence is skipped on startup, going to the main menu directly.
+        /// </summary>
+        SlopSkipIntro,
+
+        /// <summary>
+        /// Whether the fade transitions of screens are finished instantly.
+        /// </summary>
+        SlopInstantScreenTransitions,
     }
 }

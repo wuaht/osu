@@ -32,6 +32,8 @@ namespace osu.Game.Screens
         private ShaderPrecompiler precompiler;
 
         private IntroSequence introSequence;
+
+        private bool skipIntro;
         private LoadingSpinner spinner;
         private ScheduledDelegate spinnerShow;
 
@@ -41,6 +43,9 @@ namespace osu.Game.Screens
         {
             // Headless tests run too fast to load non-circles intros correctly.
             // They will hit the "audio can't play" notification and cause random test failures.
+            if (skipIntro && !DebugUtils.IsNUnitRunning)
+                return new IntroSkip(createMainMenu);
+
             if (SeasonalUIConfig.ENABLED && !DebugUtils.IsNUnitRunning)
                 return new IntroChristmas(createMainMenu);
 
@@ -109,6 +114,7 @@ namespace osu.Game.Screens
         private void load(OsuConfigManager config)
         {
             introSequence = config.Get<IntroSequence>(OsuSetting.IntroSequence);
+            skipIntro = config.Get<bool>(OsuSetting.SlopSkipIntro);
         }
 
         /// <summary>

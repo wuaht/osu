@@ -13,6 +13,7 @@ using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Screens;
 using osu.Game.Beatmaps;
+using osu.Game.Configuration;
 using osu.Game.Overlays;
 using osu.Game.Rulesets;
 using osu.Game.Rulesets.Mods;
@@ -163,10 +164,25 @@ namespace osu.Game.Screens
             FooterContent = new Bindable<ScreenFooterContent>(ScreenFooterContent.Legacy(showBackButton: AllowUserExit));
         }
 
+        private readonly Bindable<bool> instantTransitions = new Bindable<bool>();
+
         [BackgroundDependencyLoader(true)]
-        private void load(AudioManager audio)
+        private void load(AudioManager audio, OsuConfigManager config)
         {
             sampleExit = audio.Samples.Get(@"UI/screen-back");
+            config?.BindWith(OsuSetting.SlopInstantScreenTransitions, instantTransitions);
+        }
+
+        /// <summary>
+        /// Finishes the transition transforms applied to this screen during the current frame, see <see cref="OsuSetting.SlopInstantScreenTransitions"/>.
+        /// </summary>
+        private void finishTransitionIfInstant()
+        {
+            if (!instantTransitions.Value)
+                return;
+
+            // only the screen itself is affected, as children may have looping transforms which would be stopped.
+            ScheduleAfterChildren(() => FinishTransforms());
         }
 
         protected override void LoadComplete()
@@ -202,6 +218,7 @@ namespace osu.Game.Screens
                 musicController.AllowTrackControl.Value = globalMusicControlStateAtSuspend.Value;
 
             base.OnResuming(e);
+            finishTransitionIfInstant();
         }
 
         public override void OnSuspending(ScreenTransitionEvent e)
@@ -212,6 +229,7 @@ namespace osu.Game.Screens
             globalMusicControlStateAtSuspend = musicController.AllowTrackControl.Value;
 
             onSuspendingLogo();
+            finishTransitionIfInstant();
         }
 
         public override void OnEntering(ScreenTransitionEvent e)
@@ -233,6 +251,7 @@ namespace osu.Game.Screens
 
             background = backgroundStack?.CurrentScreen as BackgroundScreen;
             base.OnEntering(e);
+            finishTransitionIfInstant();
         }
 
         public override bool OnExiting(ScreenExitEvent e)
@@ -254,6 +273,7 @@ namespace osu.Game.Screens
             if (ownedBackground != null && backgroundStack?.CurrentScreen == ownedBackground)
                 backgroundStack?.Exit();
 
+            finishTransitionIfInstant();
             return false;
         }
 

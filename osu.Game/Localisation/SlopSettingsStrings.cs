@@ -1099,6 +1099,41 @@ namespace osu.Game.Localisation
         /// </summary>
         public static LocalisableString OpenInTextEditor => new TranslatableString(getKey(@"open_in_text_editor"), @"Open .osu in text editor");
 
+        /// <summary>
+        /// "Minimal replay frames"
+        /// </summary>
+        public static LocalisableString MinimalReplayFrames => new TranslatableString(getKey(@"minimal_replay_frames"), @"Minimal replay frames");
+
+        /// <summary>
+        /// "Records the bare minimum amount of frames in replays"
+        /// </summary>
+        public static LocalisableString MinimalReplayFramesDescription => new TranslatableString(getKey(@"minimal_replay_frames_description"), @"Records the bare minimum amount of frames in replays");
+
+        /// <summary>
+        /// "User interface"
+        /// </summary>
+        public static LocalisableString UserInterfaceHeader => new TranslatableString(getKey(@"user_interface_header"), @"User interface");
+
+        /// <summary>
+        /// "Skip intro"
+        /// </summary>
+        public static LocalisableString SkipIntro => new TranslatableString(getKey(@"skip_intro"), @"Skip intro");
+
+        /// <summary>
+        /// "Jumps directly to the menu on startup"
+        /// </summary>
+        public static LocalisableString SkipIntroDescription => new TranslatableString(getKey(@"skip_intro_description"), @"Jumps directly to the menu on startup");
+
+        /// <summary>
+        /// "Instant menu navigation"
+        /// </summary>
+        public static LocalisableString InstantScreenTransitions => new TranslatableString(getKey(@"instant_screen_transitions"), @"Instant menu navigation");
+
+        /// <summary>
+        /// "Disables fade transitions between screens"
+        /// </summary>
+        public static LocalisableString InstantScreenTransitionsDescription => new TranslatableString(getKey(@"instant_screen_transitions_description"), @"Disables fade transitions between screens");
+
         private static string getKey(string key) => $"{prefix}:{key}";
     }
 }

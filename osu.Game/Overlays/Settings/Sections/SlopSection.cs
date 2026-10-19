@@ -30,6 +30,7 @@ namespace osu.Game.Overlays.Settings.Sections
                 new GameplaySettings(),
                 new HitObjectSettings(),
                 new AnimationSettings(),
+                new UserInterfaceSettings(),
                 new EditorSettings(),
                 new OfflineProfileSettings(),
                 new OnlineSettings(),

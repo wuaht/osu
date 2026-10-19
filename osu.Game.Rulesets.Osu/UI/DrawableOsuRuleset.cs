@@ -77,7 +77,7 @@ namespace osu.Game.Rulesets.Osu.UI
 
         protected override ReplayInputHandler CreateReplayInputHandler(Replay replay) => new OsuFramedReplayInputHandler(replay);
 
-        protected override ReplayRecorder CreateReplayRecorder(Score score) => new OsuReplayRecorder(score);
+        protected override ReplayRecorder CreateReplayRecorder(Score score) => new OsuReplayRecorder(score, Beatmap.HitObjects.OfType<Spinner>());
 
         public override double GameplayStartTime
         {

@@ -368,6 +368,11 @@ namespace osu.Game.Screens.Menu
                 LoadComponentAsync(nextScreen);
         }
 
+        /// <summary>
+        /// Whether the screen prepared by <see cref="PrepareMenuLoad"/> has finished loading.
+        /// </summary>
+        protected bool IsMenuLoaded => nextScreen?.LoadState >= LoadState.Ready;
+
         protected void LoadMenu()
         {
             if (DidLoadMenu)

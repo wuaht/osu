@@ -7,10 +7,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using osu.Framework.Allocation;
+using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Input;
 using osu.Framework.Input.Bindings;
 using osu.Framework.Input.Events;
+using osu.Game.Configuration;
 using osu.Game.Online.Spectator;
 using osu.Game.Rulesets.Replays;
 using osu.Game.Scoring;
@@ -35,11 +37,24 @@ namespace osu.Game.Rulesets.UI
         [Resolved]
         private SpectatorClient spectatorClient { get; set; }
 
+        private readonly Bindable<bool> minimalFrames = new Bindable<bool>();
+
+        /// <summary>
+        /// Whether frames should currently be recorded at <see cref="RecordFrameRate"/>, even if <see cref="OsuSetting.SlopMinimalReplayFrames"/> is enabled.
+        /// </summary>
+        protected virtual bool RequiresContinuousRecording => false;
+
         protected ReplayRecorder(Score target)
         {
             this.target = target;
 
             RelativeSizeAxes = Axes.Both;
+        }
+
+        [BackgroundDependencyLoader(true)]
+        private void load(OsuConfigManager config)
+        {
+            config?.BindWith(OsuSetting.SlopMinimalReplayFrames, minimalFrames);
         }
 
         protected override void LoadComplete()
@@ -78,6 +93,10 @@ namespace osu.Game.Rulesets.UI
             var last = target.Replay.Frames.LastOrDefault();
 
             if (!important && last != null && Time.Current - last.Time < (1000d / RecordFrameRate) * Clock.Rate)
+                return;
+
+            // only key presses and judgements are recorded, except for when continuous input matters (e.g. spinners).
+            if (!important && last != null && minimalFrames.Value && !RequiresContinuousRecording)
                 return;
 
             var position = ScreenSpaceToGamefield?.Invoke(inputManager.CurrentState.Mouse.Position) ?? inputManager.CurrentState.Mouse.Position;
