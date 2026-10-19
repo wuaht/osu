@@ -10,6 +10,7 @@ using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Input.Events;
 using osu.Framework.Localisation;
+using osu.Framework.Platform;
 using osu.Game.Beatmaps;
 using osu.Game.Configuration;
 using osu.Game.Graphics;
@@ -19,6 +20,7 @@ using osu.Game.Localisation;
 using osu.Game.Online.API;
 using osu.Game.Online.BeatmapMirrors;
 using osu.Game.Overlays;
+using osu.Game.Screens.Edit;
 using osuTK;
 using osuTK.Graphics;
 using WebCommonStrings = osu.Game.Resources.Localisation.Web.CommonStrings;
@@ -59,6 +61,9 @@ namespace osu.Game.Screens.Select
         [Resolved]
         private IDialogOverlay? dialogOverlay { get; set; }
 
+        [Resolved]
+        private Storage storage { get; set; } = null!;
+
         public PanelUpdateBeatmapButton()
         {
             AutoSizeAxes = Axes.X;
@@ -66,6 +71,7 @@ namespace osu.Game.Screens.Select
         }
 
         private Bindable<bool> preferNoVideo = null!;
+        private Bindable<bool> backupOnUpdate = null!;
 
         [BackgroundDependencyLoader]
         private void load(OsuConfigManager config)
@@ -73,6 +79,7 @@ namespace osu.Game.Screens.Select
             const float icon_size = 12;
 
             preferNoVideo = config.GetBindable<bool>(OsuSetting.PreferNoVideo);
+            backupOnUpdate = config.GetBindable<bool>(OsuSetting.SlopBackupOnUpdate);
 
             Content.Anchor = Anchor.Centre;
             Content.Origin = Anchor.Centre;
@@ -176,6 +183,12 @@ namespace osu.Game.Screens.Select
             }
 
             updateConfirmed = false;
+
+            if (backupOnUpdate.Value)
+            {
+                foreach (var beatmap in beatmapSet.Beatmaps)
+                    EditorBeatmapBackup.CreateBackup(storage, beatmap, EditorBeatmapBackup.UPDATE_TAG);
+            }
 
             beatmapDownloader.DownloadAsUpdate(beatmapSet, preferNoVideo.Value);
             attachExistingDownload();

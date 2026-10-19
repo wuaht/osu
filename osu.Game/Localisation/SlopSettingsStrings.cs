@@ -1134,6 +1134,16 @@ namespace osu.Game.Localisation
         /// </summary>
         public static LocalisableString InstantScreenTransitionsDescription => new TranslatableString(getKey(@"instant_screen_transitions_description"), @"Disables fade transitions between screens");
 
+        /// <summary>
+        /// "Backup beatmaps on update"
+        /// </summary>
+        public static LocalisableString BackupOnUpdate => new TranslatableString(getKey(@"backup_on_update"), @"Backup beatmaps on update");
+
+        /// <summary>
+        /// "Backs up the .osu files when updating a map"
+        /// </summary>
+        public static LocalisableString BackupOnUpdateDescription => new TranslatableString(getKey(@"backup_on_update_description"), @"Backs up the .osu files when updating a map");
+
         private static string getKey(string key) => $"{prefix}:{key}";
     }
 }

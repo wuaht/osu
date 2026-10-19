@@ -23,7 +23,7 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
     {
         protected override LocalisableString Header => SlopSettingsStrings.OnlineHeader;
 
-        public override IEnumerable<LocalisableString> FilterTerms => base.FilterTerms.Concat(new LocalisableString[] { "mirror", "download", "beatmap", "update", "bn", "nominator", "tracker", "request" });
+        public override IEnumerable<LocalisableString> FilterTerms => base.FilterTerms.Concat(new LocalisableString[] { "mirror", "download", "beatmap", "update", "bn", "nominator", "tracker", "request", "backup" });
 
         [Resolved]
         private BeatmapOwnerStore ownerStore { get; set; } = null!;
@@ -61,6 +61,12 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                     Caption = SlopSettingsStrings.BeatmapMirror,
                     HintText = SlopSettingsStrings.BeatmapMirrorDescription,
                     Current = config.GetBindable<BeatmapMirror>(OsuSetting.SlopBeatmapMirror),
+                }),
+                new SettingsItemV2(new FormCheckBox
+                {
+                    Caption = SlopSettingsStrings.BackupOnUpdate,
+                    HintText = SlopSettingsStrings.BackupOnUpdateDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopBackupOnUpdate),
                 }),
                 clearMappersButton = new DangerousSettingsButtonV2
                 {

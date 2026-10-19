@@ -25,6 +25,16 @@ namespace osu.Game.Screens.Edit
         public const string BACKUPS_DIRECTORY = @"Backups";
 
         /// <summary>
+        /// The filename tag of backups made when saving in the editor.
+        /// </summary>
+        public const string AUTO_TAG = @"AUTO";
+
+        /// <summary>
+        /// The filename tag of backups made before updating a beatmap set.
+        /// </summary>
+        public const string UPDATE_TAG = @"UPDATE";
+
+        /// <summary>
         /// Writes a compressed copy of the currently stored file of <paramref name="beatmapInfo"/> to the backups folder.
         /// Does nothing if the beatmap has no stored file yet.
         /// </summary>
@@ -34,14 +44,15 @@ namespace osu.Game.Screens.Edit
         /// </remarks>
         /// <param name="storage">The user's data storage.</param>
         /// <param name="beatmapInfo">The beatmap which is about to be saved.</param>
-        public static void CreateBackup(Storage storage, BeatmapInfo beatmapInfo) => PrepareBackup(storage, beatmapInfo)?.Invoke();
+        /// <param name="tag">The tag in the backup filename, describing why the backup was made.</param>
+        public static void CreateBackup(Storage storage, BeatmapInfo beatmapInfo, string tag = AUTO_TAG) => PrepareBackup(storage, beatmapInfo, tag)?.Invoke();
 
         /// <summary>
         /// Captures which file of <paramref name="beatmapInfo"/> is currently stored, returning an action which writes the backup of it.
         /// The action may run on any thread, which allows the disk access to happen in the background.
         /// </summary>
         /// <returns>The action writing the backup, or null if the beatmap has no stored file yet.</returns>
-        public static Action? PrepareBackup(Storage storage, BeatmapInfo beatmapInfo)
+        public static Action? PrepareBackup(Storage storage, BeatmapInfo beatmapInfo, string tag = AUTO_TAG)
         {
             string? filename = beatmapInfo.Path;
             RealmNamedFileUsage? file = filename == null ? null : beatmapInfo.BeatmapSet?.GetFile(filename);
@@ -50,10 +61,10 @@ namespace osu.Game.Screens.Edit
                 return null;
 
             string storagePath = file.File.GetStoragePath();
-            return () => createBackup(storage, filename, storagePath);
+            return () => createBackup(storage, filename, storagePath, tag);
         }
 
-        private static void createBackup(Storage storage, string filename, string storagePath)
+        private static void createBackup(Storage storage, string filename, string storagePath, string tag)
         {
             try
             {
@@ -71,7 +82,7 @@ namespace osu.Game.Screens.Edit
                     }
                 }
 
-                WriteBackup(storage, filename, previousContent);
+                WriteBackup(storage, filename, previousContent, tag);
             }
             catch (Exception e)
             {
@@ -86,12 +97,13 @@ namespace osu.Game.Screens.Edit
         /// <param name="storage">The user's data storage.</param>
         /// <param name="filename">The filename of the beatmap file.</param>
         /// <param name="content">The content of the beatmap file to back up.</param>
-        public static void WriteBackup(Storage storage, string filename, byte[] content)
+        /// <param name="tag">The tag in the backup filename, describing why the backup was made.</param>
+        public static void WriteBackup(Storage storage, string filename, byte[] content, string tag = AUTO_TAG)
         {
             try
             {
                 var backupStorage = storage.GetStorageForDirectory(BACKUPS_DIRECTORY);
-                string backupFilename = getAvailableBackupFilename(backupStorage, filename);
+                string backupFilename = getAvailableBackupFilename(backupStorage, filename, tag);
 
                 // create the file immediately (rather than in the background task) so that multiple backups within the same second can't pick the same name.
                 var output = backupStorage.GetStream(backupFilename, FileAccess.Write, FileMode.CreateNew);
@@ -118,16 +130,16 @@ namespace osu.Game.Screens.Edit
         /// <summary>
         /// Creates a backup filename in the format "2026-10-07 21-16-41_AUTO__Artist - Title (Creator) [Difficulty].osu.xz".
         /// </summary>
-        private static string getAvailableBackupFilename(Storage backupStorage, string beatmapFilename)
+        private static string getAvailableBackupFilename(Storage backupStorage, string beatmapFilename, string tag)
         {
             string timestamp = DateTime.Now.ToString(@"yyyy-MM-dd HH-mm-ss", CultureInfo.InvariantCulture);
             string name = beatmapFilename.GetValidFilename();
 
-            string backupFilename = $@"{timestamp}_AUTO__{name}.xz";
+            string backupFilename = $@"{timestamp}_{tag}__{name}.xz";
 
             // in the rare case of multiple saves within the same second, keep all backups.
             for (int i = 2; backupStorage.Exists(backupFilename); i++)
-                backupFilename = $@"{timestamp}-{i}_AUTO__{name}.xz";
+                backupFilename = $@"{timestamp}-{i}_{tag}__{name}.xz";
 
             return backupFilename;
         }

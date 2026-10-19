@@ -380,6 +380,7 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopMinimalReplayFrames, false);
             SetDefault(OsuSetting.SlopSkipIntro, false);
             SetDefault(OsuSetting.SlopInstantScreenTransitions, false);
+            SetDefault(OsuSetting.SlopBackupOnUpdate, true);
         }
 
         protected override bool CheckLookupContainsPrivateInformation(OsuSetting lookup)
@@ -1206,5 +1207,10 @@ namespace osu.Game.Configuration
         /// Whether the fade transitions of screens are finished instantly.
         /// </summary>
         SlopInstantScreenTransitions,
+
+        /// <summary>
+        /// Whether the beatmap files of a beatmap set are backed up before it gets updated.
+        /// </summary>
+        SlopBackupOnUpdate,
     }
 }
