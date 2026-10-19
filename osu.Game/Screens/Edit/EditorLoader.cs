@@ -4,6 +4,7 @@
 #nullable disable
 
 using System;
+using System.Linq;
 using JetBrains.Annotations;
 using osu.Framework.Allocation;
 using osu.Framework.Extensions.ObjectExtensions;
@@ -13,6 +14,7 @@ using osu.Framework.Logging;
 using osu.Framework.Screens;
 using osu.Framework.Threading;
 using osu.Game.Beatmaps;
+using osu.Game.Configuration;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Rulesets;
 using osu.Game.Rulesets.Mods;
@@ -48,6 +50,9 @@ namespace osu.Game.Screens.Edit
         [Resolved]
         private BeatmapManager beatmapManager { get; set; }
 
+        [Resolved]
+        private OsuConfigManager config { get; set; }
+
         [CanBeNull]
         private ScheduledDelegate scheduledDifficultySwitch;
 
@@ -70,7 +75,28 @@ namespace osu.Game.Screens.Edit
             // will be restored via lease, see `DisallowExternalBeatmapRulesetChanges`.
             if (!(Beatmap.Value is DummyWorkingBeatmap))
                 Ruleset.Value = Beatmap.Value.BeatmapInfo.Ruleset;
-            Mods.Value = Array.Empty<Mod>();
+
+            Mods.Value = config.Get<bool>(OsuSetting.SlopEditorPreviewMods) ? getPreviewMods() : Array.Empty<Mod>();
+        }
+
+        /// <summary>
+        /// The selected mods which are kept for previewing the beatmap: rate adjust mods, and Hidden in osu!.
+        /// </summary>
+        private Mod[] getPreviewMods()
+        {
+            var ruleset = Ruleset.Value.CreateInstance();
+            bool isOsu = Ruleset.Value.OnlineID == 0;
+
+            return Mods.Value.Where(m => m is ModRateAdjust || (isOsu && m is ModHidden))
+                       .Select(m =>
+                       {
+                           // the mods may have been selected for another ruleset.
+                           var mod = ruleset.CreateModFromAcronym(m.Acronym);
+                           mod?.CopyCommonSettingsFrom(m);
+                           return mod;
+                       })
+                       .Where(m => m != null)
+                       .ToArray();
         }
 
         protected virtual Editor CreateEditor() => new Editor(this);

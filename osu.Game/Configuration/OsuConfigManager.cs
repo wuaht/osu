@@ -373,6 +373,8 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopEditorSliderCurveColour, SliderCurveColourStyle.Line);
             SetDefault(OsuSetting.SlopEditorDisableAltDistanceSnap, false);
             SetDefault(OsuSetting.SlopEditorSliderPartOnFirstClick, false);
+            SetDefault(OsuSetting.SlopEditorNoAudioStretch, false);
+            SetDefault(OsuSetting.SlopEditorPreviewMods, false);
         }
 
         protected override bool CheckLookupContainsPrivateInformation(OsuSetting lookup)
@@ -1164,5 +1166,15 @@ namespace osu.Game.Configuration
         /// Whether clicking a slider's head or tail selects that part for hitsounding even if the slider wasn't selected before.
         /// </summary>
         SlopEditorSliderPartOnFirstClick,
+
+        /// <summary>
+        /// Whether the editor changes the pitch together with the playback speed in all screens instead of stretching the audio.
+        /// </summary>
+        SlopEditorNoAudioStretch,
+
+        /// <summary>
+        /// Whether the editor keeps the selected rate adjust mods (and Hidden in osu!) for playback and test play.
+        /// </summary>
+        SlopEditorPreviewMods,
     }
 }

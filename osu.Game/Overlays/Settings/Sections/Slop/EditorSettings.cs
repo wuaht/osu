@@ -23,7 +23,7 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
     {
         protected override LocalisableString Header => SlopSettingsStrings.EditorHeader;
 
-        public override IEnumerable<LocalisableString> FilterTerms => base.FilterTerms.Concat(new LocalisableString[] { "skin", "backup", "autosave", "snap", "blanket", "triangle", "waveform", "hitsound", "frosted", "bn", "nominator", "request", "alias", "break", "own", "border", "fps", "star", "difficulty", "bezier", "curve", "colour", "color", "alt" });
+        public override IEnumerable<LocalisableString> FilterTerms => base.FilterTerms.Concat(new LocalisableString[] { "skin", "backup", "autosave", "snap", "blanket", "triangle", "waveform", "hitsound", "frosted", "bn", "nominator", "request", "alias", "break", "own", "border", "fps", "star", "difficulty", "bezier", "curve", "colour", "color", "alt", "pitch", "speed", "stretch", "mods", "preview" });
 
         /// <summary>
         /// Dropdown entry representing "use the regular gameplay skin".
@@ -267,6 +267,18 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                     Caption = SlopSettingsStrings.SliderPartOnFirstClick,
                     HintText = SlopSettingsStrings.SliderPartOnFirstClickDescription,
                     Current = config.GetBindable<bool>(OsuSetting.SlopEditorSliderPartOnFirstClick),
+                }),
+                new SettingsItemV2(new FormCheckBox
+                {
+                    Caption = SlopSettingsStrings.EditorNoAudioStretch,
+                    HintText = SlopSettingsStrings.EditorNoAudioStretchDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorNoAudioStretch),
+                }),
+                new SettingsItemV2(new FormCheckBox
+                {
+                    Caption = SlopSettingsStrings.EditorPreviewMods,
+                    HintText = SlopSettingsStrings.EditorPreviewModsDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorPreviewMods),
                 }),
             };
         }

@@ -1054,6 +1054,26 @@ namespace osu.Game.Localisation
         /// </summary>
         public static LocalisableString SliderPartOnFirstClickDescription => new TranslatableString(getKey(@"slider_part_on_first_click_description"), @"Clicking the head or tail of an unselected slider directly selects that part for hitsounding");
 
+        /// <summary>
+        /// "Don't stretch audio when changing speed"
+        /// </summary>
+        public static LocalisableString EditorNoAudioStretch => new TranslatableString(getKey(@"editor_no_audio_stretch"), @"Don't stretch audio when changing speed");
+
+        /// <summary>
+        /// "Allows audio pitch changes in order to make timing more precise"
+        /// </summary>
+        public static LocalisableString EditorNoAudioStretchDescription => new TranslatableString(getKey(@"editor_no_audio_stretch_description"), @"Allows audio pitch changes in order to make timing more precise");
+
+        /// <summary>
+        /// "Preview mods"
+        /// </summary>
+        public static LocalisableString EditorPreviewMods => new TranslatableString(getKey(@"editor_preview_mods"), @"Preview mods");
+
+        /// <summary>
+        /// "Loads the map with the currently selected mods. Only supports DT/HT/HD for now"
+        /// </summary>
+        public static LocalisableString EditorPreviewModsDescription => new TranslatableString(getKey(@"editor_preview_mods_description"), @"Loads the map with the currently selected mods. Only supports DT/HT/HD for now");
+
         private static string getKey(string key) => $"{prefix}:{key}";
     }
 }

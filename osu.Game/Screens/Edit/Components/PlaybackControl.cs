@@ -1,6 +1,7 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System.Collections.Generic;
 using System.Linq;
 using osuTK;
 using osuTK.Graphics;
@@ -19,8 +20,10 @@ using osu.Framework.Localisation;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Sprites;
 using osu.Game.Graphics.UserInterface;
+using osu.Game.Configuration;
 using osu.Game.Localisation;
 using osu.Game.Overlays;
+using osu.Game.Rulesets.Mods;
 
 namespace osu.Game.Screens.Edit.Components
 {
@@ -47,9 +50,21 @@ namespace osu.Game.Screens.Edit.Components
         /// </summary>
         private readonly BindableNumber<double> frequencyAdjustment = new BindableDouble(1);
 
+        private readonly Bindable<bool> noAudioStretch = new Bindable<bool>();
+
+        /// <summary>
+        /// The rate of the mods kept for previewing in the editor (see <see cref="OsuSetting.SlopEditorPreviewMods"/>).
+        /// </summary>
+        private double modRate = 1;
+
         [BackgroundDependencyLoader]
-        private void load(OverlayColourProvider colourProvider, Editor? editor)
+        private void load(OverlayColourProvider colourProvider, Editor? editor, OsuConfigManager? config, IBindable<IReadOnlyList<Mod>>? mods)
         {
+            config?.BindWith(OsuSetting.SlopEditorNoAudioStretch, noAudioStretch);
+
+            if (mods != null)
+                modRate = mods.Value.OfType<ModRateAdjust>().Aggregate(1.0, (rate, mod) => rate * mod.SpeedChange.Value);
+
             Background.Colour = EditorPanelStyle.PanelBackground;
 
             Children = new Drawable[]
@@ -99,19 +114,25 @@ namespace osu.Game.Screens.Edit.Components
             base.LoadComplete();
 
             currentScreenMode.BindValueChanged(_ => updateSpeedAdjustments());
+            noAudioStretch.BindValueChanged(_ => updateSpeedAdjustments());
             playbackSpeed.BindValueChanged(_ => updateSpeedAdjustments(), true);
         }
 
         private void updateSpeedAdjustments()
         {
             bool isTimingScreen = currentScreenMode.Value == EditorScreenMode.Timing;
+            bool changePitch = isTimingScreen || noAudioStretch.Value;
+            double speed = playbackSpeed.Value * modRate;
 
-            tempoAdjustment.Value = isTimingScreen ? 1 : playbackSpeed.Value;
-            frequencyAdjustment.Value = isTimingScreen ? playbackSpeed.Value : 1;
+            tempoAdjustment.Value = changePitch ? 1 : speed;
+            frequencyAdjustment.Value = changePitch ? speed : 1;
 
-            playbackSpeedControl.TooltipText = isTimingScreen
-                ? "In timing mode, the pitch changes along with the speed. This keeps the audio sharp and in sync, so timing stays accurate at slower speeds."
-                : default(LocalisableString);
+            if (noAudioStretch.Value)
+                playbackSpeedControl.TooltipText = "The pitch changes along with the speed. This keeps the audio sharp and in sync, so timing stays accurate at slower speeds.";
+            else if (isTimingScreen)
+                playbackSpeedControl.TooltipText = "In timing mode, the pitch changes along with the speed. This keeps the audio sharp and in sync, so timing stays accurate at slower speeds.";
+            else
+                playbackSpeedControl.TooltipText = default(LocalisableString);
         }
 
         protected override void Dispose(bool isDisposing)
