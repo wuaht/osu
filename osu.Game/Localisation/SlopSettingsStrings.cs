@@ -589,6 +589,61 @@ namespace osu.Game.Localisation
         /// </summary>
         public static LocalisableString ColourEffectRainbowSaturationDescription => new TranslatableString(getKey(@"colour_effect_rainbow_saturation_description"), @"How saturated rainbow colours are. Lower values make dark colours like blue and purple brighter.");
 
+        /// <summary>
+        /// "Hit objects"
+        /// </summary>
+        public static LocalisableString HitObjectsHeader => new TranslatableString(getKey(@"hit_objects_header"), @"Hit objects");
+
+        /// <summary>
+        /// "Show 300 judgements"
+        /// </summary>
+        public static LocalisableString ShowGreatJudgements => new TranslatableString(getKey(@"show_great_judgements"), @"Show 300 judgements");
+
+        /// <summary>
+        /// "Show slider ends"
+        /// </summary>
+        public static LocalisableString ShowSliderEnds => new TranslatableString(getKey(@"show_slider_ends"), @"Show slider ends");
+
+        /// <summary>
+        /// "Slider end circles are still shown in the editor."
+        /// </summary>
+        public static LocalisableString ShowSliderEndsDescription => new TranslatableString(getKey(@"show_slider_ends_description"), @"Slider end circles are still shown in the editor.");
+
+        /// <summary>
+        /// "Show combo numbers"
+        /// </summary>
+        public static LocalisableString ShowComboNumbers => new TranslatableString(getKey(@"show_combo_numbers"), @"Show combo numbers");
+
+        /// <summary>
+        /// "Hide follow points"
+        /// </summary>
+        public static LocalisableString HideFollowPoints => new TranslatableString(getKey(@"hide_follow_points"), @"Hide follow points");
+
+        /// <summary>
+        /// "Hides follow points in gameplay and in the editor."
+        /// </summary>
+        public static LocalisableString HideFollowPointsDescription => new TranslatableString(getKey(@"hide_follow_points_description"), @"Hides follow points in gameplay and in the editor.");
+
+        /// <summary>
+        /// "Disable slider rendering"
+        /// </summary>
+        public static LocalisableString HideSliderBodies => new TranslatableString(getKey(@"hide_slider_bodies"), @"Disable slider rendering");
+
+        /// <summary>
+        /// "Hides slider bodies. Makes some 2B/Aspire maps easier to read."
+        /// </summary>
+        public static LocalisableString HideSliderBodiesDescription => new TranslatableString(getKey(@"hide_slider_bodies_description"), @"Hides slider bodies. Makes some 2B/Aspire maps easier to read.");
+
+        /// <summary>
+        /// "Don't tint approach circles"
+        /// </summary>
+        public static LocalisableString WhiteApproachCircles => new TranslatableString(getKey(@"white_approach_circles"), @"Don't tint approach circles");
+
+        /// <summary>
+        /// "Makes approach circles white instead of using combo colours."
+        /// </summary>
+        public static LocalisableString WhiteApproachCirclesDescription => new TranslatableString(getKey(@"white_approach_circles_description"), @"Makes approach circles white instead of using combo colours.");
+
         private static string getKey(string key) => $"{prefix}:{key}";
     }
 }

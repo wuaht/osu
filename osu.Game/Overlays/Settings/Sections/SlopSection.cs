@@ -27,6 +27,7 @@ namespace osu.Game.Overlays.Settings.Sections
                 new GraphicsSettings(),
                 new ColourEffectSettings(),
                 new GameplaySettings(),
+                new HitObjectSettings(),
                 new EditorSettings(),
                 new OfflineProfileSettings(),
                 new OnlineSettings(),

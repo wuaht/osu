@@ -4,10 +4,12 @@
 using System;
 using System.Diagnostics;
 using osu.Framework.Allocation;
+using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Pooling;
 using osu.Framework.Logging;
+using osu.Game.Configuration;
 using osu.Game.Rulesets.Objects;
 using osu.Game.Rulesets.Objects.Drawables;
 using osu.Game.Rulesets.Scoring;
@@ -50,9 +52,16 @@ namespace osu.Game.Rulesets.Judgements
             proxiedAboveHitObjectsContent = new Lazy<Drawable>(() => aboveHitObjectsContent.CreateProxy());
         }
 
+        [Resolved(CanBeNull = true)]
+        private OsuConfigManager? gameConfig { get; set; }
+
+        private readonly Bindable<bool> showGreatJudgements = new Bindable<bool>(true);
+
         [BackgroundDependencyLoader]
         private void load()
         {
+            gameConfig?.BindWith(OsuSetting.SlopShowGreatJudgements, showGreatJudgements);
+
             prepareDrawables();
         }
 
@@ -124,6 +133,7 @@ namespace osu.Game.Rulesets.Judgements
             {
                 // not sure if this should remain going forward.
                 JudgementBody.ResetAnimation();
+                JudgementBody.Alpha = Result.Type == HitResult.Great && !showGreatJudgements.Value ? 0 : 1;
 
                 switch (Result.Type)
                 {

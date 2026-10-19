@@ -1,4 +1,4 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using osu.Framework.Allocation;
@@ -43,6 +43,7 @@ namespace osu.Game.Rulesets.Osu.Skinning.Argon
 
         private readonly IBindable<Color4> accentColour = new Bindable<Color4>();
         private readonly IBindable<int> indexInCurrentCombo = new Bindable<int>();
+        private readonly Bindable<bool> showComboNumbers = new Bindable<bool>(true);
         private readonly FlashPiece flash;
         private readonly Container kiaiContainer;
 
@@ -121,13 +122,15 @@ namespace osu.Game.Rulesets.Osu.Skinning.Argon
             indexInCurrentCombo.BindTo(drawableOsuObject.IndexInCurrentComboBindable);
 
             configHitLighting = config.GetBindable<bool>(OsuSetting.HitLighting);
+            config.BindWith(OsuSetting.SlopShowComboNumbers, showComboNumbers);
         }
 
         protected override void LoadComplete()
         {
             base.LoadComplete();
 
-            indexInCurrentCombo.BindValueChanged(index => number.Text = (index.NewValue + 1).ToString(), true);
+            indexInCurrentCombo.BindValueChanged(_ => updateNumber());
+            showComboNumbers.BindValueChanged(_ => updateNumber(), true);
 
             accentColour.BindValueChanged(colour =>
             {
@@ -154,6 +157,8 @@ namespace osu.Game.Rulesets.Osu.Skinning.Argon
 
             drawableObject.ApplyCustomUpdateState += updateStateTransforms;
         }
+
+        private void updateNumber() => number.Text = showComboNumbers.Value ? (indexInCurrentCombo.Value + 1).ToString() : string.Empty;
 
         private void updateStateTransforms(DrawableHitObject drawableHitObject, ArmedState state)
         {

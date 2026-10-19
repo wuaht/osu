@@ -7,9 +7,11 @@ using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Utils;
+using osu.Game.Configuration;
 using osu.Game.Rulesets.Objects.Drawables;
 using osu.Game.Rulesets.Objects.Types;
 using osu.Game.Rulesets.Osu.Configuration;
+using osu.Game.Screens.Edit;
 using osu.Game.Skinning;
 using osuTK;
 using osuTK.Graphics;
@@ -46,10 +48,19 @@ namespace osu.Game.Rulesets.Osu.Objects.Drawables
 
         private readonly Bindable<bool> hitAnimations = new Bindable<bool>(true);
 
+        private readonly Bindable<bool> showSliderEnds = new Bindable<bool>(true);
+
+        [Resolved(CanBeNull = true)]
+        private OsuConfigManager? gameConfig { get; set; }
+
+        [Resolved(CanBeNull = true)]
+        private EditorBeatmap? editorBeatmap { get; set; }
+
         [BackgroundDependencyLoader]
         private void load(OsuRulesetConfigManager? osuConfig)
         {
             osuConfig?.BindWith(OsuRulesetSetting.HitAnimations, hitAnimations);
+            gameConfig?.BindWith(OsuSetting.SlopShowSliderEnds, showSliderEnds);
 
             Origin = Anchor.Centre;
             Size = OsuHitObject.OBJECT_DIMENSIONS;
@@ -70,6 +81,9 @@ namespace osu.Game.Rulesets.Osu.Objects.Drawables
             });
 
             ScaleBindable.BindValueChanged(scale => scaleContainer.Scale = new Vector2(scale.NewValue));
+
+            // slider ends are always shown in the editor.
+            showSliderEnds.BindValueChanged(show => scaleContainer.Alpha = show.NewValue || editorBeatmap != null ? 1 : 0, true);
         }
 
         protected override void LoadSamples()

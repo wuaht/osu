@@ -1,4 +1,4 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using osu.Framework.Allocation;
@@ -31,6 +31,8 @@ namespace osu.Game.Rulesets.Osu.Skinning.Default
 
         private readonly Bindable<bool> borderComboColour = new Bindable<bool>();
 
+        private readonly Bindable<bool> hideSliderBodies = new Bindable<bool>();
+
         private ISkinSource skin = null!;
 
         [BackgroundDependencyLoader]
@@ -58,7 +60,18 @@ namespace osu.Game.Rulesets.Osu.Skinning.Default
 
             AccentColourBindable.BindValueChanged(_ => updateBorderColour());
             borderComboColour.BindValueChanged(_ => updateBorderColour(), true);
+
+            gameConfig?.BindWith(OsuSetting.SlopHideSliderBodies, hideSliderBodies);
+            hideSliderBodies.BindValueChanged(_ => updatePathVisibility(), true);
         }
+
+        public override void RecyclePath()
+        {
+            base.RecyclePath();
+            updatePathVisibility();
+        }
+
+        private void updatePathVisibility() => Path.Alpha = hideSliderBodies.Value ? 0 : 1;
 
         private void updateBorderColour()
         {

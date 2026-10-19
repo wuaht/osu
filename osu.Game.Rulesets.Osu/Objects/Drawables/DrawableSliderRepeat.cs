@@ -7,11 +7,14 @@ using System;
 using System.Collections.Generic;
 using JetBrains.Annotations;
 using osu.Framework.Allocation;
+using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Utils;
+using osu.Game.Configuration;
 using osu.Game.Rulesets.Objects.Drawables;
 using osu.Game.Rulesets.Osu.Skinning.Default;
+using osu.Game.Screens.Edit;
 using osu.Game.Skinning;
 using osuTK;
 using osuTK.Graphics;
@@ -32,6 +35,16 @@ namespace osu.Game.Rulesets.Osu.Objects.Drawables
         public SkinnableDrawable Arrow { get; private set; }
 
         private Drawable scaleContainer;
+
+        private Container circlePieceContainer;
+
+        private readonly Bindable<bool> showSliderEnds = new Bindable<bool>(true);
+
+        [Resolved(CanBeNull = true)]
+        private OsuConfigManager gameConfig { get; set; }
+
+        [Resolved(CanBeNull = true)]
+        private EditorBeatmap editorBeatmap { get; set; }
 
         public DrawableSliderRepeat()
             : base(null)
@@ -56,11 +69,17 @@ namespace osu.Game.Rulesets.Osu.Objects.Drawables
                 Origin = Anchor.Centre,
                 Children = new Drawable[]
                 {
-                    // no default for this; only visible in legacy skins.
-                    CirclePiece = new SkinnableDrawable(new OsuSkinComponentLookup(OsuSkinComponents.SliderTailHitCircle), _ => Empty())
+                    circlePieceContainer = new Container
                     {
+                        RelativeSizeAxes = Axes.Both,
                         Anchor = Anchor.Centre,
                         Origin = Anchor.Centre,
+                        // no default for this; only visible in legacy skins.
+                        Child = CirclePiece = new SkinnableDrawable(new OsuSkinComponentLookup(OsuSkinComponents.SliderTailHitCircle), _ => Empty())
+                        {
+                            Anchor = Anchor.Centre,
+                            Origin = Anchor.Centre,
+                        },
                     },
                     Arrow = new SkinnableDrawable(new OsuSkinComponentLookup(OsuSkinComponents.ReverseArrow), _ => new DefaultReverseArrow())
                     {
@@ -71,6 +90,11 @@ namespace osu.Game.Rulesets.Osu.Objects.Drawables
             });
 
             ScaleBindable.BindValueChanged(scale => scaleContainer.Scale = new Vector2(scale.NewValue));
+
+            gameConfig?.BindWith(OsuSetting.SlopShowSliderEnds, showSliderEnds);
+
+            // slider ends are always shown in the editor.
+            showSliderEnds.BindValueChanged(show => circlePieceContainer.Alpha = show.NewValue || editorBeatmap != null ? 1 : 0, true);
         }
 
         protected override void OnApply()

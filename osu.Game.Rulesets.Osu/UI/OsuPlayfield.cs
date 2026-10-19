@@ -6,10 +6,12 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using osu.Framework.Allocation;
+using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Primitives;
 using osu.Game.Beatmaps;
+using osu.Game.Configuration;
 using osu.Game.Rulesets.Judgements;
 using osu.Game.Rulesets.Objects;
 using osu.Game.Rulesets.Objects.Drawables;
@@ -131,10 +133,18 @@ namespace osu.Game.Rulesets.Osu.UI
             judgementAboveHitObjectLayer.Add(judgement.ProxiedAboveHitObjectsContent);
         }
 
+        private readonly Bindable<bool> hideFollowPoints = new Bindable<bool>();
+
+        [Resolved(CanBeNull = true)]
+        private OsuConfigManager? gameConfig { get; set; }
+
         [BackgroundDependencyLoader]
         private void load(OsuRulesetConfigManager? config, IBeatmap? beatmap)
         {
             config?.BindWith(OsuRulesetSetting.PlayfieldBorderStyle, playfieldBorder.PlayfieldBorderStyle);
+
+            gameConfig?.BindWith(OsuSetting.SlopHideFollowPoints, hideFollowPoints);
+            hideFollowPoints.BindValueChanged(hide => FollowPoints.Alpha = hide.NewValue ? 0 : 1, true);
 
             var osuBeatmap = (OsuBeatmap?)beatmap;
 

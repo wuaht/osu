@@ -331,6 +331,12 @@ namespace osu.Game.Configuration
 
             SetDefault(OsuSetting.SlopUnofficialBuildNotifiedVersion, string.Empty);
             SetDefault(OsuSetting.SlopUnsupportedRealtimeNotifiedVersion, string.Empty);
+            SetDefault(OsuSetting.SlopShowGreatJudgements, true);
+            SetDefault(OsuSetting.SlopShowSliderEnds, true);
+            SetDefault(OsuSetting.SlopShowComboNumbers, true);
+            SetDefault(OsuSetting.SlopHideFollowPoints, false);
+            SetDefault(OsuSetting.SlopHideSliderBodies, false);
+            SetDefault(OsuSetting.SlopWhiteApproachCircles, false);
         }
 
         protected override bool CheckLookupContainsPrivateInformation(OsuSetting lookup)
@@ -912,5 +918,35 @@ namespace osu.Game.Configuration
         /// Whether the panels of the "request" screen of the beatmap editor have a frosted glass background, instead of an opaque one.
         /// </summary>
         SlopBnTrackerFrostedPanels,
+
+        /// <summary>
+        /// Whether judgements of the highest hit result (300s) are displayed.
+        /// </summary>
+        SlopShowGreatJudgements,
+
+        /// <summary>
+        /// Whether slider end circles are displayed during gameplay.
+        /// </summary>
+        SlopShowSliderEnds,
+
+        /// <summary>
+        /// Whether combo numbers are displayed on hit circles.
+        /// </summary>
+        SlopShowComboNumbers,
+
+        /// <summary>
+        /// Whether follow points are hidden.
+        /// </summary>
+        SlopHideFollowPoints,
+
+        /// <summary>
+        /// Whether slider bodies are hidden.
+        /// </summary>
+        SlopHideSliderBodies,
+
+        /// <summary>
+        /// Whether approach circles are white instead of using the combo colour.
+        /// </summary>
+        SlopWhiteApproachCircles,
     }
 }

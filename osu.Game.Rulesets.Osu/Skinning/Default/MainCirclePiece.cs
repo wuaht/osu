@@ -1,4 +1,4 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using osu.Framework.Allocation;
@@ -6,6 +6,7 @@ using osu.Framework.Bindables;
 using osu.Framework.Extensions.ObjectExtensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
+using osu.Game.Configuration;
 using osu.Game.Rulesets.Objects.Drawables;
 using osu.Game.Rulesets.Osu.Objects;
 using osu.Game.Rulesets.Osu.Objects.Drawables;
@@ -42,9 +43,13 @@ namespace osu.Game.Rulesets.Osu.Skinning.Default
 
         private readonly IBindable<Color4> accentColour = new Bindable<Color4>();
         private readonly IBindable<int> indexInCurrentCombo = new Bindable<int>();
+        private readonly Bindable<bool> showComboNumbers = new Bindable<bool>(true);
 
         [Resolved]
         private DrawableHitObject drawableObject { get; set; } = null!;
+
+        [Resolved(CanBeNull = true)]
+        private OsuConfigManager? gameConfig { get; set; }
 
         [BackgroundDependencyLoader]
         private void load()
@@ -53,6 +58,7 @@ namespace osu.Game.Rulesets.Osu.Skinning.Default
 
             accentColour.BindTo(drawableObject.AccentColour);
             indexInCurrentCombo.BindTo(drawableOsuObject.IndexInCurrentComboBindable);
+            gameConfig?.BindWith(OsuSetting.SlopShowComboNumbers, showComboNumbers);
         }
 
         protected override void LoadComplete()
@@ -66,11 +72,14 @@ namespace osu.Game.Rulesets.Osu.Skinning.Default
                 circle.Colour = colour.NewValue;
             }, true);
 
-            indexInCurrentCombo.BindValueChanged(index => number.Text = (index.NewValue + 1).ToString(), true);
+            indexInCurrentCombo.BindValueChanged(_ => updateNumber());
+            showComboNumbers.BindValueChanged(_ => updateNumber(), true);
 
             drawableObject.ApplyCustomUpdateState += updateStateTransforms;
             updateStateTransforms(drawableObject, drawableObject.State.Value);
         }
+
+        private void updateNumber() => number.Text = showComboNumbers.Value ? (indexInCurrentCombo.Value + 1).ToString() : string.Empty;
 
         private void updateStateTransforms(DrawableHitObject drawableHitObject, ArmedState state)
         {
