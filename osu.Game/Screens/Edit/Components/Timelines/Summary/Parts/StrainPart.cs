@@ -6,26 +6,24 @@ using System.Collections.Generic;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
+using osu.Framework.Graphics.Colour;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Primitives;
 using osu.Framework.Graphics.Rendering;
 using osu.Framework.Graphics.Shaders;
 using osu.Framework.Graphics.Textures;
+using osu.Framework.Utils;
 using osu.Game.Configuration;
-using osu.Game.Graphics;
 using osuTK;
-using osuTK.Graphics;
 
 namespace osu.Game.Screens.Edit.Components.Timelines.Summary.Parts
 {
     /// <summary>
     /// Displays the difficulty strain of the beatmap over time (like osu!stable).
-    /// The part before the current time is white, the part after it grey.
+    /// The colours and the opacities of the parts before and after the current time can be customised.
     /// </summary>
     public partial class StrainPart : CompositeDrawable
     {
-        private const float graph_alpha = 0.8f;
-
         [Resolved]
         private EditorClock editorClock { get; set; } = null!;
 
@@ -35,6 +33,10 @@ namespace osu.Game.Screens.Edit.Components.Timelines.Summary.Parts
         private readonly IBindable<EditorBeatmapDifficultyInfo?> difficultyInfo = new Bindable<EditorBeatmapDifficultyInfo?>();
 
         private Bindable<bool> showStrains = null!;
+        private Bindable<string> lowColour = null!;
+        private Bindable<string> highColour = null!;
+        private Bindable<int> activeAlpha = null!;
+        private Bindable<int> inactiveAlpha = null!;
 
         private Container pastContainer = null!;
         private Container futureContainer = null!;
@@ -45,13 +47,16 @@ namespace osu.Game.Screens.Edit.Components.Timelines.Summary.Parts
         private void load(OsuConfigManager config)
         {
             showStrains = config.GetBindable<bool>(OsuSetting.SlopEditorShowDifficultyStrains);
+            lowColour = config.GetBindable<string>(OsuSetting.SlopStrainGraphLowColour);
+            highColour = config.GetBindable<string>(OsuSetting.SlopStrainGraphHighColour);
+            activeAlpha = config.GetBindable<int>(OsuSetting.SlopStrainGraphActiveAlpha);
+            inactiveAlpha = config.GetBindable<int>(OsuSetting.SlopStrainGraphInactiveAlpha);
 
             Alpha = 0;
 
             InternalChild = new Container
             {
                 RelativeSizeAxes = Axes.Both,
-                Alpha = graph_alpha,
                 Children = new Drawable[]
                 {
                     // the graph is displayed twice, each masked to the part before or after the current time.
@@ -59,13 +64,13 @@ namespace osu.Game.Screens.Edit.Components.Timelines.Summary.Parts
                     {
                         RelativeSizeAxes = Axes.Y,
                         Masking = true,
-                        Child = pastGraph = new StrainGraph { Colour = Color4.White },
+                        Child = pastGraph = new StrainGraph(),
                     },
                     futureContainer = new Container
                     {
                         RelativeSizeAxes = Axes.Y,
                         Masking = true,
-                        Child = futureGraph = new StrainGraph { Colour = OsuColour.Gray(0.75f) },
+                        Child = futureGraph = new StrainGraph(),
                     },
                 }
             };
@@ -88,6 +93,21 @@ namespace osu.Game.Screens.Edit.Components.Timelines.Summary.Parts
             }, true);
 
             showStrains.BindValueChanged(show => this.FadeTo(show.NewValue ? 1 : 0, 200, Easing.OutQuint), true);
+
+            lowColour.BindValueChanged(_ => updateColours());
+            highColour.BindValueChanged(_ => updateColours(), true);
+
+            activeAlpha.BindValueChanged(a => pastContainer.Alpha = a.NewValue / 100f, true);
+            inactiveAlpha.BindValueChanged(a => futureContainer.Alpha = a.NewValue / 100f, true);
+        }
+
+        private void updateColours()
+        {
+            Colour4 low = SlopColours.Parse(lowColour.Value, Colour4.White);
+            Colour4 high = SlopColours.Parse(highColour.Value, Colour4.White);
+
+            pastGraph.SetColours(low, high);
+            futureGraph.SetColours(low, high);
         }
 
         protected override void Update()
@@ -122,6 +142,19 @@ namespace osu.Game.Screens.Edit.Components.Timelines.Summary.Parts
         {
             private float[] strains = Array.Empty<float>();
             private double strainsStartTime;
+
+            private Colour4 lowColour = Colour4.White;
+            private Colour4 highColour = Colour4.White;
+
+            /// <summary>
+            /// Sets the colours of the columns, which are interpolated in the upper half of the strains (like osu!stable).
+            /// </summary>
+            public void SetColours(Colour4 low, Colour4 high)
+            {
+                lowColour = low;
+                highColour = high;
+                Invalidate(Invalidation.DrawNode);
+            }
 
             /// <param name="strains">The strains in sections of <see cref="EditorBeatmapDifficulty.STRAIN_SECTION_LENGTH"/>.</param>
             /// <param name="startTime">The start time of the first section.</param>
@@ -222,6 +255,8 @@ namespace osu.Game.Screens.Edit.Components.Timelines.Summary.Parts
                 private IShader shader = null!;
                 private Texture texture = null!;
                 private Vector2 drawSize;
+                private Colour4 lowColour;
+                private Colour4 highColour;
 
                 private readonly List<float> columns = new List<float>();
 
@@ -237,6 +272,8 @@ namespace osu.Game.Screens.Edit.Components.Timelines.Summary.Parts
                     shader = Source.shader;
                     texture = Source.texture;
                     drawSize = Source.DrawSize;
+                    lowColour = Source.lowColour;
+                    highColour = Source.highColour;
 
                     columns.Clear();
                     columns.AddRange(Source.columns);
@@ -248,6 +285,12 @@ namespace osu.Game.Screens.Edit.Components.Timelines.Summary.Parts
 
                     shader.Bind();
 
+                    SRGBColour drawColour = DrawColourInfo.Colour.TopLeft;
+                    float maxStrain = 0;
+
+                    foreach (float c in columns)
+                        maxStrain = Math.Max(maxStrain, c);
+
                     for (int c = 0; c < columns.Count; c++)
                     {
                         float height = columns[c] * drawSize.Y;
@@ -257,12 +300,15 @@ namespace osu.Game.Screens.Edit.Components.Timelines.Summary.Parts
 
                         float right = Math.Min(c + 1, drawSize.X);
 
+                        float amount = maxStrain > 0 ? Math.Max(0, (columns[c] / maxStrain - 0.5f) * 2) : 0;
+                        SRGBColour colour = drawColour * (SRGBColour)Interpolation.ValueAt(amount, lowColour, highColour, 0, 1);
+
                         renderer.DrawQuad(texture, new Quad(
                             Vector2Extensions.Transform(new Vector2(c, drawSize.Y - height), DrawInfo.Matrix),
                             Vector2Extensions.Transform(new Vector2(right, drawSize.Y - height), DrawInfo.Matrix),
                             Vector2Extensions.Transform(new Vector2(c, drawSize.Y), DrawInfo.Matrix),
                             Vector2Extensions.Transform(new Vector2(right, drawSize.Y), DrawInfo.Matrix)
-                        ), DrawColourInfo.Colour);
+                        ), colour);
                     }
 
                     shader.Unbind();

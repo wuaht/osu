@@ -3,6 +3,7 @@
 
 #nullable disable
 
+using System.Collections.Generic;
 using System.Diagnostics;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
@@ -10,14 +11,12 @@ using osu.Framework.Graphics;
 using osu.Framework.Input.Bindings;
 using osu.Framework.Input.Events;
 using osu.Game.Beatmaps;
-using osu.Game.Graphics;
+using osu.Game.Configuration;
 using osu.Game.Rulesets.Mania.Configuration;
 using osu.Game.Rulesets.Mania.Skinning.Default;
 using osu.Game.Rulesets.Scoring;
 using osu.Game.Rulesets.UI.Scrolling;
-using osu.Game.Screens.Edit;
 using osu.Game.Skinning;
-using osuTK.Graphics;
 
 namespace osu.Game.Rulesets.Mania.Objects.Drawables
 {
@@ -26,13 +25,25 @@ namespace osu.Game.Rulesets.Mania.Objects.Drawables
     /// </summary>
     public partial class DrawableNote : DrawableManiaHitObject<Note>, IKeyBindingHandler<ManiaAction>
     {
-        [Resolved]
-        private OsuColour colours { get; set; }
-
         [Resolved(canBeNull: true)]
         private IBeatmap beatmap { get; set; }
 
         private readonly Bindable<bool> configTimingBasedNoteColouring = new Bindable<bool>();
+
+        private static readonly OsuSetting[] snap_colour_settings =
+        {
+            OsuSetting.SlopManiaSnapColour2,
+            OsuSetting.SlopManiaSnapColour3,
+            OsuSetting.SlopManiaSnapColour4,
+            OsuSetting.SlopManiaSnapColour6,
+            OsuSetting.SlopManiaSnapColour8,
+            OsuSetting.SlopManiaSnapColour12,
+            OsuSetting.SlopManiaSnapColour16,
+            OsuSetting.SlopManiaSnapColourOther,
+        };
+
+        private OsuConfigManager config;
+        private readonly List<Bindable<string>> snapColours = new List<Bindable<string>>();
 
         protected virtual ManiaSkinComponents Component => ManiaSkinComponents.Note;
 
@@ -50,9 +61,21 @@ namespace osu.Game.Rulesets.Mania.Objects.Drawables
         }
 
         [BackgroundDependencyLoader(true)]
-        private void load(ManiaRulesetConfigManager rulesetConfig)
+        private void load(ManiaRulesetConfigManager rulesetConfig, OsuConfigManager config)
         {
             rulesetConfig?.BindWith(ManiaRulesetSetting.TimingBasedNoteColouring, configTimingBasedNoteColouring);
+
+            this.config = config;
+
+            if (config != null)
+            {
+                foreach (var setting in snap_colour_settings)
+                {
+                    var colour = config.GetBindable<string>(setting);
+                    colour.BindValueChanged(_ => Scheduler.AddOnce(updateSnapColour));
+                    snapColours.Add(colour);
+                }
+            }
 
             AddInternal(headPiece = new SkinnableDrawable(new ManiaSkinComponentLookup(Component), _ => new DefaultNotePiece())
             {
@@ -129,7 +152,14 @@ namespace osu.Game.Rulesets.Mania.Objects.Drawables
 
             int snapDivisor = beatmap.ControlPointInfo.GetClosestBeatDivisor(HitObject.StartTime);
 
-            Colour = configTimingBasedNoteColouring.Value ? BindableBeatDivisor.GetColourFor(snapDivisor, colours) : Color4.White;
+            if (!configTimingBasedNoteColouring.Value || config == null)
+            {
+                Colour = Colour4.White;
+                return;
+            }
+
+            // uses the customisable palette of osu!stable instead of the editor's beat snap colours.
+            Colour = SlopColours.Parse(config.Get<string>(SlopColours.GetManiaSnapColourSetting(snapDivisor)), Colour4.White);
         }
     }
 }

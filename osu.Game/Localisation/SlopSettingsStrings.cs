@@ -1144,6 +1144,96 @@ namespace osu.Game.Localisation
         /// </summary>
         public static LocalisableString BackupOnUpdateDescription => new TranslatableString(getKey(@"backup_on_update_description"), @"Backs up the .osu files when updating a map");
 
+        /// <summary>
+        /// "Custom colours"
+        /// </summary>
+        public static LocalisableString CustomColoursHeader => new TranslatableString(getKey(@"custom_colours_header"), @"Custom colours");
+
+        /// <summary>
+        /// "Strain graph low"
+        /// </summary>
+        public static LocalisableString StrainGraphLowColour => new TranslatableString(getKey(@"strain_graph_low_colour"), @"Strain graph low");
+
+        /// <summary>
+        /// "Strain graph high"
+        /// </summary>
+        public static LocalisableString StrainGraphHighColour => new TranslatableString(getKey(@"strain_graph_high_colour"), @"Strain graph high");
+
+        /// <summary>
+        /// "Strain graph active alpha"
+        /// </summary>
+        public static LocalisableString StrainGraphActiveAlpha => new TranslatableString(getKey(@"strain_graph_active_alpha"), @"Strain graph active alpha");
+
+        /// <summary>
+        /// "Strain graph inactive alpha"
+        /// </summary>
+        public static LocalisableString StrainGraphInactiveAlpha => new TranslatableString(getKey(@"strain_graph_inactive_alpha"), @"Strain graph inactive alpha");
+
+        /// <summary>
+        /// "Mania snap 1/2"
+        /// </summary>
+        public static LocalisableString ManiaSnapColour2 => new TranslatableString(getKey(@"mania_snap_colour_2"), @"Mania snap 1/2");
+
+        /// <summary>
+        /// "Mania snap 1/3"
+        /// </summary>
+        public static LocalisableString ManiaSnapColour3 => new TranslatableString(getKey(@"mania_snap_colour_3"), @"Mania snap 1/3");
+
+        /// <summary>
+        /// "Mania snap 1/4"
+        /// </summary>
+        public static LocalisableString ManiaSnapColour4 => new TranslatableString(getKey(@"mania_snap_colour_4"), @"Mania snap 1/4");
+
+        /// <summary>
+        /// "Mania snap 1/6"
+        /// </summary>
+        public static LocalisableString ManiaSnapColour6 => new TranslatableString(getKey(@"mania_snap_colour_6"), @"Mania snap 1/6");
+
+        /// <summary>
+        /// "Mania snap 1/8"
+        /// </summary>
+        public static LocalisableString ManiaSnapColour8 => new TranslatableString(getKey(@"mania_snap_colour_8"), @"Mania snap 1/8");
+
+        /// <summary>
+        /// "Mania snap 1/12"
+        /// </summary>
+        public static LocalisableString ManiaSnapColour12 => new TranslatableString(getKey(@"mania_snap_colour_12"), @"Mania snap 1/12");
+
+        /// <summary>
+        /// "Mania snap 1/16"
+        /// </summary>
+        public static LocalisableString ManiaSnapColour16 => new TranslatableString(getKey(@"mania_snap_colour_16"), @"Mania snap 1/16");
+
+        /// <summary>
+        /// "Mania snap other"
+        /// </summary>
+        public static LocalisableString ManiaSnapColourOther => new TranslatableString(getKey(@"mania_snap_colour_other"), @"Mania snap other");
+
+        /// <summary>
+        /// "Used by timing-based note colouring"
+        /// </summary>
+        public static LocalisableString ManiaSnapColourDescription => new TranslatableString(getKey(@"mania_snap_colour_description"), @"Used by timing-based note colouring");
+
+        /// <summary>
+        /// "Input overlay key K1"
+        /// </summary>
+        public static LocalisableString KeyOverlayColourK1 => new TranslatableString(getKey(@"key_overlay_colour_k1"), @"Input overlay key K1");
+
+        /// <summary>
+        /// "Input overlay key K2"
+        /// </summary>
+        public static LocalisableString KeyOverlayColourK2 => new TranslatableString(getKey(@"key_overlay_colour_k2"), @"Input overlay key K2");
+
+        /// <summary>
+        /// "Input overlay key M1"
+        /// </summary>
+        public static LocalisableString KeyOverlayColourM1 => new TranslatableString(getKey(@"key_overlay_colour_m1"), @"Input overlay key M1");
+
+        /// <summary>
+        /// "Input overlay key M2"
+        /// </summary>
+        public static LocalisableString KeyOverlayColourM2 => new TranslatableString(getKey(@"key_overlay_colour_m2"), @"Input overlay key M2");
+
         private static string getKey(string key) => $"{prefix}:{key}";
     }
 }

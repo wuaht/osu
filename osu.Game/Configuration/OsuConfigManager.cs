@@ -381,6 +381,22 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopSkipIntro, false);
             SetDefault(OsuSetting.SlopInstantScreenTransitions, false);
             SetDefault(OsuSetting.SlopBackupOnUpdate, true);
+            SetDefault(OsuSetting.SlopStrainGraphLowColour, @"#FFFFFF");
+            SetDefault(OsuSetting.SlopStrainGraphHighColour, @"#FFFFFF");
+            SetDefault(OsuSetting.SlopStrainGraphActiveAlpha, 75, 0, 100);
+            SetDefault(OsuSetting.SlopStrainGraphInactiveAlpha, 25, 0, 100);
+            SetDefault(OsuSetting.SlopManiaSnapColour2, @"#FC3636");
+            SetDefault(OsuSetting.SlopManiaSnapColour3, @"#0093FD");
+            SetDefault(OsuSetting.SlopManiaSnapColour4, @"#813BC6");
+            SetDefault(OsuSetting.SlopManiaSnapColour6, @"#F2C94C");
+            SetDefault(OsuSetting.SlopManiaSnapColour8, @"#D34B8C");
+            SetDefault(OsuSetting.SlopManiaSnapColour12, @"#F2994A");
+            SetDefault(OsuSetting.SlopManiaSnapColour16, @"#00D1FF");
+            SetDefault(OsuSetting.SlopManiaSnapColourOther, @"#FFFFFF");
+            SetDefault(OsuSetting.SlopKeyOverlayColourK1, @"#FFDE00");
+            SetDefault(OsuSetting.SlopKeyOverlayColourK2, @"#FFDE00");
+            SetDefault(OsuSetting.SlopKeyOverlayColourM1, @"#F8009E");
+            SetDefault(OsuSetting.SlopKeyOverlayColourM2, @"#F8009E");
         }
 
         protected override bool CheckLookupContainsPrivateInformation(OsuSetting lookup)
@@ -1212,5 +1228,85 @@ namespace osu.Game.Configuration
         /// Whether the beatmap files of a beatmap set are backed up before it gets updated.
         /// </summary>
         SlopBackupOnUpdate,
+
+        /// <summary>
+        /// The colour of low strains in the editor's difficulty strain graph.
+        /// </summary>
+        SlopStrainGraphLowColour,
+
+        /// <summary>
+        /// The colour of high strains in the editor's difficulty strain graph.
+        /// </summary>
+        SlopStrainGraphHighColour,
+
+        /// <summary>
+        /// The opacity (in percent) of the part of the editor's difficulty strain graph before the current time.
+        /// </summary>
+        SlopStrainGraphActiveAlpha,
+
+        /// <summary>
+        /// The opacity (in percent) of the part of the editor's difficulty strain graph after the current time.
+        /// </summary>
+        SlopStrainGraphInactiveAlpha,
+
+        /// <summary>
+        /// The colour of mania notes snapped to 1/1 or 1/2 when using timing-based note colouring.
+        /// </summary>
+        SlopManiaSnapColour2,
+
+        /// <summary>
+        /// The colour of mania notes snapped to 1/3 when using timing-based note colouring.
+        /// </summary>
+        SlopManiaSnapColour3,
+
+        /// <summary>
+        /// The colour of mania notes snapped to 1/4 when using timing-based note colouring.
+        /// </summary>
+        SlopManiaSnapColour4,
+
+        /// <summary>
+        /// The colour of mania notes snapped to 1/6 when using timing-based note colouring.
+        /// </summary>
+        SlopManiaSnapColour6,
+
+        /// <summary>
+        /// The colour of mania notes snapped to 1/8 when using timing-based note colouring.
+        /// </summary>
+        SlopManiaSnapColour8,
+
+        /// <summary>
+        /// The colour of mania notes snapped to 1/12 when using timing-based note colouring.
+        /// </summary>
+        SlopManiaSnapColour12,
+
+        /// <summary>
+        /// The colour of mania notes snapped to 1/16 when using timing-based note colouring.
+        /// </summary>
+        SlopManiaSnapColour16,
+
+        /// <summary>
+        /// The colour of mania notes with any other snap when using timing-based note colouring.
+        /// </summary>
+        SlopManiaSnapColourOther,
+
+        /// <summary>
+        /// The colour of the first key of the legacy key overlay when pressed.
+        /// </summary>
+        SlopKeyOverlayColourK1,
+
+        /// <summary>
+        /// The colour of the second key of the legacy key overlay when pressed.
+        /// </summary>
+        SlopKeyOverlayColourK2,
+
+        /// <summary>
+        /// The colour of the third key of the legacy key overlay when pressed.
+        /// </summary>
+        SlopKeyOverlayColourM1,
+
+        /// <summary>
+        /// The colour of the fourth key of the legacy key overlay when pressed.
+        /// </summary>
+        SlopKeyOverlayColourM2,
     }
 }
