@@ -1044,6 +1044,16 @@ namespace osu.Game.Localisation
         /// </summary>
         public static LocalisableString DisableAltDistanceSnapDescription => new TranslatableString(getKey(@"disable_alt_distance_snap_description"), @"Disables holding Alt to temporarily toggle distance snap");
 
+        /// <summary>
+        /// "Select slider hitsound on first click"
+        /// </summary>
+        public static LocalisableString SliderPartOnFirstClick => new TranslatableString(getKey(@"slider_part_on_first_click"), @"Select slider hitsound on first click");
+
+        /// <summary>
+        /// "Clicking the head or tail of an unselected slider directly selects that part for hitsounding"
+        /// </summary>
+        public static LocalisableString SliderPartOnFirstClickDescription => new TranslatableString(getKey(@"slider_part_on_first_click_description"), @"Clicking the head or tail of an unselected slider directly selects that part for hitsounding");
+
         private static string getKey(string key) => $"{prefix}:{key}";
     }
 }

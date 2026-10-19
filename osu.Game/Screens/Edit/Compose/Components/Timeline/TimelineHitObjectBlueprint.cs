@@ -271,6 +271,9 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
         /// </summary>
         private bool wasSoleSelectionOnMouseDown;
 
+        [Resolved]
+        private OsuConfigManager? config { get; set; }
+
         private bool isSoleSelection => IsSelected && editorBeatmap?.SelectedHitObjects.Count == 1;
 
         private SelectedHitObjectPart? selectedPart => editorBeatmap?.SelectedHitObjectPart.Value is SelectedHitObjectPart part && part.HitObject == Item && part.IsValid ? part : null;
@@ -314,9 +317,23 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
             if (e.Button != MouseButton.Left || e.ControlPressed || e.ShiftPressed || e.AltPressed)
                 return;
 
-            // the drag area handles mouse down itself, so the blueprint container doesn't change the selection on clicks on it.
-            if (!isSoleSelection || (!dragAreaClicked && !wasSoleSelectionOnMouseDown))
+            if (!isSoleSelection)
                 return;
+
+            // the drag area handles mouse down itself, so the blueprint container doesn't change the selection on clicks on it.
+            if (!dragAreaClicked && !wasSoleSelectionOnMouseDown)
+            {
+                if (config?.Get<bool>(OsuSetting.SlopEditorSliderPartOnFirstClick) != true)
+                    return;
+
+                // the click has just selected this hit object. only its nodes are selected directly, a click on the body keeps the whole object selected.
+                var firstPart = getPartAt(e.ScreenSpaceMousePosition, repeats);
+
+                if (firstPart.NodeIndex != null)
+                    editorBeatmap.SelectedHitObjectPart.Value = firstPart;
+
+                return;
+            }
 
             var part = getPartAt(e.ScreenSpaceMousePosition, repeats);
 

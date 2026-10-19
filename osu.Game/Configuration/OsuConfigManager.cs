@@ -372,6 +372,7 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopEditorPointInsertPreview, false);
             SetDefault(OsuSetting.SlopEditorSliderCurveColour, SliderCurveColourStyle.Line);
             SetDefault(OsuSetting.SlopEditorDisableAltDistanceSnap, false);
+            SetDefault(OsuSetting.SlopEditorSliderPartOnFirstClick, false);
         }
 
         protected override bool CheckLookupContainsPrivateInformation(OsuSetting lookup)
@@ -1158,5 +1159,10 @@ namespace osu.Game.Configuration
         /// Whether holding Alt no longer temporarily toggles distance snap.
         /// </summary>
         SlopEditorDisableAltDistanceSnap,
+
+        /// <summary>
+        /// Whether clicking a slider's head or tail selects that part for hitsounding even if the slider wasn't selected before.
+        /// </summary>
+        SlopEditorSliderPartOnFirstClick,
     }
 }

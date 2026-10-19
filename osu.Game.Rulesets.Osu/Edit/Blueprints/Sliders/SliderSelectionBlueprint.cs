@@ -38,6 +38,7 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
 
         private ControlPointInsertionPreview insertionPreview = null!;
         private readonly Bindable<bool> showInsertionPreview = new Bindable<bool>();
+        private readonly Bindable<bool> partOnFirstClick = new Bindable<bool>();
         protected SliderCircleOverlay HeadOverlay { get; private set; } = null!;
         protected SliderCircleOverlay TailOverlay { get; private set; } = null!;
 
@@ -114,6 +115,7 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
 
             config.BindWith(OsuSetting.EditorShowHitMarkers, showHitMarkers);
             config.BindWith(OsuSetting.SlopEditorPointInsertPreview, showInsertionPreview);
+            config.BindWith(OsuSetting.SlopEditorSliderPartOnFirstClick, partOnFirstClick);
         }
 
         protected override void LoadComplete()
@@ -222,7 +224,18 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
             // control points handle mouse down themselves (so OnMouseDown isn't invoked for clicks on them),
             // but they are only displayed while this slider is the sole selection, so the slider was already selected before such a click.
             if (!controlPointClicked && !wasSoleSelectionOnMouseDown)
+            {
+                if (!partOnFirstClick.Value)
+                    return;
+
+                // the click has just selected this slider. only its head and tail are selected directly, a click on the body keeps the whole slider selected.
+                var firstPart = getNextPart(e.ScreenSpaceMousePosition, out bool firstClickOnBody);
+
+                if (!firstClickOnBody)
+                    editorBeatmap.SelectedHitObjectPart.Value = firstPart;
+
                 return;
+            }
 
             var part = getNextPart(e.ScreenSpaceMousePosition, out bool bodyClicked);
 

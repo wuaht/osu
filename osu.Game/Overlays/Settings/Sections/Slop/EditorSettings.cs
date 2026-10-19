@@ -262,6 +262,12 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                     HintText = SlopSettingsStrings.DisableAltDistanceSnapDescription,
                     Current = config.GetBindable<bool>(OsuSetting.SlopEditorDisableAltDistanceSnap),
                 }),
+                new SettingsItemV2(new FormCheckBox
+                {
+                    Caption = SlopSettingsStrings.SliderPartOnFirstClick,
+                    HintText = SlopSettingsStrings.SliderPartOnFirstClickDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorSliderPartOnFirstClick),
+                }),
             };
         }
 
