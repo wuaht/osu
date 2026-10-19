@@ -6,6 +6,7 @@ using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Sprites;
+using osu.Game.Configuration;
 using osu.Game.Rulesets.Scoring;
 using osuTK;
 
@@ -44,6 +45,8 @@ namespace osu.Game.Skinning
         private readonly Container counterContainer;
 
         public bool UsesFixedAnchor { get; set; }
+
+        private bool instant;
 
         public LegacyDefaultComboCounter()
         {
@@ -105,8 +108,9 @@ namespace osu.Game.Skinning
         }
 
         [BackgroundDependencyLoader]
-        private void load(ScoreProcessor scoreProcessor)
+        private void load(ScoreProcessor scoreProcessor, OsuConfigManager? config)
         {
+            instant = config?.Get<bool>(OsuSetting.SlopInstantComboCounter) == true;
             Current.BindTo(scoreProcessor.Combo);
         }
 
@@ -143,6 +147,18 @@ namespace osu.Game.Skinning
 
             if (!IsLoaded)
                 return;
+
+            if (instant)
+            {
+                FinishTransforms(false, nameof(DisplayedCount));
+                scheduledPopOutCurrentId++;
+                isRolling = false;
+                popOutCount.FadeOut();
+                displayedCount = Current.Value;
+                displayedCountSpriteText.FadeTo(Current.Value == 0 ? 0 : 1);
+                transformNoPopOut(Current.Value);
+                return;
+            }
 
             if (!rolling)
             {

@@ -64,6 +64,24 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                     HintText = SlopSettingsStrings.FlashlightIgnoreComboBreaksDescription,
                     Current = config.GetBindable<bool>(OsuSetting.SlopFlashlightIgnoreComboBreaks),
                 }),
+                new SettingsItemV2(new FormCheckBox
+                {
+                    Caption = SlopSettingsStrings.InstantComboCounter,
+                    HintText = SlopSettingsStrings.InstantComboCounterDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopInstantComboCounter),
+                }),
+                new SettingsItemV2(new FormCheckBox
+                {
+                    Caption = SlopSettingsStrings.InstantScoreDisplay,
+                    HintText = SlopSettingsStrings.InstantScoreDisplayDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopInstantScoreDisplay),
+                }),
+                new SettingsItemV2(new FormCheckBox
+                {
+                    Caption = SlopSettingsStrings.FastBackgroundDim,
+                    HintText = SlopSettingsStrings.FastBackgroundDimDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopFastBackgroundDim),
+                }),
             };
         }
     }

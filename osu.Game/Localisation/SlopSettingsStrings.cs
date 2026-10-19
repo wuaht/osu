@@ -799,6 +799,71 @@ namespace osu.Game.Localisation
         /// </summary>
         public static LocalisableString FlashlightIgnoreComboBreaksDescription => new TranslatableString(getKey(@"flashlight_ignore_combo_breaks_description"), @"The flashlight keeps shrinking as if no combo break happened.");
 
+        /// <summary>
+        /// "Instant combo counter"
+        /// </summary>
+        public static LocalisableString InstantComboCounter => new TranslatableString(getKey(@"instant_combo_counter"), @"Instant combo counter");
+
+        /// <summary>
+        /// "Disables the combo counter increase and decrease animations."
+        /// </summary>
+        public static LocalisableString InstantComboCounterDescription => new TranslatableString(getKey(@"instant_combo_counter_description"), @"Disables the combo counter increase and decrease animations.");
+
+        /// <summary>
+        /// "Instant score and accuracy display"
+        /// </summary>
+        public static LocalisableString InstantScoreDisplay => new TranslatableString(getKey(@"instant_score_display"), @"Instant score and accuracy display");
+
+        /// <summary>
+        /// "Disables the score and accuracy increase and decrease animations."
+        /// </summary>
+        public static LocalisableString InstantScoreDisplayDescription => new TranslatableString(getKey(@"instant_score_display_description"), @"Disables the score and accuracy increase and decrease animations.");
+
+        /// <summary>
+        /// "Fast background dim"
+        /// </summary>
+        public static LocalisableString FastBackgroundDim => new TranslatableString(getKey(@"fast_background_dim"), @"Fast background dim");
+
+        /// <summary>
+        /// "Makes background dim changes much faster."
+        /// </summary>
+        public static LocalisableString FastBackgroundDimDescription => new TranslatableString(getKey(@"fast_background_dim_description"), @"Makes background dim changes much faster.");
+
+        /// <summary>
+        /// "Cursor trail style"
+        /// </summary>
+        public static LocalisableString CursorTrailStyle => new TranslatableString(getKey(@"cursor_trail_style"), @"Cursor trail style");
+
+        /// <summary>
+        /// "Disabled"
+        /// </summary>
+        public static LocalisableString CursorTrailStyleDisabled => new TranslatableString(getKey(@"cursor_trail_style_disabled"), @"Disabled");
+
+        /// <summary>
+        /// "Default"
+        /// </summary>
+        public static LocalisableString CursorTrailStyleDefault => new TranslatableString(getKey(@"cursor_trail_style_default"), @"Default");
+
+        /// <summary>
+        /// "SDF"
+        /// </summary>
+        public static LocalisableString CursorTrailStyleSdf => new TranslatableString(getKey(@"cursor_trail_style_sdf"), @"SDF");
+
+        /// <summary>
+        /// "Atrias"
+        /// </summary>
+        public static LocalisableString CursorTrailStyleAtrias => new TranslatableString(getKey(@"cursor_trail_style_atrias"), @"Atrias");
+
+        /// <summary>
+        /// "Smoother cursor trail"
+        /// </summary>
+        public static LocalisableString SmootherCursorTrail => new TranslatableString(getKey(@"smoother_cursor_trail"), @"Smoother cursor trail");
+
+        /// <summary>
+        /// "Halves the required movement to make new trail points."
+        /// </summary>
+        public static LocalisableString SmootherCursorTrailDescription => new TranslatableString(getKey(@"smoother_cursor_trail_description"), @"Halves the required movement to make new trail points.");
+
         private static string getKey(string key) => $"{prefix}:{key}";
     }
 }

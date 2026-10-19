@@ -7,6 +7,7 @@ using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
+using osu.Game.Configuration;
 using osu.Game.Rulesets.Scoring;
 using osu.Game.Rulesets.UI.Scrolling;
 using osu.Game.Skinning;
@@ -44,6 +45,8 @@ namespace osu.Game.Rulesets.Mania.Skinning.Legacy
 
         private int previousValue;
 
+        private bool instant;
+
         private const double fade_out_duration = 100;
         private const double rolling_duration = 20;
 
@@ -52,8 +55,10 @@ namespace osu.Game.Rulesets.Mania.Skinning.Legacy
         private LegacySpriteText displayedCountText = null!;
 
         [BackgroundDependencyLoader]
-        private void load(ISkinSource skin, ScoreProcessor scoreProcessor)
+        private void load(ISkinSource skin, ScoreProcessor scoreProcessor, OsuConfigManager? config)
         {
+            instant = config?.Get<bool>(OsuSetting.SlopInstantComboCounter) == true;
+
             AutoSizeAxes = Axes.Both;
 
             InternalChildren = new[]
@@ -131,6 +136,16 @@ namespace osu.Game.Rulesets.Mania.Skinning.Legacy
 
             if (!IsLoaded)
                 return;
+
+            if (instant)
+            {
+                FinishTransforms(false, nameof(DisplayedCount));
+                popOutCountText.Hide();
+                displayedCountText.ScaleTo(1f);
+                displayedCountText.FadeTo(Current.Value == 0 ? 0 : 1);
+                DisplayedCount = Current.Value;
+                return;
+            }
 
             if (!rolling)
             {

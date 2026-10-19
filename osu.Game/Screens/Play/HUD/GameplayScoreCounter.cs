@@ -25,6 +25,8 @@ namespace osu.Game.Screens.Play.HUD
         [BackgroundDependencyLoader]
         private void load(OsuConfigManager config, ScoreProcessor scoreProcessor)
         {
+            InstantRolling = config.Get<bool>(OsuSetting.SlopInstantScoreDisplay);
+
             totalScoreBindable = scoreProcessor.TotalScore.GetBoundCopy();
             totalScoreBindable.BindValueChanged(_ => updateDisplayScore());
 

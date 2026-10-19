@@ -42,6 +42,9 @@ namespace osu.Game.Screens.Play.HUD
             Current.BindTo(scoreProcessor.Combo);
             Current.BindValueChanged(combo =>
             {
+                if (InstantRolling)
+                    return;
+
                 bool wasIncrease = combo.NewValue > combo.OldValue;
                 bool wasMiss = combo.OldValue > 1 && combo.NewValue == 0;
 

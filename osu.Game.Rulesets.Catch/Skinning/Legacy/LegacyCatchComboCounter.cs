@@ -1,7 +1,9 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using osu.Framework.Allocation;
 using osu.Framework.Graphics;
+using osu.Game.Configuration;
 using osu.Game.Graphics.Containers;
 using osu.Game.Rulesets.Catch.UI;
 using osu.Game.Screens.Play;
@@ -49,6 +51,14 @@ namespace osu.Game.Rulesets.Catch.Skinning.Legacy
 
         private int lastDisplayedCombo;
 
+        private bool instant;
+
+        [BackgroundDependencyLoader]
+        private void load(OsuConfigManager? config)
+        {
+            instant = config?.Get<bool>(OsuSetting.SlopInstantComboCounter) == true;
+        }
+
         public void UpdateCombo(int combo, Color4? hitObjectColour = null)
         {
             if (combo == lastDisplayedCombo)
@@ -65,6 +75,19 @@ namespace osu.Game.Rulesets.Catch.Skinning.Legacy
                 // needs more work to make rewind somehow look good.
                 // basically we want the previous increment to play... or turning off RemoveCompletedTransforms (not feasible from a performance angle).
                 Hide();
+                return;
+            }
+
+            if (instant)
+            {
+                counter.FinishTransforms();
+                counter.SetCountWithoutRolling(combo);
+
+                if (combo == 0)
+                    this.FadeOut(100);
+                else
+                    this.FadeIn().Then().Delay(1000).FadeOut(300);
+
                 return;
             }
 

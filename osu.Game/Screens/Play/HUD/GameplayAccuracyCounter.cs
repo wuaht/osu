@@ -19,6 +19,12 @@ namespace osu.Game.Screens.Play.HUD
         [Resolved]
         private ScoreProcessor scoreProcessor { get; set; } = null!;
 
+        [BackgroundDependencyLoader]
+        private void load(OsuConfigManager? config)
+        {
+            InstantRolling = config?.Get<bool>(OsuSetting.SlopInstantScoreDisplay) == true;
+        }
+
         protected override void LoadComplete()
         {
             base.LoadComplete();

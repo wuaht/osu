@@ -53,6 +53,13 @@ namespace osu.Game.Graphics.Containers
 
         protected Bindable<bool> ShowStoryboard { get; private set; } = null!;
 
+        private Bindable<bool> fastBackgroundDim = null!;
+
+        /// <summary>
+        /// The duration of dim and visibility transitions, taking the fast background dim setting into account.
+        /// </summary>
+        protected double FadeDuration => fastBackgroundDim.Value ? BACKGROUND_FADE_DURATION / 5 : BACKGROUND_FADE_DURATION;
+
         private float breakLightening => LightenDuringBreaks.Value && IsBreakTime.Value ? BREAK_LIGHTEN_AMOUNT : 0;
 
         protected virtual float DimLevel => Math.Max(!IgnoreUserSettings.Value ? (float)UserDimLevel.Value - breakLightening : DimWhenUserSettingsIgnored.Value, 0);
@@ -75,6 +82,7 @@ namespace osu.Game.Graphics.Containers
             UserDimLevel = config.GetBindable<double>(OsuSetting.DimLevel);
             LightenDuringBreaks = config.GetBindable<bool>(OsuSetting.LightenDuringBreaks);
             ShowStoryboard = config.GetBindable<bool>(OsuSetting.ShowStoryboard);
+            fastBackgroundDim = config.GetBindable<bool>(OsuSetting.SlopFastBackgroundDim);
 
             UserDimLevel.ValueChanged += _ => UpdateVisuals();
             DimWhenUserSettingsIgnored.ValueChanged += _ => UpdateVisuals();
@@ -102,8 +110,8 @@ namespace osu.Game.Graphics.Containers
         {
             ContentDisplayed = ShowDimContent;
 
-            dimContent.FadeTo(ContentDisplayed ? 1 : 0, BACKGROUND_FADE_DURATION, Easing.OutQuint);
-            dimContent.FadeColour(OsuColour.Gray(1f - DimLevel), BACKGROUND_FADE_DURATION, Easing.OutQuint);
+            dimContent.FadeTo(ContentDisplayed ? 1 : 0, FadeDuration, Easing.OutQuint);
+            dimContent.FadeColour(OsuColour.Gray(1f - DimLevel), FadeDuration, Easing.OutQuint);
         }
     }
 }

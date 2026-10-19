@@ -199,7 +199,7 @@ namespace osu.Game.Screens.Backgrounds
             {
                 base.UpdateVisuals();
 
-                Background?.BlurTo(blurTarget, BACKGROUND_FADE_DURATION, Easing.OutQuint);
+                Background?.BlurTo(blurTarget, FadeDuration, Easing.OutQuint);
             }
         }
     }

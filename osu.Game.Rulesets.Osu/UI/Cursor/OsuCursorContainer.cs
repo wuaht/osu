@@ -47,6 +47,15 @@ namespace osu.Game.Rulesets.Osu.UI.Cursor
 
         private readonly ArgonCursorTrail argonCursorTrail;
 
+        private readonly Bindable<CursorTrailStyle> trailStyle = new Bindable<CursorTrailStyle>(CursorTrailStyle.Default);
+
+        /// <summary>
+        /// The signed distance field trail, which replaces all other trails if <see cref="CursorTrailStyle.SDF"/> is selected.
+        /// </summary>
+        private readonly Container sdfTrailContainer;
+
+        private readonly SdfCursorTrail sdfTrail;
+
         /// <summary>
         /// The trail which is currently displayed.
         /// </summary>
@@ -78,6 +87,12 @@ namespace osu.Game.Rulesets.Osu.UI.Cursor
                             },
                         }
                     },
+                    sdfTrailContainer = new Container
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Alpha = 0,
+                        Child = sdfTrail = new SdfCursorTrail(),
+                    },
                     rippleVisualiser = new CursorRippleVisualiser(),
                     new SkinnableDrawable(new OsuSkinComponentLookup(OsuSkinComponents.CursorParticles), confineMode: ConfineMode.NoScaling),
                 }
@@ -102,6 +117,7 @@ namespace osu.Game.Rulesets.Osu.UI.Cursor
         private void load(OsuRulesetConfigManager rulesetConfig, OsuConfigManager config)
         {
             config?.BindWith(OsuSetting.SlopForceArgonCursorTrail, forceArgonTrail);
+            config?.BindWith(OsuSetting.SlopCursorTrailStyle, trailStyle);
 
             if (skinSource != null)
             {
@@ -116,7 +132,9 @@ namespace osu.Game.Rulesets.Osu.UI.Cursor
         {
             base.LoadComplete();
 
-            showTrail.BindValueChanged(v => trailContainer.FadeTo(v.NewValue ? 1 : 0, 200), true);
+            showTrail.BindValueChanged(_ => updateTrailVisibility());
+            trailStyle.BindValueChanged(_ => updateTrailVisibility());
+            updateTrailVisibility();
 
             forceArgonTrail.BindValueChanged(v =>
             {
@@ -134,9 +152,20 @@ namespace osu.Game.Rulesets.Osu.UI.Cursor
             cursorTrail.OnSkinChanged += updateTrailScale;
         }
 
+        private void updateTrailVisibility()
+        {
+            bool show = showTrail.Value && trailStyle.Value != CursorTrailStyle.Disabled;
+            bool sdf = trailStyle.Value == CursorTrailStyle.SDF;
+
+            trailContainer.FadeTo(show && !sdf ? 1 : 0, 200);
+            sdfTrailContainer.FadeTo(show && sdf ? 1 : 0, 200);
+        }
+
         private void updateTrailScale()
         {
             var scale = new Vector2(ActiveCursor.CursorScale.Value);
+
+            sdfTrail.CursorScale = scale;
 
             if (cursorTrail.Drawable is CursorTrail trail) trail.CursorScale = scale;
             argonCursorTrail.CursorScale = scale;
@@ -195,6 +224,10 @@ namespace osu.Game.Rulesets.Osu.UI.Cursor
             }
 
             applyColourEffect(trailContainer, ColourEffectTarget.CursorTrail, ref trailColourEffectApplied);
+
+            // the sdf trail colours each segment on creation, so that colour changes leave a gradient along the trail.
+            sdfTrail.PartColour = trailColourEffectApplied ? trailContainer.Colour.TopLeft.SRGB : Colour4.White;
+            sdfTrail.WhiteBlend = trailColourEffectApplied && colourEffectProvider.GetMode(ColourEffectTarget.CursorTrail) == ColourEffectMode.Rainbow;
 
             // skin textures may have their own colour, which would otherwise mix with the effect colour.
             // applied every frame, as the skin trail is recreated on skin changes.

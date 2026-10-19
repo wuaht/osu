@@ -47,6 +47,11 @@ namespace osu.Game.Graphics.UserInterface
         /// </summary>
         protected virtual Easing RollingEasing => Easing.OutQuad;
 
+        /// <summary>
+        /// If true, value changes are displayed immediately without any rollover animation.
+        /// </summary>
+        public bool InstantRolling { get; set; }
+
         private T displayedCount;
 
         /// <summary>
@@ -155,6 +160,13 @@ namespace osu.Game.Graphics.UserInterface
         /// <param name="newValue">Expected count value after modification.</param>
         protected virtual void TransformCount(T currentValue, T newValue)
         {
+            if (InstantRolling)
+            {
+                FinishTransforms(false, nameof(DisplayedCount));
+                DisplayedCount = newValue;
+                return;
+            }
+
             double rollingTotalDuration =
                 IsRollingProportional
                     ? GetProportionalDuration(currentValue, newValue)

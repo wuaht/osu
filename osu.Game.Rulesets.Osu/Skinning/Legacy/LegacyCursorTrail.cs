@@ -23,6 +23,15 @@ namespace osu.Game.Rulesets.Osu.Skinning.Legacy
 
         private IBindable<float> cursorSize = null!;
 
+        private IBindable<CursorTrailStyle> trailStyle = null!;
+
+        private bool skinAllowsRotation;
+
+        /// <summary>
+        /// Whether the disjoint trail is replaced by evenly spaced, quickly fading trail parts along the cursor path.
+        /// </summary>
+        private bool atrias => DisjointTrail && trailStyle.Value == CursorTrailStyle.Atrias;
+
         private Vector2? currentPosition;
 
         public LegacyCursorTrail(ISkin skin)
@@ -34,7 +43,8 @@ namespace osu.Game.Rulesets.Osu.Skinning.Legacy
         private void load(OsuConfigManager config, ISkinSource skinSource)
         {
             cursorSize = config.GetBindable<float>(OsuSetting.GameplayCursorSize).GetBoundCopy();
-            AllowPartRotation = skin.GetConfig<OsuSkinConfiguration, bool>(OsuSkinConfiguration.CursorTrailRotate)?.Value ?? true;
+            skinAllowsRotation = skin.GetConfig<OsuSkinConfiguration, bool>(OsuSkinConfiguration.CursorTrailRotate)?.Value ?? true;
+            trailStyle = config.GetBindable<CursorTrailStyle>(OsuSetting.SlopCursorTrailStyle).GetBoundCopy();
 
             Texture = skin.GetTexture("cursortrail");
 
@@ -57,21 +67,25 @@ namespace osu.Game.Rulesets.Osu.Skinning.Legacy
             }
 
             Texture?.ScaleAdjust *= LegacySkin.STABLE_MAGIC_SCALE_FACTOR;
+
+            trailStyle.BindValueChanged(_ => AllowPartRotation = skinAllowsRotation && !atrias, true);
         }
 
-        protected override double FadeDuration => DisjointTrail ? 150 : 500;
+        protected override double FadeDuration => atrias ? 60 : DisjointTrail ? 150 : 500;
         protected override float FadeExponent => 1;
 
-        protected override bool InterpolateMovements => !DisjointTrail;
+        protected override bool InterpolateMovements => !DisjointTrail || atrias;
 
-        protected override float IntervalMultiplier => 1 / Math.Max(cursorSize.Value, 1);
+        // Atrias trail parts are spaced a tenth of the (unscaled) trail texture apart, regardless of cursor size.
+        protected override float IntervalMultiplier => atrias ? 0.4f / Math.Max(CursorScale.X, 0.01f) : 1 / Math.Max(cursorSize.Value, 1);
         protected override bool AvoidDrawingNearCursor => !DisjointTrail;
+        protected override bool AllowSmootherTrail => !DisjointTrail;
 
         protected override void Update()
         {
             base.Update();
 
-            if (!DisjointTrail || !currentPosition.HasValue)
+            if (!DisjointTrail || atrias || !currentPosition.HasValue)
                 return;
 
             if (Time.Current - lastTrailTime >= disjoint_trail_time_separation)
@@ -83,7 +97,7 @@ namespace osu.Game.Rulesets.Osu.Skinning.Legacy
 
         protected override bool OnMouseMove(MouseMoveEvent e)
         {
-            if (!DisjointTrail)
+            if (!DisjointTrail || atrias)
                 return base.OnMouseMove(e);
 
             currentPosition = e.ScreenSpaceMousePosition;

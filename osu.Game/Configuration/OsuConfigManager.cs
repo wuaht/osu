@@ -350,6 +350,11 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopMuteHitsounds, MuteHitsoundsMode.Never);
             SetDefault(OsuSetting.SlopFlashlightMinSize, false);
             SetDefault(OsuSetting.SlopFlashlightIgnoreComboBreaks, false);
+            SetDefault(OsuSetting.SlopInstantComboCounter, false);
+            SetDefault(OsuSetting.SlopInstantScoreDisplay, false);
+            SetDefault(OsuSetting.SlopFastBackgroundDim, false);
+            SetDefault(OsuSetting.SlopCursorTrailStyle, CursorTrailStyle.Default);
+            SetDefault(OsuSetting.SlopSmootherCursorTrail, false);
         }
 
         protected override bool CheckLookupContainsPrivateInformation(OsuSetting lookup)
@@ -1026,5 +1031,30 @@ namespace osu.Game.Configuration
         /// Whether combo breaks should not shrink the flashlight back, letting its size progress as if no break happened.
         /// </summary>
         SlopFlashlightIgnoreComboBreaks,
+
+        /// <summary>
+        /// Whether the combo counter should skip its increase and decrease animations.
+        /// </summary>
+        SlopInstantComboCounter,
+
+        /// <summary>
+        /// Whether the score and accuracy displays should skip their rolling animations.
+        /// </summary>
+        SlopInstantScoreDisplay,
+
+        /// <summary>
+        /// Whether gameplay background dim changes should happen much faster.
+        /// </summary>
+        SlopFastBackgroundDim,
+
+        /// <summary>
+        /// The style of the gameplay cursor trail.
+        /// </summary>
+        SlopCursorTrailStyle,
+
+        /// <summary>
+        /// Whether the cursor trail should create new trail points after half the usual movement.
+        /// </summary>
+        SlopSmootherCursorTrail,
     }
 }

@@ -7,6 +7,7 @@ using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using osu.Framework.Allocation;
+using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Primitives;
 using osu.Framework.Graphics.Rendering;
@@ -18,6 +19,7 @@ using osu.Framework.Graphics.Visualisation;
 using osu.Framework.Input;
 using osu.Framework.Input.Events;
 using osu.Framework.Timing;
+using osu.Game.Configuration;
 using osuTK;
 using osuTK.Graphics;
 using osuTK.Graphics.ES30;
@@ -96,9 +98,15 @@ namespace osu.Game.Rulesets.Osu.UI.Cursor
             }
         }
 
+        [Resolved(canBeNull: true)]
+        private OsuConfigManager config { get; set; }
+
+        private IBindable<bool> smootherTrail;
+
         [BackgroundDependencyLoader]
         private void load(IRenderer renderer, ShaderManager shaders)
         {
+            smootherTrail = config?.GetBindable<bool>(OsuSetting.SlopSmootherCursorTrail) ?? new Bindable<bool>();
             texture ??= renderer.WhitePixel;
             shader = shaders.Load(@"CursorTrail", FragmentShaderDescriptor.TEXTURE);
             monochromeShader = shaders.Load(@"CursorTrail", @"TextureMonochrome");
@@ -183,6 +191,11 @@ namespace osu.Game.Rulesets.Osu.UI.Cursor
         protected virtual bool InterpolateMovements => true;
 
         protected virtual float IntervalMultiplier => 1.0f;
+
+        /// <summary>
+        /// Whether the interval between trail parts may be halved by the smoother cursor trail setting.
+        /// </summary>
+        protected virtual bool AllowSmootherTrail => true;
         protected virtual bool AvoidDrawingNearCursor => false;
 
         private Vector2? lastPosition;
@@ -219,6 +232,8 @@ namespace osu.Game.Rulesets.Osu.UI.Cursor
                     Vector2 direction = diff / distance;
 
                     float interval = Texture.DisplayWidth * CursorScale.X / 2.5f * IntervalMultiplier;
+                    if (AllowSmootherTrail && smootherTrail.Value)
+                        interval /= 2;
                     float stopAt = distance - (AvoidDrawingNearCursor ? interval : 0);
 
                     for (float d = interval; d < stopAt; d += interval)
