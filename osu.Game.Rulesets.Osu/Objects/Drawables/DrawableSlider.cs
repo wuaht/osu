@@ -134,6 +134,7 @@ namespace osu.Game.Rulesets.Osu.Objects.Drawables
                 {
                     Looping = true,
                     MinimumSampleVolume = MINIMUM_SAMPLE_VOLUME,
+                    IsGameplayHitSound = true,
                 }
             });
 

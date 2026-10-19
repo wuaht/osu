@@ -165,6 +165,14 @@ namespace osu.Game.Screens.Play
 
         private bool skipBreaks;
 
+        private bool killOnFail = true;
+        private bool disableSoftFailEffects;
+
+        /// <summary>
+        /// Whether failing may only mark the score as failed (without ending gameplay) when <see cref="OsuSetting.SlopKillOnFail"/> is disabled.
+        /// </summary>
+        protected virtual bool AllowSoftFail => false;
+
         protected ScoreProcessor ScoreProcessor { get; private set; }
 
         protected HealthProcessor HealthProcessor { get; private set; }
@@ -235,6 +243,8 @@ namespace osu.Game.Screens.Play
         private void load(OsuConfigManager config, OsuGameBase game, CancellationToken cancellationToken)
         {
             skipBreaks = config.Get<bool>(OsuSetting.SlopSkipBreaks);
+            killOnFail = config.Get<bool>(OsuSetting.SlopKillOnFail);
+            disableSoftFailEffects = config.Get<bool>(OsuSetting.SlopDisableSoftFailEffects);
 
             var gameplayMods = Mods.Value.Select(m => m.DeepClone()).ToArray();
 
@@ -1044,8 +1054,33 @@ namespace osu.Game.Screens.Play
             if (!CheckModsAllowFailure())
                 return false;
 
+            if (!killOnFail && AllowSoftFail && !GameplayState.Mods.OfType<IApplicableFailOverride>().Any(m => m.RestartOnFail))
+            {
+                performSoftFail();
+                return true;
+            }
+
             PerformFail();
             return true;
+        }
+
+        /// <summary>
+        /// Marks the score as failed without ending gameplay, like failing in multiplayer.
+        /// </summary>
+        private void performSoftFail()
+        {
+            ScoreProcessor.ApplyNewJudgementsWhenFailed = true;
+            ScoreProcessor.FailScore(Score.ScoreInfo);
+
+            if (disableSoftFailEffects)
+                return;
+
+            AddInternal(new SoftFailNotification());
+
+            string rulesetName = ruleset.RulesetInfo.ShortName;
+
+            if (rulesetName != @"mania" && rulesetName != @"taiko")
+                DrawableRuleset.FadeColour(Color4.Gray, 500);
         }
 
         /// <summary>

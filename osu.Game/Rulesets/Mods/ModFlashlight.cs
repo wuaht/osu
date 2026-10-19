@@ -123,6 +123,14 @@ namespace osu.Game.Rulesets.Mods
             private readonly float sizeMultiplier;
             private readonly bool comboBasedSize;
 
+            private bool alwaysMinimumSize;
+            private bool ignoreComboBreaks;
+
+            /// <summary>
+            /// The combo as it would be if no combo breaks had happened, used when <see cref="OsuSetting.SlopFlashlightIgnoreComboBreaks"/> is enabled.
+            /// </summary>
+            private int comboIgnoringBreaks;
+
             protected Flashlight(ModFlashlight modFlashlight)
             {
                 DefaultFlashlightSize = modFlashlight.DefaultFlashlightSize;
@@ -131,9 +139,12 @@ namespace osu.Game.Rulesets.Mods
             }
 
             [BackgroundDependencyLoader]
-            private void load(ShaderManager shaderManager)
+            private void load(ShaderManager shaderManager, OsuConfigManager? config)
             {
                 shader = shaderManager.Load("PositionAndColour", FragmentShader);
+
+                alwaysMinimumSize = config?.Get<bool>(OsuSetting.SlopFlashlightMinSize) == true;
+                ignoreComboBreaks = config?.Get<bool>(OsuSetting.SlopFlashlightIgnoreComboBreaks) == true;
             }
 
             [Resolved]
@@ -145,7 +156,16 @@ namespace osu.Game.Rulesets.Mods
             {
                 base.LoadComplete();
 
-                Combo.ValueChanged += _ => UpdateFlashlightSize(GetSize());
+                Combo.ValueChanged += combo =>
+                {
+                    if (combo.NewValue > combo.OldValue)
+                        comboIgnoringBreaks += combo.NewValue - combo.OldValue;
+                    else if (combo.NewValue > 0)
+                        // a decrease which isn't a combo break (i.e. a reverted judgement).
+                        comboIgnoringBreaks = Math.Max(0, comboIgnoringBreaks - (combo.OldValue - combo.NewValue));
+
+                    UpdateFlashlightSize(GetSize());
+                };
 
                 if (player != null)
                 {
@@ -173,10 +193,12 @@ namespace osu.Game.Rulesets.Mods
             {
                 float size = DefaultFlashlightSize * sizeMultiplier;
 
-                if (isBreakTime.Value)
+                if (comboBasedSize && alwaysMinimumSize)
+                    size *= GetComboScaleFor(int.MaxValue);
+                else if (isBreakTime.Value)
                     size *= BreakTimeScale;
                 else if (comboBasedSize)
-                    size *= GetComboScaleFor(Combo.Value);
+                    size *= GetComboScaleFor(ignoreComboBreaks ? comboIgnoringBreaks : Combo.Value);
 
                 return size;
             }

@@ -29,6 +29,8 @@ namespace osu.Game.Screens.Play
             Configuration.ShowLeaderboard = true;
         }
 
+        protected override bool AllowSoftFail => true;
+
         [BackgroundDependencyLoader]
         private void load([CanBeNull] OfflineProfileManager offlineProfiles)
         {

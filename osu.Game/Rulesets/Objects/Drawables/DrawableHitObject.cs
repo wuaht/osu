@@ -228,7 +228,8 @@ namespace osu.Game.Rulesets.Objects.Drawables
             // Explicit non-virtual function call in case a DrawableHitObject overrides AddInternal.
             base.AddInternal(Samples = new PausableSkinnableSound
             {
-                MinimumSampleVolume = MINIMUM_SAMPLE_VOLUME
+                MinimumSampleVolume = MINIMUM_SAMPLE_VOLUME,
+                IsGameplayHitSound = true,
             });
 
             CurrentSkin = skinSource;

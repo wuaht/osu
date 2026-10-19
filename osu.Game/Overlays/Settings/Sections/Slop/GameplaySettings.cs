@@ -16,7 +16,7 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
     {
         protected override LocalisableString Header => SlopSettingsStrings.GameplayHeader;
 
-        public override IEnumerable<LocalisableString> FilterTerms => base.FilterTerms.Concat(new LocalisableString[] { "skip", "break" });
+        public override IEnumerable<LocalisableString> FilterTerms => base.FilterTerms.Concat(new LocalisableString[] { "skip", "break", "fail", "multiplayer", "hitsound", "volume", "mute", "flashlight" });
 
         [BackgroundDependencyLoader]
         private void load(OsuConfigManager config)
@@ -28,6 +28,41 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                     Caption = SlopSettingsStrings.SkipBreaks,
                     HintText = SlopSettingsStrings.SkipBreaksDescription,
                     Current = config.GetBindable<bool>(OsuSetting.SlopSkipBreaks),
+                }),
+                new SettingsItemV2(new FormCheckBox
+                {
+                    Caption = SlopSettingsStrings.KillOnFail,
+                    HintText = SlopSettingsStrings.KillOnFailDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopKillOnFail),
+                }),
+                new SettingsItemV2(new FormCheckBox
+                {
+                    Caption = SlopSettingsStrings.DisableSoftFailEffects,
+                    HintText = SlopSettingsStrings.DisableSoftFailEffectsDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopDisableSoftFailEffects),
+                }),
+                new SettingsItemV2(new FormEnumDropdown<IgnoreBeatmapVolumeMode>
+                {
+                    Caption = SlopSettingsStrings.IgnoreBeatmapVolume,
+                    HintText = SlopSettingsStrings.IgnoreBeatmapVolumeDescription,
+                    Current = config.GetBindable<IgnoreBeatmapVolumeMode>(OsuSetting.SlopIgnoreBeatmapVolume),
+                }),
+                new SettingsItemV2(new FormEnumDropdown<MuteHitsoundsMode>
+                {
+                    Caption = SlopSettingsStrings.MuteHitsounds,
+                    Current = config.GetBindable<MuteHitsoundsMode>(OsuSetting.SlopMuteHitsounds),
+                }),
+                new SettingsItemV2(new FormCheckBox
+                {
+                    Caption = SlopSettingsStrings.FlashlightMinSize,
+                    HintText = SlopSettingsStrings.FlashlightMinSizeDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopFlashlightMinSize),
+                }),
+                new SettingsItemV2(new FormCheckBox
+                {
+                    Caption = SlopSettingsStrings.FlashlightIgnoreComboBreaks,
+                    HintText = SlopSettingsStrings.FlashlightIgnoreComboBreaksDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopFlashlightIgnoreComboBreaks),
                 }),
             };
         }

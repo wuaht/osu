@@ -12,6 +12,9 @@ using osu.Framework.Graphics;
 using osu.Framework.Graphics.Audio;
 using osu.Framework.Graphics.Containers;
 using osu.Game.Audio;
+using osu.Game.Configuration;
+using osu.Game.Rulesets;
+using osu.Game.Screens.Edit;
 
 namespace osu.Game.Skinning
 {
@@ -25,6 +28,14 @@ namespace osu.Game.Skinning
         /// <see cref="Samples"/> that specify a lower <see cref="ISampleInfo.Volume"/> will be forcibly pulled up to this volume.
         /// </summary>
         public int MinimumSampleVolume { get; set; }
+
+        /// <summary>
+        /// Whether this sound plays beatmap hitsounds during gameplay.
+        /// If <c>true</c>, the user's hitsound volume settings (<see cref="OsuSetting.SlopIgnoreBeatmapVolume"/> and <see cref="OsuSetting.SlopMuteHitsounds"/>) are applied outside of the editor.
+        /// </summary>
+        public bool IsGameplayHitSound { get; init; }
+
+        private bool ignoreSampleVolume;
 
         public override bool RemoveWhenNotAlive => false;
         public override bool RemoveCompletedTransforms => false;
@@ -55,6 +66,36 @@ namespace osu.Game.Skinning
         public SkinnableSound()
         {
             InternalChild = samplesContainer = new AudioContainer<PoolableSkinnableSample>();
+        }
+
+        [BackgroundDependencyLoader]
+        private void load(OsuConfigManager? config, EditorBeatmap? editorBeatmap, IBindable<RulesetInfo>? ruleset)
+        {
+            if (!IsGameplayHitSound || config == null || editorBeatmap != null)
+                return;
+
+            switch (config.Get<IgnoreBeatmapVolumeMode>(OsuSetting.SlopIgnoreBeatmapVolume))
+            {
+                case IgnoreBeatmapVolumeMode.IfHitsoundsDisabled:
+                    ignoreSampleVolume = !config.Get<bool>(OsuSetting.BeatmapHitsounds);
+                    break;
+
+                case IgnoreBeatmapVolumeMode.Always:
+                    ignoreSampleVolume = true;
+                    break;
+            }
+
+            switch (config.Get<MuteHitsoundsMode>(OsuSetting.SlopMuteHitsounds))
+            {
+                case MuteHitsoundsMode.ManiaOnly:
+                    if (ruleset?.Value?.ShortName == @"mania")
+                        Volume.Value = 0;
+                    break;
+
+                case MuteHitsoundsMode.Always:
+                    Volume.Value = 0;
+                    break;
+            }
         }
 
         /// <summary>
@@ -165,7 +206,7 @@ namespace osu.Game.Skinning
             {
                 var sample = samplePool?.GetPooledSample(s) ?? new PoolableSkinnableSample(s);
                 sample.Looping = Looping;
-                sample.Volume.Value = Math.Max(s.Volume, MinimumSampleVolume) / 100.0;
+                sample.Volume.Value = ignoreSampleVolume ? 1 : Math.Max(s.Volume, MinimumSampleVolume) / 100.0;
 
                 samplesContainer.Add(sample);
             }

@@ -344,6 +344,12 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopDisableReverseArrowAnimations, false);
             SetDefault(OsuSetting.SlopInstafadeNumbers, false);
             SetDefault(OsuSetting.SlopForceDisableCursorExpand, false);
+            SetDefault(OsuSetting.SlopKillOnFail, true);
+            SetDefault(OsuSetting.SlopDisableSoftFailEffects, false);
+            SetDefault(OsuSetting.SlopIgnoreBeatmapVolume, IgnoreBeatmapVolumeMode.Never);
+            SetDefault(OsuSetting.SlopMuteHitsounds, MuteHitsoundsMode.Never);
+            SetDefault(OsuSetting.SlopFlashlightMinSize, false);
+            SetDefault(OsuSetting.SlopFlashlightIgnoreComboBreaks, false);
         }
 
         protected override bool CheckLookupContainsPrivateInformation(OsuSetting lookup)
@@ -990,5 +996,35 @@ namespace osu.Game.Configuration
         /// Whether the cursor should never expand on click, regardless of skin.
         /// </summary>
         SlopForceDisableCursorExpand,
+
+        /// <summary>
+        /// Whether failing should end gameplay. When disabled, failing only marks the score as failed, like in multiplayer.
+        /// </summary>
+        SlopKillOnFail,
+
+        /// <summary>
+        /// Whether the dimming effect and notification should be hidden when failing with <see cref="SlopKillOnFail"/> disabled.
+        /// </summary>
+        SlopDisableSoftFailEffects,
+
+        /// <summary>
+        /// When beatmap sample volumes should be ignored during gameplay.
+        /// </summary>
+        SlopIgnoreBeatmapVolume,
+
+        /// <summary>
+        /// When hitsounds should be muted during gameplay.
+        /// </summary>
+        SlopMuteHitsounds,
+
+        /// <summary>
+        /// Whether the flashlight should always use its minimum (200x combo) size.
+        /// </summary>
+        SlopFlashlightMinSize,
+
+        /// <summary>
+        /// Whether combo breaks should not shrink the flashlight back, letting its size progress as if no break happened.
+        /// </summary>
+        SlopFlashlightIgnoreComboBreaks,
     }
 }

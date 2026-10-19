@@ -709,6 +709,96 @@ namespace osu.Game.Localisation
         /// </summary>
         public static LocalisableString ForceDisableCursorExpandDescription => new TranslatableString(getKey(@"force_disable_cursor_expand_description"), @"Prevents the cursor from expanding on click, even if the skin enables it.");
 
+        /// <summary>
+        /// "Kill player upon failing"
+        /// </summary>
+        public static LocalisableString KillOnFail => new TranslatableString(getKey(@"kill_on_fail"), @"Kill player upon failing");
+
+        /// <summary>
+        /// "Disable to act like you're playing in multiplayer."
+        /// </summary>
+        public static LocalisableString KillOnFailDescription => new TranslatableString(getKey(@"kill_on_fail_description"), @"Disable to act like you're playing in multiplayer.");
+
+        /// <summary>
+        /// "Disable multiplayer fail effects"
+        /// </summary>
+        public static LocalisableString DisableSoftFailEffects => new TranslatableString(getKey(@"disable_soft_fail_effects"), @"Disable multiplayer fail effects");
+
+        /// <summary>
+        /// "Disables the dimming effect and notification on fail when the above option is disabled."
+        /// </summary>
+        public static LocalisableString DisableSoftFailEffectsDescription => new TranslatableString(getKey(@"disable_soft_fail_effects_description"), @"Disables the dimming effect and notification on fail when the above option is disabled.");
+
+        /// <summary>
+        /// "Failed"
+        /// </summary>
+        public static LocalisableString SoftFailNotification => new TranslatableString(getKey(@"soft_fail_notification"), @"Failed");
+
+        /// <summary>
+        /// "Ignore beatmap volume"
+        /// </summary>
+        public static LocalisableString IgnoreBeatmapVolume => new TranslatableString(getKey(@"ignore_beatmap_volume"), @"Ignore beatmap volume");
+
+        /// <summary>
+        /// "Plays all hitsounds at full volume instead of the volume set by the beatmap."
+        /// </summary>
+        public static LocalisableString IgnoreBeatmapVolumeDescription => new TranslatableString(getKey(@"ignore_beatmap_volume_description"), @"Plays all hitsounds at full volume instead of the volume set by the beatmap.");
+
+        /// <summary>
+        /// "Never"
+        /// </summary>
+        public static LocalisableString IgnoreBeatmapVolumeNever => new TranslatableString(getKey(@"ignore_beatmap_volume_never"), @"Never");
+
+        /// <summary>
+        /// "If beatmap hitsounds are disabled"
+        /// </summary>
+        public static LocalisableString IgnoreBeatmapVolumeIfHitsoundsDisabled => new TranslatableString(getKey(@"ignore_beatmap_volume_if_hitsounds_disabled"), @"If beatmap hitsounds are disabled");
+
+        /// <summary>
+        /// "Always"
+        /// </summary>
+        public static LocalisableString IgnoreBeatmapVolumeAlways => new TranslatableString(getKey(@"ignore_beatmap_volume_always"), @"Always");
+
+        /// <summary>
+        /// "Mute hitsounds"
+        /// </summary>
+        public static LocalisableString MuteHitsounds => new TranslatableString(getKey(@"mute_hitsounds"), @"Mute hitsounds");
+
+        /// <summary>
+        /// "Never"
+        /// </summary>
+        public static LocalisableString MuteHitsoundsNever => new TranslatableString(getKey(@"mute_hitsounds_never"), @"Never");
+
+        /// <summary>
+        /// "osu!mania only"
+        /// </summary>
+        public static LocalisableString MuteHitsoundsManiaOnly => new TranslatableString(getKey(@"mute_hitsounds_mania_only"), @"osu!mania only");
+
+        /// <summary>
+        /// "Always"
+        /// </summary>
+        public static LocalisableString MuteHitsoundsAlways => new TranslatableString(getKey(@"mute_hitsounds_always"), @"Always");
+
+        /// <summary>
+        /// "Always use minimum flashlight size"
+        /// </summary>
+        public static LocalisableString FlashlightMinSize => new TranslatableString(getKey(@"flashlight_min_size"), @"Always use minimum flashlight size");
+
+        /// <summary>
+        /// "Makes the flashlight size always use the minimum radius (200x combo)."
+        /// </summary>
+        public static LocalisableString FlashlightMinSizeDescription => new TranslatableString(getKey(@"flashlight_min_size_description"), @"Makes the flashlight size always use the minimum radius (200x combo).");
+
+        /// <summary>
+        /// "Don't reset flashlight size on combo break"
+        /// </summary>
+        public static LocalisableString FlashlightIgnoreComboBreaks => new TranslatableString(getKey(@"flashlight_ignore_combo_breaks"), @"Don't reset flashlight size on combo break");
+
+        /// <summary>
+        /// "The flashlight keeps shrinking as if no combo break happened."
+        /// </summary>
+        public static LocalisableString FlashlightIgnoreComboBreaksDescription => new TranslatableString(getKey(@"flashlight_ignore_combo_breaks_description"), @"The flashlight keeps shrinking as if no combo break happened.");
+
         private static string getKey(string key) => $"{prefix}:{key}";
     }
 }

@@ -51,7 +51,8 @@ namespace osu.Game.Rulesets.UI
                     Name = "concurrent sample pool",
                     ChildrenEnumerable = Enumerable.Range(0, max_concurrent_hitsounds).Select(_ => new PausableSkinnableSound
                     {
-                        MinimumSampleVolume = DrawableHitObject.MINIMUM_SAMPLE_VOLUME
+                        MinimumSampleVolume = DrawableHitObject.MINIMUM_SAMPLE_VOLUME,
+                        IsGameplayHitSound = true,
                     })
                 }
             };

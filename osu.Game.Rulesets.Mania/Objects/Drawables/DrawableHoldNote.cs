@@ -115,6 +115,7 @@ namespace osu.Game.Rulesets.Mania.Objects.Drawables
                 {
                     Looping = true,
                     MinimumSampleVolume = MINIMUM_SAMPLE_VOLUME,
+                    IsGameplayHitSound = true,
                 }
             });
 
