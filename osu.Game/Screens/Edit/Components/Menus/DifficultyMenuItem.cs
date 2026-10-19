@@ -12,8 +12,8 @@ namespace osu.Game.Screens.Edit.Components.Menus
     {
         public BeatmapInfo BeatmapInfo { get; }
 
-        public DifficultyMenuItem(BeatmapInfo beatmapInfo, bool selected, Action<BeatmapInfo> difficultyChangeFunc)
-            : base(string.IsNullOrEmpty(beatmapInfo.DifficultyName) ? "(unnamed)" : beatmapInfo.DifficultyName, null)
+        public DifficultyMenuItem(BeatmapInfo beatmapInfo, bool selected, Action<BeatmapInfo> difficultyChangeFunc, bool showStars = false)
+            : base(GetDisplayText(beatmapInfo, showStars), null)
         {
             BeatmapInfo = beatmapInfo;
             State.Value = selected;
@@ -23,5 +23,43 @@ namespace osu.Game.Screens.Edit.Components.Menus
         }
 
         public override IconUsage? GetIconForState(bool state) => state ? FontAwesome.Solid.Check : null;
+
+        /// <summary>
+        /// Returns the text displayed for a difficulty, optionally prefixed with its star rating and ruleset.
+        /// </summary>
+        public static string GetDisplayText(BeatmapInfo beatmapInfo, bool showStars)
+        {
+            string name = string.IsNullOrEmpty(beatmapInfo.DifficultyName) ? "(unnamed)" : beatmapInfo.DifficultyName;
+
+            if (!showStars)
+                return name;
+
+            string mode;
+
+            switch (beatmapInfo.Ruleset.OnlineID)
+            {
+                case 0:
+                    mode = "O";
+                    break;
+
+                case 1:
+                    mode = "T";
+                    break;
+
+                case 2:
+                    mode = "C";
+                    break;
+
+                case 3:
+                    mode = "M";
+                    break;
+
+                default:
+                    mode = "?";
+                    break;
+            }
+
+            return FormattableString.Invariant($"({Math.Max(0, beatmapInfo.StarRating):F2}* {mode}) {name}");
+        }
     }
 }

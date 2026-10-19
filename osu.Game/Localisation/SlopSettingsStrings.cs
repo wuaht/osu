@@ -964,6 +964,86 @@ namespace osu.Game.Localisation
         /// </summary>
         public static LocalisableString NoAutomaticBreaksDescription => new TranslatableString(getKey(@"no_automatic_breaks_description"), @"Disables the editor automatically adding breaks into long gaps");
 
+        /// <summary>
+        /// "Draw screen borders"
+        /// </summary>
+        public static LocalisableString DrawScreenBorders => new TranslatableString(getKey(@"draw_screen_borders"), @"Draw screen borders");
+
+        /// <summary>
+        /// "Shows the bounds of the screen relative to the playfield"
+        /// </summary>
+        public static LocalisableString DrawScreenBordersDescription => new TranslatableString(getKey(@"draw_screen_borders_description"), @"Shows the bounds of the screen relative to the playfield");
+
+        /// <summary>
+        /// "Always hide FPS"
+        /// </summary>
+        public static LocalisableString AlwaysHideFps => new TranslatableString(getKey(@"always_hide_fps"), @"Always hide FPS");
+
+        /// <summary>
+        /// "Always hides the FPS counter in the editor, even if it's enabled everywhere else"
+        /// </summary>
+        public static LocalisableString AlwaysHideFpsDescription => new TranslatableString(getKey(@"always_hide_fps_description"), @"Always hides the FPS counter in the editor, even if it's enabled everywhere else");
+
+        /// <summary>
+        /// "Show star count in difficulty selector"
+        /// </summary>
+        public static LocalisableString DifficultyStars => new TranslatableString(getKey(@"difficulty_stars"), @"Show star count in difficulty selector");
+
+        /// <summary>
+        /// "Shows the star count for each difficulty in the difficulty switcher"
+        /// </summary>
+        public static LocalisableString DifficultyStarsDescription => new TranslatableString(getKey(@"difficulty_stars_description"), @"Shows the star count for each difficulty in the difficulty switcher");
+
+        /// <summary>
+        /// "Always ignore beatmap hitsounds"
+        /// </summary>
+        public static LocalisableString AlwaysIgnoreBeatmapSamples => new TranslatableString(getKey(@"always_ignore_beatmap_samples"), @"Always ignore beatmap hitsounds");
+
+        /// <summary>
+        /// "Forces the editor to use your skin's samples. Should only be used temporarily for most people"
+        /// </summary>
+        public static LocalisableString AlwaysIgnoreBeatmapSamplesDescription => new TranslatableString(getKey(@"always_ignore_beatmap_samples_description"), @"Forces the editor to use your skin's samples. Should only be used temporarily for most people");
+
+        /// <summary>
+        /// "Bezier point insertion preview"
+        /// </summary>
+        public static LocalisableString PointInsertPreview => new TranslatableString(getKey(@"point_insert_preview"), @"Bezier point insertion preview");
+
+        /// <summary>
+        /// "Preview the insertion order of a new control point and the new path"
+        /// </summary>
+        public static LocalisableString PointInsertPreviewDescription => new TranslatableString(getKey(@"point_insert_preview_description"), @"Preview the insertion order of a new control point and the new path");
+
+        /// <summary>
+        /// "Slider curve color"
+        /// </summary>
+        public static LocalisableString SliderCurveColour => new TranslatableString(getKey(@"slider_curve_colour"), @"Slider curve color");
+
+        /// <summary>
+        /// "Disabled"
+        /// </summary>
+        public static LocalisableString SliderCurveColourDisabled => new TranslatableString(getKey(@"slider_curve_colour_disabled"), @"Disabled");
+
+        /// <summary>
+        /// "Anchor"
+        /// </summary>
+        public static LocalisableString SliderCurveColourAnchor => new TranslatableString(getKey(@"slider_curve_colour_anchor"), @"Anchor");
+
+        /// <summary>
+        /// "Line"
+        /// </summary>
+        public static LocalisableString SliderCurveColourLine => new TranslatableString(getKey(@"slider_curve_colour_line"), @"Line");
+
+        /// <summary>
+        /// "Disable Alt for distance snap"
+        /// </summary>
+        public static LocalisableString DisableAltDistanceSnap => new TranslatableString(getKey(@"disable_alt_distance_snap"), @"Disable Alt for distance snap");
+
+        /// <summary>
+        /// "Disables holding Alt to temporarily toggle distance snap"
+        /// </summary>
+        public static LocalisableString DisableAltDistanceSnapDescription => new TranslatableString(getKey(@"disable_alt_distance_snap_description"), @"Disables holding Alt to temporarily toggle distance snap");
+
         private static string getKey(string key) => $"{prefix}:{key}";
     }
 }

@@ -35,6 +35,9 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
         protected new DrawableSlider DrawableObject => (DrawableSlider)base.DrawableObject;
 
         protected SliderBodyPiece BodyPiece { get; private set; } = null!;
+
+        private ControlPointInsertionPreview insertionPreview = null!;
+        private readonly Bindable<bool> showInsertionPreview = new Bindable<bool>();
         protected SliderCircleOverlay HeadOverlay { get; private set; } = null!;
         protected SliderCircleOverlay TailOverlay { get; private set; } = null!;
 
@@ -97,6 +100,7 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
             InternalChildren = new Drawable[]
             {
                 BodyPiece = new SliderBodyPiece(),
+                insertionPreview = new ControlPointInsertionPreview(HitObject),
                 HeadOverlay = CreateCircleOverlay(HitObject, SliderPosition.Start),
                 TailOverlay = CreateCircleOverlay(HitObject, SliderPosition.End),
             };
@@ -109,6 +113,7 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
             TailOverlay.EndDragMarker.EndDrag += endAdjustLength;
 
             config.BindWith(OsuSetting.EditorShowHitMarkers, showHitMarkers);
+            config.BindWith(OsuSetting.SlopEditorPointInsertPreview, showInsertionPreview);
         }
 
         protected override void LoadComplete()
@@ -159,6 +164,21 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
                 DrawableObject.SuppressHitAnimations();
 
             updatePartHighlight();
+            updateInsertionPreview();
+        }
+
+        private void updateInsertionPreview()
+        {
+            var inputState = GetContainingInputManager()?.CurrentState;
+
+            // matches the conditions under which ctrl+click inserts a control point.
+            bool show = showInsertionPreview.Value && IsSelected && selectedObjects.Count < 2 && placementControlPoint == null
+                        && inputState?.Keyboard.ControlPressed == true && !inputState.Keyboard.ShiftPressed && !inputState.Keyboard.AltPressed;
+
+            if (show)
+                insertionPreview.UpdatePreview(ToLocalSpace(inputState!.Mouse.Position));
+            else
+                insertionPreview.Alpha = 0;
         }
 
         #region Part selection (for hitsounding)
@@ -556,19 +576,7 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
         {
             position -= HitObject.Position;
 
-            int insertionIndex = 0;
-            float minDistance = float.MaxValue;
-
-            for (int i = 0; i < controlPoints.Count - 1; i++)
-            {
-                float dist = new Line(controlPoints[i].Position, controlPoints[i + 1].Position).DistanceToPoint(position);
-
-                if (dist < minDistance)
-                {
-                    insertionIndex = i + 1;
-                    minDistance = dist;
-                }
-            }
+            int insertionIndex = ControlPointInsertionPreview.GetInsertionIndex(controlPoints, position);
 
             var pathControlPoint = new PathControlPoint { Position = position };
 

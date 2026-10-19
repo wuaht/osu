@@ -285,6 +285,7 @@ namespace osu.Game.Screens.Edit
         {
             backupOnSave = config.GetBindable<bool>(OsuSetting.SlopEditorBackupOnSave);
             autosaveInterval = config.GetBindable<int>(OsuSetting.SlopEditorAutosaveInterval);
+            difficultyStars = config.GetBindable<bool>(OsuSetting.SlopEditorDifficultyStars);
             onlyAutosaveOwnMaps = config.GetBindable<bool>(OsuSetting.SlopEditorOnlyAutosaveOwnMaps);
             autosaveToBackups = config.GetBindable<bool>(OsuSetting.SlopEditorAutosaveToBackups);
             myMapsAliases = config.GetBindable<string>(OsuSetting.SlopEditorMyMapsAliases);
@@ -807,6 +808,7 @@ namespace osu.Game.Screens.Edit
 
         private Bindable<bool> backupOnSave;
         private Bindable<int> autosaveInterval;
+        private Bindable<bool> difficultyStars;
         private Bindable<bool> onlyAutosaveOwnMaps;
         private Bindable<bool> autosaveToBackups;
         private Bindable<string> myMapsAliases;
@@ -2176,21 +2178,24 @@ namespace osu.Game.Screens.Edit
                 foreach (var beatmap in rulesetBeatmaps)
                 {
                     bool isCurrentDifficulty = playableBeatmap.BeatmapInfo.Equals(beatmap);
-                    var difficultyMenuItem = new DifficultyMenuItem(beatmap, isCurrentDifficulty, SwitchToDifficulty);
+                    var difficultyMenuItem = new DifficultyMenuItem(beatmap, isCurrentDifficulty, SwitchToDifficulty, difficultyStars.Value);
                     difficultyItems.Add(difficultyMenuItem);
                 }
             }
 
             // Ensure difficulty names are updated when modified in the editor.
             // Maybe we could trigger less often but this seems to work well enough.
-            editorBeatmap.SaveStateTriggered += () =>
+            editorBeatmap.SaveStateTriggered += updateDifficultyTexts;
+            difficultyStars.BindValueChanged(_ => updateDifficultyTexts());
+
+            void updateDifficultyTexts()
             {
                 foreach (var beatmapInfo in Beatmap.Value.BeatmapSetInfo.Beatmaps)
                 {
                     var menuItem = difficultyItems.OfType<DifficultyMenuItem>().FirstOrDefault(i => i.BeatmapInfo.Equals(beatmapInfo));
-                    menuItem?.Text.Value = string.IsNullOrEmpty(beatmapInfo.DifficultyName) ? "(unnamed)" : beatmapInfo.DifficultyName;
+                    menuItem?.Text.Value = DifficultyMenuItem.GetDisplayText(beatmapInfo, difficultyStars.Value);
                 }
-            };
+            }
 
             return new EditorMenuItem(EditorStrings.ChangeDifficulty) { Items = difficultyItems };
         }

@@ -23,7 +23,7 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
     {
         protected override LocalisableString Header => SlopSettingsStrings.EditorHeader;
 
-        public override IEnumerable<LocalisableString> FilterTerms => base.FilterTerms.Concat(new LocalisableString[] { "skin", "backup", "autosave", "snap", "blanket", "triangle", "waveform", "hitsound", "frosted", "bn", "nominator", "request", "alias", "break", "own" });
+        public override IEnumerable<LocalisableString> FilterTerms => base.FilterTerms.Concat(new LocalisableString[] { "skin", "backup", "autosave", "snap", "blanket", "triangle", "waveform", "hitsound", "frosted", "bn", "nominator", "request", "alias", "break", "own", "border", "fps", "star", "difficulty", "bezier", "curve", "colour", "color", "alt" });
 
         /// <summary>
         /// Dropdown entry representing "use the regular gameplay skin".
@@ -220,6 +220,47 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                     Caption = SlopSettingsStrings.NoAutomaticBreaks,
                     HintText = SlopSettingsStrings.NoAutomaticBreaksDescription,
                     Current = config.GetBindable<bool>(OsuSetting.SlopEditorNoAutomaticBreaks),
+                }),
+                new SettingsItemV2(new FormCheckBox
+                {
+                    Caption = SlopSettingsStrings.DrawScreenBorders,
+                    HintText = SlopSettingsStrings.DrawScreenBordersDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorDrawScreenBorders),
+                }),
+                new SettingsItemV2(new FormCheckBox
+                {
+                    Caption = SlopSettingsStrings.AlwaysHideFps,
+                    HintText = SlopSettingsStrings.AlwaysHideFpsDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorAlwaysHideFps),
+                }),
+                new SettingsItemV2(new FormCheckBox
+                {
+                    Caption = SlopSettingsStrings.DifficultyStars,
+                    HintText = SlopSettingsStrings.DifficultyStarsDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorDifficultyStars),
+                }),
+                new SettingsItemV2(new FormCheckBox
+                {
+                    Caption = SlopSettingsStrings.AlwaysIgnoreBeatmapSamples,
+                    HintText = SlopSettingsStrings.AlwaysIgnoreBeatmapSamplesDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorAlwaysIgnoreBeatmapSamples),
+                }),
+                new SettingsItemV2(new FormCheckBox
+                {
+                    Caption = SlopSettingsStrings.PointInsertPreview,
+                    HintText = SlopSettingsStrings.PointInsertPreviewDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorPointInsertPreview),
+                }),
+                new SettingsItemV2(new FormEnumDropdown<SliderCurveColourStyle>
+                {
+                    Caption = SlopSettingsStrings.SliderCurveColour,
+                    Current = config.GetBindable<SliderCurveColourStyle>(OsuSetting.SlopEditorSliderCurveColour),
+                }),
+                new SettingsItemV2(new FormCheckBox
+                {
+                    Caption = SlopSettingsStrings.DisableAltDistanceSnap,
+                    HintText = SlopSettingsStrings.DisableAltDistanceSnapDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorDisableAltDistanceSnap),
                 }),
             };
         }

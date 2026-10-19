@@ -38,6 +38,11 @@ namespace osu.Game.Graphics.UserInterface
 
         private readonly BindableBool showFpsDisplay = new BindableBool(true);
 
+        /// <summary>
+        /// Hides the counter without changing whether it is enabled.
+        /// </summary>
+        public readonly BindableBool ForceHidden = new BindableBool();
+
         private double displayedFpsCount;
         private double displayedFrameTime;
 
@@ -143,9 +148,15 @@ namespace osu.Game.Graphics.UserInterface
             }, true);
 
             State.BindValueChanged(state => showFpsDisplay.Value = state.NewValue == Visibility.Visible);
+
+            ForceHidden.BindValueChanged(_ =>
+            {
+                if (State.Value == Visibility.Visible)
+                    PopIn();
+            });
         }
 
-        protected override void PopIn() => this.FadeIn(100);
+        protected override void PopIn() => this.FadeTo(ForceHidden.Value ? 0 : 1, 100);
 
         protected override void PopOut() => this.FadeOut(100);
 

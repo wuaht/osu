@@ -52,6 +52,7 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders.Components
         private readonly EditorAnchorShapeContainer markerRing;
 
         private readonly Bindable<EditorAnchorShape> anchorShape = new Bindable<EditorAnchorShape>();
+        private readonly Bindable<SliderCurveColourStyle> curveColourStyle = new Bindable<SliderCurveColourStyle>();
 
         [Resolved]
         private OsuColour colours { get; set; }
@@ -117,6 +118,9 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders.Components
             stackHeight.BindValueChanged(_ => updateMarkerDisplay());
 
             IsSelected.BindValueChanged(_ => updateMarkerDisplay());
+
+            config.BindWith(OsuSetting.SlopEditorSliderCurveColour, curveColourStyle);
+            curveColourStyle.BindValueChanged(_ => updateMarkerDisplay());
 
             updateMarkerDisplay();
         }
@@ -235,6 +239,12 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders.Components
         {
             if (ControlPoint.Type is not PathType pathType)
                 return colours.Yellow;
+
+            if (curveColourStyle.Value != SliderCurveColourStyle.Anchor)
+            {
+                // only anchors which start a new segment are highlighted.
+                return hitObject.Path.ControlPoints.IndexOf(ControlPoint) > 0 ? colours.Red : colours.Yellow;
+            }
 
             switch (pathType.Type)
             {

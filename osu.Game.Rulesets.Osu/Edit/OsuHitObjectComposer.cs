@@ -14,6 +14,7 @@ using osu.Framework.Bindables;
 using osu.Framework.Caching;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
+using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Input.Events;
 using osu.Framework.Utils;
@@ -97,6 +98,8 @@ namespace osu.Game.Rulesets.Osu.Edit
 
         private PatternSnapGuideOverlay patternSnapGuides;
 
+        private Bindable<bool> drawScreenBorders;
+
         [BackgroundDependencyLoader]
         private void load(OsuConfigManager config)
         {
@@ -122,6 +125,26 @@ namespace osu.Game.Rulesets.Osu.Edit
                     RelativeSizeAxes = Axes.Both
                 }
             );
+
+            // the bounds of a 4:3 gameplay screen, relative to the playfield.
+            Container screenBorder;
+            LayerBelowRuleset.Add(screenBorder = new Container
+            {
+                Position = new Vector2(-64, -56),
+                Size = new Vector2(640, 480),
+                Masking = true,
+                BorderThickness = 1,
+                BorderColour = Colour4.White.Opacity(75 / 255f),
+                Child = new Box
+                {
+                    RelativeSizeAxes = Axes.Both,
+                    Alpha = 0,
+                    AlwaysPresent = true,
+                },
+            });
+
+            drawScreenBorders = config.GetBindable<bool>(OsuSetting.SlopEditorDrawScreenBorders);
+            drawScreenBorders.BindValueChanged(draw => screenBorder.Alpha = draw.NewValue ? 1 : 0, true);
 
             selectedHitObjects = EditorBeatmap.SelectedHitObjects.GetBoundCopy();
             selectedHitObjects.CollectionChanged += (_, _) => updateDistanceSnapGrid();

@@ -1205,6 +1205,9 @@ namespace osu.Game
                 Margin = new MarginPadding(5),
             }, topMostOverlayContent.Add);
 
+            editorAlwaysHideFps = LocalConfig.GetBindable<bool>(OsuSetting.SlopEditorAlwaysHideFps);
+            editorAlwaysHideFps.BindValueChanged(_ => updateFpsCounterHidden());
+
             if (!IsDeployedBuild)
                 loadComponentSingleFile(devBuildBanner = new DevBuildBanner(), ScreenContainer.Add);
 
@@ -1831,6 +1834,9 @@ namespace osu.Game
                     break;
             }
 
+            currentScreenIsEditor = newScreen is Editor;
+            updateFpsCounterHidden();
+
             switch (newScreen)
             {
                 case IntroScreen intro:
@@ -1874,6 +1880,16 @@ namespace osu.Game
 
                 skinEditor.SetTarget(newOsuScreen);
             }
+        }
+
+        private Bindable<bool> editorAlwaysHideFps;
+
+        private bool currentScreenIsEditor;
+
+        private void updateFpsCounterHidden()
+        {
+            if (fpsCounter != null && editorAlwaysHideFps != null)
+                fpsCounter.ForceHidden.Value = currentScreenIsEditor && editorAlwaysHideFps.Value;
         }
 
         private void screenPushed(IScreen lastScreen, IScreen newScreen) => ScreenChanged((OsuScreen)lastScreen, (OsuScreen)newScreen);

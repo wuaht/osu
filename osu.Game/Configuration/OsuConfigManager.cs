@@ -365,6 +365,13 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopEditorAutosaveToBackups, false);
             SetDefault(OsuSetting.SlopEditorMyMapsAliases, string.Empty);
             SetDefault(OsuSetting.SlopEditorNoAutomaticBreaks, false);
+            SetDefault(OsuSetting.SlopEditorDrawScreenBorders, false);
+            SetDefault(OsuSetting.SlopEditorAlwaysHideFps, false);
+            SetDefault(OsuSetting.SlopEditorDifficultyStars, true);
+            SetDefault(OsuSetting.SlopEditorAlwaysIgnoreBeatmapSamples, false);
+            SetDefault(OsuSetting.SlopEditorPointInsertPreview, false);
+            SetDefault(OsuSetting.SlopEditorSliderCurveColour, SliderCurveColourStyle.Line);
+            SetDefault(OsuSetting.SlopEditorDisableAltDistanceSnap, false);
         }
 
         protected override bool CheckLookupContainsPrivateInformation(OsuSetting lookup)
@@ -1116,5 +1123,40 @@ namespace osu.Game.Configuration
         /// Whether the editor should never insert breaks automatically.
         /// </summary>
         SlopEditorNoAutomaticBreaks,
+
+        /// <summary>
+        /// Whether the bounds of the gameplay screen are shown around the osu! editor playfield.
+        /// </summary>
+        SlopEditorDrawScreenBorders,
+
+        /// <summary>
+        /// Whether the FPS counter is always hidden in the editor.
+        /// </summary>
+        SlopEditorAlwaysHideFps,
+
+        /// <summary>
+        /// Whether the star rating of each difficulty is shown in the editor's difficulty switcher.
+        /// </summary>
+        SlopEditorDifficultyStars,
+
+        /// <summary>
+        /// Whether the editor always uses the skin's samples instead of the beatmap's.
+        /// </summary>
+        SlopEditorAlwaysIgnoreBeatmapSamples,
+
+        /// <summary>
+        /// Whether the insertion of a new slider control point is previewed while holding Ctrl.
+        /// </summary>
+        SlopEditorPointInsertPreview,
+
+        /// <summary>
+        /// How the curve types of slider paths are highlighted in the editor.
+        /// </summary>
+        SlopEditorSliderCurveColour,
+
+        /// <summary>
+        /// Whether holding Alt no longer temporarily toggles distance snap.
+        /// </summary>
+        SlopEditorDisableAltDistanceSnap,
     }
 }

@@ -13,6 +13,7 @@ using osu.Framework.Input.Bindings;
 using osu.Framework.Input.Events;
 using osu.Framework.Localisation;
 using osu.Framework.Utils;
+using osu.Game.Configuration;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Input;
 using osu.Game.Input.Bindings;
@@ -61,6 +62,9 @@ namespace osu.Game.Rulesets.Edit
         public readonly Bindable<TernaryState> DistanceSnapToggle = new Bindable<TernaryState>();
 
         private bool distanceSnapMomentary;
+
+        [Resolved]
+        private OsuConfigManager? config { get; set; }
         private TernaryState? distanceSnapStateBeforeMomentaryToggle;
 
         private EditorToolboxGroup? toolboxGroup;
@@ -195,7 +199,7 @@ namespace osu.Game.Rulesets.Edit
 
         public void HandleToggleViaKey(KeyboardEvent key)
         {
-            bool altPressed = key.AltPressed;
+            bool altPressed = key.AltPressed && config?.Get<bool>(OsuSetting.SlopEditorDisableAltDistanceSnap) != true;
 
             if (altPressed && !distanceSnapMomentary)
             {
