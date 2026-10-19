@@ -929,6 +929,41 @@ namespace osu.Game.Localisation
         /// </summary>
         public static LocalisableString UseMainSkin => new TranslatableString(getKey(@"use_main_skin"), @"<Use main skin>");
 
+        /// <summary>
+        /// "Only autosave maps you own"
+        /// </summary>
+        public static LocalisableString OnlyAutosaveOwnMaps => new TranslatableString(getKey(@"only_autosave_own_maps"), @"Only autosave maps you own");
+
+        /// <summary>
+        /// "Only autosaves maps if you made them or if your name is in the diff name. Also includes any names listed as a My Maps alias"
+        /// </summary>
+        public static LocalisableString OnlyAutosaveOwnMapsDescription => new TranslatableString(getKey(@"only_autosave_own_maps_description"), @"Only autosaves maps if you made them or if your name is in the diff name. Also includes any names listed as a My Maps alias");
+
+        /// <summary>
+        /// "Write autosaves directly to backups"
+        /// </summary>
+        public static LocalisableString AutosaveToBackups => new TranslatableString(getKey(@"autosave_to_backups"), @"Write autosaves directly to backups");
+
+        /// <summary>
+        /// "Instead of autosaves overwriting the main map file, this writes them to the Backups folder instead"
+        /// </summary>
+        public static LocalisableString AutosaveToBackupsDescription => new TranslatableString(getKey(@"autosave_to_backups_description"), @"Instead of autosaves overwriting the main map file, this writes them to the Backups folder instead");
+
+        /// <summary>
+        /// "My Maps aliases (comma-separated)"
+        /// </summary>
+        public static LocalisableString MyMapsAliases => new TranslatableString(getKey(@"my_maps_aliases"), @"My Maps aliases (comma-separated)");
+
+        /// <summary>
+        /// "Never automatically insert breaks"
+        /// </summary>
+        public static LocalisableString NoAutomaticBreaks => new TranslatableString(getKey(@"no_automatic_breaks"), @"Never automatically insert breaks");
+
+        /// <summary>
+        /// "Disables the editor automatically adding breaks into long gaps"
+        /// </summary>
+        public static LocalisableString NoAutomaticBreaksDescription => new TranslatableString(getKey(@"no_automatic_breaks_description"), @"Disables the editor automatically adding breaks into long gaps");
+
         private static string getKey(string key) => $"{prefix}:{key}";
     }
 }

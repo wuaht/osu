@@ -53,7 +53,9 @@ namespace osu.Game.Screens.Edit
 
             objectDurationCache = objectDuration;
 
-            Beatmap.Breaks.RemoveAll(b => b is not ManualBreakPeriod);
+            // without automatic breaks, all existing breaks are kept like manual ones.
+            if (Beatmap.AutoGenerateBreaks)
+                Beatmap.Breaks.RemoveAll(b => b is not ManualBreakPeriod);
 
             foreach (var manualBreak in Beatmap.Breaks.ToList())
             {
@@ -64,6 +66,9 @@ namespace osu.Game.Screens.Edit
                     Beatmap.Breaks.Remove(manualBreak);
                 }
             }
+
+            if (!Beatmap.AutoGenerateBreaks)
+                return;
 
             double currentMaxEndTime = double.MinValue;
 

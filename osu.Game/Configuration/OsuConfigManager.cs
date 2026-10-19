@@ -361,6 +361,10 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopTaikoSkin, string.Empty);
             SetDefault(OsuSetting.SlopCatchSkin, string.Empty);
             SetDefault(OsuSetting.SlopManiaSkin, string.Empty);
+            SetDefault(OsuSetting.SlopEditorOnlyAutosaveOwnMaps, true);
+            SetDefault(OsuSetting.SlopEditorAutosaveToBackups, false);
+            SetDefault(OsuSetting.SlopEditorMyMapsAliases, string.Empty);
+            SetDefault(OsuSetting.SlopEditorNoAutomaticBreaks, false);
         }
 
         protected override bool CheckLookupContainsPrivateInformation(OsuSetting lookup)
@@ -1092,5 +1096,25 @@ namespace osu.Game.Configuration
         /// The ID of the skin used during osu!mania gameplay, or empty to use the main skin.
         /// </summary>
         SlopManiaSkin,
+
+        /// <summary>
+        /// Whether autosaving is restricted to beatmaps created by the local user (or one of their aliases).
+        /// </summary>
+        SlopEditorOnlyAutosaveOwnMaps,
+
+        /// <summary>
+        /// Whether autosaves are written to the backups folder instead of overwriting the beatmap.
+        /// </summary>
+        SlopEditorAutosaveToBackups,
+
+        /// <summary>
+        /// Comma-separated names which are treated as the local user when checking beatmap ownership.
+        /// </summary>
+        SlopEditorMyMapsAliases,
+
+        /// <summary>
+        /// Whether the editor should never insert breaks automatically.
+        /// </summary>
+        SlopEditorNoAutomaticBreaks,
     }
 }

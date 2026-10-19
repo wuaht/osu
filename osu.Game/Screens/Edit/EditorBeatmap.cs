@@ -102,6 +102,12 @@ namespace osu.Game.Screens.Edit
 
         private readonly IBeatmapProcessor beatmapProcessor;
 
+        /// <summary>
+        /// Whether breaks should be inserted into long gaps automatically.
+        /// If disabled, existing breaks are kept as long as they don't overlap any hit objects.
+        /// </summary>
+        public bool AutoGenerateBreaks { get; set; } = true;
+
         private readonly Dictionary<HitObject, Bindable<double>> startTimeBindables = new Dictionary<HitObject, Bindable<double>>();
 
         public EditorBeatmap(IBeatmap playableBeatmap, ISkin beatmapSkin = null, Storyboard storyboard = null, BeatmapInfo beatmapInfo = null)

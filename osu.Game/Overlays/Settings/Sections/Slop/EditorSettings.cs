@@ -23,7 +23,7 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
     {
         protected override LocalisableString Header => SlopSettingsStrings.EditorHeader;
 
-        public override IEnumerable<LocalisableString> FilterTerms => base.FilterTerms.Concat(new LocalisableString[] { "skin", "backup", "autosave", "snap", "blanket", "triangle", "waveform", "hitsound", "frosted", "bn", "nominator", "request" });
+        public override IEnumerable<LocalisableString> FilterTerms => base.FilterTerms.Concat(new LocalisableString[] { "skin", "backup", "autosave", "snap", "blanket", "triangle", "waveform", "hitsound", "frosted", "bn", "nominator", "request", "alias", "break", "own" });
 
         /// <summary>
         /// Dropdown entry representing "use the regular gameplay skin".
@@ -197,6 +197,29 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                     Current = config.GetBindable<int>(OsuSetting.SlopEditorAutosaveInterval),
                     KeyboardStep = 1,
                     LabelFormat = minutes => minutes == 0 ? SlopSettingsStrings.AutosaveOff : SlopSettingsStrings.AutosaveMinutes(minutes),
+                }),
+                new SettingsItemV2(new FormCheckBox
+                {
+                    Caption = SlopSettingsStrings.OnlyAutosaveOwnMaps,
+                    HintText = SlopSettingsStrings.OnlyAutosaveOwnMapsDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorOnlyAutosaveOwnMaps),
+                }),
+                new SettingsItemV2(new FormCheckBox
+                {
+                    Caption = SlopSettingsStrings.AutosaveToBackups,
+                    HintText = SlopSettingsStrings.AutosaveToBackupsDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorAutosaveToBackups),
+                }),
+                new SettingsItemV2(new FormTextBox
+                {
+                    Caption = SlopSettingsStrings.MyMapsAliases,
+                    Current = config.GetBindable<string>(OsuSetting.SlopEditorMyMapsAliases),
+                }),
+                new SettingsItemV2(new FormCheckBox
+                {
+                    Caption = SlopSettingsStrings.NoAutomaticBreaks,
+                    HintText = SlopSettingsStrings.NoAutomaticBreaksDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorNoAutomaticBreaks),
                 }),
             };
         }

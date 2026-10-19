@@ -71,6 +71,25 @@ namespace osu.Game.Screens.Edit
                     }
                 }
 
+                WriteBackup(storage, filename, previousContent);
+            }
+            catch (Exception e)
+            {
+                Logger.Error(e, "Failed to create beatmap backup.");
+            }
+        }
+
+        /// <summary>
+        /// Writes <paramref name="content"/> as a compressed backup of the beatmap file <paramref name="filename"/>.
+        /// Compression happens in the background. Failures are logged and never thrown.
+        /// </summary>
+        /// <param name="storage">The user's data storage.</param>
+        /// <param name="filename">The filename of the beatmap file.</param>
+        /// <param name="content">The content of the beatmap file to back up.</param>
+        public static void WriteBackup(Storage storage, string filename, byte[] content)
+        {
+            try
+            {
                 var backupStorage = storage.GetStorageForDirectory(BACKUPS_DIRECTORY);
                 string backupFilename = getAvailableBackupFilename(backupStorage, filename);
 
@@ -82,7 +101,7 @@ namespace osu.Game.Screens.Edit
                     try
                     {
                         using (output)
-                            XzCompressor.Compress(previousContent, output);
+                            XzCompressor.Compress(content, output);
                     }
                     catch (Exception e)
                     {
@@ -92,7 +111,7 @@ namespace osu.Game.Screens.Edit
             }
             catch (Exception e)
             {
-                Logger.Error(e, "Failed to create beatmap backup.");
+                Logger.Error(e, "Failed to write beatmap backup.");
             }
         }
 

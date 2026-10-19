@@ -285,6 +285,10 @@ namespace osu.Game.Screens.Edit
         {
             backupOnSave = config.GetBindable<bool>(OsuSetting.SlopEditorBackupOnSave);
             autosaveInterval = config.GetBindable<int>(OsuSetting.SlopEditorAutosaveInterval);
+            onlyAutosaveOwnMaps = config.GetBindable<bool>(OsuSetting.SlopEditorOnlyAutosaveOwnMaps);
+            autosaveToBackups = config.GetBindable<bool>(OsuSetting.SlopEditorAutosaveToBackups);
+            myMapsAliases = config.GetBindable<string>(OsuSetting.SlopEditorMyMapsAliases);
+            noAutomaticBreaks = config.GetBindable<bool>(OsuSetting.SlopEditorNoAutomaticBreaks);
 
             var loadableBeatmap = Beatmap.Value;
 
@@ -340,6 +344,8 @@ namespace osu.Game.Screens.Edit
 
             AddInternal(editorBeatmap = new EditorBeatmap(playableBeatmap, loadableBeatmap.GetSkin(), loadableBeatmap.Storyboard, loadableBeatmap.BeatmapInfo));
             dependencies.CacheAs(editorBeatmap);
+
+            noAutomaticBreaks.BindValueChanged(noBreaks => editorBeatmap.AutoGenerateBreaks = !noBreaks.NewValue, true);
 
             editorBeatmap.UpdateInProgress.BindValueChanged(_ => updateSampleDisabledState());
 
@@ -801,6 +807,15 @@ namespace osu.Game.Screens.Edit
 
         private Bindable<bool> backupOnSave;
         private Bindable<int> autosaveInterval;
+        private Bindable<bool> onlyAutosaveOwnMaps;
+        private Bindable<bool> autosaveToBackups;
+        private Bindable<string> myMapsAliases;
+        private Bindable<bool> noAutomaticBreaks;
+
+        /// <summary>
+        /// The state hash of the last autosave written to the backups folder.
+        /// </summary>
+        private string lastBackupAutosaveHash;
 
         /// <summary>
         /// The time of the last save attempt (or the editor being opened), in the game clock's time base.
@@ -830,13 +845,78 @@ namespace osu.Game.Screens.Edit
             if (HitsoundDifficultySync.Running?.IsCompleted == false)
                 return;
 
-            if (!HasUnsavedChanges)
+            if (!HasUnsavedChanges || (onlyAutosaveOwnMaps.Value && !isOwnBeatmap()))
             {
                 lastSaveTime = Time.Current;
                 return;
             }
 
+            if (autosaveToBackups.Value)
+            {
+                lastSaveTime = Time.Current;
+                writeAutosaveToBackups();
+                return;
+            }
+
             attemptMutationOperation(() => saveInBackground(true));
+        }
+
+        /// <summary>
+        /// Whether the edited beatmap was created by the local user, or the local user (or one of their aliases) is named in the difficulty name.
+        /// </summary>
+        private bool isOwnBeatmap()
+        {
+            string[] aliases = (myMapsAliases.Value + "," + api.LocalUser.Value.Username)
+                               .ToLowerInvariant()
+                               .Split(',')
+                               .Select(a => a.Trim())
+                               .Where(a => a.Length > 0)
+                               .Distinct()
+                               .ToArray();
+
+            string creator = editorBeatmap.BeatmapInfo.Metadata.Author.Username.ToLowerInvariant();
+            string difficultyName = editorBeatmap.BeatmapInfo.DifficultyName.ToLowerInvariant();
+
+            return aliases.Contains(creator) || aliases.Any(a => difficultyName.Contains(a, StringComparison.Ordinal));
+        }
+
+        /// <summary>
+        /// Writes the current state of the beatmap to the backups folder, leaving the stored beatmap untouched.
+        /// </summary>
+        private void writeAutosaveToBackups()
+        {
+            string stateHash = changeHandler?.CurrentStateHash;
+
+            if (stateHash != null && stateHash == lastBackupAutosaveHash)
+                return;
+
+            string filename = editorBeatmap.BeatmapInfo.Path;
+
+            if (filename == null)
+                return;
+
+            try
+            {
+                byte[] content;
+
+                using (var stream = new MemoryStream())
+                {
+                    using (var sw = new StreamWriter(stream, Encoding.UTF8, 1024, true))
+                        new LegacyBeatmapEncoder(editorBeatmap.PlayableBeatmap, editorBeatmap.BeatmapSkin, editorBeatmap.Storyboard).Encode(sw);
+
+                    content = stream.ToArray();
+                }
+
+                EditorBeatmapBackup.WriteBackup(storage, filename, content);
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, ex.Message);
+                return;
+            }
+
+            lastBackupAutosaveHash = stateHash;
+            onScreenDisplay?.Display(new BeatmapEditorToast(SlopSettingsStrings.BeatmapAutoSaved, editorBeatmap.BeatmapInfo.GetDisplayTitle()));
         }
 
         public bool OnPressed(KeyBindingPressEvent<PlatformAction> e)
