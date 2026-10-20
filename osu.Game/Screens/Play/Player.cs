@@ -584,6 +584,7 @@ namespace osu.Game.Screens.Play
                     DrawableRuleset.ResumeOverlay?.CreateProxy() ?? new Container(),
                     PauseOverlay = new PauseOverlay
                     {
+                        SaveReplay = Configuration.AllowUserInteraction && DrawableRuleset.ReplayScore == null ? importPausedScoreAsync : null,
                         OnResume = Resume,
                         Retries = RestartCount,
                         OnRetry = () => Restart(),
@@ -1029,6 +1030,34 @@ namespace osu.Game.Screens.Play
                     Logger.Error(ex, @"Score preparation failed!");
                 }
 
+                try
+                {
+                    await ImportScore(scoreCopy).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error(ex, @"Score import failed!");
+                }
+
+                return scoreCopy.ScoreInfo;
+            });
+        }
+
+        /// <summary>
+        /// Imports the score up to the current point in time as a failed score, without ending the recording of the replay.
+        /// </summary>
+        private Task<ScoreInfo> importPausedScoreAsync()
+        {
+            // Must be cloned synchronously as the score may be mutated after resuming.
+            Score scoreCopy = Score.DeepClone();
+
+            ScoreProcessor.PopulateScore(scoreCopy.ScoreInfo);
+            scoreCopy.ScoreInfo.Passed = false;
+            scoreCopy.ScoreInfo.Rank = ScoreRank.F;
+            scoreCopy.ScoreInfo.Date = DateTimeOffset.Now;
+
+            return Task.Run(async () =>
+            {
                 try
                 {
                     await ImportScore(scoreCopy).ConfigureAwait(false);
