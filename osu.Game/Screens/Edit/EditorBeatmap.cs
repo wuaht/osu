@@ -298,6 +298,12 @@ namespace osu.Game.Screens.Edit
             set => PlayableBeatmap.TimelineZoom = value;
         }
 
+        /// <summary>
+        /// The timeline zoom of the timing screen, which is independent of <see cref="TimelineZoom"/>.
+        /// Not persisted; <see langword="null"/> until the timing screen's timeline is zoomed.
+        /// </summary>
+        public double? TimingTimelineZoom { get; set; }
+
         public CountdownType Countdown
         {
             get => PlayableBeatmap.Countdown;

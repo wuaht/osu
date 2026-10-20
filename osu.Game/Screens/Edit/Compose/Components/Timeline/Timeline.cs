@@ -306,7 +306,7 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
                 float maximumZoom = getZoomLevelForVisibleMilliseconds(125);
                 ProportionalZoomThreshold = getZoomLevelForVisibleMilliseconds(500);
 
-                float initialZoom = (float)Math.Clamp(defaultTimelineZoom * (editorBeatmap.TimelineZoom == 0 ? 1 : editorBeatmap.TimelineZoom), minimumZoom, maximumZoom);
+                float initialZoom = (float)Math.Clamp(defaultTimelineZoom * (storedZoom == 0 ? 1 : storedZoom), minimumZoom, maximumZoom);
 
                 SetupZoom(initialZoom, minimumZoom, maximumZoom);
 
@@ -328,7 +328,22 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
         protected override void OnZoomChanged()
         {
             base.OnZoomChanged();
-            editorBeatmap.TimelineZoom = Zoom / defaultTimelineZoom;
+            storedZoom = Zoom / defaultTimelineZoom;
+        }
+
+        /// <summary>
+        /// The zoom relative to the default zoom, stored separately for the timing screen so that zooming there doesn't affect other screens.
+        /// </summary>
+        private double storedZoom
+        {
+            get => isTimingScreen ? editorBeatmap.TimingTimelineZoom ?? editorBeatmap.TimelineZoom : editorBeatmap.TimelineZoom;
+            set
+            {
+                if (isTimingScreen)
+                    editorBeatmap.TimingTimelineZoom = value;
+                else
+                    editorBeatmap.TimelineZoom = value;
+            }
         }
 
         protected override void UpdateAfterChildren()
