@@ -7,8 +7,6 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using osu.Framework.Allocation;
-using osu.Framework.Audio;
-using osu.Framework.Audio.Sample;
 using osu.Framework.Bindables;
 using osu.Framework.Extensions.LocalisationExtensions;
 using osu.Framework.Graphics;
@@ -62,8 +60,6 @@ namespace osu.Game.Screens.Select
         [Resolved]
         private RealmAccess realm { get; set; } = null!;
 
-        private Sample? sampleConfirmSelection;
-
         private Bindable<bool> showPlayButtons = null!;
 
         private Drawable title = null!;
@@ -74,10 +70,8 @@ namespace osu.Game.Screens.Select
         }
 
         [BackgroundDependencyLoader]
-        private void load(AudioManager audio, OsuConfigManager config)
+        private void load(OsuConfigManager config)
         {
-            sampleConfirmSelection = audio.Samples.Get(@"SongSelect/confirm-selection");
-
             showPlayButtons = config.GetBindable<bool>(OsuSetting.SlopEditorSongSelectShowPlayButtons);
 
             AddInternal(title = new EditorTitle
@@ -123,7 +117,6 @@ namespace osu.Game.Screens.Select
             if (!this.IsCurrentScreen())
                 return;
 
-            sampleConfirmSelection?.Play();
             this.Push(new EditorLoader());
         }
 
@@ -134,7 +127,6 @@ namespace osu.Game.Screens.Select
             if (!this.IsCurrentScreen())
                 return;
 
-            sampleConfirmSelection?.Play();
             this.Push(new NewBeatmapEditorLoader(audioTrack));
         }
 
