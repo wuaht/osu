@@ -133,11 +133,12 @@ namespace osu.Game.Rulesets.Osu.Edit.Streams
             // the last anchor's density is only shown while the segment before it accelerates towards it.
             var anchors = stream.GetDensityAnchors().Where(a => stream.UsesDensity(a.Point)).ToList();
 
-            if (anchors.Count != densityLabels.Count || anchors.Where((a, i) => densityLabels[i].ControlPoint != a.Point).Any())
-            {
-                densityLabels.Clear();
-                densityLabels.AddRange(anchors.Select(a => new DensityLabel(stream, a.Point)));
-            }
+            // existing labels are kept, so that an open popover isn't closed when another label appears or disappears.
+            foreach (var label in densityLabels.Where(l => anchors.All(a => a.Point != l.ControlPoint)).ToArray())
+                densityLabels.Remove(label, true);
+
+            foreach (var anchor in anchors.Where(a => densityLabels.All(l => l.ControlPoint != a.Point)))
+                densityLabels.Add(new DensityLabel(stream, anchor.Point));
 
             foreach (var label in densityLabels)
             {
