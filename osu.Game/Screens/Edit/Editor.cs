@@ -146,6 +146,11 @@ namespace osu.Game.Screens.Edit
 
         public readonly Bindable<EditorScreenMode> Mode = new Bindable<EditorScreenMode>();
 
+        /// <summary>
+        /// The playback speed selected by the user, kept when switching difficulties.
+        /// </summary>
+        public readonly BindableDouble PlaybackSpeed = new BindableDouble(1);
+
         public IBindable<bool> SamplePlaybackDisabled => samplePlaybackDisabled;
 
         /// <summary>
@@ -611,7 +616,8 @@ namespace osu.Game.Screens.Edit
         {
             Mode = Mode.Value,
             Time = clock.CurrentTimeAccurate,
-            ClipboardContent = nextRuleset == null || editorBeatmap.BeatmapInfo.Ruleset.ShortName == nextRuleset.ShortName ? Clipboard.Content.Value : string.Empty
+            ClipboardContent = nextRuleset == null || editorBeatmap.BeatmapInfo.Ruleset.ShortName == nextRuleset.ShortName ? Clipboard.Content.Value : string.Empty,
+            PlaybackSpeed = PlaybackSpeed.Value,
         };
 
         /// <summary>
@@ -623,6 +629,7 @@ namespace osu.Game.Screens.Edit
             Mode.Value = state.Mode;
             clock.Seek(state.Time);
             Clipboard.Content.Value = state.ClipboardContent;
+            PlaybackSpeed.Value = state.PlaybackSpeed;
         });
 
         public void TestGameplay()

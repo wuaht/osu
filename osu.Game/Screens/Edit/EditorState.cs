@@ -22,5 +22,10 @@ namespace osu.Game.Screens.Edit
         /// The editor clipboard content.
         /// </summary>
         public string ClipboardContent { get; set; } = string.Empty;
+
+        /// <summary>
+        /// The playback speed selected by the user.
+        /// </summary>
+        public double PlaybackSpeed { get; set; } = 1;
     }
 }

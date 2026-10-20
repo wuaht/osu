@@ -106,7 +106,10 @@ namespace osu.Game.Screens.Edit.Components
             editorClock.AudioAdjustments.AddAdjustment(AdjustableProperty.Frequency, frequencyAdjustment);
 
             if (editor != null)
+            {
                 currentScreenMode.BindTo(editor.Mode);
+                playbackSpeed.BindTo(editor.PlaybackSpeed);
+            }
         }
 
         protected override void LoadComplete()
