@@ -27,7 +27,7 @@ namespace osu.Game.Rulesets.Osu.Tests.Slop
         }
 
         [Test]
-        public void TestDensityChangesAtAnchorBetweenCircles()
+        public void TestCircleLiesOnAnchor()
         {
             var stream = createTwoSegmentStream();
             var points = stream.Path.Path.ControlPoints;
@@ -37,8 +37,8 @@ namespace osu.Game.Rulesets.Osu.Tests.Slop
 
             float[] xs = layout(stream);
 
-            // the circle after 200 covers the remaining 10 units at density 1, and the rest of its step at density 2.
-            Assert.That(xs, Is.EqualTo(new float[] { 0, 25, 50, 75, 100, 125, 150, 175, 200, 240, 290, 340, 390 }).Within(0.01f));
+            // the first section is stretched slightly so that its last circle lies on the anchor at 210.
+            Assert.That(xs, Is.EqualTo(new float[] { 0, 26.25f, 52.5f, 78.75f, 105, 131.25f, 157.5f, 183.75f, 210, 260, 310, 360, 410 }).Within(0.01f));
         }
 
         [Test]

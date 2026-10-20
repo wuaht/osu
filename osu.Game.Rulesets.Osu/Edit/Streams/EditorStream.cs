@@ -159,20 +159,23 @@ namespace osu.Game.Rulesets.Osu.Edit.Streams
             double baseSpacing = 100 * sliderMultiplier / Math.Max(1, BeatDivisor);
             var stops = getDensityStops(length);
 
-            double distance = 0;
+            var distances = new List<double> { 0 };
+
+            // every section between two anchors is fitted separately, so that a circle lies exactly on each anchor.
+            for (int i = 0; i < stops.Count - 1 && distances.Count < max_circles; i++)
+                fitSection(stops, stops[i].Distance, stops[i + 1].Distance, baseSpacing, distances);
+
             double time = Path.StartTime;
 
-            while (result.Count < max_circles)
+            foreach (double distance in distances.Take(max_circles))
             {
+                if (result.Count > 0)
+                    time += controlPointInfo.TimingPointAt(time).BeatLength / Math.Max(1, BeatDivisor);
+
                 result.Add((time, Path.Position + Path.Path.PositionAt(length > 0 ? Math.Min(1, distance / length) : 0)));
 
-                distance = step(stops, distance, baseSpacing);
-
-                // small leniency so that a stream which exactly fits its path doesn't lose its last circle to rounding errors.
-                if (length <= 0 || distance > length + 0.5)
+                if (length <= 0)
                     break;
-
-                time += controlPointInfo.TimingPointAt(time).BeatLength / Math.Max(1, BeatDivisor);
             }
 
             return result;
@@ -200,26 +203,76 @@ namespace osu.Game.Rulesets.Osu.Edit.Streams
             => GetDensityAnchors().Select(a => (Math.Min(a.Distance, length), GetDensity(a.Point), GetAccelerates(a.Point))).ToList();
 
         /// <summary>
-        /// Advances <paramref name="distance"/> by the spacing of one circle.
-        /// A step which crosses an anchor only uses the density before it for the part up to the anchor,
-        /// so that the spacing changes right at the anchor rather than one circle after it.
+        /// Adds the distances of the circles from <paramref name="from"/> (exclusive) to <paramref name="to"/> (inclusive).
+        /// The densities are scaled slightly, so that the section holds a whole number of circles and the last one lies on <paramref name="to"/>.
         /// </summary>
-        private static double step(List<(double Distance, double Density, bool Accelerates)> stops, double distance, double baseSpacing)
+        private static void fitSection(List<(double Distance, double Density, bool Accelerates)> stops, double from, double to, double baseSpacing, List<double> distances)
         {
-            // the part of the step which is still to be covered.
-            double remaining = 1;
+            if (to - from <= 0.001)
+                return;
 
-            while (remaining > 0)
+            int count = Math.Max(1, (int)Math.Round(countSteps(stops, from, to, baseSpacing)));
+
+            // the end of the section after walking the circles grows with the scale, so the scale which ends exactly on the anchor can be bisected.
+            double low = 0;
+            double high = 1;
+
+            while (walk(stops, from, count, baseSpacing * high) < to && high < 1024)
+                high *= 2;
+
+            for (int iteration = 0; iteration < 50; iteration++)
+            {
+                double mid = (low + high) / 2;
+
+                if (walk(stops, from, count, baseSpacing * mid) < to)
+                    low = mid;
+                else
+                    high = mid;
+            }
+
+            double distance = from;
+
+            for (int i = 1; i < count && distances.Count < max_circles; i++)
+            {
+                distance += baseSpacing * high * densityAt(stops, distance);
+                distances.Add(Math.Min(distance, to));
+            }
+
+            if (distances.Count < max_circles)
+                distances.Add(to);
+        }
+
+        /// <summary>
+        /// The number of circle spacings, including fractions, which fit between <paramref name="from"/> and <paramref name="to"/> at the chosen densities.
+        /// </summary>
+        private static double countSteps(List<(double Distance, double Density, bool Accelerates)> stops, double from, double to, double baseSpacing)
+        {
+            double distance = from;
+            double steps = 0;
+
+            while (steps < max_circles)
             {
                 double spacing = baseSpacing * densityAt(stops, distance);
-                double nextAnchor = stops.Select(s => s.Distance).Where(d => d > distance + 0.001).DefaultIfEmpty(double.PositiveInfinity).Min();
 
-                if (spacing <= 0 || distance + spacing * remaining <= nextAnchor)
-                    return distance + spacing * remaining;
+                if (spacing <= 0)
+                    return steps;
 
-                remaining -= (nextAnchor - distance) / spacing;
-                distance = nextAnchor;
+                if (distance + spacing >= to)
+                    return steps + (to - distance) / spacing;
+
+                distance += spacing;
+                steps++;
             }
+
+            return steps;
+        }
+
+        private static double walk(List<(double Distance, double Density, bool Accelerates)> stops, double from, int count, double baseSpacing)
+        {
+            double distance = from;
+
+            for (int i = 0; i < count; i++)
+                distance += baseSpacing * densityAt(stops, distance);
 
             return distance;
         }
