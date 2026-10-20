@@ -84,7 +84,7 @@ namespace osu.Game.Screens.Select
             {
                 RelativeSizeAxes = Axes.X,
                 Height = title_height,
-                Padding = new MarginPadding { Left = 4 },
+                Padding = new MarginPadding { Left = 18 },
                 Alpha = 0,
             });
         }
