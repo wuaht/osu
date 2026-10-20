@@ -86,3 +86,10 @@ Not accepting contributions unless you know what I'm building (this is a persona
 
 If you didn't already notice by now everything i added (except for logo) was made using Claude Opus 5.5, which is why *slop!* is an independant fork and is not intended to be merged into
 upstream ([they don't accept AI](https://github.com/ppy/osu/blob/master/README.md#contributing)).
+
+## Credits
+- [Khangaroo](https://github.com/khang06) <img width="13" alt="iykyk" src="assets/credit-khang.png">
+- [McOsu](https://github.com/McKay42/McOsu) <img width="13" alt="McOsu" src="assets/credit-mcosu.png">
+- [Mapping Tools](https://github.com/olibomby/mapping_tools) <img width="13" alt="Mapping Tools" src="assets/credit-mt.png">
+- [osucad](https://github.com/minetoblend/osucad) <img width="13" alt="osucad" src="assets/credit-osucad.png"> & his [osu! fork](https://github.com/minetoblend/osu)
+- claude
