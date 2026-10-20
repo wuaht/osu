@@ -59,6 +59,9 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
         [Resolved]
         private BindableBeatDivisor? beatDivisor { get; set; }
 
+        [Resolved]
+        private HitObjectComposer? composer { get; set; }
+
         private PathControlPoint? placementControlPoint;
 
         public override Quad SelectionQuad
@@ -561,7 +564,7 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
 
             if (e.Key == Key.F && e.ControlPressed && e.ShiftPressed)
             {
-                convertToStream();
+                showStreamConversion();
                 return true;
             }
 
@@ -703,6 +706,15 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
             HitObject.Position += first;
         }
 
+        private void showStreamConversion()
+        {
+            // the popover handles a single slider at a time, so fall back to a plain conversion for multiple.
+            if (composer is OsuHitObjectComposer osuComposer && editorBeatmap?.SelectedHitObjects.Count == 1)
+                osuComposer.ShowStreamConversion(HitObject);
+            else
+                convertToStream();
+        }
+
         // duplicated in `JuiceStreamSelectionBlueprint.convertToStream()`
         // consider extracting common helper when applying changes here
         private void convertToStream()
@@ -758,7 +770,7 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
             {
                 Hotkey = new Hotkey(new KeyCombination(InputKey.Control, InputKey.MouseLeft))
             },
-            new OsuMenuItem("Convert to stream", MenuItemType.Destructive, convertToStream)
+            new OsuMenuItem("Convert to stream", MenuItemType.Destructive, showStreamConversion)
             {
                 Hotkey = new Hotkey(new KeyCombination(InputKey.Control, InputKey.Shift, InputKey.F))
             },

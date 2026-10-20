@@ -100,6 +100,11 @@ namespace osu.Game.Rulesets.Osu.Edit
 
         private Bindable<bool> drawScreenBorders;
 
+        /// <summary>
+        /// Opens a popover to convert <paramref name="slider"/> into a stream with a live preview.
+        /// </summary>
+        public void ShowStreamConversion(Slider slider) => LayerBelowRuleset.Add(new StreamConversionAnchor(slider));
+
         [BackgroundDependencyLoader]
         private void load(OsuConfigManager config)
         {
