@@ -170,6 +170,7 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
 
             updatePartHighlight();
             updateInsertionPreview();
+            updateCurveDrag();
         }
 
         private void updateInsertionPreview()
@@ -344,6 +345,9 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
 
             switch (e.Button)
             {
+                case MouseButton.Middle:
+                    return !isControlPointHovered && startCurveDrag(e.MousePosition);
+
                 case MouseButton.Right:
                     if (e.ControlPressed && !isControlPointHovered && splitAtPosition(e.MousePosition, !e.ShiftPressed))
                         return true;
@@ -547,9 +551,149 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
 
         protected override void OnMouseUp(MouseUpEvent e)
         {
+            if (e.Button == MouseButton.Middle)
+            {
+                endCurveDrag();
+                return;
+            }
+
             if (placementControlPoint != null)
                 endControlPointPlacement();
         }
+
+        #region Curve dragging
+
+        /// <summary>
+        /// The state of a middle-click drag on a bezier segment, which bends the segment so that the clicked point follows the cursor.
+        /// </summary>
+        private CurveDrag? curveDrag;
+
+        private record CurveDrag(Vector2 StartPosition, PathControlPoint[] ControlPoints, Vector2[] OriginalPositions, double[] Influences, double TotalSquaredInfluence);
+
+        /// <param name="position">The position of the cursor, in playfield space.</param>
+        /// <returns>Whether a drag was started.</returns>
+        private bool startCurveDrag(Vector2 position)
+        {
+            if (editorBeatmap == null || curveDrag != null)
+                return false;
+
+            double pathDistance = HitObject.Path.Distance;
+
+            if (pathDistance <= 0)
+                return false;
+
+            double distance = findClosestDistance(position - HitObject.Position, pathDistance);
+
+            // find the segment containing the clicked point.
+            double segmentStart = 0;
+
+            for (int start = 0; start < controlPoints.Count - 1;)
+            {
+                int end = start + 1;
+
+                while (end < controlPoints.Count - 1 && controlPoints[end].Type == null)
+                    end++;
+
+                var segment = controlPoints.Skip(start).Take(end - start + 1).ToArray();
+                double segmentLength = new SliderPath(segment.Select((c, i) => new PathControlPoint(c.Position, i == 0 ? c.Type : null)).ToArray()).CalculatedDistance;
+
+                if (distance <= segmentStart + segmentLength || end == controlPoints.Count - 1)
+                {
+                    // only bezier segments with at least one point in between their ends can be bent.
+                    if (segment[0].Type != PathType.BEZIER || segment.Length < 3 || segmentLength <= 0)
+                        return false;
+
+                    double t = Math.Clamp((distance - segmentStart) / segmentLength, 0, 1);
+                    int degree = segment.Length - 1;
+
+                    double[] influences = new double[segment.Length];
+                    double totalSquaredInfluence = 0;
+
+                    for (int i = 0; i < segment.Length; i++)
+                    {
+                        influences[i] = bernstein(degree, i, t);
+
+                        // the ends of the segment are never moved.
+                        if (i > 0 && i < degree)
+                            totalSquaredInfluence += influences[i] * influences[i];
+                    }
+
+                    totalSquaredInfluence = Math.Max(totalSquaredInfluence, 1.0 / (degree * degree));
+
+                    changeHandler?.BeginChange();
+                    curveDrag = new CurveDrag(position, segment, segment.Select(c => c.Position).ToArray(), influences, totalSquaredInfluence);
+                    return true;
+                }
+
+                segmentStart += segmentLength;
+                start = end;
+            }
+
+            return false;
+        }
+
+        private void updateCurveDrag()
+        {
+            if (curveDrag == null)
+                return;
+
+            var mouse = GetContainingInputManager()?.CurrentState.Mouse;
+
+            if (mouse?.IsPressed(MouseButton.Middle) != true)
+            {
+                endCurveDrag();
+                return;
+            }
+
+            Vector2 delta = ToLocalSpace(mouse.Position) - curveDrag.StartPosition;
+            bool changed = false;
+
+            // moving each point proportionally to its influence moves the clicked point of the curve exactly with the cursor.
+            for (int i = 1; i < curveDrag.ControlPoints.Length - 1; i++)
+            {
+                double weight = curveDrag.Influences[i] / curveDrag.TotalSquaredInfluence;
+                Vector2 original = curveDrag.OriginalPositions[i];
+                var newPosition = new Vector2((float)Math.Round(original.X + delta.X * weight), (float)Math.Round(original.Y + delta.Y * weight));
+
+                if (curveDrag.ControlPoints[i].Position == newPosition)
+                    continue;
+
+                curveDrag.ControlPoints[i].Position = newPosition;
+                changed = true;
+            }
+
+            if (!changed)
+                return;
+
+            var keyboard = GetContainingInputManager()!.CurrentState.Keyboard;
+
+            // as with dragging control points, holding alt doesn't snap the length and the slider follows its whole path.
+            if (keyboard.AltPressed)
+                HitObject.Path.ExpectedDistance.Value = null;
+            else
+                HitObject.SnapTo(distanceSnapProvider);
+        }
+
+        private void endCurveDrag()
+        {
+            if (curveDrag == null)
+                return;
+
+            curveDrag = null;
+            changeHandler?.EndChange();
+        }
+
+        private static double bernstein(int degree, int index, double t)
+        {
+            double binomial = 1;
+
+            for (int i = 1; i <= index; i++)
+                binomial = binomial * (degree - index + i) / i;
+
+            return binomial * Math.Pow(t, index) * Math.Pow(1 - t, degree - index);
+        }
+
+        #endregion
 
         private void endControlPointPlacement()
         {
