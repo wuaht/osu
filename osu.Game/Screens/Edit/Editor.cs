@@ -273,6 +273,12 @@ namespace osu.Game.Screens.Edit
         [CanBeNull]
         public event Action<double> ShowSampleEditPopoverRequested;
 
+        /// <summary>
+        /// An audio track to apply to a new beatmap once its setup screen is shown.
+        /// </summary>
+        [CanBeNull]
+        public System.IO.FileInfo InitialAudioTrack { get; set; }
+
         public Editor(EditorLoader loader = null)
         {
             this.loader = loader;

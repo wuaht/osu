@@ -124,6 +124,18 @@ namespace osu.Game.Screens.Edit.Setup
             audioTrackChooser.Current.BindValueChanged(audioTrackChanged);
         }
 
+        protected override void LoadComplete()
+        {
+            base.LoadComplete();
+
+            // a new beatmap may have been created from an audio track (e.g. dropped onto the beatmap editor song select).
+            if (editor?.InitialAudioTrack is FileInfo initialAudioTrack)
+            {
+                editor.InitialAudioTrack = null;
+                audioTrackChooser.Current.Value = initialAudioTrack;
+            }
+        }
+
         public bool ChangeBackgroundImage(FileInfo source, bool applyToAllDifficulties)
         {
             if (!source.Exists)

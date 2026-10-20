@@ -3,6 +3,8 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using osu.Framework.Allocation;
 using osu.Framework.Audio;
@@ -28,6 +30,7 @@ using osu.Game.Overlays;
 using osu.Game.Screens.Edit;
 using osu.Game.Screens.Footer;
 using osu.Game.Users;
+using osu.Game.Utils;
 using osuTK;
 using WebCommonStrings = osu.Game.Resources.Localisation.Web.CommonStrings;
 
@@ -36,7 +39,7 @@ namespace osu.Game.Screens.Select
     /// <summary>
     /// A song select which opens the selected beatmap in the editor instead of starting gameplay.
     /// </summary>
-    public partial class EditorSongSelect : SongSelect
+    public partial class EditorSongSelect : SongSelect, ICanAcceptFiles
     {
         private const float title_height = 50;
 
@@ -81,7 +84,7 @@ namespace osu.Game.Screens.Select
             {
                 RelativeSizeAxes = Axes.X,
                 Height = title_height,
-                Padding = new MarginPadding { Left = WaveOverlayContainer.WIDTH_PADDING },
+                Padding = new MarginPadding { Left = WEDGE_CONTENT_MARGIN },
                 Alpha = 0,
             });
         }
@@ -124,14 +127,30 @@ namespace osu.Game.Screens.Select
             this.Push(new EditorLoader());
         }
 
-        private void createNewBeatmap()
+        private void createNewBeatmap() => createNewBeatmap(null);
+
+        private void createNewBeatmap(FileInfo? audioTrack)
         {
             if (!this.IsCurrentScreen())
                 return;
 
             sampleConfirmSelection?.Play();
-            this.Push(new NewBeatmapEditorLoader());
+            this.Push(new NewBeatmapEditorLoader(audioTrack));
         }
+
+        IEnumerable<string> ICanAcceptFiles.HandledExtensions => SupportedExtensions.AUDIO_EXTENSIONS;
+
+        Task ICanAcceptFiles.Import(params string[] paths)
+        {
+            string? audioPath = paths.FirstOrDefault(p => SupportedExtensions.AUDIO_EXTENSIONS.Contains(Path.GetExtension(p).ToLowerInvariant()));
+
+            if (audioPath != null)
+                Schedule(() => createNewBeatmap(new FileInfo(audioPath)));
+
+            return Task.CompletedTask;
+        }
+
+        Task ICanAcceptFiles.Import(ImportTask[] tasks, ImportParameters parameters) => throw new NotImplementedException();
 
         public override bool OnPressed(KeyBindingPressEvent<GlobalAction> e)
         {
@@ -211,17 +230,20 @@ namespace osu.Game.Screens.Select
         public override void OnEntering(ScreenTransitionEvent e)
         {
             base.OnEntering(e);
+            game?.RegisterImportHandler(this);
             title.FadeIn(ENTER_DURATION, Easing.OutQuint);
         }
 
         public override void OnResuming(ScreenTransitionEvent e)
         {
             base.OnResuming(e);
+            game?.RegisterImportHandler(this);
             title.FadeIn(ENTER_DURATION, Easing.OutQuint);
         }
 
         public override void OnSuspending(ScreenTransitionEvent e)
         {
+            game?.UnregisterImportHandler(this);
             title.FadeOut(ENTER_DURATION / 2, Easing.OutQuint);
             base.OnSuspending(e);
         }
@@ -231,6 +253,7 @@ namespace osu.Game.Screens.Select
             if (base.OnExiting(e))
                 return true;
 
+            game?.UnregisterImportHandler(this);
             title.FadeOut(ENTER_DURATION / 2, Easing.OutQuint);
             return false;
         }
@@ -290,10 +313,19 @@ namespace osu.Game.Screens.Select
         }
 
         /// <summary>
-        /// Opens the editor with a new beatmap rather than the beatmap selected at song select.
+        /// Opens the editor with a new beatmap rather than the beatmap selected at song select, optionally using the given audio track.
         /// </summary>
         private partial class NewBeatmapEditorLoader : EditorLoader
         {
+            private readonly FileInfo? audioTrack;
+
+            public NewBeatmapEditorLoader(FileInfo? audioTrack)
+            {
+                this.audioTrack = audioTrack;
+            }
+
+            protected override Editor CreateEditor() => new Editor(this) { InitialAudioTrack = audioTrack };
+
             protected override void LoadComplete()
             {
                 // the beatmap can't be reset at song select as it would immediately select another one while still current,
