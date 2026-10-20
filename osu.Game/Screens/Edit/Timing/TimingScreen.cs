@@ -10,7 +10,9 @@ using osu.Framework.Graphics.Containers;
 using osu.Framework.Input;
 using osu.Framework.Input.Bindings;
 using osu.Framework.Input.Events;
+using osu.Framework.Platform;
 using osu.Game.Beatmaps.ControlPoints;
+using osu.Game.Extensions;
 using osu.Game.Screens.Edit.Compose.Components.Timeline;
 
 namespace osu.Game.Screens.Edit.Timing
@@ -39,6 +41,9 @@ namespace osu.Game.Screens.Edit.Timing
 
         [Resolved]
         private EditorClock? editorClock { get; set; }
+
+        [Resolved]
+        private Clipboard hostClipboard { get; set; } = null!;
 
         public TimingScreen()
             : base(EditorScreenMode.Timing)
@@ -102,6 +107,8 @@ namespace osu.Game.Screens.Edit.Timing
                     SelectedGroups.Remove(removed);
             });
 
+            SelectedGroups.BindCollectionChanged((_, _) => CanCopy.Value = SelectedGroups.Count > 0, true);
+
             // When entering the timing screen, let's choose the closest valid timing point.
             // This will emulate the osu-stable behaviour where a metronome and timing information
             // are presented on entering the screen.
@@ -130,6 +137,17 @@ namespace osu.Game.Screens.Edit.Timing
                 double latestActiveTime = Math.Max(activeTimingPoint.Time, activeEffectPoint.Time);
                 SelectedGroup.Value = EditorBeatmap.ControlPointInfo.GroupAt(latestActiveTime);
             }
+        }
+
+        /// <summary>
+        /// Copies the timestamps of the selected groups, rather than their full contents.
+        /// </summary>
+        public override void Copy()
+        {
+            if (!CanCopy.Value)
+                return;
+
+            hostClipboard.SetText(string.Join(", ", SelectedGroups.Select(g => g.Time).Order().Select(t => t.ToEditorFormattedString())));
         }
 
         public bool OnPressed(KeyBindingPressEvent<PlatformAction> e)
