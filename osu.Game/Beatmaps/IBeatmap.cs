@@ -103,6 +103,12 @@ namespace osu.Game.Beatmaps
 
         int[] Bookmarks { get; internal set; }
 
+        /// <summary>
+        /// Editor-only stream objects, stored as the raw lines of the <c>[SlopStreams]</c> section.
+        /// The streams' hit circles are regular hit objects, so this is only required to keep the streams editable.
+        /// </summary>
+        string[] SlopStreams { get; internal set; }
+
         double[] SliderVelocityPresets { get; internal set; }
 
         int BeatmapVersion { get; }

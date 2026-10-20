@@ -79,6 +79,10 @@ namespace osu.Game.Beatmaps.Formats
 
             writer.WriteLine();
             handleHitObjects(writer);
+
+            // no blank line is written before the section, as it would otherwise be treated as part of the hit objects section when patching the editor beatmap.
+            if (beatmap.SlopStreams.Length > 0)
+                handleSlopStreams(writer);
         }
 
         private void handleGeneral(TextWriter writer)
@@ -443,6 +447,14 @@ namespace osu.Game.Beatmaps.Formats
 
             foreach (var h in beatmap.HitObjects)
                 handleHitObject(writer, h);
+        }
+
+        private void handleSlopStreams(TextWriter writer)
+        {
+            writer.WriteLine("[SlopStreams]");
+
+            foreach (string line in beatmap.SlopStreams)
+                writer.WriteLine(line);
         }
 
         private void handleHitObject(TextWriter writer, HitObject hitObject)

@@ -64,6 +64,11 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders.Components
 
         private Bindable<bool> limitedDistanceSnap { get; set; } = null!;
 
+        /// <summary>
+        /// Whether the length of the path is snapped to the beat divisor when it is modified.
+        /// </summary>
+        public bool LengthSnapping { get; init; } = true;
+
         public PathControlPointVisualiser(T hitObject, bool allowSelection)
         {
             this.hitObject = hitObject;
@@ -410,7 +415,9 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders.Components
 
             EnsureValidPathTypes();
 
-            if (hitObject.Path.Distance < originalDistance)
+            if (!LengthSnapping)
+                hitObject.Path.ExpectedDistance.Value = null;
+            else if (hitObject.Path.Distance < originalDistance)
                 hitObject.SnapTo(distanceSnapProvider);
             else
                 hitObject.Path.ExpectedDistance.Value = originalDistance;
@@ -525,7 +532,7 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders.Components
 
         private void snapLength(bool ignoreBeatSnap)
         {
-            if (ignoreBeatSnap)
+            if (ignoreBeatSnap || !LengthSnapping)
                 hitObject.Path.ExpectedDistance.Value = null;
             else
                 hitObject.SnapTo(distanceSnapProvider);

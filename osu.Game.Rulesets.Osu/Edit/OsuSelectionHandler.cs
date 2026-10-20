@@ -21,6 +21,7 @@ using osu.Game.Rulesets.Edit;
 using osu.Game.Rulesets.Objects;
 using osu.Game.Rulesets.Objects.Types;
 using osu.Game.Rulesets.Osu.Beatmaps;
+using osu.Game.Rulesets.Osu.Edit.Streams;
 using osu.Game.Rulesets.Osu.Objects;
 using osu.Game.Rulesets.Osu.UI;
 using osu.Game.Screens.Edit.Compose.Components;
@@ -95,6 +96,9 @@ namespace osu.Game.Rulesets.Osu.Edit
 
         [Resolved]
         private OsuHitObjectComposer composer { get; set; } = null!;
+
+        [Resolved]
+        private EditorStreamManager? streamManager { get; set; }
 
         [Resolved]
         private OsuConfigManager config { get; set; } = null!;
@@ -563,7 +567,33 @@ namespace osu.Game.Rulesets.Osu.Edit
 
             if (canMerge(selectedMergeableObjects))
                 yield return new OsuMenuItem("Merge selection", MenuItemType.Destructive, mergeSelection);
+
+            if (streamManager?.SelectedStream.Value is EditorStream stream)
+                yield return createStreamMenuItem(stream);
         }
+
+        private MenuItem createStreamMenuItem(EditorStream stream)
+        {
+            var divisorItems = stream_divisors.Append(stream.BeatDivisor).Distinct().Order().Select(d => new OsuMenuItem($"1/{d}", d == stream.BeatDivisor ? MenuItemType.Highlighted : MenuItemType.Standard, () =>
+            {
+                ChangeHandler?.BeginChange();
+                stream.BeatDivisor = d;
+                streamManager!.Invalidate(stream);
+                streamManager.ApplyPendingLayouts();
+                ChangeHandler?.EndChange();
+            }));
+
+            return new OsuMenuItem("Stream")
+            {
+                Items = new MenuItem[]
+                {
+                    new OsuMenuItem("Beat snap") { Items = divisorItems.ToArray() },
+                    new OsuMenuItem("Convert to circles", MenuItemType.Destructive, () => streamManager!.ConvertToCircles(stream)),
+                }
+            };
+        }
+
+        private static readonly int[] stream_divisors = { 1, 2, 3, 4, 6, 8, 12, 16 };
 
         private bool canMerge(IReadOnlyList<OsuHitObject> objects) =>
             objects.Count > 1

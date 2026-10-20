@@ -236,6 +236,10 @@ namespace osu.Game.Beatmaps.Formats
                 case Section.HitObjects:
                     handleHitObject(line);
                     return;
+
+                case Section.SlopStreams:
+                    beatmap.SlopStreams = beatmap.SlopStreams.Append(line).ToArray();
+                    return;
             }
 
             base.ParseLine(beatmap, section, line, isPrimaryStream);

@@ -45,6 +45,7 @@ namespace osu.Game.Screens.Edit
             editorBeatmap.BeginChange();
             processDifficulty(() => newBeatmap ??= readBeatmap(newState));
             processHitObjects(result, () => newBeatmap ??= readBeatmap(newState));
+            processSlopStreams(() => newBeatmap ??= readBeatmap(newState));
             processTimingPoints(() => newBeatmap ??= readBeatmap(newState));
             processBreaks(() => newBeatmap ??= readBeatmap(newState));
             processBookmarks(() => newBeatmap ??= readBeatmap(newState));
@@ -126,6 +127,12 @@ namespace osu.Game.Screens.Edit
 
                 editorBeatmap.Breaks.Add(newBreak);
             }
+        }
+
+        private void processSlopStreams(Func<IBeatmap> getNewBeatmap)
+        {
+            // always applied (as a new array), as the streams have to be resolved again after their hit objects were re-added.
+            editorBeatmap.SlopStreams.Value = getNewBeatmap().SlopStreams.ToArray();
         }
 
         private void processBookmarks(Func<IBeatmap> getNewBeatmap)

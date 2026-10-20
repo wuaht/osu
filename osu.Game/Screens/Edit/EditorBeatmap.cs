@@ -147,6 +147,9 @@ namespace osu.Game.Screens.Edit
                 EndChange();
             });
 
+            SlopStreams = new Bindable<string[]>(playableBeatmap.SlopStreams);
+            SlopStreams.BindValueChanged(s => playableBeatmap.SlopStreams = s.NewValue);
+
             SliderVelocityPresets = new BindableList<double>(playableBeatmap.SliderVelocityPresets);
             SliderVelocityPresets.BindCollectionChanged((_, _) =>
             {
@@ -313,6 +316,17 @@ namespace osu.Game.Screens.Edit
         {
             get => PlayableBeatmap.Bookmarks;
             set => PlayableBeatmap.Bookmarks = value;
+        }
+
+        /// <summary>
+        /// The raw lines of the editor-only stream objects (see <see cref="IBeatmap.SlopStreams"/>).
+        /// </summary>
+        public readonly Bindable<string[]> SlopStreams;
+
+        string[] IBeatmap.SlopStreams
+        {
+            get => PlayableBeatmap.SlopStreams;
+            set => SlopStreams.Value = value;
         }
 
         public readonly BindableList<double> SliderVelocityPresets;

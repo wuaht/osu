@@ -87,11 +87,16 @@ namespace osu.Game.Rulesets.Edit
 
         private bool placementBegun;
 
+        /// <summary>
+        /// Whether <see cref="HitObject"/> should be shown in the playfield while it is being placed.
+        /// </summary>
+        protected virtual bool ShowsPlacementObject => true;
+
         protected override void BeginPlacement(bool commitStart = false)
         {
             base.BeginPlacement(commitStart);
 
-            if (State.Value == Visibility.Visible)
+            if (State.Value == Visibility.Visible && ShowsPlacementObject)
                 placementHandler.ShowPlacement(HitObject);
 
             placementBegun = true;
@@ -102,10 +107,15 @@ namespace osu.Game.Rulesets.Edit
             base.EndPlacement(commit);
 
             if (IsValidForPlacement && commit)
-                placementHandler.CommitPlacement(HitObject);
+                CommitHitObject();
             else
                 placementHandler.HidePlacement();
         }
+
+        /// <summary>
+        /// Adds the placed <see cref="HitObject"/> to the beatmap.
+        /// </summary>
+        protected virtual void CommitHitObject() => placementHandler.CommitPlacement(HitObject);
 
         protected override void Update()
         {
@@ -137,7 +147,7 @@ namespace osu.Game.Rulesets.Edit
         {
             base.PopIn();
 
-            if (placementBegun)
+            if (placementBegun && ShowsPlacementObject)
                 placementHandler.ShowPlacement(HitObject);
         }
 

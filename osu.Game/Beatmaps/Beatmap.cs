@@ -146,6 +146,8 @@ namespace osu.Game.Beatmaps
 
         public int[] Bookmarks { get; set; } = Array.Empty<int>();
 
+        public string[] SlopStreams { get; set; } = Array.Empty<string>();
+
         public double[] SliderVelocityPresets { get; set; } = [0.75, 1, 1.5];
 
         public int BeatmapVersion { get; set; } = LegacyBeatmapEncoder.FIRST_LAZER_VERSION;

@@ -464,6 +464,12 @@ namespace osu.Game.Rulesets.Difficulty
                 set => baseBeatmap.Bookmarks = value;
             }
 
+            public string[] SlopStreams
+            {
+                get => baseBeatmap.SlopStreams;
+                set => baseBeatmap.SlopStreams = value;
+            }
+
             public double[] SliderVelocityPresets
             {
                 get => baseBeatmap.SliderVelocityPresets;

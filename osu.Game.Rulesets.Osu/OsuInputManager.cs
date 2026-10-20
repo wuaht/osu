@@ -133,5 +133,8 @@ namespace osu.Game.Rulesets.Osu
 
         [LocalisableDescription(typeof(EditorStrings), nameof(EditorStrings.ToggleDistanceSnap))]
         EditorToggleDistanceSnap,
+
+        [LocalisableDescription(typeof(OsuEditorStrings), nameof(OsuEditorStrings.StreamTool))]
+        EditorStreamTool,
     }
 }

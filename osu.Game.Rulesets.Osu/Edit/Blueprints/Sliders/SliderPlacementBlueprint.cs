@@ -63,6 +63,21 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
 
         protected override bool IsValidForPlacement => base.IsValidForPlacement && (PlacementActive == PlacementState.Waiting || HitObject.Path.HasValidLengthForPlacement);
 
+        /// <summary>
+        /// Whether the length of the placed path is snapped to the beat divisor.
+        /// </summary>
+        protected virtual bool SnapsLength => true;
+
+        /// <summary>
+        /// Whether the slider body and its head and tail circles are displayed while placing.
+        /// </summary>
+        protected virtual bool ShowsSliderPieces => true;
+
+        /// <summary>
+        /// The visualiser of the placed path's control points.
+        /// </summary>
+        protected PathControlPointVisualiser<Slider> ControlPointVisualiser => controlPointVisualiser;
+
         public SliderPlacementBlueprint()
             : base(new Slider())
         {
@@ -82,6 +97,13 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
                 tailCirclePiece = new HitCirclePiece(),
                 controlPointVisualiser = new PathControlPointVisualiser<Slider>(HitObject, false)
             };
+
+            if (!ShowsSliderPieces)
+            {
+                bodyPiece.Alpha = 0;
+                headCirclePiece.Alpha = 0;
+                tailCirclePiece.Alpha = 0;
+            }
 
             state = SliderPlacementState.Initial;
             limitedDistanceSnap = config.GetBindable<bool>(OsuSetting.EditorLimitedDistanceSnap);
@@ -428,7 +450,9 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
         private void updateSlider()
         {
             // while holding alt, the length is not snapped to the beat divisor.
-            if (state == SliderPlacementState.Drawing || inputManager.CurrentState.Keyboard.AltPressed)
+            if (!SnapsLength)
+                HitObject.Path.ExpectedDistance.Value = null;
+            else if (state == SliderPlacementState.Drawing || inputManager.CurrentState.Keyboard.AltPressed)
                 HitObject.Path.ExpectedDistance.Value = (float)HitObject.Path.CalculatedDistance;
             else
                 HitObject.Path.ExpectedDistance.Value = distanceSnapProvider?.FindSnappedDistance((float)HitObject.Path.CalculatedDistance, HitObject.StartTime, HitObject) ?? (float)HitObject.Path.CalculatedDistance;
@@ -436,6 +460,15 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
             bodyPiece.UpdateFrom(HitObject);
             headCirclePiece.UpdateFrom(HitObject.HeadCircle);
             tailCirclePiece.UpdateFrom(HitObject.TailCircle);
+
+            OnSliderUpdated();
+        }
+
+        /// <summary>
+        /// Invoked every time the placed slider was updated.
+        /// </summary>
+        protected virtual void OnSliderUpdated()
+        {
         }
 
         private void updateSliderPathFromBSplineBuilder()

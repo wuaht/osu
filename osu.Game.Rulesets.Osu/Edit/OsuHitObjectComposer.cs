@@ -28,6 +28,7 @@ using osu.Game.Rulesets.Edit.Tools;
 using osu.Game.Rulesets.Mods;
 using osu.Game.Rulesets.Objects;
 using osu.Game.Rulesets.Objects.Types;
+using osu.Game.Rulesets.Osu.Edit.Streams;
 using osu.Game.Rulesets.Osu.Objects;
 using osu.Game.Rulesets.Osu.UI;
 using osu.Game.Rulesets.UI;
@@ -56,6 +57,7 @@ namespace osu.Game.Rulesets.Osu.Edit
             new HitCircleCompositionTool(),
             new SliderCompositionTool(),
             new SpinnerCompositionTool(),
+            new StreamCompositionTool(),
             new GridFromPointsTool()
         };
 
@@ -91,6 +93,9 @@ namespace osu.Game.Rulesets.Osu.Edit
         [Cached]
         protected readonly FreehandSliderToolboxGroup FreehandSliderToolboxGroup = new FreehandSliderToolboxGroup();
 
+        [Cached]
+        private readonly EditorStreamManager streamManager = new EditorStreamManager();
+
         private Bindable<bool> visualSpacingSnap;
         private Bindable<bool> blanketSnap;
         private Bindable<bool> lineSnap;
@@ -114,6 +119,7 @@ namespace osu.Game.Rulesets.Osu.Edit
             sliderBlanketSnap = config.GetBindable<bool>(OsuSetting.SlopEditorSliderBlanketSnap);
 
             AddInternal(DistanceSnapProvider);
+            AddInternal(streamManager);
             DistanceSnapProvider.AttachToToolbox(RightToolbox);
 
             // Give a bit of breathing room around the playfield content.
@@ -123,6 +129,7 @@ namespace osu.Game.Rulesets.Osu.Edit
             PlayfieldContentContainer.Add(patternSnapGuides = new PatternSnapGuideOverlay());
             PlayfieldContentContainer.Add(new OffscreenObjectOverlay(Playfield));
             PlayfieldContentContainer.Add(new SnapTargetAnchorOverlay(Playfield, () => EditorBeatmap.SelectedHitObjects.OfType<Slider>()));
+            PlayfieldContentContainer.Add(DrawableRuleset.CreatePlayfieldAdjustmentContainer().WithChild(new StreamEditOverlay()));
 
             LayerBelowRuleset.Add(
                 distanceSnapGridContainer = new Container

@@ -85,6 +85,7 @@ namespace osu.Game.Beatmaps
             beatmap.Countdown = original.Countdown;
             beatmap.CountdownOffset = original.CountdownOffset;
             beatmap.Bookmarks = original.Bookmarks;
+            beatmap.SlopStreams = original.SlopStreams;
             beatmap.SliderVelocityPresets = original.SliderVelocityPresets;
             beatmap.BeatmapVersion = original.BeatmapVersion;
 

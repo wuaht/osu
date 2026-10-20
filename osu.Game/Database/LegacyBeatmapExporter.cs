@@ -79,6 +79,9 @@ namespace osu.Game.Database
 
             MutateBeatmap(model, playableBeatmap);
 
+            // editor-only streams are exported as the regular hit circles they consist of.
+            playableBeatmap.SlopStreams = Array.Empty<string>();
+
             // Encode to legacy format
             var stream = new MemoryStream();
 
