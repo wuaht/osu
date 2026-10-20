@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
@@ -94,7 +95,7 @@ namespace osu.Game.Rulesets.Osu.Edit.Streams
         {
             base.OnSliderUpdated();
 
-            if (!IsLoaded || PlacementActive != PlacementState.Active)
+            if (!IsLoaded || PlacementActive == PlacementState.Finished)
             {
                 pathLine.Alpha = 0;
                 circlePieces.Alpha = 0;
@@ -102,18 +103,31 @@ namespace osu.Game.Rulesets.Osu.Edit.Streams
                 return;
             }
 
-            pathLine.Alpha = 1;
             circlePieces.Alpha = 1;
-            densityLabel.Alpha = 1;
 
-            pathLine.UpdateFrom(HitObject);
+            List<Vector2> layout;
 
-            var stream = createStream();
-            var layout = stream.Generate(editorBeatmap.ControlPointInfo, editorBeatmap.Difficulty.SliderMultiplier);
+            if (PlacementActive == PlacementState.Waiting)
+            {
+                // like the other placement tools, show where the first circle is going to be placed.
+                pathLine.Alpha = 0;
+                densityLabel.Alpha = 0;
+                layout = new List<Vector2> { HitObject.Position };
+            }
+            else
+            {
+                pathLine.Alpha = 1;
+                densityLabel.Alpha = 1;
 
-            var points = stream.Path.Path.ControlPoints;
-            densityLabel.Position = HitObject.Position + points[^1].Position + new Vector2(0, circleScale * OsuHitObject.OBJECT_RADIUS * 0.6f + 8);
-            densityText.Text = $"{stream.GetDensity(points[^1]).ToString("0.0#", CultureInfo.InvariantCulture)}x";
+                pathLine.UpdateFrom(HitObject);
+
+                var stream = createStream();
+                layout = stream.Generate(editorBeatmap.ControlPointInfo, editorBeatmap.Difficulty.SliderMultiplier).Select(c => c.Position).ToList();
+
+                var points = stream.Path.Path.ControlPoints;
+                densityLabel.Position = HitObject.Position + points[^1].Position + new Vector2(0, circleScale * OsuHitObject.OBJECT_RADIUS * 0.6f + 8);
+                densityText.Text = $"{stream.GetDensity(points[^1]).ToString("0.0#", CultureInfo.InvariantCulture)}x";
+            }
 
             while (circlePieces.Count < layout.Count)
                 circlePieces.Add(new HitCirclePiece());
@@ -129,7 +143,7 @@ namespace osu.Game.Rulesets.Osu.Edit.Streams
                 }
 
                 piece.Alpha = 1;
-                piece.Position = layout[i].Position;
+                piece.Position = layout[i];
                 piece.Scale = new Vector2(circleScale);
             }
         }
@@ -153,10 +167,17 @@ namespace osu.Game.Rulesets.Osu.Edit.Streams
             float delta = e.ScrollDelta.Y != 0 ? e.ScrollDelta.Y : e.ScrollDelta.X;
             int steps = Math.Sign(delta) * (int)Math.Max(1, Math.Round(Math.Abs(delta)));
 
-            // the density applies to the end of the path, which is the anchor following the cursor while placing.
-            // once that anchor is placed, it keeps its density and the next one continues it.
-            double newDensity = Math.Round(density / step) * step + steps * step;
-            anchorDensities[points[^1]] = Math.Clamp(Math.Round(newDensity, 2), EditorStream.MIN_DENSITY, EditorStream.MAX_DENSITY);
+            double newDensity = Math.Clamp(Math.Round(Math.Round(density / step) * step + steps * step, 2), EditorStream.MIN_DENSITY, EditorStream.MAX_DENSITY);
+
+            // the density applies to the whole segment being drawn, from the anchor which starts it to the cursor,
+            // so that its circles are evenly spaced instead of ramping from the previous density.
+            int segmentStart = points.Count - 1;
+
+            while (segmentStart > 0 && (segmentStart == points.Count - 1 || points[segmentStart].Type == null))
+                segmentStart--;
+
+            for (int i = segmentStart; i < points.Count; i++)
+                anchorDensities[points[i]] = newDensity;
 
             OnSliderUpdated();
             return true;
