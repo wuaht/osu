@@ -42,9 +42,11 @@ namespace osu.Game.Rulesets.Osu.Skinning.Legacy
         [BackgroundDependencyLoader]
         private void load(OsuConfigManager config, ISkinSource skinSource)
         {
-            cursorSize = config.GetBindable<float>(OsuSetting.GameplayCursorSize).GetBoundCopy();
+            // GetBindable already returns a bound copy. Copying it again would leave the only strong reference to the intermediate copy in a weak binding,
+            // so that the trail stops receiving changes once it is garbage collected.
+            cursorSize = config.GetBindable<float>(OsuSetting.GameplayCursorSize);
             skinAllowsRotation = skin.GetConfig<OsuSkinConfiguration, bool>(OsuSkinConfiguration.CursorTrailRotate)?.Value ?? true;
-            trailStyle = config.GetBindable<CursorTrailStyle>(OsuSetting.SlopCursorTrailStyle).GetBoundCopy();
+            trailStyle = config.GetBindable<CursorTrailStyle>(OsuSetting.SlopCursorTrailStyle);
 
             Texture = skin.GetTexture("cursortrail");
 
@@ -68,7 +70,13 @@ namespace osu.Game.Rulesets.Osu.Skinning.Legacy
 
             Texture?.ScaleAdjust *= LegacySkin.STABLE_MAGIC_SCALE_FACTOR;
 
-            trailStyle.BindValueChanged(_ => AllowPartRotation = skinAllowsRotation && !atrias, true);
+            trailStyle.BindValueChanged(_ =>
+            {
+                AllowPartRotation = skinAllowsRotation && !atrias;
+
+                // the fade progress of existing parts is relative to the fade duration, which may have changed with the style.
+                ClearParts();
+            }, true);
         }
 
         protected override double FadeDuration => atrias ? 60 : DisjointTrail ? 150 : 500;
