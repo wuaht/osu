@@ -57,14 +57,16 @@ namespace osu.Game.Rulesets.Osu.Edit
         public Popover GetPopover() => new StreamConversionPopover(slider)
         {
             Closed = () => this.Delay(500).Expire(),
+            // the popover follows its target, so dragging it moves the anchor.
+            Dragged = screenSpaceDelta => Position = Parent!.ToLocalSpace(Parent.ToScreenSpace(Position) + screenSpaceDelta),
         };
     }
 
     public partial class StreamConversionPopover : OsuPopover
     {
-        private const float label_width = 85;
-        private const float value_width = 40;
-        private const float row_height = 20;
+        private const float label_width = 110;
+        private const float value_width = 50;
+        private const float row_height = 28;
 
         private static readonly int[] divisors = { 1, 2, 3, 4, 6, 8, 12, 16 };
 
@@ -74,6 +76,11 @@ namespace osu.Game.Rulesets.Osu.Edit
         private static int? savedDivisor;
 
         public Action? Closed { get; init; }
+
+        /// <summary>
+        /// Invoked with the screen space distance the popover was dragged by.
+        /// </summary>
+        public Action<Vector2>? Dragged { get; init; }
 
         private readonly Slider slider;
 
@@ -114,12 +121,18 @@ namespace osu.Game.Rulesets.Osu.Edit
 
             Child = new FillFlowContainer
             {
-                Width = 250,
+                Width = 330,
                 AutoSizeAxes = Axes.Y,
                 Direction = FillDirection.Vertical,
-                Spacing = new Vector2(4),
+                Spacing = new Vector2(8),
                 Children = new[]
                 {
+                    new OsuSpriteText
+                    {
+                        Text = "Convert to stream (drag to move)",
+                        Font = OsuFont.Default.With(size: 13, weight: FontWeight.Bold),
+                        Alpha = 0.6f,
+                    },
                     createRow("Spacing", new ChoiceSelector<StreamSpacingMode>(Enum.GetValues<StreamSpacingMode>(), m => m == StreamSpacingMode.DistanceSnap ? "Distance" : "Count")
                     {
                         Current = spacingMode
@@ -137,7 +150,7 @@ namespace osu.Game.Rulesets.Osu.Edit
                     }),
                     spacingText = new OsuSpriteText
                     {
-                        Font = OsuFont.Default.With(size: 12),
+                        Font = OsuFont.Default.With(size: 14),
                         Margin = new MarginPadding { Left = label_width },
                     },
                     createSliderRow("Wiggle", wiggle, v => $"{v:0.00}"),
@@ -148,7 +161,7 @@ namespace osu.Game.Rulesets.Osu.Edit
                     new RoundedButton
                     {
                         RelativeSizeAxes = Axes.X,
-                        Height = 26,
+                        Height = 34,
                         Text = "Convert",
                         Action = commit
                     }
@@ -175,7 +188,7 @@ namespace osu.Game.Rulesets.Osu.Edit
                         Anchor = Anchor.CentreLeft,
                         Origin = Anchor.CentreLeft,
                         Text = label,
-                        Font = OsuFont.Default.With(size: 13),
+                        Font = OsuFont.Default.With(size: 15),
                     },
                     content,
                     value ?? Empty(),
@@ -190,7 +203,7 @@ namespace osu.Game.Rulesets.Osu.Edit
             {
                 Anchor = Anchor.CentreRight,
                 Origin = Anchor.CentreRight,
-                Font = OsuFont.Default.With(size: 13, weight: FontWeight.SemiBold),
+                Font = OsuFont.Default.With(size: 15, weight: FontWeight.SemiBold),
             };
 
             current.BindValueChanged(v => valueText.Text = format(v.NewValue), true);
@@ -291,6 +304,11 @@ namespace osu.Game.Rulesets.Osu.Edit
             else
                 spacingText.Text = string.Empty;
         }
+
+        // sliders and buttons handle their own drags, so this only triggers on the empty parts of the popover.
+        protected override bool OnDragStart(DragStartEvent e) => Dragged != null;
+
+        protected override void OnDrag(DragEvent e) => Dragged?.Invoke(e.ScreenSpaceMousePosition - e.ScreenSpaceLastMousePosition);
 
         public override bool OnPressed(KeyBindingPressEvent<GlobalAction> e)
         {
@@ -403,13 +421,13 @@ namespace osu.Game.Rulesets.Osu.Edit
             public ChoiceCell(string label)
             {
                 RelativeSizeAxes = Axes.Both;
-                Padding = new MarginPadding(1);
+                Padding = new MarginPadding(2);
 
                 Child = new osu.Framework.Graphics.Containers.Container
                 {
                     RelativeSizeAxes = Axes.Both,
                     Masking = true,
-                    CornerRadius = 3,
+                    CornerRadius = 4,
                     Children = new Drawable[]
                     {
                         background = new Box { RelativeSizeAxes = Axes.Both },
@@ -418,7 +436,7 @@ namespace osu.Game.Rulesets.Osu.Edit
                             Anchor = Anchor.Centre,
                             Origin = Anchor.Centre,
                             Text = label,
-                            Font = OsuFont.Default.With(size: 12, weight: FontWeight.SemiBold),
+                            Font = OsuFont.Default.With(size: 14, weight: FontWeight.SemiBold),
                         }
                     }
                 };
