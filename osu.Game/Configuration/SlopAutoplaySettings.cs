@@ -17,8 +17,6 @@ namespace osu.Game.Configuration
 
         public static SlopAutoplayEngine Engine => Config?.Get<SlopAutoplayEngine>(OsuSetting.SlopAutoplayEngine) ?? SlopAutoplayEngine.Default;
 
-        public static SlopAutoplayEngine EditorEngine => Config?.Get<SlopAutoplayEngine>(OsuSetting.SlopEditorAutoplayEngine) ?? SlopAutoplayEngine.Realistic;
-
         public static bool Get(OsuSetting setting, bool fallback) => Config?.Get<bool>(setting) ?? fallback;
 
         public static double Get(OsuSetting setting, double fallback) => Config?.Get<double>(setting) ?? fallback;

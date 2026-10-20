@@ -1104,15 +1104,6 @@ namespace osu.Game.Localisation
         /// </summary>
         public static LocalisableString EditorShowAutoplayCursorDescription => new TranslatableString(getKey(@"editor_show_autoplay_cursor_description"), @"Shows the cursor of the autoplay replay on the playfield. Only supported in osu!");
 
-        /// <summary>
-        /// "Editor autoplay engine"
-        /// </summary>
-        public static LocalisableString EditorAutoplayEngine => new TranslatableString(getKey(@"editor_autoplay_engine"), @"Editor autoplay engine");
-
-        /// <summary>
-        /// "The autoplay engine which plays the map in the editor. Realistic moves the cursor like a player would, cutting corners on sliders"
-        /// </summary>
-        public static LocalisableString EditorAutoplayEngineDescription => new TranslatableString(getKey(@"editor_autoplay_engine_description"), @"The autoplay engine which plays the map in the editor. Realistic moves the cursor like a player would, cutting corners on sliders");
 
         /// <summary>
         /// "Text editor"
