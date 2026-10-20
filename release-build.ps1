@@ -12,6 +12,9 @@
 # "Stable" only sees stable releases, "Nightly" sees both (whichever is newer). Installing a nightly build switches the setting to "Nightly".
 # osu!fps is only released alongside stable releases.
 #
+# Branches: new features are developed on "slop-nightly", which nightly builds are made from. Once they're tested,
+# they're brought over to "slop" (git merge slop-nightly on slop), which stable releases are made from.
+#
 # Platforms (-Platforms, default: win):
 #   win    Velopack installer + updates (channel "win").
 #   osx    Portable, unsigned zips for Apple Silicon (osx-arm64) and Intel (osx-x64), without auto-updates.
@@ -50,7 +53,7 @@ $fpsRepoName = 'wuaht/osu-fps'
 $fpsBranch = 'master'
 $packId = 'slop'
 $packTitle = 'slop!'
-$branch = 'slop'
+$branch = if ($Nightly) { 'slop-nightly' } else { 'slop' }
 
 $root = $PSScriptRoot
 $fpsDir = Join-Path $root 'osu-fps'
@@ -115,7 +118,7 @@ foreach ($platform in $Platforms)
 }
 if ($Platforms.Count -eq 0) { throw 'No platforms given.' }
 
-if ((git rev-parse --abbrev-ref HEAD) -ne $branch) { throw "Releases must be made from the '$branch' branch." }
+if ((git rev-parse --abbrev-ref HEAD) -ne $branch) { throw "$(if ($Nightly) { 'Nightly builds' } else { 'Stable releases' }) must be made from the '$branch' branch." }
 
 foreach ($dependency in @('osu-framework', 'osu-resources'))
 {
