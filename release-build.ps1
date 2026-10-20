@@ -12,8 +12,10 @@
 # "Stable" only sees stable releases, "Nightly" sees both (whichever is newer). Installing a nightly build switches the setting to "Nightly".
 # osu!fps is only released alongside stable releases.
 #
-# Branches: new features are developed on "slop-nightly", which nightly builds are made from. Once they're tested,
-# they're brought over to "slop" (git merge slop-nightly on slop), which stable releases are made from.
+# Branches: new features are developed on "slop-nightly", which nightly builds are made from. "slop" only contains what has been
+# released as stable. Running a stable release on "slop-nightly" brings everything on it over to "slop" (fast-forward, after the build
+# succeeded) and releases it from there. Running it on "slop" releases "slop" as it is (e.g. for a hotfix, which then has to be
+# merged into "slop-nightly" before the next stable release from it).
 #
 # Platforms (-Platforms, default: win):
 #   win    Velopack installer + updates (channel "win").
@@ -24,7 +26,7 @@
 # requires the .NET Android workload, Android SDK / JDK and a signing keystore.
 #
 # Usage:
-#   ./release-build.ps1                    # build and publish the next version (e.g. 2026.1008.0)
+#   ./release-build.ps1                    # build and publish the next version (e.g. 2026.1008.0), on slop-nightly: bring it over to slop
 #   ./release-build.ps1 -Nightly           # build and publish the next nightly build (e.g. 2026.1008.1-nightly)
 #   ./release-build.ps1 -SkipUpload        # only build the installer locally (in .slop-release/), without releasing osu!fps
 #   ./release-build.ps1 -Platforms win,osx
@@ -53,7 +55,8 @@ $fpsRepoName = 'wuaht/osu-fps'
 $fpsBranch = 'master'
 $packId = 'slop'
 $packTitle = 'slop!'
-$branch = if ($Nightly) { 'slop-nightly' } else { 'slop' }
+$stableBranch = 'slop'
+$nightlyBranch = 'slop-nightly'
 
 $root = $PSScriptRoot
 $fpsDir = Join-Path $root 'osu-fps'
@@ -118,7 +121,28 @@ foreach ($platform in $Platforms)
 }
 if ($Platforms.Count -eq 0) { throw 'No platforms given.' }
 
-if ((git rev-parse --abbrev-ref HEAD) -ne $branch) { throw "$(if ($Nightly) { 'Nightly builds' } else { 'Stable releases' }) must be made from the '$branch' branch." }
+# The branch which is released, and which therefore must be pushed.
+$branch = git rev-parse --abbrev-ref HEAD
+$promote = $false
+
+if ($Nightly)
+{
+    if ($branch -ne $nightlyBranch) { throw "Nightly builds must be made from the '$nightlyBranch' branch." }
+}
+elseif ($branch -eq $nightlyBranch)
+{
+    # A stable release from slop-nightly brings it over to slop. slop must not have anything which slop-nightly doesn't,
+    # otherwise it couldn't be fast-forwarded (and that would be left out of the release).
+    git merge-base --is-ancestor $stableBranch HEAD
+    if ($LASTEXITCODE -ne 0) { throw "'$stableBranch' has commits which are not on '$nightlyBranch'. Merge '$stableBranch' into '$nightlyBranch' first." }
+
+    # A local build doesn't change any branches.
+    $promote = -not $SkipUpload
+}
+elseif ($branch -ne $stableBranch)
+{
+    throw "Stable releases must be made from the '$nightlyBranch' branch (which brings it over to '$stableBranch'), or from '$stableBranch'."
+}
 
 foreach ($dependency in @('osu-framework', 'osu-resources'))
 {
@@ -345,6 +369,15 @@ if ($SkipUpload)
 {
     Write-Host "Built slop! $Version for $($Platforms -join ', '). The packages are in $releasesDir" -ForegroundColor Green
     return
+}
+
+# --- Bring slop-nightly over to slop ---
+
+# Only done once the build succeeded, so that slop never contains anything which failed to build.
+if ($promote)
+{
+    Invoke-Checked "Fast-forward $stableBranch to $nightlyBranch" { git push . "HEAD:refs/heads/$stableBranch" }
+    Invoke-Checked "Push $stableBranch" { git push origin "refs/heads/${stableBranch}:refs/heads/$stableBranch" }
 }
 
 # --- Upload ---
