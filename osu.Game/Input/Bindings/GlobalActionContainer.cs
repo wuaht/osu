@@ -191,6 +191,7 @@ namespace osu.Game.Input.Bindings
             new KeyBinding(new[] { InputKey.Control, InputKey.Shift, InputKey.O }, GlobalAction.EditorEditExternally),
             new KeyBinding(new[] { InputKey.M }, GlobalAction.EditorMuteMusic),
             new KeyBinding(new[] { InputKey.Control, InputKey.M }, GlobalAction.EditorMuteEffects),
+            new KeyBinding(new[] { InputKey.BackSlash }, GlobalAction.EditorUsePreviousSliderVelocity),
         }.Concat(editorUndoRedoKeyBindings);
 
         /// <summary>
@@ -683,6 +684,9 @@ namespace osu.Game.Input.Bindings
 
         [LocalisableDescription(typeof(SlopNominatorsStrings), nameof(SlopNominatorsStrings.NominatorsEditorMode))]
         EditorNominatorsMode,
+
+        [LocalisableDescription(typeof(SlopEditorStrings), nameof(SlopEditorStrings.UsePreviousSliderVelocity))]
+        EditorUsePreviousSliderVelocity,
     }
 
     public enum GlobalActionCategory

@@ -35,6 +35,16 @@ namespace osu.Game.Localisation
         public static LocalisableString Muted => new TranslatableString(getKey(@"muted"), @"Muted");
 
         /// <summary>
+        /// "Use previous slider velocity"
+        /// </summary>
+        public static LocalisableString UsePreviousSliderVelocity => new TranslatableString(getKey(@"use_previous_slider_velocity"), @"Use previous slider velocity");
+
+        /// <summary>
+        /// "Set to previous slider velocity"
+        /// </summary>
+        public static LocalisableString SetToPreviousSliderVelocity => new TranslatableString(getKey(@"set_to_previous_slider_velocity"), @"Set to previous slider velocity");
+
+        /// <summary>
         /// "Snap objects to anchor"
         /// </summary>
         public static LocalisableString SnapObjectsToAnchor => new TranslatableString(getKey(@"snap_objects_to_anchor"), @"Snap objects to anchor");

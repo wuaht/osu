@@ -9,9 +9,17 @@ using osu.Framework.Extensions.LocalisationExtensions;
 using osu.Framework.Extensions.ObjectExtensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
+using osu.Framework.Input.Bindings;
+using osu.Framework.Input.Events;
 using osu.Framework.Localisation;
+using osu.Framework.Utils;
 using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.Sprites;
+using osu.Game.Input;
+using osu.Game.Input.Bindings;
+using osu.Game.Localisation;
+using osu.Game.Overlays;
+using osu.Game.Overlays.OSD;
 using osu.Game.Rulesets.Edit;
 using osu.Game.Rulesets.Objects;
 using osu.Game.Rulesets.Osu.Objects;
@@ -21,7 +29,7 @@ using osuTK;
 
 namespace osu.Game.Rulesets.Osu.Edit
 {
-    public partial class OsuSliderVelocityToolboxGroup : EditorToolboxGroup
+    public partial class OsuSliderVelocityToolboxGroup : EditorToolboxGroup, IKeyBindingHandler<GlobalAction>
     {
         /// <summary>
         /// The slider velocity to be used for new object placements.
@@ -38,6 +46,9 @@ namespace osu.Game.Rulesets.Osu.Edit
 
         [Resolved]
         private EditorClock editorClock { get; set; } = null!;
+
+        [Resolved]
+        private OnScreenDisplay? onScreenDisplay { get; set; }
 
         private double lastClockPosition = double.NegativeInfinity;
 
@@ -189,6 +200,56 @@ namespace osu.Game.Rulesets.Osu.Edit
                 }
 
                 sliderVelocitySource.Validate();
+            }
+        }
+
+        public bool OnPressed(KeyBindingPressEvent<GlobalAction> e)
+        {
+            if (e.Action != GlobalAction.EditorUsePreviousSliderVelocity || e.Repeat)
+                return false;
+
+            usePreviousSliderVelocity();
+            return true;
+        }
+
+        public void OnReleased(KeyBindingReleaseEvent<GlobalAction> e)
+        {
+        }
+
+        /// <summary>
+        /// Walks back from the selection (or the current time when nothing is selected) to the closest slider whose velocity differs
+        /// from the current one, and applies its velocity to the selection (or to new placements).
+        /// </summary>
+        private void usePreviousSliderVelocity()
+        {
+            var selectedSliders = selectedHitObjects.OfType<Slider>().ToList();
+
+            double currentVelocity = sliderControl.Current.Value;
+            double referenceTime = selectedSliders.Count > 0 ? selectedSliders.Min(s => s.StartTime) : editorClock.CurrentTime;
+
+            var previousSlider = editorBeatmap.HitObjects
+                                              .OfType<Slider>()
+                                              .Where(s => s.StartTime <= referenceTime && !selectedSliders.Contains(s))
+                                              .LastOrDefault(s => !Precision.AlmostEquals(s.SliderVelocityMultiplier, currentVelocity, 0.005));
+
+            if (previousSlider == null)
+                return;
+
+            sliderControl.Current.Value = previousSlider.SliderVelocityMultiplier;
+            onScreenDisplay?.Display(new PreviousSliderVelocityToast(sliderControl.Current.Value));
+        }
+
+        private partial class PreviousSliderVelocityToast : Toast
+        {
+            public PreviousSliderVelocityToast(double velocity)
+                : base(SlopEditorStrings.SetToPreviousSliderVelocity, LocalisableString.Interpolate($@"{velocity:0.00}x"))
+            {
+            }
+
+            [BackgroundDependencyLoader]
+            private void load(RealmKeyBindingStore keyBindingStore)
+            {
+                ExtraText = keyBindingStore.GetBindingsStringFor(GlobalAction.EditorUsePreviousSliderVelocity);
             }
         }
 
