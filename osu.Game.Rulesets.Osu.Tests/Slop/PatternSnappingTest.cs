@@ -45,8 +45,9 @@ namespace osu.Game.Rulesets.Osu.Tests.Slop
             // overlapping objects (closer than two radii).
             Assert.That(visualSpacing(new HitCircle { Position = new Vector2(100, 200) }, new HitCircle { Position = new Vector2(150, 200) }), Is.Empty);
 
-            // objects too far apart.
-            Assert.That(visualSpacing(new HitCircle { Position = new Vector2(50, 200) }, new HitCircle { Position = new Vector2(450, 200) }), Is.Empty);
+            // objects far apart still form a triangle.
+            Assert.That(visualSpacing(new HitCircle { Position = new Vector2(150, 300) }, new HitCircle { Position = new Vector2(350, 300) }),
+                Has.One.Matches<Vector2>(p => Vector2.Distance(p, new Vector2(250, 300 - 100 * MathF.Sqrt(3))) < 0.1f));
         }
 
         [Test]
@@ -193,8 +194,9 @@ namespace osu.Game.Rulesets.Osu.Tests.Slop
             // stacked objects.
             Assert.That(lines(new HitCircle { Position = new Vector2(200, 200) }, new HitCircle { Position = new Vector2(210, 200) }), Is.Empty);
 
-            // objects too far apart.
-            Assert.That(lines(new HitCircle { Position = new Vector2(50, 200) }, new HitCircle { Position = new Vector2(450, 200) }), Is.Empty);
+            // the gap between objects far apart is still filled.
+            Assert.That(lines(new HitCircle { Position = new Vector2(50, 200) }, new HitCircle { Position = new Vector2(450, 200) }).Select(p => p.Position),
+                Has.One.Matches<Vector2>(p => Vector2.Distance(p, new Vector2(250, 200)) < 0.1f));
         }
 
         [Test]

@@ -156,20 +156,10 @@ namespace osu.Game.Rulesets.Osu.Edit
         private const float min_visual_spacing_distance = 2;
 
         /// <summary>
-        /// The maximum distance between two objects, in multiples of the object radius, for them to form a triangle.
-        /// </summary>
-        private const float max_visual_spacing_distance = 5;
-
-        /// <summary>
         /// The minimum distance between two consecutive objects of a line, in multiples of the object radius.
         /// Closer objects are rather stacked than forming a line.
         /// </summary>
         private const float min_line_spacing = 0.5f;
-
-        /// <summary>
-        /// The maximum distance between two consecutive objects of a line, in multiples of the object radius.
-        /// </summary>
-        private const float max_line_spacing = 5;
 
         /// <summary>
         /// The maximum distance in osu!pixels at which positions are considered equal when looking for objects forming a line.
@@ -196,7 +186,7 @@ namespace osu.Game.Rulesets.Osu.Edit
                     float radius = (float)objects[a.owner].Radius;
                     float distance = Vector2.Distance(a.position, b.position);
 
-                    if (distance < radius * min_visual_spacing_distance - 0.5f || distance > radius * max_visual_spacing_distance)
+                    if (distance < radius * min_visual_spacing_distance - 0.5f)
                         continue;
 
                     var offset = b.position - a.position;
@@ -242,11 +232,10 @@ namespace osu.Game.Rulesets.Osu.Edit
                     Vector2 midpoint = (a.position + b.position) / 2;
 
                     // the gap between two objects is filled with an object halfway between them.
-                    // the distance is limited to that of consecutive objects of a line, as most pairs of objects aren't meant to form a line with each other.
-                    if (i < j && distance >= 2 * radius * min_line_spacing && distance <= radius * max_line_spacing)
+                    if (i < j && distance >= 2 * radius * min_line_spacing)
                         tryAdd(midpoint, offset / 2, radius);
 
-                    if (distance < radius * min_line_spacing || distance > radius * max_line_spacing)
+                    if (distance < radius * min_line_spacing)
                         continue;
 
                     // objects which aren't next to each other on a line would continue it with a multiple of its spacing.
