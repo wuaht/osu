@@ -69,12 +69,9 @@ namespace osu.Game.Rulesets.Osu.Edit
         private const float value_width = 50;
         private const float row_height = 28;
 
-        private static readonly int[] divisors = { 1, 2, 3, 4, 6, 8, 12, 16 };
+        private const float revert_width = 20;
 
-        /// <summary>
-        /// The divisor chosen last time, so that it stays the same across conversions.
-        /// </summary>
-        private static int? savedDivisor;
+        private static readonly int[] divisors = { 1, 2, 3, 4, 6, 8, 12, 16 };
 
         public Action? Closed { get; init; }
 
@@ -126,7 +123,9 @@ namespace osu.Game.Rulesets.Osu.Edit
         {
             AllowableAnchors = new[] { Anchor.CentreLeft, Anchor.CentreRight };
 
-            divisor.Value = savedDivisor ?? (editorBeatmap.BeatDivisor is 3 or 6 ? 3 : 4);
+            // the stream uses the timeline's beat snap by default, which is offered even if it isn't one of the common divisors.
+            divisor.Value = editorBeatmap.BeatDivisor;
+            int[] availableDivisors = divisors.Append(divisor.Value).Distinct().Order().ToArray();
 
             Child = new FillFlowContainer
             {
@@ -148,7 +147,7 @@ namespace osu.Game.Rulesets.Osu.Edit
                     }),
                     distanceSnapRow = createSliderRow("Distance snap", distanceSnap, v => $"{v:0.00}x"),
                     countRow = createSliderRow("Object count", count, v => $"{v}"),
-                    createRow("Beat snap 1/", new ChoiceSelector<int>(divisors, d => $"{d}")
+                    createRow("Beat snap 1/", new ChoiceSelector<int>(availableDivisors, d => $"{d}")
                     {
                         Current = divisor
                     }),
@@ -178,7 +177,7 @@ namespace osu.Game.Rulesets.Osu.Edit
             };
         }
 
-        private static Drawable createRow(string label, Drawable content, Drawable? value = null) => new GridContainer
+        private static Drawable createRow(string label, Drawable content, Drawable? value = null, Drawable? revert = null) => new GridContainer
         {
             RelativeSizeAxes = Axes.X,
             Height = row_height,
@@ -187,6 +186,7 @@ namespace osu.Game.Rulesets.Osu.Edit
                 new Dimension(GridSizeMode.Absolute, label_width),
                 new Dimension(),
                 new Dimension(GridSizeMode.Absolute, value == null ? 0 : value_width),
+                new Dimension(GridSizeMode.Absolute, revert == null ? 0 : revert_width),
             },
             Content = new[]
             {
@@ -201,6 +201,7 @@ namespace osu.Game.Rulesets.Osu.Edit
                     },
                     content,
                     value ?? Empty(),
+                    revert ?? Empty(),
                 }
             }
         };
@@ -225,7 +226,12 @@ namespace osu.Game.Rulesets.Osu.Edit
                 Padding = new MarginPadding { Right = 8 },
                 Current = current,
                 KeyboardStep = float.CreateTruncating(current.Precision),
-            }, valueText);
+            }, valueText, new RevertToDefaultButton<T>
+            {
+                Anchor = Anchor.CentreRight,
+                Origin = Anchor.CentreRight,
+                Current = current,
+            });
         }
 
         protected override void PopIn()
@@ -261,7 +267,6 @@ namespace osu.Game.Rulesets.Osu.Edit
             if (committed)
                 return;
 
-            savedDivisor = divisor.Value;
 
             double length = slider.Path.Distance;
             double timeSpacing = editorBeatmap.ControlPointInfo.TimingPointAt(slider.StartTime).BeatLength / divisor.Value;
