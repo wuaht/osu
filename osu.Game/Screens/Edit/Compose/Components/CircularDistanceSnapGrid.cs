@@ -49,7 +49,8 @@ namespace osu.Game.Screens.Edit.Compose.Components
             float dx = Math.Max(StartPosition.X, DrawWidth - StartPosition.X);
             float dy = Math.Max(StartPosition.Y, DrawHeight - StartPosition.Y);
             float maxDistance = new Vector2(dx, dy).Length;
-            int requiredCircles = Math.Min(MaxIntervals, (int)(maxDistance / DistanceBetweenTicks));
+            // rings are drawn up to the edge of the playfield even past the next object, so they don't disappear in dense sections.
+            int requiredCircles = (int)(maxDistance / DistanceBetweenTicks);
 
             // We need to offset the drawn lines to the next valid snap for the currently selected divisor.
             //
@@ -64,6 +65,10 @@ namespace osu.Game.Screens.Edit.Compose.Components
                 const float outline_thickness = 2;
                 float diameter = (offset + (i + 1) * DistanceBetweenTicks + thickness / 2) * 2;
                 Color4 colour = GetColourForIndexFromPlacement(i);
+
+                // snapping stops at the next object, so dim the rings beyond it.
+                if (i >= MaxIntervals)
+                    colour = colour.Opacity(colour.A * 0.4f);
 
                 // a dark outline keeps the translucent rings visible on top of bright backgrounds.
                 AddInternal(new CircularProgress
