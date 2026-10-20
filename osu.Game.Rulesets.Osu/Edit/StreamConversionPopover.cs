@@ -58,6 +58,7 @@ namespace osu.Game.Rulesets.Osu.Edit
         {
             Closed = () => this.Delay(500).Expire(),
             // the popover follows its target, so dragging it moves the anchor.
+            Pinned = screenSpacePosition => Position = Parent!.ToLocalSpace(screenSpacePosition),
             Dragged = screenSpaceDelta => Position = Parent!.ToLocalSpace(Parent.ToScreenSpace(Position) + screenSpaceDelta),
         };
     }
@@ -81,6 +82,14 @@ namespace osu.Game.Rulesets.Osu.Edit
         /// Invoked with the screen space distance the popover was dragged by.
         /// </summary>
         public Action<Vector2>? Dragged { get; init; }
+
+        /// <summary>
+        /// Invoked with the screen space centre of the popover when it starts being dragged for the first time.
+        /// From then on, the popover is centred on its target instead of picking a side next to it.
+        /// </summary>
+        public Action<Vector2>? Pinned { get; init; }
+
+        private bool pinned;
 
         private readonly Slider slider;
 
@@ -274,21 +283,47 @@ namespace osu.Game.Rulesets.Osu.Edit
             var positions = StreamGenerator.Generate(slider, objectCount, spacing, acceleration.Value, accelerationMode.Value,
                 wiggle.Value, wiggleMode.Value, out double[] distances);
 
-            editorBeatmap.RemoveRange(insertedCircles);
-            insertedCircles.Clear();
+            // existing circles are updated in place, as re-adding all of them on every change makes them flicker.
+            if (insertedCircles.Count > positions.Length)
+            {
+                var surplus = insertedCircles.GetRange(positions.Length, insertedCircles.Count - positions.Length);
+                insertedCircles.RemoveRange(positions.Length, surplus.Count);
+                editorBeatmap.RemoveRange(surplus);
+            }
+
+            var added = new List<HitCircle>();
 
             for (int i = 0; i < positions.Length; i++)
             {
-                insertedCircles.Add(new HitCircle
+                double startTime = slider.StartTime + i * timeSpacing;
+
+                if (i < insertedCircles.Count)
                 {
-                    StartTime = slider.StartTime + i * timeSpacing,
+                    var circle = insertedCircles[i];
+
+                    if (circle.StartTime == startTime && circle.Position == positions[i])
+                        continue;
+
+                    circle.StartTime = startTime;
+                    circle.Position = positions[i];
+                    editorBeatmap.Update(circle);
+                    continue;
+                }
+
+                var newCircle = new HitCircle
+                {
+                    StartTime = startTime,
                     Position = positions[i],
                     NewCombo = i == 0 && slider.NewCombo,
                     Samples = slider.HeadCircle.Samples.Select(s => s.With()).ToList()
-                });
+                };
+
+                insertedCircles.Add(newCircle);
+                added.Add(newCircle);
             }
 
-            editorBeatmap.AddRange(insertedCircles);
+            if (added.Count > 0)
+                editorBeatmap.AddRange(added);
 
             if (objectCount > 1)
             {
@@ -306,7 +341,21 @@ namespace osu.Game.Rulesets.Osu.Edit
         }
 
         // sliders and buttons handle their own drags, so this only triggers on the empty parts of the popover.
-        protected override bool OnDragStart(DragStartEvent e) => Dragged != null;
+        protected override bool OnDragStart(DragStartEvent e)
+        {
+            if (Dragged == null)
+                return false;
+
+            // picking the side with the most space would make the popover jump around while it is dragged.
+            if (!pinned && Pinned != null)
+            {
+                Pinned(Body.ScreenSpaceDrawQuad.Centre);
+                AllowableAnchors = new[] { Anchor.Centre };
+                pinned = true;
+            }
+
+            return true;
+        }
 
         protected override void OnDrag(DragEvent e) => Dragged?.Invoke(e.ScreenSpaceMousePosition - e.ScreenSpaceLastMousePosition);
 
