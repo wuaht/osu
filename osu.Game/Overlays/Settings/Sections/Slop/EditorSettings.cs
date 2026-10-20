@@ -282,6 +282,12 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                 }),
                 new SettingsItemV2(new FormCheckBox
                 {
+                    Caption = SlopSettingsStrings.EditorSongSelectShowPlayButtons,
+                    HintText = SlopSettingsStrings.EditorSongSelectShowPlayButtonsDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorSongSelectShowPlayButtons),
+                }),
+                new SettingsItemV2(new FormCheckBox
+                {
                     Caption = SlopSettingsStrings.EditorManiaPlayfieldWaveform,
                     HintText = SlopSettingsStrings.EditorManiaPlayfieldWaveformDescription,
                     Current = config.GetBindable<bool>(OsuSetting.SlopEditorManiaPlayfieldWaveform),

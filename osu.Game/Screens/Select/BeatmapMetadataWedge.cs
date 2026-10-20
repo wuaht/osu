@@ -43,6 +43,12 @@ namespace osu.Game.Screens.Select
         private Drawable failRetryWedge = null!;
         private FailRetryDisplay failRetryDisplay = null!;
 
+        /// <summary>
+        /// Whether this wedge is displayed in the beatmap editor song select.
+        /// Play statistics are hidden and information relevant for editing is shown instead.
+        /// </summary>
+        public bool EditorMode { get; init; }
+
         public bool RatingsVisible => ratingsWedge.Alpha > 0;
         public bool FailRetryVisible => failRetryWedge.Alpha > 0;
 
@@ -87,7 +93,7 @@ namespace osu.Game.Screens.Select
                 Direction = FillDirection.Vertical,
                 Spacing = new Vector2(0f, 4f),
                 Shear = OsuGame.SHEAR,
-                Children = new[]
+                Children = new Drawable[]
                 {
                     new ShearAligningWrapper(new Container
                     {
@@ -243,6 +249,32 @@ namespace osu.Game.Screens.Select
                 }
             };
 
+            if (EditorMode)
+            {
+                var flow = (FillFlowContainer)InternalChild;
+
+                // play statistics wedges are never shown in editor mode, so appending is enough to place this below the main wedge.
+                flow.Add(new ShearAligningWrapper(new Container
+                {
+                    CornerRadius = 10,
+                    Masking = true,
+                    RelativeSizeAxes = Axes.X,
+                    AutoSizeAxes = Axes.Y,
+                    Children = new Drawable[]
+                    {
+                        new WedgeBackground(),
+                        new Container
+                        {
+                            RelativeSizeAxes = Axes.X,
+                            AutoSizeAxes = Axes.Y,
+                            Shear = -OsuGame.SHEAR,
+                            Padding = new MarginPadding { Left = SongSelect.WEDGE_CONTENT_MARGIN, Right = 35, Vertical = 16 },
+                            Child = new EditorInfoDisplay(),
+                        },
+                    },
+                }));
+            }
+
             wedgeAppearSample = audio.Samples.Get(@"SongSelect/metadata-wedge-pop-in");
             wedgeHideSample = audio.Samples.Get(@"SongSelect/metadata-wedge-pop-out");
         }
@@ -283,7 +315,8 @@ namespace osu.Game.Screens.Select
             var beatmapInfo = beatmap.Value.BeatmapInfo;
             var currentOnlineBeatmap = onlineLookupResult.Value?.Result?.Beatmaps.SingleOrDefault(b => b.OnlineID == beatmapInfo.OnlineID);
 
-            if (State.Value == Visibility.Visible && currentOnlineBeatmap != null)
+            // play statistics are not relevant when choosing a beatmap to edit.
+            if (State.Value == Visibility.Visible && currentOnlineBeatmap != null && !EditorMode)
             {
                 // play show sounds only if the wedges were previously hidden
                 if (ratingsWedge.Alpha < 1)

@@ -375,6 +375,7 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopEditorSliderPartOnFirstClick, false);
             SetDefault(OsuSetting.SlopEditorNoAudioStretch, false);
             SetDefault(OsuSetting.SlopEditorPreviewMods, false);
+            SetDefault(OsuSetting.SlopEditorSongSelectShowPlayButtons, false);
             SetDefault(OsuSetting.SlopEditorManiaPlayfieldWaveform, true);
             SetDefault(OsuSetting.SlopEditorTextEditor, @"notepad.exe");
             SetDefault(OsuSetting.SlopMinimalReplayFrames, false);
@@ -1218,6 +1219,11 @@ namespace osu.Game.Configuration
         /// Whether the editor keeps the selected rate adjust mods (and Hidden in osu!) for playback and test play.
         /// </summary>
         SlopEditorPreviewMods,
+
+        /// <summary>
+        /// Whether the mods, random and options footer buttons are shown in the beatmap editor song select.
+        /// </summary>
+        SlopEditorSongSelectShowPlayButtons,
 
         /// <summary>
         /// Whether the waveform is displayed under the playfield instead of in the timeline in the osu!mania compose screen.

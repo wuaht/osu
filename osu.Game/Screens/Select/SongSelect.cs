@@ -112,7 +112,12 @@ namespace osu.Game.Screens.Select
         // Purple makes the most sense to match the "gameplay" flow, but it's a bit too strong for the current design.
         // TODO: Colour scheme choice should probably be customisable by the user.
         [Cached]
-        private readonly OverlayColourProvider colourProvider = new OverlayColourProvider(OverlayColourScheme.Blue);
+        private readonly OverlayColourProvider colourProvider;
+
+        /// <summary>
+        /// The colour scheme used by this song select.
+        /// </summary>
+        protected virtual OverlayColourScheme ColourScheme => OverlayColourScheme.Blue;
 
         private BeatmapCarousel carousel = null!;
 
@@ -171,6 +176,9 @@ namespace osu.Game.Screens.Select
 
         protected SongSelect()
         {
+            // ReSharper disable once VirtualMemberCallInConstructor
+            colourProvider = new OverlayColourProvider(ColourScheme);
+
             FooterContent.Value = ScreenFooterContent.Argon(leftButtons: CreateFooterButtons);
         }
 
@@ -250,7 +258,7 @@ namespace osu.Game.Screens.Select
                                                                 RelativeSizeAxes = Axes.X,
                                                                 Height = 4
                                                             },
-                                                            new ShearAligningWrapper(detailsArea = new BeatmapDetailsArea()),
+                                                            new ShearAligningWrapper(detailsArea = CreateDetailsArea()),
                                                         },
                                                     },
                                                 }
@@ -335,6 +343,11 @@ namespace osu.Game.Screens.Select
 
         // Colour scheme for mod overlay is left as default (green) to match mods button.
         // Not sure about this, but we'll iterate based on feedback.
+        /// <summary>
+        /// Creates the area below the title wedge which displays beatmap details or leaderboards.
+        /// </summary>
+        protected virtual BeatmapDetailsArea CreateDetailsArea() => new BeatmapDetailsArea();
+
         protected virtual ModSelectOverlay CreateModSelectOverlay() => new UserModSelectOverlay
         {
             ShowPresets = true,

@@ -1075,6 +1075,16 @@ namespace osu.Game.Localisation
         public static LocalisableString EditorPreviewModsDescription => new TranslatableString(getKey(@"editor_preview_mods_description"), @"Loads the map with the currently selected mods. Only supports DT/HT/HD for now");
 
         /// <summary>
+        /// "Show play mode song select buttons"
+        /// </summary>
+        public static LocalisableString EditorSongSelectShowPlayButtons => new TranslatableString(getKey(@"editor_song_select_show_play_buttons"), @"Show play mode song select buttons");
+
+        /// <summary>
+        /// "Shows the mods, random and options buttons in the editor song select. Useful together with preview mods."
+        /// </summary>
+        public static LocalisableString EditorSongSelectShowPlayButtonsDescription => new TranslatableString(getKey(@"editor_song_select_show_play_buttons_description"), @"Shows the mods, random and options buttons in the editor song select. Useful together with preview mods.");
+
+        /// <summary>
         /// "Show waveform under Mania playfield"
         /// </summary>
         public static LocalisableString EditorManiaPlayfieldWaveform => new TranslatableString(getKey(@"editor_mania_playfield_waveform"), @"Show waveform under Mania playfield");

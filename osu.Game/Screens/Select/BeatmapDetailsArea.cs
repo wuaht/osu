@@ -14,8 +14,14 @@ namespace osu.Game.Screens.Select
     /// </summary>
     public partial class BeatmapDetailsArea : VisibilityContainer
     {
-        private Header header = null!;
+        private Header? header;
         private Container contentContainer = null!;
+
+        /// <summary>
+        /// Whether this area is displayed in the beatmap editor song select.
+        /// In this mode, the leaderboard is unavailable and information relevant for editing is shown instead.
+        /// </summary>
+        public bool EditorMode { get; init; }
 
         public BeatmapDetailsArea()
         {
@@ -29,12 +35,19 @@ namespace osu.Game.Screens.Select
 
             InternalChildren = new Drawable[]
             {
-                new ShearAligningWrapper(header = new Header
-                {
-                    Shear = -OsuGame.SHEAR,
-                    RelativeSizeAxes = Axes.X,
-                    Height = header_height,
-                }),
+                new ShearAligningWrapper(EditorMode
+                    ? new EditorHeader
+                    {
+                        Shear = -OsuGame.SHEAR,
+                        RelativeSizeAxes = Axes.X,
+                        Height = header_height,
+                    }
+                    : header = new Header
+                    {
+                        Shear = -OsuGame.SHEAR,
+                        RelativeSizeAxes = Axes.X,
+                        Height = header_height,
+                    }),
                 new ShearAligningWrapper(contentContainer = new Container
                 {
                     Shear = -OsuGame.SHEAR,
@@ -51,7 +64,10 @@ namespace osu.Game.Screens.Select
         {
             base.LoadComplete();
 
-            header.Type.BindValueChanged(_ => updateDisplay(), true);
+            if (header != null)
+                header.Type.BindValueChanged(_ => updateDisplay(), true);
+            else
+                updateDisplay();
         }
 
         protected override void PopIn()
@@ -76,7 +92,15 @@ namespace osu.Game.Screens.Select
                 currentContent.Expire();
             }
 
-            switch (header.Type.Value)
+            if (EditorMode)
+            {
+                currentContent = new BeatmapMetadataWedge { EditorMode = true };
+                contentContainer.Add(currentContent);
+                currentContent.Show();
+                return;
+            }
+
+            switch (header!.Type.Value)
             {
                 default:
                 case Header.Selection.Details:
