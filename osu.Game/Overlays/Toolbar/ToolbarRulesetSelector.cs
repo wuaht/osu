@@ -118,6 +118,10 @@ namespace osu.Game.Overlays.Toolbar
             if (r.OldValue == null)
                 return;
 
+            // screens which hide the toolbar (e.g. the editor) may change the ruleset themselves, which shouldn't sound like a user selection.
+            if (this.FindClosestParent<Toolbar>()?.State.Value == Visibility.Hidden)
+                return;
+
             var channel = rulesetSelectionSample[r.NewValue]?.GetChannel();
 
             // Skip sample choking and ducking for the default/fallback sample
