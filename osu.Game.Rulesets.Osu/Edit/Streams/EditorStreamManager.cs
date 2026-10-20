@@ -619,7 +619,9 @@ namespace osu.Game.Rulesets.Osu.Edit.Streams
             foreach (var c in toDeselect)
                 selected.Remove(c);
 
-            selected.AddRange(toSelect);
+            // an empty addition still raises a collection change, which would reset the composer's toggles (e.g. new combo) for the next placement.
+            if (toSelect.Length > 0)
+                selected.AddRange(toSelect);
 
             pendingSelected.Clear();
             pendingDeselected.Clear();
