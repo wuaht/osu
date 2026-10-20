@@ -7,9 +7,12 @@ namespace osu.Game.Configuration
 {
     public enum ReleaseStream
     {
+        // This client publishes stable releases and nightly builds (as GitHub prereleases) to its own releases, see release-build.ps1.
+        // The names are kept, as they are stored in the config.
+        [Description("Stable")]
         Lazer,
 
-        [Description("Tachyon (Unstable)")]
+        [Description("Nightly (Unstable)")]
         Tachyon
     }
 }

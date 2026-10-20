@@ -7,6 +7,11 @@
 # osu!fps (the osu-fps submodule) is released alongside it: its commit is tagged with the same version on wuaht/osu-fps,
 # whose CI then publishes the ruleset DLL for official osu!lazer. This is skipped if the ruleset hasn't changed since its last release.
 #
+# Update channels: stable releases are normal GitHub releases, nightly builds (-Nightly) are published as prereleases
+# with a "-nightly" version suffix. The in-game "Release stream" setting picks which of them the updater installs:
+# "Stable" only sees stable releases, "Nightly" sees both (whichever is newer). Installing a nightly build switches the setting to "Nightly".
+# osu!fps is only released alongside stable releases.
+#
 # Platforms (-Platforms, default: win):
 #   win    Velopack installer + updates (channel "win").
 #   osx    Portable, unsigned zips for Apple Silicon (osx-arm64) and Intel (osx-x64), without auto-updates.
@@ -17,6 +22,7 @@
 #
 # Usage:
 #   ./release-build.ps1                    # build and publish the next version (e.g. 2026.1008.0)
+#   ./release-build.ps1 -Nightly           # build and publish the next nightly build (e.g. 2026.1008.1-nightly)
 #   ./release-build.ps1 -SkipUpload        # only build the installer locally (in .slop-release/), without releasing osu!fps
 #   ./release-build.ps1 -Platforms win,osx
 #   ./release-build.ps1 -Version 2026.1008.1
@@ -31,12 +37,14 @@ param(
     [string[]]$Platforms = @('win'),
     [switch]$SkipUpload,
     [switch]$Force,
+    [switch]$Nightly,
     [int]$OfficialSchemaVersion
 )
 
 $ErrorActionPreference = 'Stop'
 
 $repoUrl = 'https://github.com/wuaht/osu'
+$nightlySuffix = '-nightly'
 $repoName = 'wuaht/osu'
 $fpsRepoName = 'wuaht/osu-fps'
 $fpsBranch = 'master'
@@ -153,18 +161,27 @@ if (-not $Version)
     if (Test-Path $lastVersionFile)
     {
         $lastVersion = (Get-Content -Raw $lastVersionFile).Trim()
-        if ($lastVersion -match "^$([regex]::Escape($prefix))\.(\d+)$") { $n = [int]$Matches[1] + 1 }
+        # Stable releases and nightly builds share the counter, so that their versions never collide.
+        if ($lastVersion -match "^$([regex]::Escape($prefix))\.(\d+)(-.*)?$") { $n = [int]$Matches[1] + 1 }
     }
 
     $Version = "$prefix.$n"
+    if ($Nightly) { $Version += $nightlySuffix }
 }
+
+if ($Nightly -and -not $Version.EndsWith($nightlySuffix)) { throw "Nightly versions must end with '$nightlySuffix'." }
+if (-not $Nightly -and $Version.Contains('-')) { throw "Stable versions can't have a suffix. Use -Nightly for nightly builds." }
+
+# The file version can't have a suffix.
+$fileVersion = ($Version -split '-')[0]
+$releaseKind = if ($Nightly) { 'nightly build' } else { 'release' }
 
 if ($existingTags -contains $Version) { throw "A release for version $Version already exists." }
 
 New-Item -ItemType Directory -Force $outputDir | Out-Null
 Set-Content -Path $lastVersionFile -Encoding utf8 -Value $Version
 
-Write-Host "Releasing slop! $Version" -ForegroundColor Green
+Write-Host "Releasing slop! $Version ($releaseKind)" -ForegroundColor Green
 
 # --- Official database compatibility ---
 
@@ -236,7 +253,7 @@ function Publish-Desktop([string]$runtime, [string]$outputPath)
             --self-contained true `
             --output $outputPath `
             "-p:Version=$Version" `
-            "-p:FileVersion=$Version" `
+            "-p:FileVersion=$fileVersion" `
             "-p:OfficialRealmSchemaVersion=$OfficialSchemaVersion"
     }
 }
@@ -300,7 +317,10 @@ foreach ($platform in $Platforms)
     if (-not $SkipUpload -and $existingTags.Count -gt 0)
     {
         Write-Host "==> Download previous release ($platform)" -ForegroundColor Cyan
-        vpk download github --repoUrl $repoUrl --token $token --channel $platform --outputDir $releasesDir
+        # Deltas are generated against the previous build of the same update channel, as that's what its users update from.
+        $downloadArgs = @('download', 'github', '--repoUrl', $repoUrl, '--token', $token, '--channel', $platform, '--outputDir', $releasesDir)
+        if ($Nightly) { $downloadArgs += '--pre' }
+        vpk @downloadArgs
         # The first release of a platform has no previous release, so this is not an error.
         if ($LASTEXITCODE -ne 0) { Write-Host "No previous release found for $platform, skipping delta updates." -ForegroundColor Yellow }
     }
@@ -343,6 +363,7 @@ foreach ($channel in @($Platforms | Where-Object { $_ -ne 'osx' }))
         '--publish'
     )
     if ($releaseCreated) { $uploadArgs += '--merge' }
+    if ($Nightly) { $uploadArgs += '--pre' }
 
     Invoke-Checked "Upload release ($channel)" { vpk @uploadArgs }
     $releaseCreated = $true
@@ -351,7 +372,9 @@ foreach ($channel in @($Platforms | Where-Object { $_ -ne 'osx' }))
 if (-not $releaseCreated)
 {
     Invoke-Checked 'Create release' {
-        gh release create $Version --repo $repoName --title "slop! $Version" --target (git rev-parse HEAD) --notes ''
+        $createArgs = @('release', 'create', $Version, '--repo', $repoName, '--title', "slop! $Version", '--target', (git rev-parse HEAD), '--notes', '')
+        if ($Nightly) { $createArgs += '--prerelease' }
+        gh @createArgs
     }
 }
 
@@ -360,8 +383,8 @@ if ($extraAssets.Count -gt 0)
     Invoke-Checked 'Upload additional files' { gh release upload $Version --repo $repoName --clobber @extraAssets }
 }
 
-# Release notes: the commits since the previous release.
-$previousTag = $existingTags | Where-Object { $_ -ne $Version } | Select-Object -First 1
+# Release notes: the commits since the previous build of the same update channel (nightly builds also follow stable releases).
+$previousTag = $existingTags | Where-Object { $_ -ne $Version -and ($Nightly -or -not $_.Contains('-')) } | Select-Object -First 1
 $notesFile = Join-Path $outputDir 'notes.md'
 
 if ($previousTag)
@@ -377,7 +400,13 @@ else
 
 Invoke-Checked 'Set release notes' { gh release edit $Version --repo $repoName --notes-file $notesFile }
 
-Write-Host "Published slop! $Version to $repoUrl/releases/tag/$Version" -ForegroundColor Green
+Write-Host "Published slop! $Version ($releaseKind) to $repoUrl/releases/tag/$Version" -ForegroundColor Green
+
+if ($Nightly)
+{
+    Write-Host 'Skipping the osu!fps release, as it is only released alongside stable releases.' -ForegroundColor Yellow
+    return
+}
 
 # --- osu!fps ---
 

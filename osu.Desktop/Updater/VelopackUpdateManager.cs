@@ -55,7 +55,8 @@ namespace osu.Desktop.Updater
 
             try
             {
-                // slop! releases are published to the fork (see release-slop.ps1), rather than ppy/osu.
+                // releases are published to the fork (see release-build.ps1), rather than ppy/osu.
+                // nightly builds are published as prereleases, so only the nightly stream includes them (along with stable releases, if they are newer).
                 IUpdateSource updateSource = new GithubSource(@"https://github.com/wuaht/osu", null, ReleaseStream.Value == Game.Configuration.ReleaseStream.Tachyon);
                 Velopack.UpdateManager updateManager = new Velopack.UpdateManager(updateSource, new UpdateOptions
                 {
