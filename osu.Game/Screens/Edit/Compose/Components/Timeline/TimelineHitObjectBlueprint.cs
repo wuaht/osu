@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using JetBrains.Annotations;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
@@ -460,6 +461,11 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
 
             private ScheduledDelegate? dragOperation;
 
+            /// <summary>
+            /// The state of the path at the start of the drag, used when scaling so that rounding errors don't accumulate.
+            /// </summary>
+            private (Vector2[] positions, double distance, double duration)? originalPath;
+
             public Action<DragEvent?>? OnDragHandled;
 
             /// <summary>
@@ -557,6 +563,9 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
             {
                 changeHandler?.BeginChange();
 
+                if (hitObject is IHasPath hasPath and IHasDuration hasDuration)
+                    originalPath = (hasPath.Path.ControlPoints.Select(p => p.Position).ToArray(), hasPath.Path.Distance, hasDuration.Duration);
+
                 var selectionItems = beatmap.SelectedHitObjects;
 
                 if (!selectionItems.Contains(hitObject))
@@ -591,6 +600,8 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
 
                     // holding ctrl changes the length of a slider, keeping its velocity. holding shift as well, the length is not snapped to the beat divisor.
                     bool adjustLength = keyboard.ControlPressed && hitObject is IHasPath;
+                    // holding alt as well scales the whole slider shape instead of extending or cutting its path.
+                    bool adjustScale = adjustLength && keyboard.AltPressed && hitObject is IHasPosition && originalPath != null;
                     bool adjustVelocity = !adjustLength && (sliderVelocityWithAlt.Value ? keyboard.AltPressed : keyboard.ShiftPressed);
 
                     double? proposedTime = adjustLength && keyboard.ShiftPressed
@@ -601,6 +612,30 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
                     {
                         switch (hitObject)
                         {
+                            case IHasRepeats when adjustScale:
+                            {
+                                var path = ((IHasPath)hitObject).Path;
+                                var (positions, distance, duration) = originalPath!.Value;
+
+                                double proposedScaledDuration = time - hitObject.StartTime;
+
+                                if (proposedScaledDuration <= 0 || Precision.AlmostEquals(duration, 0) || positions.Length != path.ControlPoints.Count)
+                                    return;
+
+                                // with an unchanged velocity, the duration of the slider scales with its size.
+                                float scale = (float)(proposedScaledDuration / duration);
+
+                                if (Precision.AlmostEquals(distance * scale, path.Distance))
+                                    return;
+
+                                for (int i = 0; i < positions.Length; i++)
+                                    path.ControlPoints[i].Position = positions[i] * scale;
+
+                                path.ExpectedDistance.Value = distance * scale;
+                                beatmap.Update(hitObject);
+                                break;
+                            }
+
                             case IHasRepeats repeatHitObject when adjustLength:
                             {
                                 var path = ((IHasPath)hitObject).Path;
@@ -679,6 +714,7 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
                 changeHandler?.EndChange();
                 OnDragHandled?.Invoke(null);
                 objsToAdjust.Clear();
+                originalPath = null;
             }
         }
 
