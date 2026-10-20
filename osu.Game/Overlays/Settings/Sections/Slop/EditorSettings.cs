@@ -298,6 +298,12 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                     HintText = SlopSettingsStrings.EditorShowAutoplayCursorDescription,
                     Current = config.GetBindable<bool>(OsuSetting.SlopEditorShowAutoplayCursor),
                 }),
+                new SettingsItemV2(new FormEnumDropdown<SlopAutoplayEngine>
+                {
+                    Caption = SlopSettingsStrings.EditorAutoplayEngine,
+                    HintText = SlopSettingsStrings.EditorAutoplayEngineDescription,
+                    Current = config.GetBindable<SlopAutoplayEngine>(OsuSetting.SlopEditorAutoplayEngine),
+                }),
                 new SettingsItemV2(new FormTextBox
                 {
                     Caption = SlopSettingsStrings.EditorTextEditor,

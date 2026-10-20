@@ -120,8 +120,11 @@ namespace osu.Game.Rulesets.Edit
             {
                 var drawableRulesetMods = new List<Mod>();
 
-                if (Ruleset.GetAutoplayMod() is Mod autoplay)
+                if (Ruleset.GetAutoplayMod() is ModAutoplay autoplay)
+                {
+                    autoplay.InEditor = true;
                     drawableRulesetMods.Add(autoplay);
+                }
 
                 // the previewed Hidden mod is applied to the displayed objects (rate adjust mods are applied to the clock instead).
                 if (config.Get<bool>(OsuSetting.SlopEditorPreviewMods) && mods != null)

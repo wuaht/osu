@@ -379,6 +379,7 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopEditorManiaPlayfieldWaveform, true);
             SetDefault(OsuSetting.SlopEditorTextEditor, @"notepad.exe");
             SetDefault(OsuSetting.SlopEditorShowAutoplayCursor, false);
+            SetDefault(OsuSetting.SlopEditorAutoplayEngine, SlopAutoplayEngine.Realistic);
             SetDefault(OsuSetting.SlopMinimalReplayFrames, false);
             SetDefault(OsuSetting.SlopSkipIntro, false);
             SetDefault(OsuSetting.SlopInstantScreenTransitions, false);
@@ -1241,6 +1242,10 @@ namespace osu.Game.Configuration
         /// </summary>
         SlopEditorShowAutoplayCursor,
 
+        /// <summary>
+        /// The autoplay engine used to generate the replay which drives gameplay in the editor.
+        /// </summary>
+        SlopEditorAutoplayEngine,
 
         /// <summary>
         /// Whether replays only record frames which contain important data, such as key presses and judgements.

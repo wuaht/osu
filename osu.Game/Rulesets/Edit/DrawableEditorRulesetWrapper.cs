@@ -50,7 +50,7 @@ namespace osu.Game.Rulesets.Edit
             drawableRuleset.FrameStablePlayback = false;
             Playfield.DisplayJudgements.Value = false;
 
-            autoplayEngine = config.GetBindable<SlopAutoplayEngine>(OsuSetting.SlopAutoplayEngine);
+            autoplayEngine = config.GetBindable<SlopAutoplayEngine>(OsuSetting.SlopEditorAutoplayEngine);
         }
 
         [Resolved]
