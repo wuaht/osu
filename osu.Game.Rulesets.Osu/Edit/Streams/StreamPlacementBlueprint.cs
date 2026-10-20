@@ -1,17 +1,24 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
-using System.Linq;
+using System;
+using System.Collections.Generic;
+using System.Globalization;
 using osu.Framework.Allocation;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
+using osu.Framework.Graphics.Shapes;
+using osu.Framework.Input.Events;
 using osu.Game.Beatmaps;
+using osu.Game.Graphics;
+using osu.Game.Graphics.Sprites;
 using osu.Game.Rulesets.Objects;
 using osu.Game.Rulesets.Osu.Edit.Blueprints.HitCircles.Components;
 using osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders;
 using osu.Game.Rulesets.Osu.Objects;
 using osu.Game.Screens.Edit;
 using osuTK;
+using osuTK.Graphics;
 
 namespace osu.Game.Rulesets.Osu.Edit.Streams
 {
@@ -38,13 +45,45 @@ namespace osu.Game.Rulesets.Osu.Edit.Streams
         private StreamPathLine pathLine = null!;
         private Container<HitCirclePiece> circlePieces = null!;
 
+        private Container densityLabel = null!;
+        private OsuSpriteText densityText = null!;
+
         private float circleScale = 1;
 
+        /// <summary>
+        /// The densities chosen by scrolling while placing, keyed by the anchors of the placement slider.
+        /// Anchors without an entry continue the density of the previous one.
+        /// </summary>
+        private readonly Dictionary<PathControlPoint, double> anchorDensities = new Dictionary<PathControlPoint, double>();
+
         [BackgroundDependencyLoader]
-        private void load()
+        private void load(OsuColour colours)
         {
             Add(pathLine = new StreamPathLine { Depth = 2 });
             Add(circlePieces = new Container<HitCirclePiece> { RelativeSizeAxes = Axes.Both, Depth = 1 });
+            Add(densityLabel = new Container
+            {
+                Origin = Anchor.TopCentre,
+                AutoSizeAxes = Axes.Both,
+                Masking = true,
+                CornerRadius = 4,
+                Depth = 0,
+                Children = new Drawable[]
+                {
+                    new Box
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Colour = Color4.Black,
+                        Alpha = 0.6f,
+                    },
+                    densityText = new OsuSpriteText
+                    {
+                        Margin = new MarginPadding { Horizontal = 4, Vertical = 1 },
+                        Font = OsuFont.Default.With(size: 12, weight: FontWeight.Bold),
+                        Colour = colours.Yellow,
+                    },
+                },
+            });
 
             var template = new HitCircle();
             template.ApplyDefaults(editorBeatmap.ControlPointInfo, editorBeatmap.Difficulty);
@@ -59,15 +98,22 @@ namespace osu.Game.Rulesets.Osu.Edit.Streams
             {
                 pathLine.Alpha = 0;
                 circlePieces.Alpha = 0;
+                densityLabel.Alpha = 0;
                 return;
             }
 
             pathLine.Alpha = 1;
             circlePieces.Alpha = 1;
+            densityLabel.Alpha = 1;
 
             pathLine.UpdateFrom(HitObject);
 
-            var layout = createStream().Generate(editorBeatmap.ControlPointInfo, editorBeatmap.Difficulty.SliderMultiplier);
+            var stream = createStream();
+            var layout = stream.Generate(editorBeatmap.ControlPointInfo, editorBeatmap.Difficulty.SliderMultiplier);
+
+            var points = stream.Path.Path.ControlPoints;
+            densityLabel.Position = HitObject.Position + points[^1].Position + new Vector2(0, circleScale * OsuHitObject.OBJECT_RADIUS * 0.6f + 8);
+            densityText.Text = $"{stream.GetDensity(points[^1]).ToString("0.0#", CultureInfo.InvariantCulture)}x";
 
             while (circlePieces.Count < layout.Count)
                 circlePieces.Add(new HitCirclePiece());
@@ -88,6 +134,34 @@ namespace osu.Game.Rulesets.Osu.Edit.Streams
             }
         }
 
+        protected override bool OnScroll(ScrollEvent e)
+        {
+            // before placement starts, scrolling seeks to the time to place the stream at.
+            if (PlacementActive != PlacementState.Active || e.ControlPressed || e.AltPressed || e.SuperPressed)
+                return base.OnScroll(e);
+
+            var points = HitObject.Path.ControlPoints;
+
+            if (points.Count == 0)
+                return base.OnScroll(e);
+
+            double step = e.ShiftPressed ? 0.01 : 0.1;
+            var stream = createStream();
+            double density = stream.GetDensity(stream.Path.Path.ControlPoints[^1]);
+
+            // shift+scroll arrives as a horizontal scroll on some platforms.
+            float delta = e.ScrollDelta.Y != 0 ? e.ScrollDelta.Y : e.ScrollDelta.X;
+            int steps = Math.Sign(delta) * (int)Math.Max(1, Math.Round(Math.Abs(delta)));
+
+            // the density applies to the end of the path, which is the anchor following the cursor while placing.
+            // once that anchor is placed, it keeps its density and the next one continues it.
+            double newDensity = Math.Round(density / step) * step + steps * step;
+            anchorDensities[points[^1]] = Math.Clamp(Math.Round(newDensity, 2), EditorStream.MIN_DENSITY, EditorStream.MAX_DENSITY);
+
+            OnSliderUpdated();
+            return true;
+        }
+
         protected override void CommitHitObject()
         {
             if (streamManager == null)
@@ -105,9 +179,18 @@ namespace osu.Game.Rulesets.Osu.Edit.Streams
 
             stream.Path.StartTime = HitObject.StartTime;
             stream.Path.Position = HitObject.Position;
-            stream.Path.Path.ControlPoints.AddRange(HitObject.Path.ControlPoints.Select(p => new PathControlPoint(p.Position, p.Type)));
+            foreach (var point in HitObject.Path.ControlPoints)
+            {
+                var copy = new PathControlPoint(point.Position, point.Type);
+                stream.Path.Path.ControlPoints.Add(copy);
 
-            stream.SetDensity(stream.Path.Path.ControlPoints[0], sliderVelocityToolbox?.SliderVelocity.Value ?? 1);
+                if (anchorDensities.TryGetValue(point, out double density))
+                    stream.SetDensity(copy, density);
+            }
+
+            // the stream starts with the slider velocity of the toolbox unless a different density was chosen for its first anchor.
+            if (!anchorDensities.ContainsKey(HitObject.Path.ControlPoints[0]))
+                stream.SetDensity(stream.Path.Path.ControlPoints[0], sliderVelocityToolbox?.SliderVelocity.Value ?? 1);
 
             return stream;
         }
