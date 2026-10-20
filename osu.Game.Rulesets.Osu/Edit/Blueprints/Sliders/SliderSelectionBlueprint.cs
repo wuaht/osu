@@ -345,6 +345,9 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
             switch (e.Button)
             {
                 case MouseButton.Right:
+                    if (e.ControlPressed && !isControlPointHovered && splitAtPosition(e.MousePosition, !e.ShiftPressed))
+                        return true;
+
                     lastRightClickPosition = e.MouseDownPosition;
                     return false; // Allow right click to be handled by context menu
 
@@ -715,6 +718,115 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
             foreach (var c in controlPoints)
                 c.Position -= first;
             HitObject.Position += first;
+        }
+
+        /// <summary>
+        /// Splits the slider into two back-to-back sliders at the point on its path closest to <paramref name="position"/>.
+        /// </summary>
+        /// <param name="position">The position to split at, in playfield space.</param>
+        /// <param name="snap">Whether to snap the time of the split to the beat.</param>
+        /// <returns>Whether the slider was split.</returns>
+        private bool splitAtPosition(Vector2 position, bool snap)
+        {
+            if (editorBeatmap == null || HitObject.RepeatCount > 0)
+                return false;
+
+            const double min_split_distance_ms = 2;
+
+            double pathDistance = HitObject.Path.Distance;
+
+            if (pathDistance <= 0)
+                return false;
+
+            double distance = findClosestDistance(position - HitObject.Position, pathDistance);
+            double splitTime = HitObject.StartTime + distance / pathDistance * HitObject.SpanDuration;
+
+            if (snap)
+                splitTime = editorBeatmap.SnapTime(splitTime, HitObject.StartTime);
+
+            if (splitTime - HitObject.StartTime < min_split_distance_ms || HitObject.EndTime - splitTime < min_split_distance_ms)
+                return false;
+
+            distance = (splitTime - HitObject.StartTime) / HitObject.SpanDuration * pathDistance;
+
+            var (headPoints, tailPoints) = SliderPathSplitter.Split(HitObject.Path, distance);
+
+            changeHandler?.BeginChange();
+
+            editorBeatmap.SelectedHitObjects.Clear();
+
+            var head = new Slider
+            {
+                StartTime = HitObject.StartTime,
+                Position = HitObject.Position,
+                NewCombo = HitObject.NewCombo,
+                Samples = HitObject.Samples.Select(s => s.With()).ToList(),
+                SliderVelocityMultiplier = HitObject.SliderVelocityMultiplier,
+                TickDistanceMultiplier = HitObject.TickDistanceMultiplier,
+                GenerateTicks = HitObject.GenerateTicks,
+                NodeSamples = new List<IList<HitSampleInfo>>
+                {
+                    copySamples(HitObject.NodeSamples.Count > 0 ? HitObject.NodeSamples[0] : HitObject.Samples),
+                    copySamples(HitObject.Samples),
+                },
+                Path = new SliderPath(headPoints, distance)
+            };
+
+            Vector2 tailStart = tailPoints[0].Position;
+
+            // the original slider becomes the tail, so update its start time before adding the head to keep the beatmap ordered.
+            HitObject.StartTime = splitTime;
+            HitObject.Position += tailStart;
+            HitObject.NewCombo = false;
+            HitObject.NodeSamples = new List<IList<HitSampleInfo>>
+            {
+                copySamples(HitObject.Samples),
+                HitObject.NodeSamples.Count > 0 ? HitObject.NodeSamples[^1] : copySamples(HitObject.Samples),
+            };
+
+            controlPoints.Clear();
+            controlPoints.AddRange(tailPoints.Select(p => new PathControlPoint(p.Position - tailStart, p.Type)));
+            HitObject.Path.ExpectedDistance.Value = pathDistance - distance;
+
+            editorBeatmap.Add(head);
+
+            changeHandler?.EndChange();
+
+            return true;
+
+            static IList<HitSampleInfo> copySamples(IList<HitSampleInfo> samples) => samples.Select(s => s.With()).ToList();
+        }
+
+        /// <summary>
+        /// Finds the distance along the path at which it is closest to <paramref name="position"/>.
+        /// </summary>
+        /// <param name="position">The position, relative to the start of the path.</param>
+        /// <param name="pathDistance">The length of the path.</param>
+        private double findClosestDistance(Vector2 position, double pathDistance)
+        {
+            double closest = 0;
+            float closestDistanceSq = float.MaxValue;
+
+            void search(double from, double to, double step)
+            {
+                for (double d = Math.Max(0, from); d <= Math.Min(pathDistance, to); d += step)
+                {
+                    float distanceSq = Vector2.DistanceSquared(HitObject.Path.PositionAt(d / pathDistance), position);
+
+                    if (distanceSq >= closestDistanceSq)
+                        continue;
+
+                    closestDistanceSq = distanceSq;
+                    closest = d;
+                }
+            }
+
+            const double coarse_step = 5;
+
+            search(0, pathDistance, coarse_step);
+            search(closest - coarse_step, closest + coarse_step, 0.1);
+
+            return closest;
         }
 
         private void showStreamConversion()
