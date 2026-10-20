@@ -1234,6 +1234,156 @@ namespace osu.Game.Localisation
         /// </summary>
         public static LocalisableString KeyOverlayColourM2 => new TranslatableString(getKey(@"key_overlay_colour_m2"), @"Input overlay key M2");
 
+        /// <summary>
+        /// "Autoplay"
+        /// </summary>
+        public static LocalisableString AutoplayHeader => new TranslatableString(getKey(@"autoplay_header"), @"Autoplay");
+
+        /// <summary>
+        /// "Autoplay engine"
+        /// </summary>
+        public static LocalisableString AutoplayEngine => new TranslatableString(getKey(@"autoplay_engine"), @"Autoplay engine");
+
+        /// <summary>
+        /// "Auto+ settings only apply when the Auto+ engine is selected"
+        /// </summary>
+        public static LocalisableString AutoplayEngineDescription => new TranslatableString(getKey(@"autoplay_engine_description"), @"Auto+ settings only apply when the Auto+ engine is selected");
+
+        /// <summary>
+        /// "Save Autoplay replays"
+        /// </summary>
+        public static LocalisableString SaveAutoplayReplays => new TranslatableString(getKey(@"save_autoplay_replays"), @"Save Autoplay replays");
+
+        /// <summary>
+        /// "Follow sliders"
+        /// </summary>
+        public static LocalisableString AutoPlusFollowSliders => new TranslatableString(getKey(@"auto_plus_follow_sliders"), @"Follow sliders");
+
+        /// <summary>
+        /// "Makes Auto+ follow sliders."
+        /// </summary>
+        public static LocalisableString AutoPlusFollowSlidersDescription => new TranslatableString(getKey(@"auto_plus_follow_sliders_description"), @"Makes Auto+ follow sliders.");
+
+        /// <summary>
+        /// "Follow slider ends"
+        /// </summary>
+        public static LocalisableString AutoPlusFollowSliderEnds => new TranslatableString(getKey(@"auto_plus_follow_slider_ends"), @"Follow slider ends");
+
+        /// <summary>
+        /// "Makes Auto+ follow visible slider ends."
+        /// </summary>
+        public static LocalisableString AutoPlusFollowSliderEndsDescription => new TranslatableString(getKey(@"auto_plus_follow_slider_ends_description"), @"Makes Auto+ follow visible slider ends.");
+
+        /// <summary>
+        /// "Use rotation force"
+        /// </summary>
+        public static LocalisableString AutoPlusRotation => new TranslatableString(getKey(@"auto_plus_rotation"), @"Use rotation force");
+
+        /// <summary>
+        /// "From osu!fx. Makes the cursor rotate around the points more, best with disabled angular stream interpolation"
+        /// </summary>
+        public static LocalisableString AutoPlusRotationDescription => new TranslatableString(getKey(@"auto_plus_rotation_description"), @"From osu!fx. Makes the cursor rotate around the points more, best with disabled angular stream interpolation");
+
+        /// <summary>
+        /// "Bounce off border"
+        /// </summary>
+        public static LocalisableString AutoPlusBounceBorder => new TranslatableString(getKey(@"auto_plus_bounce_border"), @"Bounce off border");
+
+        /// <summary>
+        /// "From osu!fx. Reverse cursor position when going offscreen"
+        /// </summary>
+        public static LocalisableString AutoPlusBounceBorderDescription => new TranslatableString(getKey(@"auto_plus_bounce_border_description"), @"From osu!fx. Reverse cursor position when going offscreen");
+
+        /// <summary>
+        /// "Alternate buttons"
+        /// </summary>
+        public static LocalisableString AutoPlusAlternateButtons => new TranslatableString(getKey(@"auto_plus_alternate_buttons"), @"Alternate buttons");
+
+        /// <summary>
+        /// "Use cubic spline interpolation"
+        /// </summary>
+        public static LocalisableString AutoPlusCubicSplineInterpolation => new TranslatableString(getKey(@"auto_plus_cubic_spline_interpolation"), @"Use cubic spline interpolation");
+
+        /// <summary>
+        /// "Use cubic spline interpolation for cursor dancing."
+        /// </summary>
+        public static LocalisableString AutoPlusCubicSplineInterpolationDescription => new TranslatableString(getKey(@"auto_plus_cubic_spline_interpolation_description"), @"Use cubic spline interpolation for cursor dancing.");
+
+        /// <summary>
+        /// "Use half-circle interpolation"
+        /// </summary>
+        public static LocalisableString AutoPlusHalfCircleInterpolation => new TranslatableString(getKey(@"auto_plus_half_circle_interpolation"), @"Use half-circle interpolation");
+
+        /// <summary>
+        /// "Use half-circle stream interpolation"
+        /// </summary>
+        public static LocalisableString AutoPlusHalfCircleStreamInterpolation => new TranslatableString(getKey(@"auto_plus_half_circle_stream_interpolation"), @"Use half-circle stream interpolation");
+
+        /// <summary>
+        /// "Use angular stream interpolation"
+        /// </summary>
+        public static LocalisableString AutoPlusAngularStreamInterpolation => new TranslatableString(getKey(@"auto_plus_angular_stream_interpolation"), @"Use angular stream interpolation");
+
+        /// <summary>
+        /// "Interpolation frequency"
+        /// </summary>
+        public static LocalisableString AutoPlusInterpolationFrequency => new TranslatableString(getKey(@"auto_plus_interpolation_frequency"), @"Interpolation frequency");
+
+        /// <summary>
+        /// "Slider speed factor"
+        /// </summary>
+        public static LocalisableString AutoPlusSliderSpeedFactor => new TranslatableString(getKey(@"auto_plus_slider_speed_factor"), @"Slider speed factor");
+
+        /// <summary>
+        /// "Stream speed factor"
+        /// </summary>
+        public static LocalisableString AutoPlusStreamSpeedFactor => new TranslatableString(getKey(@"auto_plus_stream_speed_factor"), @"Stream speed factor");
+
+        /// <summary>
+        /// "Stream half-circle border angle"
+        /// </summary>
+        public static LocalisableString AutoPlusStreamHalfCircleBorderAngle => new TranslatableString(getKey(@"auto_plus_stream_half_circle_border_angle"), @"Stream half-circle border angle");
+
+        /// <summary>
+        /// "(0, 0) interpolation"
+        /// </summary>
+        public static LocalisableString AutoPlusZeroInterpolation => new TranslatableString(getKey(@"auto_plus_zero_interpolation"), @"(0, 0) interpolation");
+
+        /// <summary>
+        /// "Put the cursor to the top-left corner of the screen whenever possible."
+        /// </summary>
+        public static LocalisableString AutoPlusZeroInterpolationDescription => new TranslatableString(getKey(@"auto_plus_zero_interpolation_description"), @"Put the cursor to the top-left corner of the screen whenever possible.");
+
+        /// <summary>
+        /// "TAG mode"
+        /// </summary>
+        public static LocalisableString AutoPlusTag => new TranslatableString(getKey(@"auto_plus_tag"), @"TAG mode");
+
+        /// <summary>
+        /// "Creates multiple cursors for Auto+ to simulate TAG multiplayer"
+        /// </summary>
+        public static LocalisableString AutoPlusTagDescription => new TranslatableString(getKey(@"auto_plus_tag_description"), @"Creates multiple cursors for Auto+ to simulate TAG multiplayer");
+
+        /// <summary>
+        /// "Cursor count"
+        /// </summary>
+        public static LocalisableString AutoPlusTagCount => new TranslatableString(getKey(@"auto_plus_tag_count"), @"Cursor count");
+
+        /// <summary>
+        /// "0 to use the combo colour count"
+        /// </summary>
+        public static LocalisableString AutoPlusTagCountDescription => new TranslatableString(getKey(@"auto_plus_tag_count_description"), @"0 to use the combo colour count");
+
+        /// <summary>
+        /// "Split objects by"
+        /// </summary>
+        public static LocalisableString AutoPlusTagSplit => new TranslatableString(getKey(@"auto_plus_tag_split"), @"Split objects by");
+
+        /// <summary>
+        /// "Cursor colours"
+        /// </summary>
+        public static LocalisableString AutoPlusTagColours => new TranslatableString(getKey(@"auto_plus_tag_colours"), @"Cursor colours");
+
         private static string getKey(string key) => $"{prefix}:{key}";
     }
 }

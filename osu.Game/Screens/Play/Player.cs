@@ -1356,6 +1356,11 @@ namespace osu.Game.Screens.Play
         };
 
         /// <summary>
+        /// Whether a score which was played back from a replay should still be imported.
+        /// </summary>
+        protected virtual bool ImportReplayScore => false;
+
+        /// <summary>
         /// Imports the player's <see cref="Scoring.Score"/> to the local database.
         /// </summary>
         /// <param name="score">The <see cref="Scoring.Score"/> to import.</param>
@@ -1363,7 +1368,7 @@ namespace osu.Game.Screens.Play
         protected virtual Task ImportScore(Score score)
         {
             // Replays are already populated and present in the game's database, so should not be re-imported.
-            if (DrawableRuleset.ReplayScore != null)
+            if (DrawableRuleset.ReplayScore != null && !ImportReplayScore)
                 return Task.CompletedTask;
 
             ByteArrayArchiveReader replayReader = null;

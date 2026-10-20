@@ -363,6 +363,9 @@ namespace osu.Game
             MultiplayerClientExtensions.UnsupportedVersionNotifiedBefore = LocalConfig.Get<string>(OsuSetting.SlopUnsupportedRealtimeNotifiedVersion) == Version;
             MultiplayerClientExtensions.OnUnsupportedVersionNotified = () => Schedule(() => LocalConfig.SetValue(OsuSetting.SlopUnsupportedRealtimeNotifiedVersion, Version));
 
+            // replay generators have no access to dependency injection.
+            SlopAutoplaySettings.Config = LocalConfig;
+
             dependencies.Cache(userCache = new UserLookupCache());
             base.Content.Add(userCache);
 

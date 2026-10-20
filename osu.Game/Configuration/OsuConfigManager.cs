@@ -397,6 +397,26 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopKeyOverlayColourK2, @"#FFDE00");
             SetDefault(OsuSetting.SlopKeyOverlayColourM1, @"#F8009E");
             SetDefault(OsuSetting.SlopKeyOverlayColourM2, @"#F8009E");
+            SetDefault(OsuSetting.SlopAutoplayEngine, SlopAutoplayEngine.Default);
+            SetDefault(OsuSetting.SlopSaveAutoplayReplays, false);
+            SetDefault(OsuSetting.SlopAutoPlusFollowSliders, true);
+            SetDefault(OsuSetting.SlopAutoPlusFollowSliderEnds, true);
+            SetDefault(OsuSetting.SlopAutoPlusRotation, false);
+            SetDefault(OsuSetting.SlopAutoPlusBounceBorder, false);
+            SetDefault(OsuSetting.SlopAutoPlusAlternateButtons, true);
+            SetDefault(OsuSetting.SlopAutoPlusCubicSplineInterpolation, true);
+            SetDefault(OsuSetting.SlopAutoPlusHalfCircleInterpolation, false);
+            SetDefault(OsuSetting.SlopAutoPlusHalfCircleStreamInterpolation, true);
+            SetDefault(OsuSetting.SlopAutoPlusAngularStreamInterpolation, true);
+            SetDefault(OsuSetting.SlopAutoPlusInterpolationFrequency, 1000.0, 0.0, 1000.0, 1.0);
+            SetDefault(OsuSetting.SlopAutoPlusSliderSpeedFactor, 4.0, 0.0, 20.0, 0.1);
+            SetDefault(OsuSetting.SlopAutoPlusStreamSpeedFactor, 4.0, 0.0, 20.0, 0.1);
+            SetDefault(OsuSetting.SlopAutoPlusStreamHalfCircleBorderAngle, 30.0, 0.0, 80.0, 1.0);
+            SetDefault(OsuSetting.SlopAutoPlusZeroInterpolation, false);
+            SetDefault(OsuSetting.SlopAutoPlusTag, false);
+            SetDefault(OsuSetting.SlopAutoPlusTagCount, 0, 0, 16);
+            SetDefault(OsuSetting.SlopAutoPlusTagSplit, AutoPlusTagSplitMode.Colour);
+            SetDefault(OsuSetting.SlopAutoPlusTagColours, AutoPlusTagColourSource.MapColours);
         }
 
         protected override bool CheckLookupContainsPrivateInformation(OsuSetting lookup)
@@ -1308,5 +1328,105 @@ namespace osu.Game.Configuration
         /// The colour of the fourth key of the legacy key overlay when pressed.
         /// </summary>
         SlopKeyOverlayColourM2,
+
+        /// <summary>
+        /// The engine used to generate the cursor movement of the osu! autoplay mod.
+        /// </summary>
+        SlopAutoplayEngine,
+
+        /// <summary>
+        /// Whether replays of autoplay plays should be saved after finishing the map.
+        /// </summary>
+        SlopSaveAutoplayReplays,
+
+        /// <summary>
+        /// Whether Auto+ follows the slider ball.
+        /// </summary>
+        SlopAutoPlusFollowSliders,
+
+        /// <summary>
+        /// Whether Auto+ moves to the visible slider ends.
+        /// </summary>
+        SlopAutoPlusFollowSliderEnds,
+
+        /// <summary>
+        /// Whether Auto+ rotates around the points between jumps.
+        /// </summary>
+        SlopAutoPlusRotation,
+
+        /// <summary>
+        /// Whether Auto+ reverses the cursor position when it goes offscreen.
+        /// </summary>
+        SlopAutoPlusBounceBorder,
+
+        /// <summary>
+        /// Whether Auto+ alternates the buttons it presses.
+        /// </summary>
+        SlopAutoPlusAlternateButtons,
+
+        /// <summary>
+        /// Whether Auto+ uses cubic spline interpolation for cursor dancing.
+        /// </summary>
+        SlopAutoPlusCubicSplineInterpolation,
+
+        /// <summary>
+        /// Whether Auto+ uses half-circle interpolation for cursor dancing.
+        /// </summary>
+        SlopAutoPlusHalfCircleInterpolation,
+
+        /// <summary>
+        /// Whether Auto+ uses half-circle interpolation for streams.
+        /// </summary>
+        SlopAutoPlusHalfCircleStreamInterpolation,
+
+        /// <summary>
+        /// Whether Auto+ uses angular interpolation for streams.
+        /// </summary>
+        SlopAutoPlusAngularStreamInterpolation,
+
+        /// <summary>
+        /// How many interpolated cursor positions Auto+ generates per second.
+        /// </summary>
+        SlopAutoPlusInterpolationFrequency,
+
+        /// <summary>
+        /// The speed factor Auto+ applies when entering and leaving sliders.
+        /// </summary>
+        SlopAutoPlusSliderSpeedFactor,
+
+        /// <summary>
+        /// The speed factor Auto+ applies when entering and leaving streams.
+        /// </summary>
+        SlopAutoPlusStreamSpeedFactor,
+
+        /// <summary>
+        /// The border angle of the Auto+ half-circle stream interpolation.
+        /// </summary>
+        SlopAutoPlusStreamHalfCircleBorderAngle,
+
+        /// <summary>
+        /// Whether Auto+ moves the cursor to the top-left corner whenever possible.
+        /// </summary>
+        SlopAutoPlusZeroInterpolation,
+
+        /// <summary>
+        /// Whether Auto+ uses multiple cursors to simulate TAG multiplayer.
+        /// </summary>
+        SlopAutoPlusTag,
+
+        /// <summary>
+        /// The amount of Auto+ TAG cursors (0 uses the amount of colours).
+        /// </summary>
+        SlopAutoPlusTagCount,
+
+        /// <summary>
+        /// How the objects are split between the Auto+ TAG cursors.
+        /// </summary>
+        SlopAutoPlusTagSplit,
+
+        /// <summary>
+        /// Where the colours of the Auto+ TAG cursors come from.
+        /// </summary>
+        SlopAutoPlusTagColours,
     }
 }

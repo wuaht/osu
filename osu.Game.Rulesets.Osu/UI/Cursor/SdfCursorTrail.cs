@@ -47,6 +47,11 @@ namespace osu.Game.Rulesets.Osu.UI.Cursor
 
         public Vector2 CursorScale { get; set; } = Vector2.One;
 
+        /// <summary>
+        /// Whether the trail follows the mouse. If false, positions are added via <see cref="AddPosition"/> only.
+        /// </summary>
+        public bool FollowMouse { get; set; } = true;
+
         private readonly TrailPart[] parts = new TrailPart[max_parts];
         private readonly Queue<Vector2> addQueue = new Queue<Vector2>();
 
@@ -89,12 +94,21 @@ namespace osu.Game.Rulesets.Osu.UI.Cursor
 
         protected override bool OnMouseMove(MouseMoveEvent e)
         {
-            addQueue.Enqueue(e.ScreenSpaceMousePosition);
+            if (FollowMouse)
+                AddPosition(e.ScreenSpaceMousePosition);
+
+            return base.OnMouseMove(e);
+        }
+
+        /// <summary>
+        /// Adds a trail position in screen space.
+        /// </summary>
+        public void AddPosition(Vector2 screenSpacePosition)
+        {
+            addQueue.Enqueue(screenSpacePosition);
 
             while (addQueue.Count > max_parts)
                 addQueue.Dequeue();
-
-            return base.OnMouseMove(e);
         }
 
         protected override void Update()

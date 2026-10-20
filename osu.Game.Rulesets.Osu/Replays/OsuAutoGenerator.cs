@@ -33,6 +33,20 @@ namespace osu.Game.Rulesets.Osu.Replays
         /// </summary>
         public bool DelayedMovements; // ModManager.CheckActive(Mods.Relax2);
 
+        /// <summary>
+        /// If the cursor should constantly circle around its target, spinning spinners with a large radius.
+        /// </summary>
+        public bool Pippi;
+
+        private const float pippi_spin_radius = 250;
+
+        /// <summary>
+        /// The radius of the circle the cursor follows around hit objects in <see cref="Pippi"/> mode.
+        /// </summary>
+        private const float pippi_spinner_circle_radius = 100;
+
+        private float spinRadius => Pippi ? pippi_spin_radius : SPIN_RADIUS;
+
         #endregion
 
         #region Constants
@@ -88,7 +102,24 @@ namespace osu.Game.Rulesets.Osu.Replays
                 addHitObjectReplay(h);
             }
 
+            if (Pippi)
+                applyPippiCircles();
+
             return Replay;
+        }
+
+        private void applyPippiCircles()
+        {
+            float circleRadius = (float)Beatmap.HitObjects[0].Radius * 0.98f;
+            var spinners = Beatmap.HitObjects.OfType<Spinner>().ToList();
+
+            foreach (var frame in Frames.Cast<OsuReplayFrame>())
+            {
+                bool inSpinner = spinners.Any(s => frame.Time > s.StartTime && frame.Time <= s.EndTime);
+                float radius = inSpinner ? pippi_spinner_circle_radius : circleRadius;
+
+                frame.Position += CirclePosition(frame.Time / 100, radius);
+            }
         }
 
         private void addDelayedMovements(OsuHitObject h, OsuHitObject prev)
@@ -161,7 +192,7 @@ namespace osu.Game.Rulesets.Osu.Replays
 
                 Vector2 spinCentreOffset = SPINNER_CENTRE - ((OsuReplayFrame)Frames[^1]).Position;
 
-                if (spinCentreOffset.Length > SPIN_RADIUS)
+                if (spinCentreOffset.Length > spinRadius)
                 {
                     // If moving in from the outside, don't ease out (default eases out). This means auto will "start" spinning immediately after moving into position.
                     easing = Easing.In;
@@ -182,18 +213,18 @@ namespace osu.Game.Rulesets.Osu.Replays
 
         #region Helper subroutines
 
-        private static void calcSpinnerStartPosAndDirection(Vector2 prevPos, out Vector2 startPosition, out float spinnerDirection)
+        private void calcSpinnerStartPosAndDirection(Vector2 prevPos, out Vector2 startPosition, out float spinnerDirection)
         {
             Vector2 spinCentreOffset = SPINNER_CENTRE - prevPos;
             float distFromCentre = spinCentreOffset.Length;
-            float distToTangentPoint = MathF.Sqrt(distFromCentre * distFromCentre - SPIN_RADIUS * SPIN_RADIUS);
+            float distToTangentPoint = MathF.Sqrt(distFromCentre * distFromCentre - spinRadius * spinRadius);
 
-            if (distFromCentre > SPIN_RADIUS)
+            if (distFromCentre > spinRadius)
             {
                 // Previous cursor position was outside spin circle, set startPosition to the tangent point.
 
                 // Angle between centre offset and tangent point offset.
-                float angle = MathF.Asin(SPIN_RADIUS / distFromCentre);
+                float angle = MathF.Asin(spinRadius / distFromCentre);
 
                 if (angle > 0)
                 {
@@ -218,13 +249,13 @@ namespace osu.Game.Rulesets.Osu.Replays
             else if (spinCentreOffset.Length > 0)
             {
                 // Previous cursor position was inside spin circle, set startPosition to the nearest point on spin circle.
-                startPosition = SPINNER_CENTRE - spinCentreOffset * (SPIN_RADIUS / spinCentreOffset.Length);
+                startPosition = SPINNER_CENTRE - spinCentreOffset * (spinRadius / spinCentreOffset.Length);
                 spinnerDirection = 1;
             }
             else
             {
                 // Degenerate case where cursor position is exactly at the centre of the spin circle.
-                startPosition = SPINNER_CENTRE + new Vector2(0, -SPIN_RADIUS);
+                startPosition = SPINNER_CENTRE + new Vector2(0, -spinRadius);
                 spinnerDirection = 1;
             }
         }
@@ -363,7 +394,7 @@ namespace osu.Game.Rulesets.Osu.Replays
                         t = ApplyModsToTimeDelta(previousFrame, nextFrame) * spinnerDirection;
                         angle += (float)t * radsPerMillisecond;
 
-                        Vector2 pos = SPINNER_CENTRE + CirclePosition(angle, SPIN_RADIUS);
+                        Vector2 pos = SPINNER_CENTRE + CirclePosition(angle, spinRadius);
                         AddFrameToReplay(new OsuReplayFrame((int)nextFrame, new Vector2(pos.X, pos.Y), action));
 
                         previousFrame = nextFrame;
@@ -372,7 +403,7 @@ namespace osu.Game.Rulesets.Osu.Replays
                     t = ApplyModsToTimeDelta(previousFrame, spinner.EndTime) * spinnerDirection;
                     angle += (float)t * radsPerMillisecond;
 
-                    Vector2 endPosition = SPINNER_CENTRE + CirclePosition(angle, SPIN_RADIUS);
+                    Vector2 endPosition = SPINNER_CENTRE + CirclePosition(angle, spinRadius);
 
                     AddFrameToReplay(new OsuReplayFrame(spinner.EndTime, new Vector2(endPosition.X, endPosition.Y), action));
 

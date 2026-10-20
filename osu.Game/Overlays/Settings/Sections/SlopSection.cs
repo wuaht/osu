@@ -29,6 +29,7 @@ namespace osu.Game.Overlays.Settings.Sections
                 new CustomColoursSettings(),
                 new SkinSettings(),
                 new GameplaySettings(),
+                new AutoplaySettings(),
                 new HitObjectSettings(),
                 new AnimationSettings(),
                 new UserInterfaceSettings(),
