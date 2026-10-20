@@ -40,6 +40,11 @@ namespace osu.Game.Rulesets.Osu.Replays.AutoPlus
         [Resolved]
         private IBindable<WorkingBeatmap> workingBeatmap { get; set; } = null!;
 
+        /// <summary>
+        /// The number of shown tag cursors.
+        /// </summary>
+        public int CursorCount => InternalChildren.Count;
+
         public AutoPlusTagCursorContainer(Playfield playfield, IBeatmap beatmap, IReadOnlyList<Mod> mods)
         {
             this.playfield = playfield;
@@ -56,7 +61,7 @@ namespace osu.Game.Rulesets.Osu.Replays.AutoPlus
             var splitMode = config.Get<AutoPlusTagSplitMode>(OsuSetting.SlopAutoPlusTagSplit);
 
             IReadOnlyList<Color4>? skinColours = skinManager?.CurrentSkin.Value.GetConfig<GlobalSkinColours, IReadOnlyList<Color4>>(GlobalSkinColours.ComboColours)?.Value;
-            IReadOnlyList<Color4>? mapColours = workingBeatmap.Value.Skin.GetConfig<GlobalSkinColours, IReadOnlyList<Color4>>(GlobalSkinColours.ComboColours)?.Value;
+            IReadOnlyList<Color4>? mapColours = workingBeatmap.Value?.Skin?.GetConfig<GlobalSkinColours, IReadOnlyList<Color4>>(GlobalSkinColours.ComboColours)?.Value;
             IReadOnlyList<Color4>? gameplayColours = skin.GetConfig<GlobalSkinColours, IReadOnlyList<Color4>>(GlobalSkinColours.ComboColours)?.Value;
 
             if (mapColours == null || mapColours.Count == 0)
@@ -68,6 +73,9 @@ namespace osu.Game.Rulesets.Osu.Replays.AutoPlus
 
             var objects = beatmap.HitObjects.OfType<OsuHitObject>().ToList();
             var subsets = split(objects, count, splitMode, Math.Max(gameplayColours?.Count ?? 1, 1));
+
+            // The preempt of the hit objects already includes the difficulty adjustments of mods.
+            double preempt = objects.FirstOrDefault()?.TimePreempt ?? OsuHitObject.PREEMPT_MAX;
 
             Color4[] colours = getColours(colourSource, count, mapColours, skinColours);
 
@@ -81,7 +89,7 @@ namespace osu.Game.Rulesets.Osu.Replays.AutoPlus
                 if (frames.Count == 0)
                     continue;
 
-                AddInternal(new TagCursor(playfield, frames, colours[i]));
+                AddInternal(new TagCursor(playfield, frames, colours[i], preempt));
             }
         }
 
@@ -186,11 +194,12 @@ namespace osu.Game.Rulesets.Osu.Replays.AutoPlus
 
             private int frameIndex;
             private bool visible = true;
-            private double preempt;
+            private readonly double preempt;
 
-            public TagCursor(Playfield playfield, List<OsuReplayFrame> frames, Color4 colour)
+            public TagCursor(Playfield playfield, List<OsuReplayFrame> frames, Color4 colour, double preempt)
             {
                 this.playfield = playfield;
+                this.preempt = preempt;
                 this.frames = frames;
                 this.colour = colour;
 
@@ -217,10 +226,8 @@ namespace osu.Game.Rulesets.Osu.Replays.AutoPlus
             }
 
             [BackgroundDependencyLoader]
-            private void load(IBindable<WorkingBeatmap> workingBeatmap)
+            private void load()
             {
-                preempt = IBeatmapDifficultyInfo.DifficultyRange(workingBeatmap.Value.BeatmapInfo.Difficulty.ApproachRate, OsuHitObject.PREEMPT_MAX, OsuHitObject.PREEMPT_MID, OsuHitObject.PREEMPT_MIN);
-
                 InternalChildren = new Drawable[]
                 {
                     trail = new SdfCursorTrail

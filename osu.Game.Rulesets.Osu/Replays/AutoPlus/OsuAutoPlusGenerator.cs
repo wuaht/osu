@@ -184,16 +184,17 @@ namespace osu.Game.Rulesets.Osu.Replays.AutoPlus
                         addKeyFrame(frames, new KeyFrame(startTime, slider.StackedPosition, true, FrameType.Click, slider));
                         clickTimes.Add(startTime);
 
+                        // Ticks are rounded up, so that the cursor is on the slider ball when they are judged.
                         var tickTimes = new SortedSet<int>();
 
                         foreach (var nested in slider.NestedHitObjects)
                         {
                             if (nested is SliderTick || nested is SliderRepeat)
-                                tickTimes.Add(toTime(nested.StartTime));
+                                tickTimes.Add((int)Math.Ceiling(nested.StartTime));
                         }
 
                         double finalSpanStartTime = slider.StartTime + (slider.SpanCount() - 1) * slider.SpanDuration;
-                        tickTimes.Add(toTime(Math.Max(slider.StartTime + slider.Duration / 2, finalSpanStartTime + slider.SpanDuration + SliderEventGenerator.TAIL_LENIENCY)));
+                        tickTimes.Add((int)Math.Ceiling(Math.Max(slider.StartTime + slider.Duration / 2, finalSpanStartTime + slider.SpanDuration + SliderEventGenerator.TAIL_LENIENCY)));
 
                         if (followSliderEnds && useInterpolation)
                             tickTimes.Add(endTime);
