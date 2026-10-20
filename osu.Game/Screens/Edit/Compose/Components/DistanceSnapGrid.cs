@@ -41,7 +41,7 @@ namespace osu.Game.Screens.Edit.Compose.Components
         /// The position which the grid should start.
         /// The first beat snapping tick is located at <see cref="StartPosition"/> + <see cref="DistanceBetweenTicks"/> away from this point.
         /// </summary>
-        protected readonly Vector2 StartPosition;
+        public readonly Vector2 StartPosition;
 
         /// <summary>
         /// The snapping time at <see cref="StartPosition"/>.

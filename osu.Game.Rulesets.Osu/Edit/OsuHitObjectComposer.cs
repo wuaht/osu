@@ -339,10 +339,83 @@ namespace osu.Game.Rulesets.Osu.Edit
             var playfield = PlayfieldAtScreenSpacePosition(screenSpacePosition);
             (Vector2 pos, double time) = distanceSnapGrid.GetSnappedPosition(distanceSnapGrid.ToLocalSpace(screenSpacePosition), fixedTime);
 
-            if (pos.X < 0 || pos.X > OsuPlayfield.BASE_SIZE.X || pos.Y < 0 || pos.Y > OsuPlayfield.BASE_SIZE.Y)
-                return null;
+            if (!isInPlayfield(pos))
+            {
+                // rather than giving up on distance snap, move along the snapped ring to the closest position that is still in bounds.
+                Vector2? clamped = clampToPlayfieldAlongCircle(distanceSnapGrid.StartPosition, pos);
+
+                if (clamped == null)
+                    return null;
+
+                pos = clamped.Value;
+            }
 
             return new SnapResult(distanceSnapGrid.ToScreenSpace(pos), time, playfield);
+        }
+
+        private static bool isInPlayfield(Vector2 pos, float leniency = 0)
+            => pos.X >= -leniency && pos.X <= OsuPlayfield.BASE_SIZE.X + leniency && pos.Y >= -leniency && pos.Y <= OsuPlayfield.BASE_SIZE.Y + leniency;
+
+        /// <summary>
+        /// Finds the position on the circle around <paramref name="centre"/> passing through <paramref name="position"/>
+        /// which is inside the playfield and closest in direction to <paramref name="position"/>.
+        /// </summary>
+        /// <returns>The clamped position, or <c>null</c> if no part of the circle is inside the playfield.</returns>
+        private static Vector2? clampToPlayfieldAlongCircle(Vector2 centre, Vector2 position)
+        {
+            Vector2 direction = position - centre;
+            float radius = direction.Length;
+
+            if (radius == 0)
+                return null;
+
+            direction /= radius;
+
+            Vector2? best = null;
+            float bestDot = float.MinValue;
+
+            // the closest in-bounds position on the circle is always where it crosses one of the playfield's edges.
+            foreach (float x in new[] { 0, OsuPlayfield.BASE_SIZE.X })
+            {
+                float dx = x - centre.X;
+                float squared = radius * radius - dx * dx;
+
+                if (squared < 0)
+                    continue;
+
+                float dy = MathF.Sqrt(squared);
+                consider(new Vector2(x, centre.Y + dy));
+                consider(new Vector2(x, centre.Y - dy));
+            }
+
+            foreach (float y in new[] { 0, OsuPlayfield.BASE_SIZE.Y })
+            {
+                float dy = y - centre.Y;
+                float squared = radius * radius - dy * dy;
+
+                if (squared < 0)
+                    continue;
+
+                float dx = MathF.Sqrt(squared);
+                consider(new Vector2(centre.X + dx, y));
+                consider(new Vector2(centre.X - dx, y));
+            }
+
+            return best;
+
+            void consider(Vector2 candidate)
+            {
+                if (!isInPlayfield(candidate, 0.01f))
+                    return;
+
+                float dot = Vector2.Dot((candidate - centre) / radius, direction);
+
+                if (dot <= bestDot)
+                    return;
+
+                bestDot = dot;
+                best = Vector2.Clamp(candidate, Vector2.Zero, OsuPlayfield.BASE_SIZE);
+            }
         }
 
         [CanBeNull]
