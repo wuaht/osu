@@ -176,12 +176,12 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
         {
             var inputState = GetContainingInputManager()?.CurrentState;
 
-            // matches the conditions under which ctrl+click inserts a control point.
+            // matches the conditions under which ctrl+click inserts a control point (at the closer end with shift held).
             bool show = showInsertionPreview.Value && IsSelected && selectedObjects.Count < 2 && placementControlPoint == null
-                        && inputState?.Keyboard.ControlPressed == true && !inputState.Keyboard.ShiftPressed && !inputState.Keyboard.AltPressed;
+                        && inputState?.Keyboard.ControlPressed == true && !inputState.Keyboard.AltPressed;
 
             if (show)
-                insertionPreview.UpdatePreview(ToLocalSpace(inputState!.Mouse.Position));
+                insertionPreview.UpdatePreview(ToLocalSpace(inputState!.Mouse.Position), inputState.Keyboard.ShiftPressed);
             else
                 insertionPreview.Alpha = 0;
         }
@@ -354,7 +354,7 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
                     if (e.ControlPressed && IsSelected && selectedObjects.Count < 2)
                     {
                         changeHandler?.BeginChange();
-                        placementControlPoint = addControlPoint(e.MousePosition);
+                        placementControlPoint = addControlPoint(e.MousePosition, e.ShiftPressed);
                         ControlPointVisualiser?.SetSelectionTo(placementControlPoint);
                         return true; // Stop input from being handled and modifying the selection
                     }
@@ -588,16 +588,27 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
             adjustLength(desiredDistance, adjustVelocityMomentary, ignoreBeatSnapMomentary);
         }
 
-        private PathControlPoint addControlPoint(Vector2 position)
+        /// <param name="position">The position of the new control point.</param>
+        /// <param name="atEnd">Whether to insert at the start or end of the path (whichever is closer) rather than into the closest segment.</param>
+        private PathControlPoint addControlPoint(Vector2 position, bool atEnd = false)
         {
             position -= HitObject.Position;
 
-            int insertionIndex = ControlPointInsertionPreview.GetInsertionIndex(controlPoints, position);
+            int insertionIndex = ControlPointInsertionPreview.GetInsertionIndex(controlPoints, position, atEnd);
 
             var pathControlPoint = new PathControlPoint { Position = position };
 
             // Move the control points from the insertion index onwards to make room for the insertion
-            controlPoints.Insert(insertionIndex, pathControlPoint);
+            ControlPointInsertionPreview.Insert(controlPoints, insertionIndex, pathControlPoint);
+
+            // a new head becomes the slider's position, with the path re-positioned to start at (0, 0).
+            if (insertionIndex == 0)
+            {
+                HitObject.Position += position;
+
+                foreach (var c in controlPoints)
+                    c.Position -= position;
+            }
 
             ControlPointVisualiser?.EnsureValidPathTypes();
 

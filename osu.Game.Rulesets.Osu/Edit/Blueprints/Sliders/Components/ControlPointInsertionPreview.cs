@@ -76,8 +76,16 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders.Components
         /// </summary>
         /// <param name="controlPoints">The control points of the path.</param>
         /// <param name="position">The position of the new control point, relative to the start of the path.</param>
-        public static int GetInsertionIndex(IReadOnlyList<PathControlPoint> controlPoints, Vector2 position)
+        /// <param name="atEnd">Whether to insert at the start or end of the path (whichever is closer) rather than into the closest segment.</param>
+        public static int GetInsertionIndex(IReadOnlyList<PathControlPoint> controlPoints, Vector2 position, bool atEnd = false)
         {
+            if (atEnd && controlPoints.Count > 0)
+            {
+                return Vector2.DistanceSquared(position, controlPoints[0].Position) < Vector2.DistanceSquared(position, controlPoints[^1].Position)
+                    ? 0
+                    : controlPoints.Count;
+            }
+
             int insertionIndex = 0;
             float minDistance = float.MaxValue;
 
@@ -96,10 +104,26 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders.Components
         }
 
         /// <summary>
+        /// Inserts <paramref name="controlPoint"/> into <paramref name="controlPoints"/> at <paramref name="index"/>.
+        /// When inserting a new head, it takes over the type of the previous head so that it extends the first segment.
+        /// </summary>
+        public static void Insert(IList<PathControlPoint> controlPoints, int index, PathControlPoint controlPoint)
+        {
+            if (index == 0 && controlPoints.Count > 0)
+            {
+                controlPoint.Type = controlPoints[0].Type;
+                controlPoints[0].Type = null;
+            }
+
+            controlPoints.Insert(index, controlPoint);
+        }
+
+        /// <summary>
         /// Shows the preview for a control point inserted at <paramref name="cursorPosition"/>.
         /// </summary>
         /// <param name="cursorPosition">The cursor position, in the parent's (playfield) space.</param>
-        public void UpdatePreview(Vector2 cursorPosition)
+        /// <param name="atEnd">Whether the control point is inserted at the start or end of the path (see <see cref="GetInsertionIndex"/>).</param>
+        public void UpdatePreview(Vector2 cursorPosition, bool atEnd = false)
         {
             var controlPoints = slider.Path.ControlPoints;
 
@@ -110,10 +134,10 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders.Components
             }
 
             Vector2 position = cursorPosition - slider.Position;
-            int insertionIndex = GetInsertionIndex(controlPoints, position);
+            int insertionIndex = GetInsertionIndex(controlPoints, position, atEnd);
 
             var newControlPoints = controlPoints.Select(p => new PathControlPoint(p.Position, p.Type)).ToList();
-            newControlPoints.Insert(insertionIndex, new PathControlPoint(position));
+            Insert(newControlPoints, insertionIndex, new PathControlPoint(position));
 
             var newPath = new SliderPath(newControlPoints.ToArray());
             newPath.ExpectedDistance.Value = distanceSnapProvider?.FindSnappedDistance((float)newPath.CalculatedDistance, slider.StartTime, slider) ?? newPath.CalculatedDistance;
@@ -128,18 +152,23 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders.Components
             body.Position = offset;
             body.OriginPosition = body.PathOffset;
 
-            Vector2 previous = controlPoints[insertionIndex - 1].Position;
-            Vector2 next = controlPoints[insertionIndex].Position;
+            // when inserting at either end, there's only a neighbour on one side.
+            Vector2? previous = insertionIndex > 0 ? controlPoints[insertionIndex - 1].Position : null;
+            Vector2? next = insertionIndex < controlPoints.Count ? controlPoints[insertionIndex].Position : null;
 
             guideLine.ClearVertices();
-            guideLine.AddVertex(previous);
+            if (previous != null)
+                guideLine.AddVertex(previous.Value);
             guideLine.AddVertex(position);
-            guideLine.AddVertex(next);
+            if (next != null)
+                guideLine.AddVertex(next.Value);
             guideLine.Position = offset;
             guideLine.OriginPosition = guideLine.PositionInBoundingBox(Vector2.Zero);
 
-            previousMarker.Position = offset + previous;
-            nextMarker.Position = offset + next;
+            previousMarker.Alpha = previous != null ? 1 : 0;
+            previousMarker.Position = offset + (previous ?? Vector2.Zero);
+            nextMarker.Alpha = next != null ? 1 : 0;
+            nextMarker.Position = offset + (next ?? Vector2.Zero);
 
             Alpha = 1;
         }
