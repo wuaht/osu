@@ -12,7 +12,7 @@ namespace osu.Game.Configuration
         [Description("Stable")]
         Lazer,
 
-        [Description("Nightly (Unstable)")]
+        [Description("Nightly")]
         Tachyon
     }
 }
