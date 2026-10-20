@@ -4,7 +4,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using osu.Framework.Graphics;
 using osu.Framework.Utils;
 using osu.Game.Beatmaps;
 using osu.Game.Replays;
@@ -39,9 +38,17 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
         private const float max_step = 0.1f;
 
         /// <summary>
-        /// Jumps longer than this arc slightly upwards, like a flicking wrist.
+        /// Follows smooth targets closely without overshooting.
         /// </summary>
-        private const float arc_jump_distance = 125;
+        private static readonly DynamicsParameters tracking = new DynamicsParameters(8, 1, 1);
+
+        /// <summary>
+        /// How far the cursor lags behind a moving target with <see cref="tracking"/>, in milliseconds.
+        /// Targets are sampled this far ahead to compensate, like a player anticipating the movement.
+        /// </summary>
+        private const double tracking_lag = 1000 / (Math.PI * 8) * 0.5;
+
+        private static readonly DynamicsParameters resting = new DynamicsParameters(2, 1, 1);
 
         private static readonly Vector2 playfield_min = new Vector2(-512, -384);
         private static readonly Vector2 playfield_max = new Vector2(1024, 768);
@@ -206,7 +213,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
             }
 
             // before the first object, move towards it. after the last object, rest.
-            moveTo(dt, next?.StackedPosition ?? cursor.Position, new DynamicsParameters(2, 0.5f, 0.5f));
+            moveTo(dt, next?.StackedPosition ?? cursor.Position, resting);
         }
 
         private void spin(double time, float dt, Spinner spinner)
@@ -226,64 +233,56 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
 
         private void followSlider(double time, float dt, Slider slider)
         {
-            Vector2 ballPosition = slider.StackedPositionAt(Math.Clamp((time - slider.StartTime) / slider.Duration, 0, 1));
+            double aheadTime = Math.Min(time + ApplyModsToRate(time, tracking_lag), slider.EndTime);
 
-            // fast and short sliders are followed loosely, slow and long sliders closely.
+            // slow sliders are followed closely, fast and short sliders cut corners.
             float followAmount = Interpolation.ValueAt(slider.Velocity, 1f, 0f, 0, 2) * Interpolation.ValueAt(slider.SpanDuration, 0f, 1f, 50, 150);
-            Vector2 target = Vector2.Lerp(sliderPaths[slider].PositionAt(time), ballPosition, followAmount);
+            Vector2 target = Vector2.Lerp(sliderPaths[slider].PositionAt(aheadTime), ballPositionAt(slider, aheadTime), followAmount);
 
-            float distance = Math.Clamp(Vector2.Distance(cursor.Position, target) / (float)slider.Radius, 0.5f, 6);
-
-            moveTo(dt, target, new DynamicsParameters(MathF.Max(distance * 5, 5), MathF.Max(1, 2 - distance), 0.5f));
-            moveTo(dt, ballPosition, new DynamicsParameters(1, 1, 3));
+            moveTo(dt, target, tracking);
 
             // stay inside the follow circle, so that no ticks are missed.
-            cursor.Position = RealisticMath.MoveIntoCircle(cursor.Position, ballPosition, (float)slider.Radius * 2);
+            cursor.Position = RealisticMath.MoveIntoCircle(cursor.Position, ballPositionAt(slider, time), (float)slider.Radius * 2);
         }
 
         private void approach(double time, float dt, OsuHitObject current, OsuHitObject next)
         {
-            Vector2 from = current is Slider slider ? sliderPaths[slider].PositionAt(time) : current.StackedEndPosition;
+            double leaveTime = getLeaveTime(current);
+            Vector2 from = current is Slider slider ? sliderPaths[slider].PositionAt(leaveTime) : current.StackedEndPosition;
 
-            // aim for the near side of the next object.
-            Vector2 to = RealisticMath.MoveIntoCircle((from + next.StackedPosition) / 2, next.StackedPosition, (float)next.Radius * 0.5f);
-
-            double moveStartTime = Math.Max(getLeaveTime(current), next.StartTime - next.TimePreempt);
-
-            if (time < moveStartTime)
-            {
-                moveTo(dt, from, new DynamicsParameters(2, 0.5f, 0.5f));
-                return;
-            }
-
-            double moveDuration = next.StartTime - moveStartTime;
-            Vector2 target = Interpolation.ValueAt(time, from, to, moveStartTime, moveStartTime + Math.Min(200, moveDuration * 0.75), Easing.Out);
+            // aim for the near side of the next object, never at exactly the same spot.
+            Vector2 to = RealisticMath.MoveIntoCircle((from + next.StackedPosition) / 2, next.StackedPosition, (float)next.Radius * 0.5f)
+                         + new Vector2(RealisticMath.Random(next.StackedPosition) - 0.5f, RealisticMath.Random(next.StackedPosition + new Vector2(1, 0)) - 0.5f) * (float)next.Radius * 0.25f;
 
             float distance = Vector2.Distance(from, to);
-            float frequencyMultiplier = 1;
 
-            if (distance > arc_jump_distance)
+            // during pauses, players wait and only start moving when needed (Fitts's law), arriving at the next object just in time.
+            double gap = next.StartTime - leaveTime;
+            double realGap = ApplyModsToTimeDelta(leaveTime, next.StartTime);
+            double movementTime = 80 + 90 * Math.Log2(distance / (2 * next.Radius) + 1);
+            double moveStartTime = realGap > movementTime ? next.StartTime - gap * movementTime / realGap : leaveTime;
+
+            double aheadTime = time + ApplyModsToRate(time, tracking_lag);
+            double progress = next.StartTime > moveStartTime ? Math.Clamp((aheadTime - moveStartTime) / (next.StartTime - moveStartTime), 0, 1) : 1;
+
+            Vector2 target = Vector2.Lerp(from, to, (float)minimumJerk(progress));
+
+            // movements curve slightly to one side.
+            if (distance > 0)
             {
-                double gap = next.StartTime - current.GetEndTime();
-                float progress = gap > 0 ? (float)Math.Clamp((time - current.GetEndTime()) / gap, 0, 1) : 1;
+                Vector2 direction = (to - from) / distance;
+                float side = RealisticMath.Random(next.StackedPosition + new Vector2(0, 1)) < 0.5f ? -1 : 1;
 
-                target.Y -= (1 - progress) * (1 - progress) * distance * 0.1f;
-                frequencyMultiplier = 1.5f;
+                target += new Vector2(-direction.Y, direction.X) * side * MathF.Sin(MathF.PI * (float)progress) * distance * 0.05f;
             }
 
-            // players never aim at exactly the same spot.
-            target += new Vector2(
-                RealisticMath.Random(current.StackedPosition) - 0.5f,
-                RealisticMath.Random(current.StackedPosition + new Vector2(1, 0)) - 0.5f) * (float)current.Radius * 0.25f;
-
-            double realDuration = ApplyModsToTimeDelta(moveStartTime, next.StartTime);
-            float frequency = realDuration > 0 ? (float)(1000 / realDuration * 0.75 * (1 + Math.Log(distance + 1) * 0.05)) * frequencyMultiplier : 10;
-
-            // start the movement gently.
-            float fadeIn = Interpolation.ValueAt(time, 0.15f, 1f, moveStartTime, moveStartTime + Math.Min(250, moveDuration * 0.75));
-
-            moveTo(dt, target, new DynamicsParameters(MathF.Min(MathF.Max(frequency, 0.5f) * fadeIn, 2) * 3, 1, 0.75f * fadeIn));
+            moveTo(dt, target, tracking);
         }
+
+        /// <summary>
+        /// The progress of a natural point-to-point hand movement, which starts and stops smoothly.
+        /// </summary>
+        private static double minimumJerk(double t) => t * t * t * (10 - 15 * t + 6 * t * t);
 
         private void moveTo(float dt, Vector2 target, DynamicsParameters parameters)
         {
@@ -315,6 +314,8 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
                     return hitObject.StartTime;
             }
         }
+
+        private static Vector2 ballPositionAt(Slider slider, double time) => slider.StackedPositionAt(Math.Clamp((time - slider.StartTime) / slider.Duration, 0, 1));
 
         private static Vector2 rotate(Vector2 vector, float angle)
         {

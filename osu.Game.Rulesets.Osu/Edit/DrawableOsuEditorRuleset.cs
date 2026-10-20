@@ -29,6 +29,11 @@ namespace osu.Game.Rulesets.Osu.Edit
 
         private partial class OsuEditorPlayfield : OsuPlayfield
         {
+            /// <summary>
+            /// The autoplay cursor is slightly transparent, so that it does not cover the objects being edited.
+            /// </summary>
+            private const float cursor_alpha = 0.6f;
+
             [Resolved]
             private EditorBeatmap editorBeatmap { get; set; } = null!;
 
@@ -53,7 +58,7 @@ namespace osu.Game.Rulesets.Osu.Edit
 
                 editorBeatmap.BeatmapReprocessed += onBeatmapReprocessed;
 
-                showAutoplayCursor.BindValueChanged(show => Cursor!.Alpha = show.NewValue ? 1 : 0, true);
+                showAutoplayCursor.BindValueChanged(show => Cursor!.Alpha = show.NewValue ? cursor_alpha : 0, true);
             }
 
             private void onBeatmapReprocessed() => ApplyCircleSizeToPlayfieldBorder(editorBeatmap);
