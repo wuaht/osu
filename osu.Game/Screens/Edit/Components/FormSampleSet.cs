@@ -20,6 +20,7 @@ using osu.Framework.Graphics.UserInterface;
 using osu.Framework.Input.Events;
 using osu.Framework.Localisation;
 using osu.Game.Audio;
+using osu.Game.Configuration;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Backgrounds;
 using osu.Game.Graphics.Sprites;
@@ -218,14 +219,18 @@ namespace osu.Game.Screens.Edit.Components
 
             private ISample? sample;
 
+            private Bindable<double> hitsoundVolume = null!;
+
             public SampleButton()
                 : base(null)
             {
             }
 
             [BackgroundDependencyLoader]
-            private void load()
+            private void load(OsuConfigManager config)
             {
+                hitsoundVolume = config.GetBindable<double>(OsuSetting.HitsoundVolume);
+
                 Add(icon = new SpriteIcon
                 {
                     Icon = FontAwesome.Solid.Plus,
@@ -243,7 +248,7 @@ namespace osu.Game.Screens.Edit.Components
                         this.ShowPopover();
                     }
                     else
-                        sample?.Play();
+                        playSample();
                 };
 
                 if (editorBeatmap?.BeatmapSkin != null)
@@ -277,6 +282,18 @@ namespace osu.Game.Screens.Edit.Components
                 recycleSamples();
 
                 triangles?.Colour = ColourInfo.GradientVertical(triangleGradientSecondColour.Value, BackgroundColour);
+            }
+
+            // hitsound samples don't receive the global effect volume, so the hitsound volume is applied to the channel directly.
+            private void playSample()
+            {
+                var channel = sample?.GetChannel();
+
+                if (channel == null)
+                    return;
+
+                channel.Volume.Value = hitsoundVolume.Value;
+                channel.Play();
             }
 
             private void recycleSamples() => Schedule(() =>

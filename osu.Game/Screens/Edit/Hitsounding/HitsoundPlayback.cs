@@ -35,7 +35,14 @@ namespace osu.Game.Screens.Edit.Hitsounding
         /// </summary>
         private readonly Dictionary<HitSampleInfo, SkinnableSound> sounds = new Dictionary<HitSampleInfo, SkinnableSound>();
 
+        private readonly HitsoundVolumeContainer volumeContainer = new HitsoundVolumeContainer();
+
         private double lastTime;
+
+        public HitsoundPlayback()
+        {
+            InternalChild = volumeContainer;
+        }
 
         protected override void Update()
         {
@@ -106,7 +113,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
             // the volume isn't part of the equality of samples, so one sound is used for all volumes.
             if (!sounds.TryGetValue(sample, out var sound))
             {
-                AddInternal(sound = new SkinnableSound(sample.With(newVolume: 100)));
+                volumeContainer.Add(sound = new SkinnableSound(sample.With(newVolume: 100)));
                 sounds[sample] = sound;
             }
 

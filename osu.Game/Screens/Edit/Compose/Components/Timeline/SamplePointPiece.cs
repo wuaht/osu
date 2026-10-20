@@ -286,7 +286,7 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
                     },
                     new EditorSkinProvidingContainer(beatmap)
                     {
-                        Child = demoSample = new SkinnableSound()
+                        Child = new HitsoundVolumeContainer { Child = demoSample = new SkinnableSound() }
                     }
                 };
 
