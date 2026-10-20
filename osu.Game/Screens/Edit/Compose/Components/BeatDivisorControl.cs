@@ -16,6 +16,7 @@ using osu.Framework.Graphics.Sprites;
 using osu.Framework.Graphics.UserInterface;
 using osu.Framework.Input.Bindings;
 using osu.Framework.Input.Events;
+using osu.Framework.Localisation;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.Sprites;
@@ -284,6 +285,28 @@ namespace osu.Game.Screens.Edit.Compose.Components
             private void updateState()
             {
                 BeatDivisor.BindValueChanged(val => divisorText.Text = $"1/{val.NewValue}", true);
+            }
+
+            [Resolved]
+            private EditorClock? editorClock { get; set; }
+
+            [Resolved]
+            private EditorBeatmap? editorBeatmap { get; set; }
+
+            /// <summary>
+            /// The BPM of the current divisor relative to 1/4, i.e. the BPM of a stream snapped to the current divisor.
+            /// </summary>
+            public override LocalisableString TooltipText
+            {
+                get
+                {
+                    if (editorClock == null || editorBeatmap == null)
+                        return default;
+
+                    double bpm = editorBeatmap.ControlPointInfo.TimingPointAt(editorClock.CurrentTime).BPM;
+                    return $"{bpm * BeatDivisor.Value / 4:0.##} BPM";
+                }
+                set { }
             }
 
             public Popover GetPopover() => new CustomDivisorPopover
