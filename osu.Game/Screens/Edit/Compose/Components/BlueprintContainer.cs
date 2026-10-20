@@ -218,7 +218,7 @@ namespace osu.Game.Screens.Edit.Compose.Components
             DragBox.Show();
 
             selectionBeforeDrag.Clear();
-            if (e.ControlPressed)
+            if (e.ControlPressed || e.ShiftPressed)
                 selectionBeforeDrag.UnionWith(SelectedItems);
 
             return true;
