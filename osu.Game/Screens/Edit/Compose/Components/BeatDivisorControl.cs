@@ -216,27 +216,14 @@ namespace osu.Game.Screens.Edit.Compose.Components
         [Resolved]
         private EditorScreenWithTimeline? screenWithTimeline { get; set; }
 
-        /// <summary>
-        /// Whether Ctrl is held above the timeline of the timing screen, where it places timing points instead of changing the beat snap divisor.
-        /// </summary>
-        private bool isPlacingTimingPoints()
-        {
-            if (screenWithTimeline is not TimingScreen)
-                return false;
-
-            var timeline = screenWithTimeline.TimelineArea?.Timeline;
-            var inputManager = GetContainingInputManager();
-
-            return timeline != null && inputManager != null && timeline.ScreenSpaceDrawQuad.Contains(inputManager.CurrentState.Mouse.Position);
-        }
-
         public bool OnPressed(KeyBindingPressEvent<GlobalAction> e)
         {
             switch (e.Action)
             {
-                case GlobalAction.EditorCycleNextBeatSnapDivisor when isPlacingTimingPoints():
-                case GlobalAction.EditorCyclePreviousBeatSnapDivisor when isPlacingTimingPoints():
-                    return true;
+                // on the timing screen, control-scrolling is used for unsnapped seeking instead (see Editor.OnScroll()).
+                case GlobalAction.EditorCycleNextBeatSnapDivisor when screenWithTimeline is TimingScreen:
+                case GlobalAction.EditorCyclePreviousBeatSnapDivisor when screenWithTimeline is TimingScreen:
+                    return false;
 
                 case GlobalAction.EditorCycleNextBeatSnapDivisor:
                     beatDivisor.SelectNext();

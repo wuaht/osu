@@ -968,7 +968,10 @@ namespace osu.Game.Screens.Edit
 
         protected override bool OnScroll(ScrollEvent e)
         {
-            if (e.ControlPressed || e.AltPressed || e.SuperPressed)
+            // on the timing screen, control-scrolling seeks by single milliseconds (four with shift held) to fine-tune offsets.
+            bool unsnapped = e.ControlPressed && currentScreen is TimingScreen;
+
+            if ((e.ControlPressed && !unsnapped) || e.AltPressed || e.SuperPressed)
                 return false;
 
             const double precision = 1;
@@ -988,10 +991,12 @@ namespace osu.Game.Screens.Edit
             // because we are doing snapped seeking, we need to add up precise scrolls until they accumulate to an arbitrary cut-off.
             while (Math.Abs(scrollAccumulation) >= precision)
             {
-                if (scrollAccumulation > 0)
-                    seek(e, -1);
+                int direction = scrollAccumulation > 0 ? -1 : 1;
+
+                if (unsnapped)
+                    clock.Seek(clock.CurrentTime + direction * (e.ShiftPressed ? 4 : 1));
                 else
-                    seek(e, 1);
+                    seek(e, direction);
 
                 scrollAccumulation = scrollAccumulation < 0 ? Math.Min(0, scrollAccumulation + precision) : Math.Max(0, scrollAccumulation - precision);
             }
