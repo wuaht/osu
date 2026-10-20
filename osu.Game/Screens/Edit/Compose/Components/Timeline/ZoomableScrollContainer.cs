@@ -176,9 +176,26 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
                 return;
 
             const float zoom_change_sensitivity = 0.02f;
+            const float proportional_zoom_change_sensitivity = 0.1f;
 
-            setZoomTarget(zoomTarget + change * (maxZoom - minZoom) * zoom_change_sensitivity, focusPoint);
+            // beyond the threshold, zoom changes are proportional to the current zoom so that zooming in further doesn't take ages,
+            // without making the linear steps below the threshold coarser.
+            if (zoomTarget >= ProportionalZoomThreshold && (change > 0 || zoomTarget > ProportionalZoomThreshold))
+            {
+                setZoomTarget(Math.Max(ProportionalZoomThreshold, zoomTarget * (1 + change * proportional_zoom_change_sensitivity)), focusPoint);
+                return;
+            }
+
+            float linearMaxZoom = Math.Min(maxZoom, ProportionalZoomThreshold);
+            float newZoom = zoomTarget + change * (linearMaxZoom - minZoom) * zoom_change_sensitivity;
+
+            setZoomTarget(change > 0 ? Math.Min(newZoom, linearMaxZoom) : newZoom, focusPoint);
         }
+
+        /// <summary>
+        /// The zoom level above which <see cref="AdjustZoomRelatively"/> changes the zoom proportionally rather than linearly.
+        /// </summary>
+        protected float ProportionalZoomThreshold { get; set; } = float.MaxValue;
 
         private float zoomTarget = 1;
 
