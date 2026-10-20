@@ -129,7 +129,8 @@ namespace osu.Game.Rulesets.Osu.Edit.Streams
                 pathLine.UpdateFrom(stream.Path);
             }
 
-            var anchors = stream.GetDensityAnchors();
+            // the last anchor's density is only shown while the segment before it accelerates towards it.
+            var anchors = stream.GetDensityAnchors().Where(a => stream.UsesDensity(a.Point)).ToList();
 
             if (anchors.Count != densityLabels.Count || anchors.Where((a, i) => densityLabels[i].ControlPoint != a.Point).Any())
             {
@@ -268,9 +269,10 @@ namespace osu.Game.Rulesets.Osu.Edit.Streams
                 UpdateText();
             }
 
-            public void UpdateText() => text.Text = $"{stream.GetDensity(ControlPoint).ToString("0.0#", CultureInfo.InvariantCulture)}x";
+            public void UpdateText()
+                => text.Text = $"{stream.GetDensity(ControlPoint).ToString("0.0#", CultureInfo.InvariantCulture)}x{(stream.GetAccelerates(ControlPoint) ? " >" : string.Empty)}";
 
-            public override LocalisableString TooltipText => "Stream density. Scroll to adjust (hold shift for finer steps), click to edit.";
+            public override LocalisableString TooltipText => "Stream density. Scroll to adjust (hold shift for finer steps), click to edit or accelerate towards the next anchor.";
 
             protected override bool OnHover(HoverEvent e)
             {
@@ -322,6 +324,8 @@ namespace osu.Game.Rulesets.Osu.Edit.Streams
                 Precision = 0.01,
             };
 
+            private readonly BindableBool accelerates = new BindableBool();
+
             private readonly EditorStreamManager streamManager;
             private readonly IEditorChangeHandler? changeHandler;
 
@@ -341,6 +345,10 @@ namespace osu.Game.Rulesets.Osu.Edit.Streams
             private void load()
             {
                 density.Value = stream.GetDensity(controlPoint);
+                accelerates.Value = stream.GetAccelerates(controlPoint);
+
+                var densityAnchors = stream.Path.Path.ControlPoints.Where(stream.HasDensity).ToList();
+                bool isLastAnchor = densityAnchors.Count > 0 && densityAnchors[^1] == controlPoint;
 
                 Child = new FillFlowContainer
                 {
@@ -394,6 +402,13 @@ namespace osu.Game.Rulesets.Osu.Edit.Streams
                                 },
                             },
                         },
+                        new OsuCheckbox
+                        {
+                            LabelText = "Accelerate to next anchor",
+                            Current = accelerates,
+                            // the last anchor has no next anchor to accelerate towards.
+                            Alpha = isLastAnchor ? 0 : 1,
+                        },
                     },
                 };
             }
@@ -412,6 +427,12 @@ namespace osu.Game.Rulesets.Osu.Edit.Streams
                     stream.SetDensity(controlPoint, d.NewValue);
                     streamManager.Invalidate(stream);
                 }, true);
+
+                accelerates.BindValueChanged(a =>
+                {
+                    stream.SetAccelerates(controlPoint, a.NewValue);
+                    streamManager.Invalidate(stream);
+                });
             }
 
             protected override void PopIn()

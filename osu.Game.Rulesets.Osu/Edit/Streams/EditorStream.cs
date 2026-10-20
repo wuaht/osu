@@ -46,6 +46,8 @@ namespace osu.Game.Rulesets.Osu.Edit.Streams
 
         private readonly Dictionary<PathControlPoint, double> densities = new Dictionary<PathControlPoint, double>();
 
+        private readonly HashSet<PathControlPoint> accelerating = new HashSet<PathControlPoint>();
+
         /// <summary>
         /// Whether <paramref name="point"/> lies on the path and therefore carries a density.
         /// This is the case for the first and last anchor, and every anchor which starts a new segment.
@@ -80,6 +82,37 @@ namespace osu.Game.Rulesets.Osu.Edit.Streams
         }
 
         public void SetDensity(PathControlPoint point, double density) => densities[point] = Math.Clamp(Math.Round(density, 2), MIN_DENSITY, MAX_DENSITY);
+
+        /// <summary>
+        /// Whether the density changes gradually from <paramref name="point"/> to the next anchor which carries a density.
+        /// Otherwise, the whole segment starting at <paramref name="point"/> uses its density.
+        /// </summary>
+        public bool GetAccelerates(PathControlPoint point) => accelerating.Contains(point);
+
+        public void SetAccelerates(PathControlPoint point, bool accelerates)
+        {
+            if (accelerates)
+                accelerating.Add(point);
+            else
+                accelerating.Remove(point);
+        }
+
+        /// <summary>
+        /// Whether the density of <paramref name="point"/> affects the layout.
+        /// The density of the last anchor is only used as the target of an accelerating segment before it.
+        /// </summary>
+        public bool UsesDensity(PathControlPoint point)
+        {
+            if (!HasDensity(point))
+                return false;
+
+            var anchors = Path.Path.ControlPoints.Where(HasDensity).ToList();
+
+            if (anchors.Count < 2 || point != anchors[^1])
+                return true;
+
+            return GetAccelerates(anchors[^2]);
+        }
 
         /// <summary>
         /// Moves, rotates, scales and mirrors the whole stream. The densities are scaled along, so that the circles stay at the same relative positions.
@@ -150,10 +183,10 @@ namespace osu.Game.Rulesets.Osu.Edit.Streams
             return result;
         }
 
-        private List<(double Distance, double Density)> getDensityStops(double length)
-            => GetDensityAnchors().Select(a => (Math.Min(a.Distance, length), GetDensity(a.Point))).ToList();
+        private List<(double Distance, double Density, bool Accelerates)> getDensityStops(double length)
+            => GetDensityAnchors().Select(a => (Math.Min(a.Distance, length), GetDensity(a.Point), GetAccelerates(a.Point))).ToList();
 
-        private static double densityAt(List<(double Distance, double Density)> stops, double distance)
+        private static double densityAt(List<(double Distance, double Density, bool Accelerates)> stops, double distance)
         {
             if (stops.Count == 0)
                 return 1;
@@ -163,14 +196,20 @@ namespace osu.Game.Rulesets.Osu.Edit.Streams
 
             for (int i = 1; i < stops.Count; i++)
             {
-                if (distance > stops[i].Distance)
+                if (distance >= stops[i].Distance && i < stops.Count - 1)
                     continue;
 
-                var (fromDistance, fromDensity) = stops[i - 1];
-                var (toDistance, toDensity) = stops[i];
+                var (fromDistance, fromDensity, accelerates) = stops[i - 1];
+                var (toDistance, toDensity, _) = stops[i];
+
+                // segments keep the density of the anchor which starts them, unless they accelerate towards the next one.
+                if (!accelerates)
+                    return fromDensity;
 
                 if (toDistance - fromDistance <= 0)
                     return toDensity;
+
+                distance = Math.Min(distance, toDistance);
 
                 return fromDensity + (toDensity - fromDensity) * (distance - fromDistance) / (toDistance - fromDistance);
             }
@@ -182,17 +221,19 @@ namespace osu.Game.Rulesets.Osu.Edit.Streams
 
         /// <summary>
         /// Serialises the stream to a line of the <c>[SlopStreams]</c> section.
-        /// Format: <c>x,y,startTime,divisor,points,densities</c>, where <c>points</c> are <c>type:x:y</c> relative to the start position, separated by <c>|</c>,
+        /// Format: <c>x,y,startTime,divisor,points,densities,version</c>, where <c>points</c> are <c>type:x:y</c> relative to the start position, separated by <c>|</c>,
         /// and <c>densities</c> are the densities of the respective points, separated by <c>|</c> and empty for points without a density.
+        /// A density followed by <c>~</c> accelerates towards the next one.
+        /// Lines without a version (written before segments had constant densities) accelerate between all anchors.
         /// </summary>
         public string Serialise()
         {
             var points = Path.Path.ControlPoints;
 
             string pointsString = string.Join('|', points.Select(p => $"{serialiseType(p.Type)}:{format(p.Position.X)}:{format(p.Position.Y)}"));
-            string densitiesString = string.Join('|', points.Select(p => HasDensity(p) ? format(GetDensity(p)) : string.Empty));
+            string densitiesString = string.Join('|', points.Select(p => HasDensity(p) ? format(GetDensity(p)) + (GetAccelerates(p) ? "~" : string.Empty) : string.Empty));
 
-            return string.Join(',', format(Path.Position.X), format(Path.Position.Y), format(Path.StartTime), BeatDivisor.ToString(CultureInfo.InvariantCulture), pointsString, densitiesString);
+            return string.Join(',', format(Path.Position.X), format(Path.Position.Y), format(Path.StartTime), BeatDivisor.ToString(CultureInfo.InvariantCulture), pointsString, densitiesString, format_version);
         }
 
         /// <summary>
@@ -214,6 +255,7 @@ namespace osu.Game.Rulesets.Osu.Edit.Streams
 
                 string[] points = parts[4].Split('|');
                 string[] pointDensities = parts[5].Split('|');
+                bool legacy = parts.Length < 7;
 
                 for (int i = 0; i < points.Length; i++)
                 {
@@ -226,7 +268,13 @@ namespace osu.Game.Rulesets.Osu.Edit.Streams
                     stream.Path.Path.ControlPoints.Add(point);
 
                     if (i < pointDensities.Length && pointDensities[i].Length > 0)
-                        stream.SetDensity(point, double.Parse(pointDensities[i], CultureInfo.InvariantCulture));
+                    {
+                        string density = pointDensities[i];
+                        bool accelerates = legacy || density.EndsWith('~');
+
+                        stream.SetDensity(point, double.Parse(density.TrimEnd('~'), CultureInfo.InvariantCulture));
+                        stream.SetAccelerates(point, accelerates);
+                    }
                 }
 
                 if (stream.Path.Path.ControlPoints.Count < 2)
@@ -246,6 +294,8 @@ namespace osu.Game.Rulesets.Osu.Edit.Streams
                 return null;
             }
         }
+
+        private const string format_version = "2";
 
         private static string format(double value) => value.ToString("0.###", CultureInfo.InvariantCulture);
 
