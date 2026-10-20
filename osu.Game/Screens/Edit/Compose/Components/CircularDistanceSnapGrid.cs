@@ -61,9 +61,22 @@ namespace osu.Game.Screens.Edit.Compose.Components
             for (int i = 0; i < requiredCircles; i++)
             {
                 const float thickness = 4;
+                const float outline_thickness = 2;
                 float diameter = (offset + (i + 1) * DistanceBetweenTicks + thickness / 2) * 2;
+                Color4 colour = GetColourForIndexFromPlacement(i);
 
-                AddInternal(new Ring(StartTime, GetColourForIndexFromPlacement(i), SliderVelocitySource)
+                // a dark outline keeps the translucent rings visible on top of bright backgrounds.
+                AddInternal(new CircularProgress
+                {
+                    Position = StartPosition,
+                    Origin = Anchor.Centre,
+                    Size = new Vector2(diameter + outline_thickness * 2),
+                    InnerRadius = (thickness + outline_thickness * 2) / (diameter + outline_thickness * 2),
+                    Progress = 1,
+                    Colour = Color4.Black.Opacity(colour.A * 0.6f),
+                });
+
+                AddInternal(new Ring(StartTime, colour, SliderVelocitySource)
                 {
                     Position = StartPosition,
                     Origin = Anchor.Centre,

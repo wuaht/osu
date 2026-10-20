@@ -837,7 +837,8 @@ namespace osu.Game.Rulesets.Osu.Edit
 
             if (objects.Count == 0)
                 // use accurate time value to give more instantaneous feedback to the user.
-                return createGrid(h => h.StartTime <= EditorClock.CurrentTimeAccurate);
+                // when placing, the grid isn't limited by the next object, so that its rings stay visible in dense sections.
+                return createGrid(h => h.StartTime <= EditorClock.CurrentTimeAccurate, limitToTarget: false);
 
             double minTime = objects.Min(h => h.StartTime);
             return createGrid(h => h.StartTime < minTime, objects.Count + 1);
@@ -849,8 +850,9 @@ namespace osu.Game.Rulesets.Osu.Edit
         /// <param name="sourceSelector">A predicate that matches <see cref="HitObject"/>s where the grid can start from.
         /// Only the last <see cref="HitObject"/> matching the predicate is used.</param>
         /// <param name="targetOffset">An offset from the <see cref="HitObject"/> selected via <paramref name="sourceSelector"/> at which the grid should stop.</param>
+        /// <param name="limitToTarget">Whether the grid should stop at the target <see cref="HitObject"/>.</param>
         /// <returns>The <see cref="OsuDistanceSnapGrid"/> from a selected <see cref="HitObject"/> to a target <see cref="HitObject"/>.</returns>
-        private OsuDistanceSnapGrid createGrid(Func<HitObject, bool> sourceSelector, int targetOffset = 1)
+        private OsuDistanceSnapGrid createGrid(Func<HitObject, bool> sourceSelector, int targetOffset = 1, bool limitToTarget = true)
         {
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(targetOffset);
 
@@ -877,7 +879,7 @@ namespace osu.Game.Rulesets.Osu.Edit
             HitObject targetObject = null;
 
             // Keep advancing the target object while its start time falls before the end time of the source object
-            while (true)
+            while (limitToTarget)
             {
                 if (targetIndex >= EditorBeatmap.HitObjects.Count)
                     break;
