@@ -421,6 +421,7 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopAutoPlusTagCount, 0, 0, 16);
             SetDefault(OsuSetting.SlopAutoPlusTagSplit, AutoPlusTagSplitMode.Colour);
             SetDefault(OsuSetting.SlopAutoPlusTagColours, AutoPlusTagColourSource.MapColours);
+            SetDefault(OsuSetting.SlopAllowOverlaysDuringGameplay, true);
         }
 
         protected override bool CheckLookupContainsPrivateInformation(OsuSetting lookup)
@@ -1452,5 +1453,10 @@ namespace osu.Game.Configuration
         /// Where the colours of the Auto+ TAG cursors come from.
         /// </summary>
         SlopAutoPlusTagColours,
+
+        /// <summary>
+        /// Whether overlays such as the settings can be opened while actively playing.
+        /// </summary>
+        SlopAllowOverlaysDuringGameplay,
     }
 }

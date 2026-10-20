@@ -16,13 +16,19 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
     {
         protected override LocalisableString Header => SlopSettingsStrings.GameplayHeader;
 
-        public override IEnumerable<LocalisableString> FilterTerms => base.FilterTerms.Concat(new LocalisableString[] { "skip", "break", "fail", "multiplayer", "hitsound", "volume", "mute", "flashlight", "mania", "judgement", "counter", "replay", "frames" });
+        public override IEnumerable<LocalisableString> FilterTerms => base.FilterTerms.Concat(new LocalisableString[] { "skip", "break", "fail", "multiplayer", "hitsound", "volume", "mute", "flashlight", "mania", "judgement", "counter", "replay", "frames", "settings", "options" });
 
         [BackgroundDependencyLoader]
         private void load(OsuConfigManager config)
         {
             Children = new Drawable[]
             {
+                new SettingsItemV2(new FormCheckBox
+                {
+                    Caption = SlopSettingsStrings.AllowOverlaysDuringGameplay,
+                    HintText = SlopSettingsStrings.AllowOverlaysDuringGameplayDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopAllowOverlaysDuringGameplay),
+                }),
                 new SettingsItemV2(new FormCheckBox
                 {
                     Caption = SlopSettingsStrings.SkipBreaks,

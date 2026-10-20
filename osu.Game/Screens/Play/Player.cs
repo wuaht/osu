@@ -108,6 +108,7 @@ namespace osu.Game.Screens.Play
         public IBindable<bool> LocalUserPlaying => localUserPlaying;
 
         private readonly Bindable<bool> localUserPlaying = new Bindable<bool>();
+        private readonly Bindable<bool> allowOverlaysDuringGameplay = new Bindable<bool>();
         private readonly Bindable<LocalUserPlayingState> playingState = new Bindable<LocalUserPlayingState>();
 
         public int RestartCount;
@@ -245,6 +246,7 @@ namespace osu.Game.Screens.Play
             skipBreaks = config.Get<bool>(OsuSetting.SlopSkipBreaks);
             killOnFail = config.Get<bool>(OsuSetting.SlopKillOnFail);
             disableSoftFailEffects = config.Get<bool>(OsuSetting.SlopDisableSoftFailEffects);
+            config.BindWith(OsuSetting.SlopAllowOverlaysDuringGameplay, allowOverlaysDuringGameplay);
 
             var gameplayMods = Mods.Value.Select(m => m.DeepClone()).ToArray();
 
@@ -421,6 +423,7 @@ namespace osu.Game.Screens.Play
             DrawableRuleset.FrameStableClock.IsCatchingUp.BindValueChanged(_ => updateSampleDisabledState());
 
             DrawableRuleset.HasReplayLoaded.BindValueChanged(_ => updateGameplayState());
+            allowOverlaysDuringGameplay.BindValueChanged(_ => updateGameplayState());
 
             // bind clock into components that require it
             ((IBindable<bool>)DrawableRuleset.IsPaused).BindTo(GameplayClockContainer.IsPaused);
@@ -622,7 +625,7 @@ namespace osu.Game.Screens.Play
                 playingState.Value = LocalUserPlayingState.NotPlaying;
 
             localUserPlaying.Value = playingState.Value == LocalUserPlayingState.Playing;
-            OverlayActivationMode.Value = playingState.Value == LocalUserPlayingState.Playing ? OverlayActivation.Disabled : OverlayActivation.UserTriggered;
+            OverlayActivationMode.Value = playingState.Value == LocalUserPlayingState.Playing && !allowOverlaysDuringGameplay.Value ? OverlayActivation.Disabled : OverlayActivation.UserTriggered;
         }
 
         private void updateSampleDisabledState()

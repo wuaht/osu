@@ -1429,6 +1429,16 @@ namespace osu.Game.Localisation
         /// </summary>
         public static LocalisableString AutoPlusTagColours => new TranslatableString(getKey(@"auto_plus_tag_colours"), @"Cursor colours");
 
+        /// <summary>
+        /// "Allow opening overlays during gameplay"
+        /// </summary>
+        public static LocalisableString AllowOverlaysDuringGameplay => new TranslatableString(getKey(@"allow_overlays_during_gameplay"), @"Allow opening overlays during gameplay");
+
+        /// <summary>
+        /// "The settings, chat and other overlays can be opened with their hotkeys while playing, without pausing first."
+        /// </summary>
+        public static LocalisableString AllowOverlaysDuringGameplayDescription => new TranslatableString(getKey(@"allow_overlays_during_gameplay_description"), @"The settings, chat and other overlays can be opened with their hotkeys while playing, without pausing first.");
+
         private static string getKey(string key) => $"{prefix}:{key}";
     }
 }
