@@ -4,15 +4,20 @@
 #nullable disable
 
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
+using osu.Framework.Input.Bindings;
+using osu.Framework.Input.Events;
 using osu.Framework.Platform;
 using osu.Game.Beatmaps;
+using osu.Game.Beatmaps.Formats;
 using osu.Game.Configuration;
 using osu.Game.Extensions;
+using osu.Game.Input.Bindings;
 using osu.Game.IO.Serialization;
 using osu.Game.Rulesets;
 using osu.Game.Rulesets.Edit;
@@ -21,7 +26,7 @@ using osu.Game.Screens.Edit.Hitsounding;
 
 namespace osu.Game.Screens.Edit.Compose
 {
-    public partial class ComposeScreen : EditorScreenWithTimeline, IGameplaySettings
+    public partial class ComposeScreen : EditorScreenWithTimeline, IGameplaySettings, IKeyBindingHandler<GlobalAction>
     {
         [Resolved]
         private Clipboard hostClipboard { get; set; } = null!;
@@ -179,6 +184,38 @@ namespace osu.Game.Screens.Edit.Compose
         {
             CanCut.Value = CanCopy.Value = EditorBeatmap.SelectedHitObjects.Any();
             CanPaste.Value = composer.IsLoaded && !string.IsNullOrEmpty(clipboard.Value);
+        }
+
+        /// <summary>
+        /// Copies the selected objects to the system clipboard as they would appear in the <c>[HitObjects]</c> section of a <c>.osu</c> file.
+        /// </summary>
+        public void CopyAsOsuFormat()
+        {
+            if (!CanCopy.Value)
+                return;
+
+            Copy();
+
+            var selection = EditorBeatmap.SelectedHitObjects.OrderBy(h => h.StartTime).ToArray();
+
+            using (var writer = new StringWriter())
+            {
+                new LegacyBeatmapEncoder(EditorBeatmap, null, null).EncodeHitObjects(writer, selection);
+                hostClipboard.SetText(writer.ToString().TrimEnd());
+            }
+        }
+
+        public bool OnPressed(KeyBindingPressEvent<GlobalAction> e)
+        {
+            if (e.Action != GlobalAction.EditorCopyAsOsuFormat || e.Repeat)
+                return false;
+
+            CopyAsOsuFormat();
+            return true;
+        }
+
+        public void OnReleased(KeyBindingReleaseEvent<GlobalAction> e)
+        {
         }
 
         private string getTimestamp()

@@ -449,6 +449,15 @@ namespace osu.Game.Beatmaps.Formats
                 handleHitObject(writer, h);
         }
 
+        /// <summary>
+        /// Encodes the given hit objects as they appear in the <c>[HitObjects]</c> section, one per line.
+        /// </summary>
+        public void EncodeHitObjects(TextWriter writer, IEnumerable<HitObject> hitObjects)
+        {
+            foreach (var h in hitObjects)
+                handleHitObject(writer, h);
+        }
+
         private void handleSlopStreams(TextWriter writer)
         {
             writer.WriteLine("[SlopStreams]");

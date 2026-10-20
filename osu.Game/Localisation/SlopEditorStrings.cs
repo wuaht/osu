@@ -40,6 +40,11 @@ namespace osu.Game.Localisation
         public static LocalisableString UsePreviousSliderVelocity => new TranslatableString(getKey(@"use_previous_slider_velocity"), @"Use previous slider velocity");
 
         /// <summary>
+        /// "Copy selection in .osu format"
+        /// </summary>
+        public static LocalisableString CopyAsOsuFormat => new TranslatableString(getKey(@"copy_as_osu_format"), @"Copy selection in .osu format");
+
+        /// <summary>
         /// "Set to previous slider velocity"
         /// </summary>
         public static LocalisableString SetToPreviousSliderVelocity => new TranslatableString(getKey(@"set_to_previous_slider_velocity"), @"Set to previous slider velocity");
