@@ -4,7 +4,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using osu.Framework.Utils;
 using osu.Game.Beatmaps;
 using osu.Game.Replays;
 using osu.Game.Rulesets.Mods;
@@ -112,7 +111,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
                 {
                     // make sure the press lands on the object.
                     if (hitObjects[nextHitIndex] is not Spinner)
-                        cursor.Position = RealisticMath.MoveIntoCircle(cursor.Position, hitObjects[nextHitIndex].StackedPosition, (float)hitObjects[nextHitIndex].Radius * 0.8f);
+                        cursor.ConstrainToCircle(hitObjects[nextHitIndex].StackedPosition, (float)hitObjects[nextHitIndex].Radius * 0.8f);
                 }
 
                 var actions = heldButtons.Where(b => b.Value > 0).Select(b => b.Key).ToArray();
@@ -236,13 +235,13 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
             double aheadTime = Math.Min(time + ApplyModsToRate(time, tracking_lag), slider.EndTime);
 
             // slow sliders are followed closely, fast and short sliders cut corners.
-            float followAmount = Interpolation.ValueAt(slider.Velocity, 1f, 0f, 0, 2) * Interpolation.ValueAt(slider.SpanDuration, 0f, 1f, 50, 150);
+            float followAmount = (float)(Math.Clamp(1 - slider.Velocity / 2, 0, 1) * Math.Clamp((slider.SpanDuration - 50) / 100, 0, 1));
             Vector2 target = Vector2.Lerp(sliderPaths[slider].PositionAt(aheadTime), ballPositionAt(slider, aheadTime), followAmount);
 
             moveTo(dt, target, tracking);
 
             // stay inside the follow circle, so that no ticks are missed.
-            cursor.Position = RealisticMath.MoveIntoCircle(cursor.Position, ballPositionAt(slider, time), (float)slider.Radius * 2);
+            cursor.ConstrainToCircle(ballPositionAt(slider, time), (float)slider.Radius * 2);
         }
 
         private void approach(double time, float dt, OsuHitObject current, OsuHitObject next)

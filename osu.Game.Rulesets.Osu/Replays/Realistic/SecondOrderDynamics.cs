@@ -22,6 +22,8 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
         private float k2;
         private float k3;
 
+        private Vector2? previousTarget;
+
         public SecondOrderDynamics(Vector2 position)
         {
             Position = position;
@@ -47,11 +49,36 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
         /// <param name="target">The target position.</param>
         public void Update(float dt, Vector2 target)
         {
+            if (dt <= 0)
+                return;
+
+            Vector2 targetVelocity = previousTarget.HasValue ? (target - previousTarget.Value) / dt : Vector2.Zero;
+            previousTarget = target;
+
             // keeps the simulation stable for large time steps.
             float k2Stable = MathF.Max(k2, MathF.Max(dt * dt / 2 + dt * k1 / 2, dt * k1));
 
             Position += dt * Velocity;
-            Velocity += dt * (target + k3 * Velocity - Position - k1 * Velocity) / k2Stable;
+            Velocity += dt * (target + k3 * targetVelocity - Position - k1 * Velocity) / k2Stable;
+        }
+
+        /// <summary>
+        /// Moves the position onto the edge of the given circle if it is outside of it, and stops any movement away from the circle.
+        /// </summary>
+        public void ConstrainToCircle(Vector2 centre, float radius)
+        {
+            Vector2 offset = Position - centre;
+            float distance = offset.Length;
+
+            if (distance <= radius)
+                return;
+
+            Vector2 normal = offset / distance;
+            Position = centre + normal * radius;
+
+            float outwardSpeed = Vector2.Dot(Velocity, normal);
+            if (outwardSpeed > 0)
+                Velocity -= normal * outwardSpeed;
         }
     }
 
