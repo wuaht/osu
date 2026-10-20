@@ -8,20 +8,26 @@ using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Extensions;
+using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Cursor;
+using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.UserInterface;
 using osu.Framework.Input.Bindings;
 using osu.Framework.Input.Events;
 using osu.Framework.Localisation;
 using osu.Game.Graphics;
+using osu.Game.Graphics.Containers;
+using osu.Game.Graphics.UserInterface;
 using osu.Game.Graphics.Sprites;
 using osu.Game.Graphics.UserInterfaceV2;
 using osu.Game.Input.Bindings;
+using osu.Game.Overlays;
 using osu.Game.Rulesets.Osu.Objects;
 using osu.Game.Screens.Edit;
 using osuTK;
+using osuTK.Graphics;
 
 namespace osu.Game.Rulesets.Osu.Edit
 {
@@ -56,6 +62,10 @@ namespace osu.Game.Rulesets.Osu.Edit
 
     public partial class StreamConversionPopover : OsuPopover
     {
+        private const float label_width = 85;
+        private const float value_width = 40;
+        private const float row_height = 20;
+
         private static readonly int[] divisors = { 1, 2, 3, 4, 6, 8, 12, 16 };
 
         /// <summary>
@@ -67,14 +77,17 @@ namespace osu.Game.Rulesets.Osu.Edit
 
         private readonly Slider slider;
 
-        private FormEnumDropdown<StreamSpacingMode> spacingModeInput = null!;
-        private FormSliderBar<double> distanceSnapInput = null!;
-        private FormSliderBar<int> countInput = null!;
-        private FormDropdown<int> divisorInput = null!;
-        private FormSliderBar<double> accelerationInput = null!;
-        private FormEnumDropdown<StreamAccelerationMode> accelerationModeInput = null!;
-        private FormSliderBar<double> wiggleInput = null!;
-        private FormEnumDropdown<StreamWiggleMode> wiggleModeInput = null!;
+        private readonly Bindable<StreamSpacingMode> spacingMode = new Bindable<StreamSpacingMode>();
+        private readonly BindableNumber<double> distanceSnap = new BindableNumber<double>(1) { MinValue = 0.1, MaxValue = 9, Precision = 0.01 };
+        private readonly BindableNumber<int> count = new BindableNumber<int>(5) { MinValue = 1, MaxValue = 64, Precision = 1 };
+        private readonly Bindable<int> divisor = new Bindable<int>();
+        private readonly BindableNumber<double> acceleration = new BindableNumber<double> { MinValue = -2, MaxValue = 2, Precision = 0.01 };
+        private readonly Bindable<StreamAccelerationMode> accelerationMode = new Bindable<StreamAccelerationMode>();
+        private readonly BindableNumber<double> wiggle = new BindableNumber<double> { MinValue = -1, MaxValue = 1, Precision = 0.01 };
+        private readonly Bindable<StreamWiggleMode> wiggleMode = new Bindable<StreamWiggleMode>();
+
+        private Drawable distanceSnapRow = null!;
+        private Drawable countRow = null!;
         private OsuSpriteText spacingText = null!;
 
         private readonly List<HitCircle> insertedCircles = new List<HitCircle>();
@@ -97,85 +110,45 @@ namespace osu.Game.Rulesets.Osu.Edit
         {
             AllowableAnchors = new[] { Anchor.CentreLeft, Anchor.CentreRight };
 
-            int defaultDivisor = savedDivisor ?? (editorBeatmap.BeatDivisor is 3 or 6 ? 3 : 4);
+            divisor.Value = savedDivisor ?? (editorBeatmap.BeatDivisor is 3 or 6 ? 3 : 4);
 
             Child = new FillFlowContainer
             {
-                Width = 260,
+                Width = 250,
                 AutoSizeAxes = Axes.Y,
-                Spacing = new Vector2(5),
-                Children = new Drawable[]
+                Direction = FillDirection.Vertical,
+                Spacing = new Vector2(4),
+                Children = new[]
                 {
-                    spacingModeInput = new FormEnumDropdown<StreamSpacingMode>
+                    createRow("Spacing", new ChoiceSelector<StreamSpacingMode>(Enum.GetValues<StreamSpacingMode>(), m => m == StreamSpacingMode.DistanceSnap ? "Distance" : "Count")
                     {
-                        Caption = "Spacing",
-                    },
-                    distanceSnapInput = new FormSliderBar<double>
+                        Current = spacingMode
+                    }),
+                    distanceSnapRow = createSliderRow("Distance snap", distanceSnap, v => $"{v:0.00}x"),
+                    countRow = createSliderRow("Object count", count, v => $"{v}"),
+                    createRow("Beat snap 1/", new ChoiceSelector<int>(divisors, d => $"{d}")
                     {
-                        Caption = "Distance snap",
-                        Current = new BindableNumber<double>(1)
-                        {
-                            MinValue = 0.1,
-                            MaxValue = 9,
-                            Precision = 0.01,
-                        },
-                        TabbableContentContainer = this
-                    },
-                    countInput = new FormSliderBar<int>
+                        Current = divisor
+                    }),
+                    createSliderRow("Acceleration", acceleration, v => $"{v:0.00}"),
+                    createRow("Accel. mode", new ChoiceSelector<StreamAccelerationMode>(Enum.GetValues<StreamAccelerationMode>(), m => m.GetDescription())
                     {
-                        Caption = "Object count",
-                        Current = new BindableNumber<int>(5)
-                        {
-                            MinValue = 1,
-                            MaxValue = 64,
-                            Precision = 1,
-                        },
-                        TabbableContentContainer = this
-                    },
-                    divisorInput = new DivisorDropdown
-                    {
-                        Caption = "Beat snap divisor",
-                        Items = divisors,
-                        Current = { Value = defaultDivisor },
-                    },
-                    accelerationInput = new FormSliderBar<double>
-                    {
-                        Caption = "Acceleration",
-                        Current = new BindableNumber<double>
-                        {
-                            MinValue = -2,
-                            MaxValue = 2,
-                            Precision = 0.01,
-                        },
-                        TabbableContentContainer = this
-                    },
-                    accelerationModeInput = new FormEnumDropdown<StreamAccelerationMode>
-                    {
-                        Caption = "Acceleration mode",
-                    },
+                        Current = accelerationMode
+                    }),
                     spacingText = new OsuSpriteText
                     {
-                        Font = OsuFont.Default.With(size: 14),
-                        Margin = new MarginPadding { Horizontal = 9 },
+                        Font = OsuFont.Default.With(size: 12),
+                        Margin = new MarginPadding { Left = label_width },
                     },
-                    wiggleInput = new FormSliderBar<double>
+                    createSliderRow("Wiggle", wiggle, v => $"{v:0.00}"),
+                    createRow("Wiggle mode", new ChoiceSelector<StreamWiggleMode>(Enum.GetValues<StreamWiggleMode>(), m => m.GetDescription())
                     {
-                        Caption = "Wiggle",
-                        Current = new BindableNumber<double>
-                        {
-                            MinValue = -1,
-                            MaxValue = 1,
-                            Precision = 0.01,
-                        },
-                        TabbableContentContainer = this
-                    },
-                    wiggleModeInput = new FormEnumDropdown<StreamWiggleMode>
-                    {
-                        Caption = "Wiggle mode",
-                    },
+                        Current = wiggleMode
+                    }),
                     new RoundedButton
                     {
                         RelativeSizeAxes = Axes.X,
+                        Height = 26,
                         Text = "Convert",
                         Action = commit
                     }
@@ -183,54 +156,110 @@ namespace osu.Game.Rulesets.Osu.Edit
             };
         }
 
-        protected override void LoadComplete()
+        private static Drawable createRow(string label, Drawable content, Drawable? value = null) => new GridContainer
         {
-            base.LoadComplete();
+            RelativeSizeAxes = Axes.X,
+            Height = row_height,
+            ColumnDimensions = new[]
+            {
+                new Dimension(GridSizeMode.Absolute, label_width),
+                new Dimension(),
+                new Dimension(GridSizeMode.Absolute, value == null ? 0 : value_width),
+            },
+            Content = new[]
+            {
+                new[]
+                {
+                    new OsuSpriteText
+                    {
+                        Anchor = Anchor.CentreLeft,
+                        Origin = Anchor.CentreLeft,
+                        Text = label,
+                        Font = OsuFont.Default.With(size: 13),
+                    },
+                    content,
+                    value ?? Empty(),
+                }
+            }
+        };
+
+        private static Drawable createSliderRow<T>(string label, BindableNumber<T> current, Func<T, string> format)
+            where T : struct, System.Numerics.INumber<T>, System.Numerics.IMinMaxValue<T>
+        {
+            var valueText = new OsuSpriteText
+            {
+                Anchor = Anchor.CentreRight,
+                Origin = Anchor.CentreRight,
+                Font = OsuFont.Default.With(size: 13, weight: FontWeight.SemiBold),
+            };
+
+            current.BindValueChanged(v => valueText.Text = format(v.NewValue), true);
+
+            return createRow(label, new RoundedSliderBar<T>
+            {
+                Anchor = Anchor.CentreLeft,
+                Origin = Anchor.CentreLeft,
+                RelativeSizeAxes = Axes.X,
+                Padding = new MarginPadding { Right = 8 },
+                Current = current,
+                KeyboardStep = float.CreateTruncating(current.Precision),
+            }, valueText);
+        }
+
+        protected override void PopIn()
+        {
+            base.PopIn();
+
+            if (began)
+                return;
 
             changeHandler?.BeginChange();
             began = true;
 
             editorBeatmap.Remove(slider);
 
-            spacingModeInput.Current.BindValueChanged(mode =>
+            spacingMode.BindValueChanged(mode =>
             {
-                distanceSnapInput.Alpha = mode.NewValue == StreamSpacingMode.DistanceSnap ? 1 : 0;
-                countInput.Alpha = mode.NewValue == StreamSpacingMode.Count ? 1 : 0;
+                distanceSnapRow.Alpha = mode.NewValue == StreamSpacingMode.DistanceSnap ? 1 : 0;
+                countRow.Alpha = mode.NewValue == StreamSpacingMode.Count ? 1 : 0;
                 Scheduler.AddOnce(updateStream);
             }, true);
 
-            distanceSnapInput.Current.BindValueChanged(_ => Scheduler.AddOnce(updateStream));
-            countInput.Current.BindValueChanged(_ => Scheduler.AddOnce(updateStream));
-            divisorInput.Current.BindValueChanged(_ => Scheduler.AddOnce(updateStream));
-            accelerationInput.Current.BindValueChanged(_ => Scheduler.AddOnce(updateStream));
-            accelerationModeInput.Current.BindValueChanged(_ => Scheduler.AddOnce(updateStream));
-            wiggleInput.Current.BindValueChanged(_ => Scheduler.AddOnce(updateStream));
-            wiggleModeInput.Current.BindValueChanged(_ => Scheduler.AddOnce(updateStream));
+            distanceSnap.BindValueChanged(_ => Scheduler.AddOnce(updateStream));
+            count.BindValueChanged(_ => Scheduler.AddOnce(updateStream));
+            divisor.BindValueChanged(_ => Scheduler.AddOnce(updateStream));
+            acceleration.BindValueChanged(_ => Scheduler.AddOnce(updateStream));
+            accelerationMode.BindValueChanged(_ => Scheduler.AddOnce(updateStream));
+            wiggle.BindValueChanged(_ => Scheduler.AddOnce(updateStream));
+            wiggleMode.BindValueChanged(_ => Scheduler.AddOnce(updateStream));
         }
 
         private void updateStream()
         {
-            savedDivisor = divisorInput.Current.Value;
+            if (committed)
+                return;
+
+            savedDivisor = divisor.Value;
 
             double length = slider.Path.Distance;
-            double timeSpacing = editorBeatmap.ControlPointInfo.TimingPointAt(slider.StartTime).BeatLength / divisorInput.Current.Value;
+            double timeSpacing = editorBeatmap.ControlPointInfo.TimingPointAt(slider.StartTime).BeatLength / divisor.Value;
 
-            int count;
+            int objectCount;
             double spacing;
 
-            if (spacingModeInput.Current.Value == StreamSpacingMode.Count)
+            if (spacingMode.Value == StreamSpacingMode.Count)
             {
-                count = countInput.Current.Value;
-                spacing = length / Math.Max(1, count - 1);
+                objectCount = count.Value;
+                spacing = length / Math.Max(1, objectCount - 1);
             }
             else
             {
-                spacing = slider.Velocity * timeSpacing * distanceSnapInput.Current.Value;
-                count = spacing > 0 ? (int)((length + 1) / spacing) + 1 : 1;
+                spacing = slider.Velocity * timeSpacing * distanceSnap.Value;
+                objectCount = spacing > 0 ? (int)((length + 1) / spacing) + 1 : 1;
             }
 
-            var positions = StreamGenerator.Generate(slider, count, spacing, accelerationInput.Current.Value, accelerationModeInput.Current.Value,
-                wiggleInput.Current.Value, wiggleModeInput.Current.Value, out double[] distances);
+            var positions = StreamGenerator.Generate(slider, objectCount, spacing, acceleration.Value, accelerationMode.Value,
+                wiggle.Value, wiggleMode.Value, out double[] distances);
 
             editorBeatmap.RemoveRange(insertedCircles);
             insertedCircles.Clear();
@@ -248,16 +277,16 @@ namespace osu.Game.Rulesets.Osu.Edit
 
             editorBeatmap.AddRange(insertedCircles);
 
-            if (count > 1)
+            if (objectCount > 1)
             {
                 double snapDistance = slider.Velocity * timeSpacing;
-                bool mirror = accelerationModeInput.Current.Value == StreamAccelerationMode.Mirror;
+                bool mirror = accelerationMode.Value == StreamAccelerationMode.Mirror;
                 double first = (distances[1] - distances[0]) / snapDistance;
-                double last = mirror && count > 2
-                    ? (distances[count / 2 + 1] - distances[count / 2]) / snapDistance
+                double last = mirror && objectCount > 2
+                    ? (distances[objectCount / 2 + 1] - distances[objectCount / 2]) / snapDistance
                     : (distances[^1] - distances[^2]) / snapDistance;
 
-                spacingText.Text = $"Spacing: {first:F2}x {(mirror ? "<->" : "->")} {last:F2}x";
+                spacingText.Text = $"Spacing {first:F2}x {(mirror ? "<->" : "->")} {last:F2}x";
             }
             else
                 spacingText.Text = string.Empty;
@@ -276,6 +305,9 @@ namespace osu.Game.Rulesets.Osu.Edit
 
         private void commit()
         {
+            if (!began || committed)
+                return;
+
             changeHandler?.EndChange();
             committed = true;
             editorBeatmap.SelectedHitObjects.Clear();
@@ -287,20 +319,139 @@ namespace osu.Game.Rulesets.Osu.Edit
         {
             base.PopOut();
 
-            if (began && !committed)
+            // a popover which loads hidden pops out once before it was ever shown.
+            if (!began)
+                return;
+
+            if (!committed)
             {
                 editorBeatmap.RemoveRange(insertedCircles);
                 editorBeatmap.Add(slider);
                 changeHandler?.EndChange();
-                began = false;
+                committed = true;
             }
 
             Closed?.Invoke();
         }
 
-        private partial class DivisorDropdown : FormDropdown<int>
+        /// <summary>
+        /// A compact row of toggle cells, one per item.
+        /// </summary>
+        private partial class ChoiceSelector<T> : CompositeDrawable, IHasCurrentValue<T>
         {
-            protected override LocalisableString GenerateItemText(int item) => $"1/{item}";
+            private readonly BindableWithCurrent<T> current = new BindableWithCurrent<T>();
+
+            public Bindable<T> Current
+            {
+                get => current.Current;
+                set => current.Current = value;
+            }
+
+            private readonly T[] items;
+            private readonly ChoiceCell[] cells;
+
+            public ChoiceSelector(IEnumerable<T> items, Func<T, string> getText)
+            {
+                this.items = items.ToArray();
+
+                RelativeSizeAxes = Axes.Both;
+
+                cells = this.items.Select(item => new ChoiceCell(getText(item)) { Action = () => Current.Value = item }).ToArray();
+
+                InternalChild = new GridContainer
+                {
+                    RelativeSizeAxes = Axes.Both,
+                    ColumnDimensions = cells.Select(_ => new Dimension()).ToArray(),
+                    Content = new[] { cells.Cast<Drawable>().ToArray() }
+                };
+            }
+
+            protected override void LoadComplete()
+            {
+                base.LoadComplete();
+
+                Current.BindValueChanged(v =>
+                {
+                    for (int i = 0; i < items.Length; i++)
+                        cells[i].Selected = EqualityComparer<T>.Default.Equals(items[i], v.NewValue);
+                }, true);
+            }
+        }
+
+        private partial class ChoiceCell : OsuClickableContainer
+        {
+            private readonly Box background;
+            private readonly OsuSpriteText text;
+
+            [Resolved]
+            private OsuColour colours { get; set; } = null!;
+
+            [Resolved]
+            private OverlayColourProvider? colourProvider { get; set; }
+
+            private bool selected;
+
+            public bool Selected
+            {
+                set
+                {
+                    selected = value;
+                    updateColours();
+                }
+            }
+
+            public ChoiceCell(string label)
+            {
+                RelativeSizeAxes = Axes.Both;
+                Padding = new MarginPadding(1);
+
+                Child = new osu.Framework.Graphics.Containers.Container
+                {
+                    RelativeSizeAxes = Axes.Both,
+                    Masking = true,
+                    CornerRadius = 3,
+                    Children = new Drawable[]
+                    {
+                        background = new Box { RelativeSizeAxes = Axes.Both },
+                        text = new OsuSpriteText
+                        {
+                            Anchor = Anchor.Centre,
+                            Origin = Anchor.Centre,
+                            Text = label,
+                            Font = OsuFont.Default.With(size: 12, weight: FontWeight.SemiBold),
+                        }
+                    }
+                };
+            }
+
+            protected override void LoadComplete()
+            {
+                base.LoadComplete();
+                updateColours();
+            }
+
+            protected override bool OnHover(HoverEvent e)
+            {
+                updateColours();
+                return base.OnHover(e);
+            }
+
+            protected override void OnHoverLost(HoverLostEvent e)
+            {
+                updateColours();
+                base.OnHoverLost(e);
+            }
+
+            private void updateColours()
+            {
+                if (!IsLoaded)
+                    return;
+
+                Color4 idle = colourProvider?.Background3 ?? colours.Gray3;
+
+                background.Colour = selected ? colourProvider?.Highlight1 ?? colours.Yellow : IsHovered ? idle.Lighten(0.3f) : idle;
+                text.Colour = selected ? colourProvider?.Background5 ?? colours.Gray1 : Color4.White;
+            }
         }
     }
 
