@@ -72,6 +72,24 @@ namespace osu.Game.Rulesets.Osu.Tests.Slop
         }
 
         [Test]
+        public void TestChangingDensityKeepsFollowingSections()
+        {
+            var stream = new EditorStream { BeatDivisor = 4 };
+            var points = stream.Path.Path.ControlPoints;
+
+            // the following anchors have no density of their own, so they continue the first one's.
+            points.Add(new PathControlPoint(Vector2.Zero, PathType.LINEAR));
+            stream.SetDensity(points[0], 2);
+            points.Add(new PathControlPoint(new Vector2(200, 0), PathType.LINEAR));
+            points.Add(new PathControlPoint(new Vector2(400, 0)));
+
+            stream.SetDensity(points[0], 3);
+
+            Assert.That(stream.GetDensity(points[1]), Is.EqualTo(2));
+            Assert.That(stream.GetDensity(points[2]), Is.EqualTo(2));
+        }
+
+        [Test]
         public void TestSerialisationRoundTrip()
         {
             var stream = createTwoSegmentStream();

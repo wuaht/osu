@@ -12,6 +12,7 @@ using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Cursor;
 using osu.Framework.Graphics.Shapes;
+using osu.Framework.Graphics.Sprites;
 using osu.Framework.Graphics.UserInterface;
 using osu.Framework.Input.Events;
 using osu.Framework.Localisation;
@@ -232,6 +233,7 @@ namespace osu.Game.Rulesets.Osu.Edit.Streams
             private OsuColour colours { get; set; } = null!;
 
             private OsuSpriteText text = null!;
+            private SpriteIcon accelerationIcon = null!;
             private Box background = null!;
 
             public DensityLabel(EditorStream stream, PathControlPoint controlPoint)
@@ -258,11 +260,30 @@ namespace osu.Game.Rulesets.Osu.Edit.Streams
                         Colour = Color4.Black,
                         Alpha = 0.6f,
                     },
-                    text = new OsuSpriteText
+                    new FillFlowContainer
                     {
+                        AutoSizeAxes = Axes.Both,
+                        Direction = FillDirection.Horizontal,
+                        Spacing = new Vector2(3, 0),
                         Margin = new MarginPadding { Horizontal = 4, Vertical = 1 },
-                        Font = OsuFont.Default.With(size: 12, weight: FontWeight.Bold),
-                        Colour = colours.Yellow,
+                        Children = new Drawable[]
+                        {
+                            text = new OsuSpriteText
+                            {
+                                Anchor = Anchor.CentreLeft,
+                                Origin = Anchor.CentreLeft,
+                                Font = OsuFont.Default.With(size: 12, weight: FontWeight.Bold),
+                                Colour = colours.Yellow,
+                            },
+                            accelerationIcon = new SpriteIcon
+                            {
+                                Anchor = Anchor.CentreLeft,
+                                Origin = Anchor.CentreLeft,
+                                Icon = FontAwesome.Solid.AngleDoubleRight,
+                                Size = new Vector2(9),
+                                Colour = colours.Yellow,
+                            },
+                        },
                     },
                 };
 
@@ -270,9 +291,39 @@ namespace osu.Game.Rulesets.Osu.Edit.Streams
             }
 
             public void UpdateText()
-                => text.Text = $"{stream.GetDensity(ControlPoint).ToString("0.0#", CultureInfo.InvariantCulture)}x{(stream.GetAccelerates(ControlPoint) ? " >" : string.Empty)}";
+            {
+                text.Text = $"{formatDensity(stream.GetDensity(ControlPoint))}x";
 
-            public override LocalisableString TooltipText => "Stream density. Scroll to adjust (hold shift for finer steps), click to edit or accelerate towards the next anchor.";
+                bool accelerates = stream.GetNextDensityAnchor(ControlPoint) != null && stream.GetAccelerates(ControlPoint);
+
+                accelerationIcon.Alpha = accelerates ? 1 : 0;
+                // the hidden icon takes no space, so that the label stays centred below the anchor.
+                accelerationIcon.BypassAutoSizeAxes = accelerates ? Axes.None : Axes.Both;
+            }
+
+            public override LocalisableString TooltipText
+            {
+                get
+                {
+                    var next = stream.GetNextDensityAnchor(ControlPoint);
+
+                    if (next == null)
+                        return "Density the previous section gradually changes to. Scroll to adjust (hold shift for finer steps), click to edit.";
+
+                    if (stream.GetAccelerates(ControlPoint))
+                        return $"Density of this section, gradually changing to {formatDensity(stream.GetDensity(next))}x at the next anchor. Scroll to adjust (hold shift for finer steps), click to edit.";
+
+                    return "Density of this section, kept until the next anchor. Scroll to adjust (hold shift for finer steps), click to edit.";
+                }
+            }
+
+            protected override bool OnMouseDown(MouseDownEvent e)
+            {
+                base.OnMouseDown(e);
+
+                // keeps the hit objects below the label from being selected instead of opening the popover.
+                return e.Button == MouseButton.Left;
+            }
 
             protected override bool OnHover(HoverEvent e)
             {
@@ -312,6 +363,8 @@ namespace osu.Game.Rulesets.Osu.Edit.Streams
             public Popover GetPopover() => new DensityPopover(stream, ControlPoint, streamManager, changeHandler);
         }
 
+        private static string formatDensity(double density) => density.ToString("0.0#", CultureInfo.InvariantCulture);
+
         private partial class DensityPopover : OsuPopover
         {
             private readonly EditorStream stream;
@@ -330,6 +383,9 @@ namespace osu.Game.Rulesets.Osu.Edit.Streams
             private readonly IEditorChangeHandler? changeHandler;
 
             private OsuSpriteText valueText = null!;
+            private OsuTextFlowContainer explanationText = null!;
+
+            private PathControlPoint? nextAnchor;
 
             private bool changeStarted;
 
@@ -342,13 +398,12 @@ namespace osu.Game.Rulesets.Osu.Edit.Streams
             }
 
             [BackgroundDependencyLoader]
-            private void load()
+            private void load(OsuColour colours)
             {
                 density.Value = stream.GetDensity(controlPoint);
                 accelerates.Value = stream.GetAccelerates(controlPoint);
 
-                var densityAnchors = stream.Path.Path.ControlPoints.Where(stream.HasDensity).ToList();
-                bool isLastAnchor = densityAnchors.Count > 0 && densityAnchors[^1] == controlPoint;
+                nextAnchor = stream.GetNextDensityAnchor(controlPoint);
 
                 Child = new FillFlowContainer
                 {
@@ -404,10 +459,16 @@ namespace osu.Game.Rulesets.Osu.Edit.Streams
                         },
                         new OsuCheckbox
                         {
-                            LabelText = "Accelerate to next anchor",
+                            LabelText = "Gradually change to the next anchor's density",
                             Current = accelerates,
-                            // the last anchor has no next anchor to accelerate towards.
-                            Alpha = isLastAnchor ? 0 : 1,
+                            // the last anchor has no next anchor to change towards.
+                            Alpha = nextAnchor == null ? 0 : 1,
+                        },
+                        explanationText = new OsuTextFlowContainer(t => t.Font = OsuFont.Default.With(size: 12))
+                        {
+                            RelativeSizeAxes = Axes.X,
+                            AutoSizeAxes = Axes.Y,
+                            Colour = colours.Gray9,
                         },
                     },
                 };
@@ -426,13 +487,27 @@ namespace osu.Game.Rulesets.Osu.Edit.Streams
 
                     stream.SetDensity(controlPoint, d.NewValue);
                     streamManager.Invalidate(stream);
+                    updateExplanation();
                 }, true);
 
                 accelerates.BindValueChanged(a =>
                 {
                     stream.SetAccelerates(controlPoint, a.NewValue);
                     streamManager.Invalidate(stream);
-                });
+                    updateExplanation();
+                }, true);
+            }
+
+            private void updateExplanation()
+            {
+                string current = formatDensity(stream.GetDensity(controlPoint));
+
+                if (nextAnchor == null)
+                    explanationText.Text = "The section before this anchor only uses this density while it gradually changes towards it.";
+                else if (accelerates.Value)
+                    explanationText.Text = $"The circle spacing changes smoothly from {current}x here to {formatDensity(stream.GetDensity(nextAnchor))}x at the next anchor.";
+                else
+                    explanationText.Text = $"All circles until the next anchor are evenly spaced at {current}x.";
             }
 
             protected override void PopIn()

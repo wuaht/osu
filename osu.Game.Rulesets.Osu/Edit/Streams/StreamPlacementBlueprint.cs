@@ -207,11 +207,11 @@ namespace osu.Game.Rulesets.Osu.Edit.Streams
 
                 if (anchorDensities.TryGetValue(point, out double density))
                     stream.SetDensity(copy, density);
+                // the stream starts with the slider velocity of the toolbox unless a different density was chosen for its first anchor.
+                // this is set before the following anchors are added, so that the ones without a density continue it.
+                else if (point == HitObject.Path.ControlPoints[0])
+                    stream.SetDensity(copy, sliderVelocityToolbox?.SliderVelocity.Value ?? 1);
             }
-
-            // the stream starts with the slider velocity of the toolbox unless a different density was chosen for its first anchor.
-            if (!anchorDensities.ContainsKey(HitObject.Path.ControlPoints[0]))
-                stream.SetDensity(stream.Path.Path.ControlPoints[0], sliderVelocityToolbox?.SliderVelocity.Value ?? 1);
 
             return stream;
         }

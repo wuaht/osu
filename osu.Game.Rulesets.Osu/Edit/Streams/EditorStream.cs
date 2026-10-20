@@ -81,7 +81,20 @@ namespace osu.Game.Rulesets.Osu.Edit.Streams
             return previous;
         }
 
-        public void SetDensity(PathControlPoint point, double density) => densities[point] = Math.Clamp(Math.Round(density, 2), MIN_DENSITY, MAX_DENSITY);
+        public void SetDensity(PathControlPoint point, double density)
+        {
+            // anchors without a density of their own would otherwise follow the new density, changing the sections after this one too.
+            foreach (var p in Path.Path.ControlPoints.Where(p => p != point && HasDensity(p) && !densities.ContainsKey(p)).ToArray())
+                densities[p] = GetDensity(p);
+
+            densities[point] = Math.Clamp(Math.Round(density, 2), MIN_DENSITY, MAX_DENSITY);
+        }
+
+        /// <summary>
+        /// The next anchor after <paramref name="point"/> which carries a density, or <c>null</c> if <paramref name="point"/> is the last one.
+        /// </summary>
+        public PathControlPoint? GetNextDensityAnchor(PathControlPoint point)
+            => Path.Path.ControlPoints.SkipWhile(p => p != point).Skip(1).FirstOrDefault(HasDensity);
 
         /// <summary>
         /// Whether the density changes gradually from <paramref name="point"/> to the next anchor which carries a density.
