@@ -205,6 +205,9 @@ namespace osu.Game.Rulesets.Osu.Replays.AutoPlus
 
                 RelativeSizeAxes = Axes.Both;
 
+                // keeps updating while faded out, so the cursor can fade back in once its next range starts.
+                AlwaysPresent = true;
+
                 double start = frames[0].Time;
                 double end = frames[0].Time;
 
@@ -233,7 +236,7 @@ namespace osu.Game.Rulesets.Osu.Replays.AutoPlus
                     trail = new SdfCursorTrail
                     {
                         FollowMouse = false,
-                        PartColour = colour,
+                        Colour = colour,
                     },
                     cursor = new OsuCursor
                     {
@@ -263,14 +266,13 @@ namespace osu.Game.Rulesets.Osu.Replays.AutoPlus
                     frameIndex--;
 
                 while (frameIndex < frames.Count - 1 && frames[frameIndex + 1].Time <= time)
-                {
                     frameIndex++;
-                    trail.AddPosition(playfield.ToScreenSpace(frames[frameIndex].Position));
-                }
 
                 Vector2 screenSpacePosition = playfield.ToScreenSpace(frames[frameIndex].Position);
 
                 cursor.Position = ToLocalSpace(screenSpacePosition);
+
+                // one position per frame, like the main cursor.
                 trail.AddPosition(screenSpacePosition);
             }
         }

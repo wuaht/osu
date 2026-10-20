@@ -7,7 +7,6 @@ using System.Collections.Specialized;
 using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
-using osu.Framework.Extensions.IEnumerableExtensions;
 using osu.Framework.Extensions.ObjectExtensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
@@ -108,7 +107,7 @@ namespace osu.Game.Rulesets.Edit
             dependencies = new DependencyContainer(base.CreateChildDependencies(parent));
 
         [BackgroundDependencyLoader(true)]
-        private void load(OsuConfigManager config, Editor? editor)
+        private void load(OsuConfigManager config, Editor? editor, IBindable<IReadOnlyList<Mod>>? mods)
         {
             autoSeekOnPlacement = config.GetBindable<bool>(OsuSetting.EditorAutoSeekOnPlacement);
 
@@ -119,7 +118,19 @@ namespace osu.Game.Rulesets.Edit
 
             try
             {
-                DrawableRuleset = CreateDrawableRuleset(Ruleset, EditorBeatmap.PlayableBeatmap, Ruleset.GetAutoplayMod()?.Yield().ToArray() ?? []);
+                var drawableRulesetMods = new List<Mod>();
+
+                if (Ruleset.GetAutoplayMod() is Mod autoplay)
+                    drawableRulesetMods.Add(autoplay);
+
+                // the previewed Hidden mod is applied to the displayed objects (rate adjust mods are applied to the clock instead).
+                if (config.Get<bool>(OsuSetting.SlopEditorPreviewMods) && mods != null)
+                {
+                    var rulesetModTypes = Ruleset.CreateAllMods().Select(m => m.GetType()).ToHashSet();
+                    drawableRulesetMods.AddRange(mods.Value.Where(m => m is ModHidden && rulesetModTypes.Contains(m.GetType())));
+                }
+
+                DrawableRuleset = CreateDrawableRuleset(Ruleset, EditorBeatmap.PlayableBeatmap, drawableRulesetMods);
                 drawableRulesetWrapper = new DrawableEditorRulesetWrapper<TObject>(DrawableRuleset)
                 {
                     Clock = EditorClock,

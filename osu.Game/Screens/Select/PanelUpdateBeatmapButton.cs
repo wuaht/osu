@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Diagnostics;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
@@ -13,6 +14,7 @@ using osu.Framework.Localisation;
 using osu.Framework.Platform;
 using osu.Game.Beatmaps;
 using osu.Game.Configuration;
+using osu.Game.Database;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Sprites;
 using osu.Game.Graphics.UserInterface;
@@ -63,6 +65,9 @@ namespace osu.Game.Screens.Select
 
         [Resolved]
         private Storage storage { get; set; } = null!;
+
+        [Resolved]
+        private RealmAccess realm { get; set; } = null!;
 
         public PanelUpdateBeatmapButton()
         {
@@ -186,8 +191,19 @@ namespace osu.Game.Screens.Select
 
             if (backupOnUpdate.Value)
             {
-                foreach (var beatmap in beatmapSet.Beatmaps)
-                    EditorBeatmapBackup.CreateBackup(storage, beatmap, EditorBeatmapBackup.UPDATE_TAG);
+                // the carousel's detached set doesn't carry its files, so the stored files are looked up from the database.
+                Guid setId = beatmapSet.ID;
+
+                realm.Run(r =>
+                {
+                    var liveSet = r.Find<BeatmapSetInfo>(setId);
+
+                    if (liveSet == null)
+                        return;
+
+                    foreach (var beatmap in liveSet.Beatmaps)
+                        EditorBeatmapBackup.CreateBackup(storage, beatmap, EditorBeatmapBackup.UPDATE_TAG);
+                });
             }
 
             beatmapDownloader.DownloadAsUpdate(beatmapSet, preferNoVideo.Value);

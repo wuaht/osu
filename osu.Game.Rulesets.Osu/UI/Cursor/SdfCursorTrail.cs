@@ -57,6 +57,8 @@ namespace osu.Game.Rulesets.Osu.UI.Cursor
 
         private int currentIndex;
         private Vector2? lastPosition;
+        private Vector2? mousePosition;
+        private bool addedThisFrame;
         private float? lastTime;
 
         private double timeOffset;
@@ -94,6 +96,8 @@ namespace osu.Game.Rulesets.Osu.UI.Cursor
 
         protected override bool OnMouseMove(MouseMoveEvent e)
         {
+            mousePosition = e.ScreenSpaceMousePosition;
+
             if (FollowMouse)
                 AddPosition(e.ScreenSpaceMousePosition);
 
@@ -106,6 +110,7 @@ namespace osu.Game.Rulesets.Osu.UI.Cursor
         public void AddPosition(Vector2 screenSpacePosition)
         {
             addQueue.Enqueue(screenSpacePosition);
+            addedThisFrame = true;
 
             while (addQueue.Count > max_parts)
                 addQueue.Dequeue();
@@ -115,7 +120,14 @@ namespace osu.Game.Rulesets.Osu.UI.Cursor
         {
             base.Update();
 
-            Color4 colour = PartColour.ToLinear();
+            // a position is added every frame, so that the trail stays visible below a still cursor.
+            if (FollowMouse && !addedThisFrame && mousePosition != null)
+                addQueue.Enqueue(mousePosition.Value);
+
+            addedThisFrame = false;
+
+            // the colour is kept in gamma space, which the shader blends with.
+            Color4 colour = PartColour;
 
             while (addQueue.Count > 0)
                 add(addQueue.Dequeue(), colour);
@@ -301,7 +313,8 @@ namespace osu.Game.Rulesets.Osu.UI.Cursor
                 frameBuffer.Bind();
 
                 renderer.PushOrtho(rootRectangle);
-                renderer.Clear(new ClearInfo(Color4.Transparent));
+                // osuTK's transparent is white, which the max blending would keep in the colour channels.
+                renderer.Clear(new ClearInfo(new Color4(0, 0, 0, 0)));
                 renderer.SetBlend(max_blending);
 
                 trailShader.Bind();

@@ -33,9 +33,9 @@ void main(void)
 
     lowp vec3 col = v_Colour.rgb;
 
-    // vertex colours are already in linear space, so this matches a gamma-correct mix towards white.
+    // vertex colours are in gamma space, so the mix towards white is done in linear space.
     if (v_WhiteBlend > 0.5)
-        col = mix(col, vec3(1.0), linearstep(32.0 * timeInterp, 32.0 * timeInterp + 0.75, dist));
+        col = pow(mix(pow(col, vec3(2.2)), vec3(1.0), linearstep(32.0 * timeInterp, 32.0 * timeInterp + 0.75, dist)), vec3(1.0 / 2.2));
 
     o_Colour = vec4(col * max(alpha, 0.0), 1.0);
 }
