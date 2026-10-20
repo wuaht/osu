@@ -10,6 +10,7 @@ using osu.Game.Rulesets.Mods;
 using osu.Game.Rulesets.Osu.Objects;
 using osu.Game.Rulesets.Osu.Replays;
 using osu.Game.Rulesets.Osu.Replays.AutoPlus;
+using osu.Game.Rulesets.Osu.Replays.Realistic;
 using osu.Game.Rulesets.UI;
 
 namespace osu.Game.Rulesets.Osu.Mods
@@ -18,17 +19,22 @@ namespace osu.Game.Rulesets.Osu.Mods
     {
         public override Type[] IncompatibleMods => base.IncompatibleMods.Concat(new[] { typeof(OsuModMagnetised), typeof(OsuModRepel), typeof(OsuModAutopilot), typeof(OsuModSpunOut), typeof(OsuModAlternate), typeof(OsuModSingleTap), typeof(OsuModWiggle), typeof(OsuModDepth) }).ToArray();
 
-        private static bool useTagCursors => SlopAutoplaySettings.Engine == SlopAutoplayEngine.AutoPlus && SlopAutoplaySettings.Get(OsuSetting.SlopAutoPlusTag, false);
+        private SlopAutoplayEngine engine => InEditor ? SlopAutoplaySettings.EditorEngine : SlopAutoplaySettings.Engine;
+
+        private bool useTagCursors => engine == SlopAutoplayEngine.AutoPlus && SlopAutoplaySettings.Get(OsuSetting.SlopAutoPlusTag, false);
 
         public override ModReplayData CreateReplayData(IBeatmap beatmap, IReadOnlyList<Mod> mods)
         {
-            switch (SlopAutoplaySettings.Engine)
+            switch (engine)
             {
                 case SlopAutoplayEngine.Pippi:
                     return new ModReplayData(new OsuAutoGenerator(beatmap, mods) { Pippi = true }.Generate(), new ModCreatedUser { Username = "Autoplay" });
 
                 case SlopAutoplayEngine.AutoPlus:
                     return new ModReplayData(new OsuAutoPlusGenerator(beatmap, mods, invisibleDummy: useTagCursors).Generate(), new ModCreatedUser { Username = "Auto+" });
+
+                case SlopAutoplayEngine.Realistic:
+                    return new ModReplayData(new OsuRealisticAutoGenerator(beatmap, mods).Generate(), new ModCreatedUser { Username = "Autoplay" });
 
                 default:
                     return new ModReplayData(new OsuAutoGenerator(beatmap, mods).Generate(), new ModCreatedUser { Username = "Autoplay" });

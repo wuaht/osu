@@ -260,6 +260,18 @@ namespace osu.Game.Rulesets.Osu.UI.Cursor
             currentIndex = (currentIndex + 1) % max_sprites;
         }
 
+        /// <summary>
+        /// Removes all parts of the trail, so that the next movement starts a new trail.
+        /// </summary>
+        public void ClearParts()
+        {
+            for (int i = 0; i < max_sprites; i++)
+                parts[i].InvalidationID = -1;
+
+            currentIndex = 0;
+            lastPosition = null;
+        }
+
         protected override DrawNode CreateDrawNode() => new TrailDrawNode(this);
 
         private struct TrailPart

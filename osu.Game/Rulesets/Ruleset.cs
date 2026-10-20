@@ -501,5 +501,10 @@ namespace osu.Game.Rulesets
         /// Can be overridden to avoid showing scroll speed changes in the editor.
         /// </summary>
         public virtual bool EditorShowScrollSpeed => true;
+
+        /// <summary>
+        /// Whether the editor playfield can display the cursor of the autoplay replay.
+        /// </summary>
+        public virtual bool EditorSupportsAutoplayCursor => false;
     }
 }

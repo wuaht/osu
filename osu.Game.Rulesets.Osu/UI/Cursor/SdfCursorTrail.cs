@@ -207,6 +207,19 @@ namespace osu.Game.Rulesets.Osu.UI.Cursor
             lastTime = time;
         }
 
+        /// <summary>
+        /// Removes all parts of the trail, so that the next movement starts a new trail.
+        /// </summary>
+        public void ClearParts()
+        {
+            Array.Clear(parts);
+            addQueue.Clear();
+
+            currentIndex = 0;
+            lastPosition = null;
+            lastTime = null;
+        }
+
         protected override DrawNode CreateDrawNode() => new SdfTrailDrawNode(this);
 
         private struct TrailPart

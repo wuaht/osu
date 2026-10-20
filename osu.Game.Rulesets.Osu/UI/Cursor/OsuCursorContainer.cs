@@ -171,6 +171,18 @@ namespace osu.Game.Rulesets.Osu.UI.Cursor
             argonCursorTrail.CursorScale = scale;
         }
 
+        /// <summary>
+        /// Removes all parts of the cursor trails, so that the next movement starts new trails.
+        /// </summary>
+        public void ClearTrails()
+        {
+            if (cursorTrail.Drawable is CursorTrail skinTrail)
+                skinTrail.ClearParts();
+
+            argonCursorTrail.ClearParts();
+            sdfTrail.ClearParts();
+        }
+
         private int downCount;
 
         private void updateExpandedState()

@@ -497,5 +497,7 @@ namespace osu.Game.Rulesets.Osu
         }
 
         public override bool EditorShowScrollSpeed => false;
+
+        public override bool EditorSupportsAutoplayCursor => true;
     }
 }

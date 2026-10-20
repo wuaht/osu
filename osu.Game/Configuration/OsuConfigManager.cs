@@ -378,6 +378,8 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopEditorSongSelectShowPlayButtons, false);
             SetDefault(OsuSetting.SlopEditorManiaPlayfieldWaveform, true);
             SetDefault(OsuSetting.SlopEditorTextEditor, @"notepad.exe");
+            SetDefault(OsuSetting.SlopEditorShowAutoplayCursor, false);
+            SetDefault(OsuSetting.SlopEditorAutoplayEngine, SlopAutoplayEngine.Realistic);
             SetDefault(OsuSetting.SlopMinimalReplayFrames, false);
             SetDefault(OsuSetting.SlopSkipIntro, false);
             SetDefault(OsuSetting.SlopInstantScreenTransitions, false);
@@ -1234,6 +1236,16 @@ namespace osu.Game.Configuration
         /// The program used to open beatmap files in a text editor from the editor.
         /// </summary>
         SlopEditorTextEditor,
+
+        /// <summary>
+        /// Whether the cursor of the autoplay replay is displayed in the editor.
+        /// </summary>
+        SlopEditorShowAutoplayCursor,
+
+        /// <summary>
+        /// The autoplay engine used to generate the replay which drives gameplay in the editor.
+        /// </summary>
+        SlopEditorAutoplayEngine,
 
         /// <summary>
         /// Whether replays only record frames which contain important data, such as key presses and judgements.

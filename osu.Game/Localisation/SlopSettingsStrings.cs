@@ -1095,6 +1095,26 @@ namespace osu.Game.Localisation
         public static LocalisableString EditorManiaPlayfieldWaveformDescription => new TranslatableString(getKey(@"editor_mania_playfield_waveform_description"), @"Requires the timeline waveform to be visible. Shows the waveform under the playfield instead of the timeline in Mania compose mode");
 
         /// <summary>
+        /// "Show autoplay cursor"
+        /// </summary>
+        public static LocalisableString EditorShowAutoplayCursor => new TranslatableString(getKey(@"editor_show_autoplay_cursor"), @"Show autoplay cursor");
+
+        /// <summary>
+        /// "Shows the cursor of the autoplay replay on the playfield. Only supported in osu!"
+        /// </summary>
+        public static LocalisableString EditorShowAutoplayCursorDescription => new TranslatableString(getKey(@"editor_show_autoplay_cursor_description"), @"Shows the cursor of the autoplay replay on the playfield. Only supported in osu!");
+
+        /// <summary>
+        /// "Editor autoplay engine"
+        /// </summary>
+        public static LocalisableString EditorAutoplayEngine => new TranslatableString(getKey(@"editor_autoplay_engine"), @"Editor autoplay engine");
+
+        /// <summary>
+        /// "The autoplay engine which plays the map in the editor. Realistic moves the cursor like a player would, cutting corners on sliders"
+        /// </summary>
+        public static LocalisableString EditorAutoplayEngineDescription => new TranslatableString(getKey(@"editor_autoplay_engine_description"), @"The autoplay engine which plays the map in the editor. Realistic moves the cursor like a player would, cutting corners on sliders");
+
+        /// <summary>
         /// "Text editor"
         /// </summary>
         public static LocalisableString EditorTextEditor => new TranslatableString(getKey(@"editor_text_editor"), @"Text editor");

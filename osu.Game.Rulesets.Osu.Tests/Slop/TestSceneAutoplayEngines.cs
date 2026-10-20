@@ -39,6 +39,7 @@ namespace osu.Game.Rulesets.Osu.Tests.Slop
         [TestCase(SlopAutoplayEngine.Default)]
         [TestCase(SlopAutoplayEngine.Pippi)]
         [TestCase(SlopAutoplayEngine.AutoPlus)]
+        [TestCase(SlopAutoplayEngine.Realistic)]
         public void TestPerfectPlay(SlopAutoplayEngine engine)
         {
             setEngine(engine, false);

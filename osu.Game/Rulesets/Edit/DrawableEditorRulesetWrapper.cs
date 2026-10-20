@@ -4,10 +4,12 @@
 using System;
 using System.Linq;
 using osu.Framework.Allocation;
+using osu.Framework.Bindables;
 using osu.Framework.Caching;
 using osu.Framework.Extensions.ObjectExtensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
+using osu.Game.Configuration;
 using osu.Game.Rulesets.Mods;
 using osu.Game.Rulesets.Objects;
 using osu.Game.Rulesets.UI;
@@ -40,11 +42,15 @@ namespace osu.Game.Rulesets.Edit
             InternalChild = drawableRuleset;
         }
 
+        private Bindable<SlopAutoplayEngine> autoplayEngine = null!;
+
         [BackgroundDependencyLoader]
-        private void load()
+        private void load(OsuConfigManager config)
         {
             drawableRuleset.FrameStablePlayback = false;
             Playfield.DisplayJudgements.Value = false;
+
+            autoplayEngine = config.GetBindable<SlopAutoplayEngine>(OsuSetting.SlopEditorAutoplayEngine);
         }
 
         [Resolved]
@@ -68,6 +74,8 @@ namespace osu.Game.Rulesets.Edit
             {
                 beatmap.HitObjectUpdated += hitObjectUpdated;
             }
+
+            autoplayEngine.BindValueChanged(_ => Scheduler.AddOnce(regenerateAutoplay));
 
             Scheduler.AddOnce(regenerateAutoplay);
         }

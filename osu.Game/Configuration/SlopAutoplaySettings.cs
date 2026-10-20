@@ -17,6 +17,8 @@ namespace osu.Game.Configuration
 
         public static SlopAutoplayEngine Engine => Config?.Get<SlopAutoplayEngine>(OsuSetting.SlopAutoplayEngine) ?? SlopAutoplayEngine.Default;
 
+        public static SlopAutoplayEngine EditorEngine => Config?.Get<SlopAutoplayEngine>(OsuSetting.SlopEditorAutoplayEngine) ?? SlopAutoplayEngine.Realistic;
+
         public static bool Get(OsuSetting setting, bool fallback) => Config?.Get<bool>(setting) ?? fallback;
 
         public static double Get(OsuSetting setting, double fallback) => Config?.Get<double>(setting) ?? fallback;
@@ -31,6 +33,11 @@ namespace osu.Game.Configuration
 
         [Description("Auto+")]
         AutoPlus,
+
+        /// <summary>
+        /// Moves the cursor like a player would, following a spring towards each target and cutting corners on sliders.
+        /// </summary>
+        Realistic,
     }
 
     public enum AutoPlusTagSplitMode
