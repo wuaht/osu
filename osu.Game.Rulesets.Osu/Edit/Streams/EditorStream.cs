@@ -153,7 +153,7 @@ namespace osu.Game.Rulesets.Osu.Edit.Streams
             {
                 result.Add((time, Path.Position + Path.Path.PositionAt(length > 0 ? Math.Min(1, distance / length) : 0)));
 
-                distance += baseSpacing * densityAt(stops, distance);
+                distance = step(stops, distance, baseSpacing);
 
                 // small leniency so that a stream which exactly fits its path doesn't lose its last circle to rounding errors.
                 if (length <= 0 || distance > length + 0.5)
@@ -185,6 +185,31 @@ namespace osu.Game.Rulesets.Osu.Edit.Streams
 
         private List<(double Distance, double Density, bool Accelerates)> getDensityStops(double length)
             => GetDensityAnchors().Select(a => (Math.Min(a.Distance, length), GetDensity(a.Point), GetAccelerates(a.Point))).ToList();
+
+        /// <summary>
+        /// Advances <paramref name="distance"/> by the spacing of one circle.
+        /// A step which crosses an anchor only uses the density before it for the part up to the anchor,
+        /// so that the spacing changes right at the anchor rather than one circle after it.
+        /// </summary>
+        private static double step(List<(double Distance, double Density, bool Accelerates)> stops, double distance, double baseSpacing)
+        {
+            // the part of the step which is still to be covered.
+            double remaining = 1;
+
+            while (remaining > 0)
+            {
+                double spacing = baseSpacing * densityAt(stops, distance);
+                double nextAnchor = stops.Select(s => s.Distance).Where(d => d > distance + 0.001).DefaultIfEmpty(double.PositiveInfinity).Min();
+
+                if (spacing <= 0 || distance + spacing * remaining <= nextAnchor)
+                    return distance + spacing * remaining;
+
+                remaining -= (nextAnchor - distance) / spacing;
+                distance = nextAnchor;
+            }
+
+            return distance;
+        }
 
         private static double densityAt(List<(double Distance, double Density, bool Accelerates)> stops, double distance)
         {

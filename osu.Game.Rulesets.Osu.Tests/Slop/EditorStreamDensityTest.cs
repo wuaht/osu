@@ -27,6 +27,21 @@ namespace osu.Game.Rulesets.Osu.Tests.Slop
         }
 
         [Test]
+        public void TestDensityChangesAtAnchorBetweenCircles()
+        {
+            var stream = createTwoSegmentStream();
+            var points = stream.Path.Path.ControlPoints;
+
+            points[1].Position = new Vector2(210, 0);
+            points[2].Position = new Vector2(410, 0);
+
+            float[] xs = layout(stream);
+
+            // the circle after 200 covers the remaining 10 units at density 1, and the rest of its step at density 2.
+            Assert.That(xs, Is.EqualTo(new float[] { 0, 25, 50, 75, 100, 125, 150, 175, 200, 240, 290, 340, 390 }).Within(0.01f));
+        }
+
+        [Test]
         public void TestAcceleratingSegment()
         {
             var stream = createTwoSegmentStream();
