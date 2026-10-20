@@ -282,6 +282,13 @@ namespace osu.Game.Screens.Edit.Compose.Components
         }
 
         /// <summary>
+        /// Handles a click on an already selected blueprint which did not result in a drag.
+        /// </summary>
+        /// <param name="blueprint">The clicked blueprint.</param>
+        /// <returns>Whether the click was handled.</returns>
+        protected internal virtual bool SelectedBlueprintClicked(SelectionBlueprint<T> blueprint) => false;
+
+        /// <summary>
         /// Handle a blueprint requesting selection.
         /// </summary>
         /// <param name="blueprint">The blueprint.</param>

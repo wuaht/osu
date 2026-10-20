@@ -572,6 +572,8 @@ namespace osu.Game.Rulesets.Osu.Edit
                 yield return createStreamMenuItem(stream);
         }
 
+        protected override bool SelectedBlueprintClicked(SelectionBlueprint<HitObject> blueprint) => streamManager?.SelectSingleCircle(blueprint.Item) == true;
+
         private MenuItem createStreamMenuItem(EditorStream stream)
         {
             var divisorItems = stream_divisors.Append(stream.BeatDivisor).Distinct().Order().Select(d => new OsuMenuItem($"1/{d}", d == stream.BeatDivisor ? MenuItemType.Highlighted : MenuItemType.Standard, () =>

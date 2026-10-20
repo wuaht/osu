@@ -473,6 +473,14 @@ namespace osu.Game.Screens.Edit.Compose.Components
                 return true;
             }
 
+            if (selectedBlueprintAlreadySelectedOnMouseDown)
+            {
+                var clicked = SelectionBlueprints.AliveChildren.FirstOrDefault(b => b.IsSelected && b.IsHovered);
+
+                if (clicked != null && SelectionHandler.SelectedBlueprintClicked(clicked))
+                    return clickSelectionHandled = true;
+            }
+
             if (selectedBlueprintAlreadySelectedOnMouseDown && SelectedItems.Count == 1)
             {
                 // If a click occurred and was handled by the currently selected blueprint but didn't result in a drag,

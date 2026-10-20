@@ -69,6 +69,11 @@ namespace osu.Game.Rulesets.Osu.Edit.Streams
         private readonly HashSet<HitObject> pendingSelected = new HashSet<HitObject>();
         private readonly HashSet<HitObject> pendingDeselected = new HashSet<HitObject>();
 
+        /// <summary>
+        /// Streams whose circles are currently selected individually instead of as a whole.
+        /// </summary>
+        private readonly HashSet<EditorStream> individuallySelected = new HashSet<EditorStream>();
+
         protected override void LoadComplete()
         {
             base.LoadComplete();
@@ -175,6 +180,7 @@ namespace osu.Game.Rulesets.Osu.Edit.Streams
                 return;
 
             pendingLayouts.Remove(stream);
+            individuallySelected.Remove(stream);
             dirty = true;
 
             updateSelectedStream();
@@ -187,6 +193,7 @@ namespace osu.Game.Rulesets.Osu.Edit.Streams
         {
             streams.Clear();
             pendingLayouts.Clear();
+            individuallySelected.Clear();
 
             var claimed = new HashSet<HitObject>();
             bool dropped = false;
@@ -394,6 +401,7 @@ namespace osu.Game.Rulesets.Osu.Edit.Streams
                         case ValidationResult.Invalid:
                             streams.Remove(stream);
                             pendingLayouts.Remove(stream);
+                            individuallySelected.Remove(stream);
                             dirty = true;
                             removed = true;
                             break;
@@ -566,19 +574,41 @@ namespace osu.Game.Rulesets.Osu.Edit.Streams
         }
 
         /// <summary>
-        /// Streams are selected and deselected as a whole.
+        /// Selects only <paramref name="hitObject"/> out of its selected stream, so that it can be edited on its own (e.g. its new combo or samples).
+        /// </summary>
+        /// <returns>Whether <paramref name="hitObject"/> belongs to a stream and the selection was changed.</returns>
+        public bool SelectSingleCircle(HitObject hitObject)
+        {
+            var stream = GetStream(hitObject);
+            var selected = editorBeatmap.SelectedHitObjects;
+
+            if (stream == null || selected.Count == 1)
+                return false;
+
+            individuallySelected.Add(stream);
+
+            selected.Clear();
+            selected.Add(hitObject);
+            return true;
+        }
+
+        /// <summary>
+        /// Streams are selected and deselected as a whole, unless their circles were selected individually via <see cref="SelectSingleCircle"/>.
         /// </summary>
         private void syncSelection()
         {
             var selected = editorBeatmap.SelectedHitObjects;
 
-            var streamsToSelect = pendingSelected.Select(GetStream).OfType<EditorStream>().ToHashSet();
+            // a stream without any selected circle is selected as a whole again the next time.
+            individuallySelected.RemoveWhere(s => !s.Circles.Any(selected.Contains));
+
+            var streamsToSelect = pendingSelected.Select(GetStream).OfType<EditorStream>().Where(s => !individuallySelected.Contains(s)).ToHashSet();
 
             // circles which were deleted from the beatmap don't deselect the rest of their stream.
             // a stream which was both selected and deselected (e.g. by clicking another of its circles) stays selected.
             var hitObjects = new HashSet<HitObject>(editorBeatmap.HitObjects);
             var toDeselect = pendingDeselected.Where(hitObjects.Contains).Select(GetStream).OfType<EditorStream>().Distinct()
-                                              .Where(s => !streamsToSelect.Contains(s))
+                                              .Where(s => !streamsToSelect.Contains(s) && !individuallySelected.Contains(s))
                                               .SelectMany(s => s.Circles).Where(c => selected.Contains(c)).ToArray();
 
             var toSelect = streamsToSelect.SelectMany(s => s.Circles).Where(c => !selected.Contains(c)).ToArray();
