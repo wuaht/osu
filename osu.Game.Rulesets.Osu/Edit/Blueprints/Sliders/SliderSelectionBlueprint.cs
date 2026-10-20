@@ -346,7 +346,8 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
             switch (e.Button)
             {
                 case MouseButton.Middle:
-                    return !isControlPointHovered && startCurveDrag(e.MousePosition);
+                    // unselected sliders keep the quick deletion of a middle click.
+                    return IsSelected && !isControlPointHovered && startCurveDrag(e.MousePosition);
 
                 case MouseButton.Right:
                     if (e.ControlPressed && !isControlPointHovered && splitAtPosition(e.MousePosition, !e.ShiftPressed))
@@ -553,7 +554,18 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
         {
             if (e.Button == MouseButton.Middle)
             {
+                bool wasClick = curveDrag?.Moved == false;
+
                 endCurveDrag();
+
+                // a middle click without dragging still quick-deletes the selection, as it would without curve dragging.
+                if (wasClick && editorBeatmap != null)
+                {
+                    changeHandler?.BeginChange();
+                    editorBeatmap.RemoveRange(editorBeatmap.SelectedHitObjects.ToArray());
+                    changeHandler?.EndChange();
+                }
+
                 return;
             }
 
@@ -568,7 +580,15 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
         /// </summary>
         private CurveDrag? curveDrag;
 
-        private record CurveDrag(Vector2 StartPosition, PathControlPoint[] ControlPoints, Vector2[] OriginalPositions, double[] Influences, double TotalSquaredInfluence);
+        private record CurveDrag(Vector2 StartPosition, PathControlPoint[] ControlPoints, Vector2[] OriginalPositions, double[] Influences, double TotalSquaredInfluence)
+        {
+            /// <summary>
+            /// Whether the cursor has moved far enough for this to be a drag rather than a click.
+            /// </summary>
+            public bool Moved { get; set; }
+        }
+
+        private const float curve_drag_threshold = 4;
 
         /// <param name="position">The position of the cursor, in playfield space.</param>
         /// <returns>Whether a drag was started.</returns>
@@ -646,6 +666,12 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
             }
 
             Vector2 delta = ToLocalSpace(mouse.Position) - curveDrag.StartPosition;
+
+            if (!curveDrag.Moved && delta.Length < curve_drag_threshold)
+                return;
+
+            curveDrag.Moved = true;
+
             bool changed = false;
 
             // moving each point proportionally to its influence moves the clicked point of the curve exactly with the cursor.
