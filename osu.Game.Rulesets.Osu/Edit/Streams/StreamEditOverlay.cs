@@ -61,6 +61,7 @@ namespace osu.Game.Rulesets.Osu.Edit.Streams
         private Container<DensityLabel> densityLabels = null!;
 
         private int lastLineVersion = -1;
+        private Vector2 lastLinePosition;
 
         public StreamEditOverlay()
         {
@@ -120,9 +121,11 @@ namespace osu.Game.Rulesets.Osu.Edit.Streams
             if (stream == null)
                 return;
 
-            if (lastLineVersion != stream.Path.Path.Version.Value)
+            // moving the whole stream only changes its position, which doesn't bump the path version.
+            if (lastLineVersion != stream.Path.Path.Version.Value || lastLinePosition != stream.Path.Position)
             {
                 lastLineVersion = stream.Path.Path.Version.Value;
+                lastLinePosition = stream.Path.Position;
                 pathLine.UpdateFrom(stream.Path);
             }
 
