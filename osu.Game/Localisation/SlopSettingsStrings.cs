@@ -1105,6 +1105,21 @@ namespace osu.Game.Localisation
         public static LocalisableString EditorShowAutoplayCursorDescription => new TranslatableString(getKey(@"editor_show_autoplay_cursor_description"), @"Shows the cursor of the autoplay replay on the playfield. Only supported in osu!");
 
         /// <summary>
+        /// "Autoplay cursor skin"
+        /// </summary>
+        public static LocalisableString EditorAutoplayCursorSkin => new TranslatableString(getKey(@"editor_autoplay_cursor_skin"), @"Autoplay cursor skin");
+
+        /// <summary>
+        /// "Skin whose cursor is used for the autoplay cursor in the editor."
+        /// </summary>
+        public static LocalisableString EditorAutoplayCursorSkinDescription => new TranslatableString(getKey(@"editor_autoplay_cursor_skin_description"), @"Skin whose cursor is used for the autoplay cursor in the editor.");
+
+        /// <summary>
+        /// "Same as editor skin"
+        /// </summary>
+        public static LocalisableString SameAsEditorSkin => new TranslatableString(getKey(@"same_as_editor_skin"), @"Same as editor skin");
+
+        /// <summary>
         /// "Editor autoplay engine"
         /// </summary>
         public static LocalisableString EditorAutoplayEngine => new TranslatableString(getKey(@"editor_autoplay_engine"), @"Editor autoplay engine");

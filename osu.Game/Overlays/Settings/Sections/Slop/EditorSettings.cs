@@ -46,12 +46,19 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
 
         private EditorSkinDropdown skinDropdown = null!;
 
+        private readonly Bindable<Live<SkinInfo>> selectedCursorSkin = new Bindable<Live<SkinInfo>>(same_as_gameplay_skin);
+
+        private Bindable<string> cursorSkinSetting = null!;
+
+        private EditorSkinDropdown cursorSkinDropdown = null!;
+
         private IDisposable? realmSubscription;
 
         [BackgroundDependencyLoader]
         private void load(OsuConfigManager config)
         {
             editorSkinSetting = config.GetBindable<string>(OsuSetting.SlopEditorSkin);
+            cursorSkinSetting = config.GetBindable<string>(OsuSetting.SlopEditorAutoplayCursorSkin);
 
             Children = new Drawable[]
             {
@@ -298,6 +305,16 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                     HintText = SlopSettingsStrings.EditorShowAutoplayCursorDescription,
                     Current = config.GetBindable<bool>(OsuSetting.SlopEditorShowAutoplayCursor),
                 }),
+                new SettingsItemV2(cursorSkinDropdown = new EditorSkinDropdown
+                {
+                    AlwaysShowSearchBar = true,
+                    AllowNonContiguousMatching = true,
+                    Caption = SlopSettingsStrings.EditorAutoplayCursorSkin,
+                    HintText = SlopSettingsStrings.EditorAutoplayCursorSkinDescription,
+                    DefaultItemText = SlopSettingsStrings.SameAsEditorSkin,
+                    Current = selectedCursorSkin,
+                    Items = new[] { same_as_gameplay_skin },
+                }),
                 new SettingsItemV2(new FormEnumDropdown<SlopAutoplayEngine>
                 {
                     Caption = SlopSettingsStrings.EditorAutoplayEngine,
@@ -325,6 +342,11 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
             {
                 editorSkinSetting.Value = skin.NewValue.ID == Guid.Empty ? string.Empty : skin.NewValue.ID.ToString();
             });
+
+            selectedCursorSkin.BindValueChanged(skin =>
+            {
+                cursorSkinSetting.Value = skin.NewValue.ID == Guid.Empty ? string.Empty : skin.NewValue.ID.ToString();
+            });
         }
 
         private void skinsChanged(IRealmCollection<SkinInfo> sender, ChangeSet? changes)
@@ -339,13 +361,16 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
             Schedule(() =>
             {
                 skinDropdown.Items = items;
+                cursorSkinDropdown.Items = items;
 
-                // A skin which no longer exists falls back to the gameplay skin (see EditorSkinSource), so reflect that here.
-                selectedSkin.Value = Guid.TryParse(editorSkinSetting.Value, out var id)
-                    ? items.FirstOrDefault(s => s.ID == id) ?? same_as_gameplay_skin
-                    : same_as_gameplay_skin;
+                // A skin which no longer exists falls back to the default entry (see EditorSkinSource), so reflect that here.
+                selectedSkin.Value = findSkin(items, editorSkinSetting.Value);
+                selectedCursorSkin.Value = findSkin(items, cursorSkinSetting.Value);
             });
         }
+
+        private static Live<SkinInfo> findSkin(List<Live<SkinInfo>> items, string setting)
+            => Guid.TryParse(setting, out var id) ? items.FirstOrDefault(s => s.ID == id) ?? same_as_gameplay_skin : same_as_gameplay_skin;
 
         protected override void Dispose(bool isDisposing)
         {
@@ -356,8 +381,13 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
 
         private partial class EditorSkinDropdown : FormDropdown<Live<SkinInfo>>
         {
+            /// <summary>
+            /// The text of the entry which doesn't select a specific skin.
+            /// </summary>
+            public LocalisableString DefaultItemText { get; init; } = SlopSettingsStrings.SameAsGameplaySkin;
+
             protected override LocalisableString GenerateItemText(Live<SkinInfo> item)
-                => item.ID == Guid.Empty ? SlopSettingsStrings.SameAsGameplaySkin : item.ToString() ?? string.Empty;
+                => item.ID == Guid.Empty ? DefaultItemText : item.ToString() ?? string.Empty;
         }
     }
 }

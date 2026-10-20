@@ -12,6 +12,7 @@ using osu.Game.Rulesets.Osu.UI;
 using osu.Game.Rulesets.Osu.UI.Cursor;
 using osu.Game.Rulesets.UI;
 using osu.Game.Screens.Edit;
+using osu.Game.Skinning;
 using osuTK;
 
 namespace osu.Game.Rulesets.Osu.Edit
@@ -79,6 +80,24 @@ namespace osu.Game.Rulesets.Osu.Edit
         {
             [Resolved]
             private EditorClock editorClock { get; set; } = null!;
+
+            private EditorCursorSkinSource? cursorSkinSource;
+
+            protected override IReadOnlyDependencyContainer CreateChildDependencies(IReadOnlyDependencyContainer parent)
+            {
+                var dependencies = new DependencyContainer(base.CreateChildDependencies(parent));
+
+                dependencies.CacheAs<ISkinSource>(cursorSkinSource = new EditorCursorSkinSource(
+                    parent.Get<ISkinSource>(), parent.Get<SkinManager>(), parent.Get<OsuConfigManager>(), parent.Get<IBeatmap>()));
+
+                return dependencies;
+            }
+
+            protected override void Dispose(bool isDisposing)
+            {
+                base.Dispose(isDisposing);
+                cursorSkinSource?.Dispose();
+            }
 
             protected override void UpdateAfterChildren()
             {
