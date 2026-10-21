@@ -6,7 +6,6 @@ using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Input.Events;
 using osu.Game.Beatmaps;
-using osu.Game.Rulesets.Configuration;
 using osu.Game.Rulesets.Osu.Configuration;
 using osu.Game.Skinning;
 using osuTK.Input;
