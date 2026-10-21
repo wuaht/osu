@@ -266,6 +266,7 @@ namespace osu.Game.Screens.Edit
         private Bindable<bool> editorLoopMusic;
         private Bindable<bool> editorShowDifficultyStrains;
         private Bindable<bool> editorShowAutoplayCursor;
+        private Bindable<float> editorAutoplayCursorOpacity;
 
         /// <summary>
         /// This controls the opacity of components like the timelines, sidebars, etc.
@@ -420,6 +421,7 @@ namespace osu.Game.Screens.Edit
             editorContractSidebars = config.GetBindable<bool>(OsuSetting.EditorContractSidebars);
             editorShowDifficultyStrains = config.GetBindable<bool>(OsuSetting.SlopEditorShowDifficultyStrains);
             editorShowAutoplayCursor = config.GetBindable<bool>(OsuSetting.SlopEditorShowAutoplayCursor);
+            editorAutoplayCursorOpacity = config.GetBindable<float>(OsuSetting.SlopEditorAutoplayCursorOpacity);
 
             // These two settings don't work together. Make them mutually exclusive to let the user know.
             editorAutoSeekOnPlacement.BindValueChanged(enabled =>
@@ -509,6 +511,7 @@ namespace osu.Game.Screens.Edit
                                             },
                                             new OsuMenuItemSpacer(),
                                             new BackgroundDimMenuItem(editorBackgroundDim),
+                                            new AutoplayCursorOpacityMenuItem(editorAutoplayCursorOpacity),
                                             new ToggleMenuItem(EditorStrings.ShowStoryboard)
                                             {
                                                 State = { BindTarget = editorShowStoryboard },

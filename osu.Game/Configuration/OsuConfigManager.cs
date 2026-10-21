@@ -384,6 +384,8 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopEditorManiaPlayfieldWaveform, true);
             SetDefault(OsuSetting.SlopEditorTextEditor, @"notepad.exe");
             SetDefault(OsuSetting.SlopEditorShowAutoplayCursor, false);
+            SetDefault(OsuSetting.SlopEditorAutoplayCursorOpacity, 0.6f, 0f, 1f, 0.01f);
+            SetDefault(OsuSetting.SlopEditorSnapSliderEndsToLaterTimingPoints, true);
             SetDefault(OsuSetting.SlopEditorAutoplayCursorSkin, string.Empty);
             SetDefault(OsuSetting.SlopEditorAutoplayEngine, SlopAutoplayEngine.Realistic);
             SetDefault(OsuSetting.SlopMinimalReplayFrames, false);
@@ -1274,6 +1276,16 @@ namespace osu.Game.Configuration
         /// Whether the cursor of the autoplay replay is displayed in the editor.
         /// </summary>
         SlopEditorShowAutoplayCursor,
+
+        /// <summary>
+        /// The opacity of the autoplay cursor in the editor.
+        /// </summary>
+        SlopEditorAutoplayCursorOpacity,
+
+        /// <summary>
+        /// Whether slider ends snap to the ticks of the timing point active at the end of the slider, instead of the one at its start.
+        /// </summary>
+        SlopEditorSnapSliderEndsToLaterTimingPoints,
 
         /// <summary>
         /// The skin whose cursor is used for the autoplay cursor in the editor, or empty to use the editor skin.

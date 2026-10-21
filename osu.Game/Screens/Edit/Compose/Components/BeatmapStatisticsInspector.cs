@@ -9,7 +9,7 @@ using osu.Game.Beatmaps.Timing;
 namespace osu.Game.Screens.Edit.Compose.Components
 {
     /// <summary>
-    /// Displays general statistics of the beatmap being edited: its max combo, star rating and the timing at the current time.
+    /// Displays general statistics of the beatmap being edited: its difficulty name, max combo, star rating and the timing at the current time.
     /// </summary>
     public partial class BeatmapStatisticsInspector : EditorInspector
     {
@@ -21,6 +21,7 @@ namespace osu.Game.Screens.Edit.Compose.Components
 
         private readonly IBindable<EditorBeatmapDifficultyInfo?> difficultyInfo = new Bindable<EditorBeatmapDifficultyInfo?>();
 
+        private string lastDifficultyName = string.Empty;
         private double lastBPM;
         private TimeSignature? lastTimeSignature;
 
@@ -41,7 +42,8 @@ namespace osu.Game.Screens.Edit.Compose.Components
         {
             base.Update();
 
-            if (updateTiming())
+            // the difficulty name may be changed in the setup screen.
+            if (updateTiming() | EditorBeatmap.BeatmapInfo.DifficultyName != lastDifficultyName)
                 updateText();
         }
 
@@ -66,6 +68,11 @@ namespace osu.Game.Screens.Edit.Compose.Components
             InspectorText.Clear();
 
             var info = difficultyInfo.Value;
+
+            lastDifficultyName = EditorBeatmap.BeatmapInfo.DifficultyName;
+
+            AddHeader("Difficulty");
+            AddValue(string.IsNullOrEmpty(lastDifficultyName) ? "-" : lastDifficultyName);
 
             AddHeader("Max combo");
             AddValue(info == null ? "-" : $"{info.MaxCombo}x");

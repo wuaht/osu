@@ -2,11 +2,13 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using NUnit.Framework;
+using osu.Framework.Allocation;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Cursor;
 using osu.Framework.Testing;
 using osu.Framework.Utils;
 using osu.Game.Beatmaps.ControlPoints;
+using osu.Game.Configuration;
 using osu.Game.Rulesets.Edit;
 using osu.Game.Rulesets.Osu;
 using osu.Game.Rulesets.Osu.Beatmaps;
@@ -26,9 +28,14 @@ namespace osu.Game.Tests.Slop
         private TestHitObjectComposer composer = null!;
         private EditorBeatmap editorBeatmap = null!;
 
+        [Resolved]
+        private OsuConfigManager config { get; set; } = null!;
+
         [SetUp]
         public void Setup() => Schedule(() =>
         {
+            config.SetValue(OsuSetting.SlopEditorSnapSliderEndsToLaterTimingPoints, true);
+
             editorBeatmap = new EditorBeatmap(new OsuBeatmap
             {
                 BeatmapInfo = { Ruleset = new OsuRuleset().RulesetInfo },
@@ -84,6 +91,16 @@ namespace osu.Game.Tests.Slop
         {
             // the closest tick (2700) is past the actual end (2600), so the previous one is used.
             assertSnappedSliderDistance(260, 230);
+        }
+
+        [Test]
+        public void TestDisabledSnapsToStartTimingPoint()
+        {
+            AddStep("disable snapping to later timing points", () => config.SetValue(OsuSetting.SlopEditorSnapSliderEndsToLaterTimingPoints, false));
+
+            // the end snaps to the start-based ticks at 1000 and 2000.
+            assertSnappedSliderDistance(155, 100);
+            assertSnappedSliderDistance(240, 200);
         }
 
         private void assertSnappedSliderDistance(float distance, float expectedDistance)

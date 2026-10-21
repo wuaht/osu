@@ -65,12 +65,29 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
         /// </summary>
         private const float slider_body_limit = 0.8f;
 
+        /// <summary>
+        /// How far the cursor may run ahead of or fall behind the slider ball while following a slider, in milliseconds.
+        /// </summary>
+        private const double slider_timing_variation = 60;
+
+        /// <summary>
+        /// How long it takes the cursor to change between running ahead and falling behind the slider ball, in milliseconds.
+        /// </summary>
+        private const double slider_timing_interval = 400;
+
+        /// <summary>
+        /// How far from its centre a slider with repeats may extend to be treated as a buzz slider, relative to the slider's radius.
+        /// The cursor stays still on buzz sliders, as the follow circle covers the whole slider.
+        /// </summary>
+        private const float buzz_slider_extent = 1.2f;
+
         private static readonly Vector2 playfield_min = new Vector2(-512, -384);
         private static readonly Vector2 playfield_max = new Vector2(1024, 768);
 
         private readonly IReadOnlyList<OsuHitObject> hitObjects;
         private readonly Dictionary<Slider, LenientSliderPath> sliderPaths = new Dictionary<Slider, LenientSliderPath>();
         private readonly Dictionary<Slider, List<Vector2>> sliderBodies = new Dictionary<Slider, List<Vector2>>();
+        private readonly Dictionary<Slider, Vector2> buzzSliderPositions = new Dictionary<Slider, Vector2>();
         private readonly Dictionary<OsuHitObject, double> leaveTimes = new Dictionary<OsuHitObject, double>();
 
         private SecondOrderDynamics cursor = null!;
@@ -95,6 +112,16 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
                 for (int j = 0; j < body.Count; j++)
                     body[j] += slider.StackedPosition;
                 sliderBodies[slider] = body;
+
+                if (body.Count > 0 && slider.RepeatCount > 0)
+                {
+                    Vector2 min = body.Aggregate(Vector2.ComponentMin);
+                    Vector2 max = body.Aggregate(Vector2.ComponentMax);
+                    Vector2 centre = closestPointOnPath(body, (min + max) / 2);
+
+                    if (body.All(p => Vector2.Distance(p, centre) <= slider.Radius * buzz_slider_extent))
+                        buzzSliderPositions[slider] = centre;
+                }
             }
         }
 
@@ -255,7 +282,17 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
 
         private void followSlider(double time, float dt, Slider slider)
         {
-            double aheadTime = Math.Min(time + ApplyModsToRate(time, tracking_lag), slider.EndTime);
+            // short sliders with repeats are buzzed by holding the cursor still within the follow circle.
+            if (buzzSliderPositions.TryGetValue(slider, out Vector2 buzzPosition))
+            {
+                moveTo(dt, buzzPosition, tracking);
+                cursor.ConstrainToCircle(ballPositionAt(slider, time), (float)slider.Radius * 2);
+                return;
+            }
+
+            // players don't follow the slider ball at exactly its speed, but run slightly ahead of it or fall slightly behind.
+            double timingOffset = ApplyModsToRate(time, slider_timing_variation) * (smoothNoise(slider.StackedPosition + new Vector2(13, (float)(slider.StartTime % 10000)), (time - slider.StartTime) / slider_timing_interval) * 2 - 1);
+            double aheadTime = Math.Clamp(time + ApplyModsToRate(time, tracking_lag) + timingOffset, slider.StartTime, slider.EndTime);
 
             // slow sliders are followed closely, fast and short sliders cut corners.
             float followAmount = (float)(Math.Clamp(1 - slider.Velocity / 2, 0, 1) * Math.Clamp((slider.SpanDuration - 50) / 100, 0, 1));

@@ -1154,6 +1154,22 @@ namespace osu.Game.Localisation
         public static LocalisableString EditorShowAutoplayCursorDescription => new TranslatableString(getKey(@"editor_show_autoplay_cursor_description"), @"Shows the cursor of the autoplay replay on the playfield. Only supported in osu!");
 
         /// <summary>
+        /// "Autoplay cursor opacity"
+        /// </summary>
+        public static LocalisableString EditorAutoplayCursorOpacity => new TranslatableString(getKey(@"editor_autoplay_cursor_opacity"), @"Autoplay cursor opacity");
+
+        /// <summary>
+        /// "Snap slider ends to later timing points"
+        /// </summary>
+        public static LocalisableString SnapSliderEndsToLaterTimingPoints => new TranslatableString(getKey(@"snap_slider_ends_to_later_timing_points"), @"Snap slider ends to later timing points");
+
+        /// <summary>
+        /// "Snaps the end of a slider spanning a timing point to the ticks of the later timing point. When disabled, slider ends snap to the ticks of the timing point at the slider's start."
+        /// </summary>
+        public static LocalisableString SnapSliderEndsToLaterTimingPointsDescription => new TranslatableString(getKey(@"snap_slider_ends_to_later_timing_points_description"),
+            @"Snaps the end of a slider spanning a timing point to the ticks of the later timing point. When disabled, slider ends snap to the ticks of the timing point at the slider's start.");
+
+        /// <summary>
         /// "Autoplay cursor skin"
         /// </summary>
         public static LocalisableString EditorAutoplayCursorSkin => new TranslatableString(getKey(@"editor_autoplay_cursor_skin"), @"Autoplay cursor skin");

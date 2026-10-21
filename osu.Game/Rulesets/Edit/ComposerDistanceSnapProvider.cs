@@ -335,6 +335,9 @@ namespace osu.Game.Rulesets.Edit
 
         public virtual float FindSnappedSliderDistance(float distance, double startTime, IHasSliderVelocity? withVelocity = null)
         {
+            if (config?.Get<bool>(OsuSetting.SlopEditorSnapSliderEndsToLaterTimingPoints) == false)
+                return FindSnappedDistance(distance, startTime, withVelocity);
+
             double actualEndTime = startTime + DistanceToDuration(distance, startTime, withVelocity);
 
             // snap using the ticks of the timing point active at the end of the slider, which may differ from the one at its start.

@@ -289,6 +289,12 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                 }),
                 new SettingsItemV2(new FormCheckBox
                 {
+                    Caption = SlopSettingsStrings.SnapSliderEndsToLaterTimingPoints,
+                    HintText = SlopSettingsStrings.SnapSliderEndsToLaterTimingPointsDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorSnapSliderEndsToLaterTimingPoints),
+                }),
+                new SettingsItemV2(new FormCheckBox
+                {
                     Caption = SlopSettingsStrings.DisableAltDistanceSnap,
                     HintText = SlopSettingsStrings.DisableAltDistanceSnapDescription,
                     Current = config.GetBindable<bool>(OsuSetting.SlopEditorDisableAltDistanceSnap),

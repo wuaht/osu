@@ -30,15 +30,15 @@ namespace osu.Game.Rulesets.Osu.Edit
 
         private partial class OsuEditorPlayfield : OsuPlayfield
         {
-            /// <summary>
-            /// The autoplay cursor is slightly transparent, so that it does not cover the objects being edited.
-            /// </summary>
-            private const float cursor_alpha = 0.6f;
-
             [Resolved]
             private EditorBeatmap editorBeatmap { get; set; } = null!;
 
             private Bindable<bool> showAutoplayCursor = null!;
+
+            /// <summary>
+            /// The autoplay cursor is slightly transparent by default, so that it does not cover the objects being edited.
+            /// </summary>
+            private Bindable<float> autoplayCursorOpacity = null!;
 
             protected override GameplayCursorContainer CreateCursor() => new OsuEditorCursorContainer();
 
@@ -51,6 +51,7 @@ namespace osu.Game.Rulesets.Osu.Edit
             private void load(OsuConfigManager config)
             {
                 showAutoplayCursor = config.GetBindable<bool>(OsuSetting.SlopEditorShowAutoplayCursor);
+                autoplayCursorOpacity = config.GetBindable<float>(OsuSetting.SlopEditorAutoplayCursorOpacity);
             }
 
             protected override void LoadComplete()
@@ -59,8 +60,11 @@ namespace osu.Game.Rulesets.Osu.Edit
 
                 editorBeatmap.BeatmapReprocessed += onBeatmapReprocessed;
 
-                showAutoplayCursor.BindValueChanged(show => Cursor!.Alpha = show.NewValue ? cursor_alpha : 0, true);
+                showAutoplayCursor.BindValueChanged(_ => updateCursorAlpha());
+                autoplayCursorOpacity.BindValueChanged(_ => updateCursorAlpha(), true);
             }
+
+            private void updateCursorAlpha() => Cursor!.Alpha = showAutoplayCursor.Value ? autoplayCursorOpacity.Value : 0;
 
             private void onBeatmapReprocessed() => ApplyCircleSizeToPlayfieldBorder(editorBeatmap);
 
