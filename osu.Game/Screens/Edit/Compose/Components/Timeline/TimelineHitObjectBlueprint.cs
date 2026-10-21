@@ -167,6 +167,12 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
                     Origin = Anchor.BottomCentre
                 });
             }
+
+            AddInternal(new TimelineUnsnapIndicators(item)
+            {
+                // above the slider velocity piece, if there is one.
+                Y = difficultyPointPiece != null ? -16 : 0,
+            });
         }
 
         protected override void LoadComplete()
