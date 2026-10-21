@@ -51,6 +51,11 @@ namespace osu.Game.Screens.Edit.Nominators
         public readonly BindableBool IsBusy = new BindableBool();
 
         /// <summary>
+        /// Invoked when a change of the status of at least one nominator to <see cref="BnNominationStatus.Accepted"/> succeeded.
+        /// </summary>
+        public event Action? NominatorsAccepted;
+
+        /// <summary>
         /// The reason of the current state, e.g. why loading or signing in failed.
         /// </summary>
         public string? Message { get; private set; }
@@ -456,7 +461,13 @@ namespace osu.Game.Screens.Edit.Nominators
             if (current == null || current.Status == status || current.Nominator.IsRemoved)
                 return;
 
-            change(async id => await client.SetStatusAsync(id, nominatorId, status).ConfigureAwait(false), applyChange);
+            change(async id => await client.SetStatusAsync(id, nominatorId, status).ConfigureAwait(false), c =>
+            {
+                applyChange(c);
+
+                if (status == BnNominationStatus.Accepted)
+                    NominatorsAccepted?.Invoke();
+            });
         }
 
         /// <summary>
@@ -469,7 +480,15 @@ namespace osu.Game.Screens.Edit.Nominators
             if (ids.Length == 0)
                 return;
 
-            change(async id => await client.SetStatusesAsync(id, ids, status).ConfigureAwait(false), applyFullData);
+            bool accepts = status == BnNominationStatus.Accepted && ids.Any(i => findNominator(i)?.Status != status);
+
+            change(async id => await client.SetStatusesAsync(id, ids, status).ConfigureAwait(false), d =>
+            {
+                applyFullData(d);
+
+                if (accepts)
+                    NominatorsAccepted?.Invoke();
+            });
         }
 
         public void AddComment(int nominatorId, string text, Action? onSuccess = null)

@@ -64,6 +64,8 @@ namespace osu.Game.Screens.Edit.Nominators
         private NominatorFilterSidebar sidebar = null!;
         private Container detailsContainer = null!;
 
+        private AcceptedFountains fountains = null!;
+
         private NominatorDetails? details;
 
         public NominatorsScreen()
@@ -74,53 +76,57 @@ namespace osu.Game.Screens.Edit.Nominators
         [BackgroundDependencyLoader]
         private void load()
         {
-            Child = new Container
+            Children = new Drawable[]
             {
-                RelativeSizeAxes = Axes.Both,
-                Padding = new MarginPadding(spacing),
-                Children = new Drawable[]
+                new Container
                 {
-                    session,
-                    mainContent = new GridContainer
+                    RelativeSizeAxes = Axes.Both,
+                    Padding = new MarginPadding(spacing),
+                    Children = new Drawable[]
                     {
-                        RelativeSizeAxes = Axes.Both,
-                        ColumnDimensions = new[]
+                        session,
+                        mainContent = new GridContainer
                         {
-                            new Dimension(),
-                            new Dimension(GridSizeMode.Absolute, spacing),
-                            new Dimension(GridSizeMode.Absolute, NominatorFilterSidebar.WIDTH),
-                        },
-                        Content = new[]
-                        {
-                            new Drawable[]
+                            RelativeSizeAxes = Axes.Both,
+                            ColumnDimensions = new[]
                             {
-                                new GridContainer
+                                new Dimension(),
+                                new Dimension(GridSizeMode.Absolute, spacing),
+                                new Dimension(GridSizeMode.Absolute, NominatorFilterSidebar.WIDTH),
+                            },
+                            Content = new[]
+                            {
+                                new Drawable[]
                                 {
-                                    RelativeSizeAxes = Axes.Both,
-                                    RowDimensions = new[]
+                                    new GridContainer
                                     {
-                                        new Dimension(GridSizeMode.Absolute, BeatmapSetHeader.HEIGHT),
-                                        new Dimension(GridSizeMode.Absolute, spacing),
-                                        new Dimension(),
+                                        RelativeSizeAxes = Axes.Both,
+                                        RowDimensions = new[]
+                                        {
+                                            new Dimension(GridSizeMode.Absolute, BeatmapSetHeader.HEIGHT),
+                                            new Dimension(GridSizeMode.Absolute, spacing),
+                                            new Dimension(),
+                                        },
+                                        Content = new[]
+                                        {
+                                            new Drawable[] { new BeatmapSetHeader() },
+                                            new[] { Empty() },
+                                            new Drawable[] { new NominatorGrid() },
+                                        }
                                     },
-                                    Content = new[]
-                                    {
-                                        new Drawable[] { new BeatmapSetHeader() },
-                                        new[] { Empty() },
-                                        new Drawable[] { new NominatorGrid() },
-                                    }
-                                },
-                                Empty(),
-                                sidebar = new NominatorFilterSidebar(),
+                                    Empty(),
+                                    sidebar = new NominatorFilterSidebar(),
+                                }
                             }
-                        }
-                    },
-                    stateDisplay = new NominatorsStateDisplay(),
-                    detailsContainer = new Container
-                    {
-                        RelativeSizeAxes = Axes.Both,
-                    },
-                }
+                        },
+                        stateDisplay = new NominatorsStateDisplay(),
+                        detailsContainer = new Container
+                        {
+                            RelativeSizeAxes = Axes.Both,
+                        },
+                    }
+                },
+                fountains = new AcceptedFountains(),
             };
         }
 
@@ -144,6 +150,8 @@ namespace osu.Game.Screens.Edit.Nominators
             }, true);
 
             SelectionMode.BindValueChanged(_ => Selection.Clear());
+
+            session.NominatorsAccepted += fountains.Shoot;
         }
 
         protected override void PopIn()
