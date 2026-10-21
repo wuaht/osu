@@ -168,11 +168,7 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
                 });
             }
 
-            AddInternal(new TimelineUnsnapIndicators(item)
-            {
-                // above the slider velocity piece, if there is one.
-                Y = difficultyPointPiece != null ? -16 : 0,
-            });
+            AddInternal(new TimelineUnsnapIndicators(item, difficultyPointPiece));
         }
 
         protected override void LoadComplete()

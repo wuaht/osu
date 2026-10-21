@@ -10,6 +10,7 @@ using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Cursor;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Localisation;
+using osu.Game.Graphics;
 using osu.Game.Rulesets.Objects;
 using osu.Game.Rulesets.Objects.Types;
 using osuTK;
@@ -24,6 +25,8 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
     {
         private const float icon_size = 14;
 
+        private const float in_piece_icon_size = 9;
+
         /// <summary>
         /// Unsnaps below this are ignored, as all object ends have these due to the way slider velocity works.
         /// </summary>
@@ -31,14 +34,24 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
 
         private readonly HitObject hitObject;
 
+        /// <summary>
+        /// The piece displayed above the head of the hit object (like the slider velocity), if any.
+        /// The head icon is displayed inside it, as there's no space above it in the timeline.
+        /// </summary>
+        private readonly HitObjectPointPiece? headPiece;
+
         [Resolved]
         private EditorBeatmap? editorBeatmap { get; set; }
 
+        [Resolved]
+        private OsuColour colours { get; set; } = null!;
+
         private double[] displayedUnsnaps = Array.Empty<double>();
 
-        public TimelineUnsnapIndicators(HitObject hitObject)
+        public TimelineUnsnapIndicators(HitObject hitObject, HitObjectPointPiece? headPiece = null)
         {
             this.hitObject = hitObject;
+            this.headPiece = headPiece;
 
             RelativeSizeAxes = Axes.Both;
         }
@@ -58,17 +71,33 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
             displayedUnsnaps = unsnaps;
 
             ClearInternal();
+            headPiece?.PrefixContainer.Clear();
 
             for (int i = 0; i < unsnaps.Length; i++)
             {
                 if (Math.Abs(unsnaps[i]) < minimum_unsnap)
                     continue;
 
-                AddInternal(new UnsnapIcon(unsnaps[i], unsnaps.Length > 1 ? getNodeName(i, unsnaps.Length) : null)
+                var icon = new UnsnapIcon(unsnaps[i], unsnaps.Length > 1 ? getNodeName(i, unsnaps.Length) : null);
+
+                if (i == 0 && headPiece != null)
                 {
-                    RelativePositionAxes = Axes.X,
-                    X = unsnaps.Length > 1 ? (float)i / (unsnaps.Length - 1) : 0,
-                });
+                    icon.Anchor = Anchor.CentreLeft;
+                    icon.Origin = Anchor.CentreLeft;
+                    icon.Size = new Vector2(in_piece_icon_size);
+                    icon.Y = 0;
+                    icon.Margin = new MarginPadding { Left = 5 };
+                    icon.Colour = colours.B5;
+                    icon.Shadow = false;
+
+                    headPiece.PrefixContainer.Add(icon);
+                    continue;
+                }
+
+                icon.RelativePositionAxes = Axes.X;
+                icon.X = unsnaps.Length > 1 ? (float)i / (unsnaps.Length - 1) : 0;
+
+                AddInternal(icon);
             }
         }
 

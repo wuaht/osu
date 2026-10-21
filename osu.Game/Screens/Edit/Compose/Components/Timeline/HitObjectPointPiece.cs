@@ -19,6 +19,16 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
 
         protected Container LabelContainer { get; private set; }
 
+        /// <summary>
+        /// Contains drawables displayed in front of the label, inside the piece.
+        /// </summary>
+        public Container PrefixContainer { get; } = new Container
+        {
+            AutoSizeAxes = Axes.Both,
+            Anchor = Anchor.CentreLeft,
+            Origin = Anchor.CentreLeft,
+        };
+
         [BackgroundDependencyLoader]
         private void load(OsuColour colours)
         {
@@ -43,13 +53,24 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
                             Colour = colour,
                             RelativeSizeAxes = Axes.Both,
                         },
-                        Label = new OsuSpriteText
+                        new FillFlowContainer
                         {
+                            AutoSizeAxes = Axes.Both,
+                            Direction = FillDirection.Horizontal,
                             Anchor = Anchor.Centre,
                             Origin = Anchor.Centre,
-                            Padding = new MarginPadding(5),
-                            Font = OsuFont.Default.With(size: 12, weight: FontWeight.SemiBold),
-                            Colour = colours.B5,
+                            Children = new Drawable[]
+                            {
+                                PrefixContainer,
+                                Label = new OsuSpriteText
+                                {
+                                    Anchor = Anchor.CentreLeft,
+                                    Origin = Anchor.CentreLeft,
+                                    Padding = new MarginPadding(5),
+                                    Font = OsuFont.Default.With(size: 12, weight: FontWeight.SemiBold),
+                                    Colour = colours.B5,
+                                }
+                            }
                         }
                     }
                 },
