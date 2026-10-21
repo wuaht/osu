@@ -92,6 +92,11 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
         /// </summary>
         private const float still_slider_extent = 1.2f;
 
+        /// <summary>
+        /// The longest time between two objects for the cursor to flow through them as part of a stream, in milliseconds.
+        /// </summary>
+        private const double stream_max_interval = 125;
+
         private static readonly Vector2 playfield_min = new Vector2(-512, -384);
         private static readonly Vector2 playfield_max = new Vector2(1024, 768);
 
@@ -106,6 +111,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
         private OsuHitObject? targetSource;
         private OsuHitObject? leftObject;
         private Vector2 leavePosition;
+        private Vector2 lastTarget;
         private Slider? enteredSlider;
         private Vector2 sliderEntryOffset;
 
@@ -154,6 +160,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
             double endTime = Math.Max(hitObjects.Max(h => h.GetEndTime()) + end_padding, buttonEvents[^1].time);
 
             cursor = new SecondOrderDynamics(SPINNER_CENTRE);
+            lastTarget = SPINNER_CENTRE;
             targetSource = null;
             leftObject = null;
             enteredSlider = null;
@@ -279,8 +286,11 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
 
             if (current != null && next != null)
             {
-                setTargetSource(next);
-                approach(time, dt, current, next);
+                // the target moves continuously through streams, so it keeps the source it had when the stream started.
+                if (!flowsInto(currentIndex))
+                    setTargetSource(next);
+
+                approach(time, dt, currentIndex);
                 return;
             }
 
@@ -419,22 +429,35 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
             return closest;
         }
 
-        private void approach(double time, float dt, OsuHitObject current, OsuHitObject next)
+        private void approach(double time, float dt, int currentIndex)
         {
+            var current = hitObjects[currentIndex];
+            var next = hitObjects[currentIndex + 1];
+
+            // the target runs ahead of the cursor, so it may already be flowing through the stream which starts at the next object.
+            if (flowsInto(currentIndex) || (flowsInto(currentIndex + 1) && time + ApplyModsToRate(time, tracking_lag) >= next.StartTime))
+            {
+                flow(time, dt, flowsInto(currentIndex) ? currentIndex : currentIndex + 1);
+                return;
+            }
+
             double leaveTime = getLeaveTime(current);
 
-            // movements start where the cursor left the previous object, so that the target doesn't jump.
+            // movements start where the cursor's target was when it left the previous object, so that the target doesn't jump.
             if (leftObject != current)
             {
                 leftObject = current;
-                leavePosition = current is Slider ? cursor.Position : current.StackedEndPosition;
+                leavePosition = lastTarget;
             }
 
             Vector2 from = leavePosition;
 
             // aim for the near side of the next object, never at exactly the same spot.
-            Vector2 to = RealisticMath.MoveIntoCircle((from + next.StackedPosition) / 2, next.StackedPosition, (float)next.Radius * 0.5f)
-                         + new Vector2(RealisticMath.Random(next.StackedPosition) - 0.5f, RealisticMath.Random(next.StackedPosition + new Vector2(1, 0)) - 0.5f) * (float)next.Radius * 0.25f;
+            // streams are aimed at their centres instead, as they are flowed through.
+            Vector2 to = flowsInto(currentIndex + 1)
+                ? next.StackedPosition
+                : RealisticMath.MoveIntoCircle((from + next.StackedPosition) / 2, next.StackedPosition, (float)next.Radius * 0.5f)
+                  + new Vector2(RealisticMath.Random(next.StackedPosition) - 0.5f, RealisticMath.Random(next.StackedPosition + new Vector2(1, 0)) - 0.5f) * (float)next.Radius * 0.25f;
 
             float distance = Vector2.Distance(from, to);
 
@@ -462,12 +485,80 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
         }
 
         /// <summary>
+        /// Moves through a stream in one continuous motion, instead of stopping at every object.
+        /// </summary>
+        /// <remarks>
+        /// The target follows a Catmull-Rom spline through the centres of the objects, parametrised by time.
+        /// This keeps the speed constant through evenly spaced streams, and only eases in and out at their start and end.
+        /// </remarks>
+        private void flow(double time, float dt, int currentIndex)
+        {
+            double aheadTime = time + ApplyModsToRate(time, tracking_lag);
+
+            // the target runs ahead of the cursor, so it may already be between the following objects.
+            while (flowsInto(currentIndex + 1) && hitObjects[currentIndex + 1].StartTime <= aheadTime)
+                currentIndex++;
+
+            var current = hitObjects[currentIndex];
+            var next = hitObjects[currentIndex + 1];
+
+            double duration = next.StartTime - current.StartTime;
+            float t = (float)Math.Clamp((aheadTime - current.StartTime) / duration, 0, 1);
+
+            Vector2 startTangent = flowTangent(currentIndex) * (float)duration;
+            Vector2 endTangent = flowTangent(currentIndex + 1) * (float)duration;
+
+            float t2 = t * t;
+            float t3 = t2 * t;
+
+            Vector2 target = (2 * t3 - 3 * t2 + 1) * current.StackedPosition
+                             + (t3 - 2 * t2 + t) * startTangent
+                             + (-2 * t3 + 3 * t2) * next.StackedPosition
+                             + (t3 - t2) * endTangent;
+
+            moveTo(dt, target, tracking);
+        }
+
+        /// <summary>
+        /// The velocity at which the cursor passes through the object at <paramref name="index"/> in a stream, in osu!pixels per millisecond.
+        /// The cursor comes to rest on the first and last object of a stream.
+        /// </summary>
+        private Vector2 flowTangent(int index)
+        {
+            if (!flowsInto(index - 1) || !flowsInto(index))
+                return Vector2.Zero;
+
+            var previous = hitObjects[index - 1];
+            var following = hitObjects[index + 1];
+
+            return (following.StackedPosition - previous.StackedPosition) / (float)(following.StartTime - previous.StartTime);
+        }
+
+        /// <summary>
+        /// Whether the cursor flows from the object at <paramref name="index"/> to the next one as part of a stream.
+        /// </summary>
+        private bool flowsInto(int index)
+        {
+            if (index < 0 || index + 1 >= hitObjects.Count)
+                return false;
+
+            var current = hitObjects[index];
+            var next = hitObjects[index + 1];
+
+            return isHitLikeCircle(current) && isHitLikeCircle(next)
+                                            && ApplyModsToTimeDelta(current.StartTime, next.StartTime) <= stream_max_interval;
+        }
+
+        private bool isHitLikeCircle(OsuHitObject hitObject) => hitObject is HitCircle || (hitObject is Slider && getLeaveTime(hitObject) == hitObject.StartTime);
+
+        /// <summary>
         /// The progress of a natural point-to-point hand movement, which starts and stops smoothly.
         /// </summary>
         private static double minimumJerk(double t) => t * t * t * (10 - 15 * t + 6 * t * t);
 
         private void moveTo(float dt, Vector2 target, DynamicsParameters parameters)
         {
+            lastTarget = target;
             cursor.Parameters = parameters;
             cursor.Update(dt, Vector2.Clamp(target, playfield_min, playfield_max));
         }

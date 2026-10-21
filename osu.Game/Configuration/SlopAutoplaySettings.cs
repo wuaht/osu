@@ -37,6 +37,7 @@ namespace osu.Game.Configuration
         /// <summary>
         /// Moves the cursor like a player would, following a spring towards each target and cutting corners on sliders.
         /// </summary>
+        [Description("Miku")]
         Realistic,
     }
 

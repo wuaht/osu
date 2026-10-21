@@ -162,6 +162,54 @@ namespace osu.Game.Rulesets.Osu.Tests.Slop
             });
         }
 
+        [Test]
+        public void TestRealisticCursorFlowsThroughStreams()
+        {
+            AddAssert("constant speed in streams", () =>
+            {
+                var ruleset = new OsuRuleset();
+                var beatmap = createBeatmap();
+                beatmap.BeatmapInfo.Ruleset = ruleset.RulesetInfo;
+
+                var converted = ruleset.CreateBeatmapConverter(beatmap).Convert();
+                var processor = ruleset.CreateBeatmapProcessor(converted);
+                processor?.PreProcess();
+                foreach (var h in converted.HitObjects)
+                    h.ApplyDefaults(converted.ControlPointInfo, converted.Difficulty);
+                processor?.PostProcess();
+
+                var frames = new OsuRealisticAutoGenerator(converted, new List<Mod>()).Generate().Frames.Cast<OsuReplayFrame>().ToList();
+
+                // the stream is the 12 circles after the 6 jumps. leave out its first and last notes, where the cursor speeds up and slows down.
+                var stream = converted.HitObjects.Skip(6).Take(12).ToList();
+                double start = stream[2].StartTime;
+                double end = stream[^3].StartTime;
+
+                // the cursor's speed, measured over windows of 30ms.
+                var speeds = new List<double>();
+
+                for (double time = start; time < end; time += 30)
+                    speeds.Add(Vector2.Distance(positionAt(frames, time), positionAt(frames, time + 30)) / 30);
+
+                double average = speeds.Average();
+                double minimum = speeds.Min();
+                double maximum = speeds.Max();
+
+                TestContext.WriteLine($"stream speed average {average:F3} min {minimum:F3} max {maximum:F3}");
+
+                return minimum > average * 0.6 && maximum < average * 1.4;
+            });
+        }
+
+        private static Vector2 positionAt(List<OsuReplayFrame> frames, double time)
+        {
+            int index = frames.FindLastIndex(f => f.Time <= time);
+            var from = frames[index];
+            var to = frames[Math.Min(index + 1, frames.Count - 1)];
+
+            return to.Time > from.Time ? Vector2.Lerp(from.Position, to.Position, (float)((time - from.Time) / (to.Time - from.Time))) : from.Position;
+        }
+
         private void setEngine(SlopAutoplayEngine engine, bool tag)
         {
             AddStep($"set engine to {engine}", () =>

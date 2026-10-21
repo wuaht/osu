@@ -1190,9 +1190,9 @@ namespace osu.Game.Localisation
         public static LocalisableString EditorAutoplayEngine => new TranslatableString(getKey(@"editor_autoplay_engine"), @"Editor autoplay engine");
 
         /// <summary>
-        /// "The autoplay engine which plays the map in the editor. Realistic moves the cursor like a player would, cutting corners on sliders"
+        /// "The autoplay engine which plays the map in the editor. Miku moves the cursor like a player would, cutting corners on sliders"
         /// </summary>
-        public static LocalisableString EditorAutoplayEngineDescription => new TranslatableString(getKey(@"editor_autoplay_engine_description"), @"The autoplay engine which plays the map in the editor. Realistic moves the cursor like a player would, cutting corners on sliders");
+        public static LocalisableString EditorAutoplayEngineDescription => new TranslatableString(getKey(@"editor_autoplay_engine_description"), @"The autoplay engine which plays the map in the editor. Miku moves the cursor like a player would, cutting corners on sliders");
 
         /// <summary>
         /// "Text editor"
