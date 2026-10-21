@@ -17,6 +17,7 @@ using osu.Framework.IO.Stores;
 using osu.Framework.Platform;
 using osu.Game.Beatmaps.ControlPoints;
 using osu.Game.Beatmaps.Formats;
+using osu.Game.Beatmaps.Timing;
 using osu.Game.Database;
 using osu.Game.Extensions;
 using osu.Game.IO.Archives;
@@ -26,6 +27,7 @@ using osu.Game.Online.API;
 using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Overlays.Notifications;
 using osu.Game.Rulesets;
+using osu.Game.Rulesets.Objects;
 using osu.Game.Skinning;
 using osu.Game.Storyboards;
 using osu.Game.Utils;
@@ -142,6 +144,68 @@ namespace osu.Game.Beatmaps
                 throw new InvalidOperationException("Failed to import new beatmap");
 
             return imported.PerformRead(s => GetWorkingBeatmap(s.Beatmaps.First()));
+        }
+
+        /// <summary>
+        /// Create a new beatmap set with a single difficulty, which is based on the provided <paramref name="template"/> (like osu!stable).
+        /// </summary>
+        /// <remarks>
+        /// The metadata, difficulty and beatmap-level settings, colours, bookmarks, audio file and uninherited timing points are kept,
+        /// while hitobjects, inherited timing points, breaks, the background, the storyboard and online information are not.
+        /// </remarks>
+        /// <param name="template">The saved beatmap to use as a template.</param>
+        public WorkingBeatmap CreateNewSetFromTemplate(WorkingBeatmap template)
+        {
+            if (template.Beatmap.Clone() is not Beatmap newBeatmap)
+                throw new InvalidOperationException("The template beatmap can't be copied.");
+
+            var beatmapInfo = template.BeatmapInfo.Clone();
+            beatmapInfo.ID = Guid.NewGuid();
+            beatmapInfo.Hash = string.Empty;
+            beatmapInfo.ResetOnlineInfo();
+            beatmapInfo.Difficulty = template.BeatmapInfo.Difficulty.Clone();
+            beatmapInfo.Metadata = template.Metadata.DeepClone();
+            beatmapInfo.Metadata.BackgroundFile = string.Empty;
+
+            var beatmapSet = new BeatmapSetInfo
+            {
+                DateAdded = DateTimeOffset.UtcNow,
+                Beatmaps = { beatmapInfo }
+            };
+
+            beatmapInfo.BeatmapSet = beatmapSet;
+
+            var imported = beatmapImporter.ImportModel(beatmapSet);
+
+            if (imported == null)
+                throw new InvalidOperationException("Failed to import new beatmap");
+
+            var newSet = imported.PerformRead(s => s.Detach());
+
+            string audioFile = template.Metadata.AudioFile;
+            string? audioPath = string.IsNullOrEmpty(audioFile) ? null : template.BeatmapSetInfo.GetPathForFile(audioFile);
+
+            if (audioPath != null)
+            {
+                using (var stream = template.GetStream(audioPath))
+                {
+                    if (stream != null)
+                        AddFile(newSet, stream, audioFile);
+                }
+            }
+
+            newBeatmap.BeatmapInfo = newSet.Beatmaps.Single();
+            newBeatmap.HitObjects = new List<HitObject>();
+            newBeatmap.Breaks = new osu.Framework.Lists.SortedList<BreakPeriod>(Comparer<BreakPeriod>.Default);
+            newBeatmap.ControlPointInfo = new ControlPointInfo();
+
+            foreach (var timingPoint in template.Beatmap.ControlPointInfo.TimingPoints)
+                newBeatmap.ControlPointInfo.Add(timingPoint.Time, timingPoint.DeepClone());
+
+            save(newBeatmap.BeatmapInfo, newBeatmap, template.Skin, null, transferCollections: false);
+
+            workingBeatmapCache.Invalidate(newSet);
+            return GetWorkingBeatmap(newBeatmap.BeatmapInfo);
         }
 
         /// <summary>

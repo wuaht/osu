@@ -231,6 +231,78 @@ namespace osu.Game.Localisation
         public static LocalisableString GuestDifficultyReplaceFailed(string name) => new TranslatableString(getKey(@"guest_difficulty_replace_failed"),
             @"Failed to replace ""{0}"" with the dropped .osu file.", name);
 
+        /// <summary>
+        /// "Custom slider colours"
+        /// </summary>
+        public static LocalisableString CustomSliderColours => new TranslatableString(getKey(@"custom_slider_colours"), @"Custom slider colours");
+
+        /// <summary>
+        /// "Overrides the slider track and border colours of the skin for this beatmap."
+        /// </summary>
+        public static LocalisableString CustomSliderColoursDescription => new TranslatableString(getKey(@"custom_slider_colours_description"),
+            @"Overrides the slider track and border colours of the skin for this beatmap.");
+
+        /// <summary>
+        /// "Slider track"
+        /// </summary>
+        public static LocalisableString SliderTrackColour => new TranslatableString(getKey(@"slider_track_colour"), @"Slider track");
+
+        /// <summary>
+        /// "Slider border"
+        /// </summary>
+        public static LocalisableString SliderBorderColour => new TranslatableString(getKey(@"slider_border_colour"), @"Slider border");
+
+        /// <summary>
+        /// "Lock colour"
+        /// </summary>
+        public static LocalisableString LockColour => new TranslatableString(getKey(@"lock_colour"), @"Lock colour");
+
+        /// <summary>
+        /// "Unlock colour"
+        /// </summary>
+        public static LocalisableString UnlockColour => new TranslatableString(getKey(@"unlock_colour"), @"Unlock colour");
+
+        /// <summary>
+        /// "Lock all colours"
+        /// </summary>
+        public static LocalisableString LockAllColours => new TranslatableString(getKey(@"lock_all_colours"), @"Lock all colours");
+
+        /// <summary>
+        /// "Unlock all colours"
+        /// </summary>
+        public static LocalisableString UnlockAllColours => new TranslatableString(getKey(@"unlock_all_colours"), @"Unlock all colours");
+
+        /// <summary>
+        /// "Random combo colours"
+        /// </summary>
+        public static LocalisableString RandomComboColours => new TranslatableString(getKey(@"random_combo_colours"), @"Random combo colours");
+
+        /// <summary>
+        /// "Right-click a combo colour to lock it, so that it is kept when getting random colours from the background."
+        /// </summary>
+        public static LocalisableString RandomComboColoursDescription => new TranslatableString(getKey(@"random_combo_colours_description"),
+            @"Right-click a combo colour to lock it, so that it is kept when getting random colours from the background.");
+
+        /// <summary>
+        /// "Get random colours"
+        /// </summary>
+        public static LocalisableString GetRandomColours => new TranslatableString(getKey(@"get_random_colours"), @"Get random colours");
+
+        /// <summary>
+        /// "Align background with playfield"
+        /// </summary>
+        public static LocalisableString AlignBackground => new TranslatableString(getKey(@"align_background"), @"Align background with playfield");
+
+        /// <summary>
+        /// "Use as template for new set"
+        /// </summary>
+        public static LocalisableString UseAsTemplateForNewSet => new TranslatableString(getKey(@"use_as_template_for_new_set"), @"Use as template for new set");
+
+        /// <summary>
+        /// "Failed to create a new beatmap set from this difficulty."
+        /// </summary>
+        public static LocalisableString UseAsTemplateFailed => new TranslatableString(getKey(@"use_as_template_failed"), @"Failed to create a new beatmap set from this difficulty.");
+
         private static string getKey(string key) => $"{prefix}:{key}";
     }
 }

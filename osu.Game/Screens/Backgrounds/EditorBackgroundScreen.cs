@@ -1,11 +1,13 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Threading;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
+using osu.Framework.Graphics.Primitives;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Screens;
 using osu.Game.Beatmaps;
@@ -13,6 +15,7 @@ using osu.Game.Configuration;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Backgrounds;
 using osu.Game.Screens.Edit;
+using osuTK;
 using osuTK.Graphics;
 
 namespace osu.Game.Screens.Backgrounds
@@ -24,6 +27,12 @@ namespace osu.Game.Screens.Backgrounds
         private CancellationTokenSource? cancellationTokenSource;
         private Bindable<float> dimLevel = null!;
         private Bindable<bool> showStoryboard = null!;
+        private Bindable<bool> alignBackground = null!;
+
+        /// <summary>
+        /// Returns the playfield which the background should be aligned with, if enabled by <see cref="OsuSetting.SlopEditorAlignBackground"/>.
+        /// </summary>
+        public Func<Drawable?>? AlignmentTarget { get; set; }
 
         private BeatmapBackgroundWithStoryboard background = null!;
 
@@ -63,6 +72,7 @@ namespace osu.Game.Screens.Backgrounds
         {
             dimLevel = config.GetBindable<float>(OsuSetting.EditorDim);
             showStoryboard = config.GetBindable<bool>(OsuSetting.EditorShowStoryboard);
+            alignBackground = config.GetBindable<bool>(OsuSetting.SlopEditorAlignBackground);
 
             content.Child = createContent();
         }
@@ -73,6 +83,40 @@ namespace osu.Game.Screens.Backgrounds
 
             dimLevel.BindValueChanged(_ => dimContainer.FadeColour(OsuColour.Gray(1 - dimLevel.Value), 500, Easing.OutQuint), true);
         }
+
+        protected override void Update()
+        {
+            base.Update();
+
+            Drawable? target = alignBackground.Value ? AlignmentTarget?.Invoke() : null;
+
+            if (target?.IsPresent == true && DrawHeight > 0)
+            {
+                RectangleF playfield = ToLocalSpace(target.ScreenSpaceDrawQuad).AABBFloat;
+
+                if (playfield.Height > 0)
+                {
+                    // like osu!stable, the background is aligned as if the playfield was shown in gameplay,
+                    // where it covers 384 of the 480 pixels of the background's height and is shifted down by 8 pixels.
+                    float scale = playfield.Height / playfield_height;
+
+                    content.RelativeSizeAxes = Axes.None;
+                    content.Origin = Anchor.Centre;
+                    content.Size = new Vector2(background_height * scale * DrawWidth / DrawHeight, background_height * scale);
+                    content.Position = new Vector2(playfield.Centre.X, playfield.Centre.Y - playfield_shift * scale);
+                    return;
+                }
+            }
+
+            content.RelativeSizeAxes = Axes.Both;
+            content.Origin = Anchor.TopLeft;
+            content.Size = Vector2.One;
+            content.Position = Vector2.Zero;
+        }
+
+        private const float playfield_height = 384;
+        private const float background_height = 480;
+        private const float playfield_shift = 8;
 
         public override void OnEntering(ScreenTransitionEvent e)
         {

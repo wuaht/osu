@@ -266,6 +266,7 @@ namespace osu.Game.Screens.Edit
         private Bindable<bool> editorLoopMusic;
         private Bindable<bool> editorShowDifficultyStrains;
         private Bindable<bool> editorShowAutoplayCursor;
+        private Bindable<bool> editorAlignBackground;
         private Bindable<float> editorAutoplayCursorOpacity;
 
         /// <summary>
@@ -421,6 +422,7 @@ namespace osu.Game.Screens.Edit
             editorContractSidebars = config.GetBindable<bool>(OsuSetting.EditorContractSidebars);
             editorShowDifficultyStrains = config.GetBindable<bool>(OsuSetting.SlopEditorShowDifficultyStrains);
             editorShowAutoplayCursor = config.GetBindable<bool>(OsuSetting.SlopEditorShowAutoplayCursor);
+            editorAlignBackground = config.GetBindable<bool>(OsuSetting.SlopEditorAlignBackground);
             editorAutoplayCursorOpacity = config.GetBindable<float>(OsuSetting.SlopEditorAutoplayCursorOpacity);
 
             // These two settings don't work together. Make them mutually exclusive to let the user know.
@@ -516,6 +518,11 @@ namespace osu.Game.Screens.Edit
                                             {
                                                 State = { BindTarget = editorShowStoryboard },
                                             },
+                                            new ToggleMenuItem(SlopEditorStrings.AlignBackground)
+                                            {
+                                                State = { BindTarget = editorAlignBackground },
+                                                Action = { Disabled = !supportsBackgroundAlignment },
+                                            },
                                             new OsuMenuItemSpacer(),
                                             new ToggleMenuItem(EditorStrings.ShowHitMarkers)
                                             {
@@ -584,10 +591,18 @@ namespace osu.Game.Screens.Edit
 
         protected override BackgroundScreen CreateBackground() => new EditorBackgroundScreen(editorBeatmap);
 
+        /// <summary>
+        /// Aligning the background is only meaningful for the osu! playfield, which matches the 4:3 frame of the background in gameplay (like osu!stable).
+        /// </summary>
+        private bool supportsBackgroundAlignment => editorBeatmap.BeatmapInfo.Ruleset.ShortName == @"osu";
+
         protected override void LoadComplete()
         {
             base.LoadComplete();
             setUpClipboardActionAvailability();
+
+            if (supportsBackgroundAlignment)
+                ApplyToBackground(b => ((EditorBackgroundScreen)b).AlignmentTarget = () => (currentScreen as ComposeScreen)?.Composer?.Playfield);
 
             lastSaveTime = Time.Current;
 
@@ -1792,6 +1807,7 @@ namespace osu.Game.Screens.Edit
         {
             yield return createDifficultyCreationMenu();
             yield return createDifficultySwitchMenu();
+            yield return new EditorMenuItem(SlopEditorStrings.UseAsTemplateForNewSet, MenuItemType.Standard, useAsTemplateForNewSet) { Action = { Disabled = !canSave } };
             yield return new OsuMenuItemSpacer();
             yield return new EditorMenuItem(EditorStrings.DeleteDifficulty, MenuItemType.Destructive, deleteDifficulty) { Action = { Disabled = Beatmap.Value.BeatmapSetInfo.Beatmaps.Count < 2 } };
             yield return new OsuMenuItemSpacer();
@@ -2195,6 +2211,41 @@ namespace osu.Game.Screens.Edit
             }
 
             dialogOverlay.Push(new CreateNewDifficultyDialog(createCopy => switchToNewDifficulty(rulesetInfo, createCopy)));
+        }
+
+        /// <summary>
+        /// Creates a new beatmap set from the current difficulty and switches to it (like osu!stable).
+        /// </summary>
+        private void useAsTemplateForNewSet()
+        {
+            // the template is created from the saved beatmap, which has to include all changes.
+            if (isNewBeatmap || HasUnsavedChanges)
+            {
+                dialogOverlay.Push(new SaveRequiredPopupDialog(() => attemptMutationOperation(() =>
+                {
+                    if (!Save())
+                        return false;
+
+                    useAsTemplateForNewSet();
+                    return true;
+                })));
+
+                return;
+            }
+
+            WorkingBeatmap newSet;
+
+            try
+            {
+                newSet = beatmapManager.CreateNewSetFromTemplate(beatmapManager.GetWorkingBeatmap(editorBeatmap.BeatmapInfo, true));
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, SlopEditorStrings.UseAsTemplateFailed.ToString());
+                return;
+            }
+
+            SwitchToDifficulty(newSet.BeatmapInfo);
         }
 
         private void switchToNewDifficulty(RulesetInfo rulesetInfo, bool createCopy)

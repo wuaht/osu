@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
@@ -103,14 +104,8 @@ namespace osu.Game.Screens.Edit.Setup
                 {
                     Caption = EditorSetupStrings.TickRate,
                     HintText = EditorSetupStrings.TickRateDescription,
-                    KeyboardStep = 1,
-                    Current = new BindableDouble(Beatmap.Difficulty.SliderTickRate)
-                    {
-                        Default = 1,
-                        MinValue = 1,
-                        MaxValue = 4,
-                        Precision = 1,
-                    },
+                    KeyboardStep = 0.5f,
+                    Current = CreateTickRateBindable(Beatmap.Difficulty.SliderTickRate),
                     TransferValueOnCommit = true,
                     TabbableContentContainer = this,
                 },
@@ -121,6 +116,30 @@ namespace osu.Game.Screens.Edit.Setup
 
             foreach (var item in Children.OfType<FormSliderBar<double>>())
                 item.Current.ValueChanged += _ => updateValues();
+        }
+
+        /// <summary>
+        /// Creates the bindable for the slider tick rate, which allows the same values as osu!stable (0.5, 1, 2, 3 and 4).
+        /// </summary>
+        public static BindableDouble CreateTickRateBindable(double tickRate)
+        {
+            var bindable = new BindableDouble(tickRate)
+            {
+                Default = 1,
+                MinValue = 0.5,
+                MaxValue = 4,
+                Precision = 0.5,
+            };
+
+            // only 0.5 is allowed as a fractional tick rate. other fractional values are moved on in the direction of the change.
+            // this is only applied to changes, so that existing beatmaps with other fractional tick rates aren't changed by just opening the setup screen.
+            bindable.BindValueChanged(e =>
+            {
+                if (e.NewValue > 1 && e.NewValue % 1 != 0)
+                    bindable.Value = e.NewValue > e.OldValue ? Math.Ceiling(e.NewValue) : Math.Floor(e.NewValue);
+            });
+
+            return bindable;
         }
 
         private void updateValues()

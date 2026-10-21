@@ -50,6 +50,11 @@ namespace osu.Game.Screens.Edit.Compose
 
         private HitObjectComposer composer;
 
+        /// <summary>
+        /// The composer of the ruleset, or null if the ruleset doesn't support editing.
+        /// </summary>
+        public HitObjectComposer Composer => composer;
+
         public ComposeScreen()
             : base(EditorScreenMode.Compose)
         {

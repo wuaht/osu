@@ -75,14 +75,8 @@ namespace osu.Game.Rulesets.Taiko.Edit.Setup
                 {
                     Caption = EditorSetupStrings.TickRate,
                     HintText = EditorSetupStrings.TickRateDescription,
-                    KeyboardStep = 1,
-                    Current = new BindableDouble(Beatmap.Difficulty.SliderTickRate)
-                    {
-                        Default = 1,
-                        MinValue = 1,
-                        MaxValue = 4,
-                        Precision = 1,
-                    },
+                    KeyboardStep = 0.5f,
+                    Current = DifficultySection.CreateTickRateBindable(Beatmap.Difficulty.SliderTickRate),
                     TransferValueOnCommit = true,
                     TabbableContentContainer = this,
                 },

@@ -393,6 +393,7 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopEditorAnchorSnap, true);
             SetDefault(OsuSetting.SlopEditorStackSnap, true);
             SetDefault(OsuSetting.SlopEditorCustomRotation, 60, 0, 180);
+            SetDefault(OsuSetting.SlopEditorAlignBackground, false);
             SetDefault(OsuSetting.SlopMinimalReplayFrames, false);
             SetDefault(OsuSetting.SlopSkipIntro, false);
             SetDefault(OsuSetting.SlopInstantScreenTransitions, false);
@@ -1326,6 +1327,11 @@ namespace osu.Game.Configuration
         /// The angle in degrees by which the selection is rotated with the custom rotation shortcuts.
         /// </summary>
         SlopEditorCustomRotation,
+
+        /// <summary>
+        /// Whether the editor background is scaled and moved to align with the playfield, like in gameplay.
+        /// </summary>
+        SlopEditorAlignBackground,
 
         /// <summary>
         /// Whether replays only record frames which contain important data, such as key presses and judgements.

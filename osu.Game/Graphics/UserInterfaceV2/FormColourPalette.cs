@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
 using osu.Framework.Allocation;
@@ -11,12 +12,14 @@ using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Cursor;
 using osu.Framework.Graphics.Shapes;
+using osu.Framework.Graphics.Sprites;
 using osu.Framework.Graphics.UserInterface;
 using osu.Framework.Input.Events;
 using osu.Framework.Localisation;
 using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.Sprites;
 using osu.Game.Graphics.UserInterface;
+using SlopEditorStrings = osu.Game.Localisation.SlopEditorStrings;
 using osu.Game.Overlays;
 using osu.Game.Resources.Localisation.Web;
 using osuTK;
@@ -39,6 +42,35 @@ namespace osu.Game.Graphics.UserInterfaceV2
         public LocalisableString HintText { get; init; }
 
         public BindableBool CanAdd { get; } = new BindableBool(true);
+
+        /// <summary>
+        /// Whether colours can be locked via their context menu, see <see cref="IsLocked"/>.
+        /// </summary>
+        public bool AllowLocking { get; init; }
+
+        /// <summary>
+        /// The lock state of each colour in <see cref="Colours"/>, which is kept aligned with additions and removals of colours.
+        /// </summary>
+        private readonly List<bool> lockedStates = new List<bool>();
+
+        private readonly List<ColourButton> colourButtons = new List<ColourButton>();
+
+        /// <summary>
+        /// Whether the colour at the given index has been locked by the user.
+        /// </summary>
+        public bool IsLocked(int index) => index >= 0 && index < lockedStates.Count && lockedStates[index];
+
+        /// <summary>
+        /// Sets the lock state of all colours.
+        /// </summary>
+        public void SetAllLocked(bool locked)
+        {
+            for (int i = 0; i < lockedStates.Count; i++)
+                lockedStates[i] = locked;
+
+            foreach (var button in colourButtons)
+                button.UpdateLockState();
+        }
 
         private FormControlBackground background = null!;
         private FormFieldCaption caption = null!;
@@ -97,7 +129,20 @@ namespace osu.Game.Graphics.UserInterfaceV2
 
             Colours.BindCollectionChanged((_, args) =>
             {
-                if (args.Action != NotifyCollectionChangedAction.Replace)
+                updateLockedStates(args);
+
+                if (args.Action == NotifyCollectionChangedAction.Replace)
+                {
+                    // the buttons are kept, but have to display colours which were replaced externally.
+                    for (int i = 0; i < args.NewItems!.Count; i++)
+                    {
+                        int index = args.NewStartingIndex + i;
+
+                        if (index < colourButtons.Count)
+                            colourButtons[index].Current.Value = Colours[index];
+                    }
+                }
+                else
                     updateColours();
             }, true);
             CanAdd.BindValueChanged(canAdd =>
@@ -148,9 +193,36 @@ namespace osu.Game.Graphics.UserInterfaceV2
                 background.VisualStyle = VisualStyle.Normal;
         }
 
+        private void updateLockedStates(NotifyCollectionChangedEventArgs args)
+        {
+            switch (args.Action)
+            {
+                case NotifyCollectionChangedAction.Add:
+                    lockedStates.InsertRange(Math.Min(args.NewStartingIndex, lockedStates.Count), Enumerable.Repeat(false, args.NewItems!.Count));
+                    break;
+
+                case NotifyCollectionChangedAction.Remove:
+                    lockedStates.RemoveRange(args.OldStartingIndex, Math.Min(args.OldItems!.Count, lockedStates.Count - args.OldStartingIndex));
+                    break;
+
+                case NotifyCollectionChangedAction.Move:
+                    bool movedState = lockedStates[args.OldStartingIndex];
+                    lockedStates.RemoveAt(args.OldStartingIndex);
+                    lockedStates.Insert(args.NewStartingIndex, movedState);
+                    break;
+            }
+
+            // keep the states aligned in all other cases (e.g. resets), keeping the states of the remaining colours.
+            if (lockedStates.Count > Colours.Count)
+                lockedStates.RemoveRange(Colours.Count, lockedStates.Count - Colours.Count);
+            while (lockedStates.Count < Colours.Count)
+                lockedStates.Add(false);
+        }
+
         private void updateColours()
         {
             flow.RemoveAll(d => d is ColourButton, true);
+            colourButtons.Clear();
 
             for (int i = 0; i < Colours.Count; ++i)
             {
@@ -161,8 +233,25 @@ namespace osu.Game.Graphics.UserInterfaceV2
                     PaletteHeaderText = PaletteHeaderText,
                     Current = { Value = Colours[colourIndex] }
                 };
-                colourButton.Current.BindValueChanged(colour => Colours[colourIndex] = colour.NewValue);
+                colourButton.Current.BindValueChanged(colour =>
+                {
+                    if (Colours[colourIndex] != colour.NewValue)
+                        Colours[colourIndex] = colour.NewValue;
+                });
                 colourButton.DeleteRequested = () => Colours.RemoveAt(colourIndex);
+
+                if (AllowLocking)
+                {
+                    colourButton.IsLocked = () => IsLocked(colourIndex);
+                    colourButton.ToggleLockRequested = () =>
+                    {
+                        lockedStates[colourIndex] = !lockedStates[colourIndex];
+                        colourButton.UpdateLockState();
+                    };
+                    colourButton.SetAllLockedRequested = SetAllLocked;
+                }
+
+                colourButtons.Add(colourButton);
                 flow.Add(colourButton);
             }
         }
@@ -173,6 +262,17 @@ namespace osu.Game.Graphics.UserInterfaceV2
 
             public Bindable<Colour4> Current { get; } = new Bindable<Colour4>();
             public Action? DeleteRequested { get; set; }
+
+            /// <summary>
+            /// Returns whether this colour is locked. Null if locking isn't supported.
+            /// </summary>
+            public Func<bool>? IsLocked { get; set; }
+
+            public Action? ToggleLockRequested { get; set; }
+
+            public Action<bool>? SetAllLockedRequested { get; set; }
+
+            private SpriteIcon lockIcon = null!;
 
             private readonly BindableList<Colour4> suggestions;
 
@@ -205,6 +305,15 @@ namespace osu.Game.Graphics.UserInterfaceV2
                         Anchor = Anchor.Centre,
                         Origin = Anchor.Centre,
                     },
+                    lockIcon = new SpriteIcon
+                    {
+                        Anchor = Anchor.TopRight,
+                        Origin = Anchor.TopRight,
+                        Margin = new MarginPadding(7),
+                        Size = new Vector2(12),
+                        Icon = FontAwesome.Solid.Lock,
+                        Alpha = 0,
+                    },
                 };
             }
 
@@ -213,6 +322,13 @@ namespace osu.Game.Graphics.UserInterfaceV2
                 base.LoadComplete();
 
                 Current.BindValueChanged(_ => updateState(), true);
+                UpdateLockState();
+            }
+
+            public void UpdateLockState()
+            {
+                if (IsLoaded)
+                    lockIcon.Alpha = IsLocked?.Invoke() == true ? 1 : 0;
             }
 
             public Popover GetPopover() => new ColourPickerPopover(suggestions)
@@ -221,16 +337,30 @@ namespace osu.Game.Graphics.UserInterfaceV2
                 Current = { BindTarget = Current }
             };
 
-            public MenuItem[] ContextMenuItems => new MenuItem[]
+            public MenuItem[] ContextMenuItems
             {
-                new OsuMenuItem(CommonStrings.ButtonsDelete, MenuItemType.Destructive, () => DeleteRequested?.Invoke())
-            };
+                get
+                {
+                    var items = new List<MenuItem>();
+
+                    if (IsLocked != null)
+                    {
+                        items.Add(new OsuMenuItem(IsLocked() ? SlopEditorStrings.UnlockColour : SlopEditorStrings.LockColour, MenuItemType.Standard, () => ToggleLockRequested?.Invoke()));
+                        items.Add(new OsuMenuItem(SlopEditorStrings.LockAllColours, MenuItemType.Standard, () => SetAllLockedRequested?.Invoke(true)));
+                        items.Add(new OsuMenuItem(SlopEditorStrings.UnlockAllColours, MenuItemType.Standard, () => SetAllLockedRequested?.Invoke(false)));
+                    }
+
+                    items.Add(new OsuMenuItem(CommonStrings.ButtonsDelete, MenuItemType.Destructive, () => DeleteRequested?.Invoke()));
+
+                    return items.ToArray();
+                }
+            }
 
             private void updateState()
             {
                 background.Colour = Current.Value;
                 hexCode.Text = Current.Value.ToHex();
-                hexCode.Colour = OsuColour.ForegroundTextColourFor(Current.Value);
+                hexCode.Colour = lockIcon.Colour = OsuColour.ForegroundTextColourFor(Current.Value);
             }
         }
 
