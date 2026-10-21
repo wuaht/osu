@@ -271,6 +271,24 @@ namespace osu.Game.Rulesets.Osu.Edit
         }
 
         private DistanceSnapGrid distanceSnapGrid;
+
+        /// <remarks>
+        /// While distance snapping, objects can also be placed with the cursor outside the playfield,
+        /// as they are moved along the snapped ring to the closest position on the playfield (see <see cref="TrySnapToDistanceGrid"/>).
+        /// </remarks>
+        public override bool CursorInPlacementArea => base.CursorInPlacementArea || (distanceSnapGrid != null && cursorInComposeArea);
+
+        private bool cursorInComposeArea
+        {
+            get
+            {
+                var mousePosition = InputManager.CurrentState.Mouse.Position;
+
+                return BlueprintContainer.ReceivePositionalInputAt(mousePosition)
+                       && !LeftToolbox.Contains(mousePosition)
+                       && !RightToolbox.Contains(mousePosition);
+            }
+        }
         private Container distanceSnapGridContainer;
 
         private readonly Cached distanceSnapGridCache = new Cached();
@@ -756,7 +774,7 @@ namespace osu.Game.Rulesets.Osu.Edit
                     break;
 
                 default:
-                    if (!CursorInPlacementArea)
+                    if (!base.CursorInPlacementArea && !cursorInComposeArea)
                         return;
 
                     distanceSnapGrid = createDistanceSnapGrid(Enumerable.Empty<HitObject>());

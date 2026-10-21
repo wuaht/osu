@@ -9,7 +9,9 @@ using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Caching;
 using osu.Framework.Graphics;
+using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Primitives;
+using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.UserInterface;
 using osu.Framework.Input.Bindings;
 using osu.Framework.Input.Events;
@@ -26,6 +28,7 @@ using osu.Game.Rulesets.Osu.Objects.Drawables;
 using osu.Game.Screens.Edit;
 using osu.Game.Screens.Edit.Compose;
 using osuTK;
+using osuTK.Graphics;
 using osuTK.Input;
 
 namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
@@ -37,6 +40,7 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
         protected SliderBodyPiece BodyPiece { get; private set; } = null!;
 
         private ControlPointInsertionPreview insertionPreview = null!;
+        private Container splitPreview = null!;
         private readonly Bindable<bool> showInsertionPreview = new Bindable<bool>();
         private readonly Bindable<bool> partOnFirstClick = new Bindable<bool>();
         protected SliderCircleOverlay HeadOverlay { get; private set; } = null!;
@@ -105,6 +109,28 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
             {
                 BodyPiece = new SliderBodyPiece(),
                 insertionPreview = new ControlPointInsertionPreview(HitObject),
+                splitPreview = new Container
+                {
+                    Origin = Anchor.Centre,
+                    Width = 5,
+                    Alpha = 0,
+                    Children = new Drawable[]
+                    {
+                        new Box
+                        {
+                            RelativeSizeAxes = Axes.Both,
+                            Colour = Color4.White,
+                        },
+                        new Box
+                        {
+                            Anchor = Anchor.Centre,
+                            Origin = Anchor.Centre,
+                            RelativeSizeAxes = Axes.Both,
+                            Size = new Vector2(0.4f, 0.97f),
+                            Colour = Color4.Red,
+                        },
+                    }
+                },
                 HeadOverlay = CreateCircleOverlay(HitObject, SliderPosition.Start),
                 TailOverlay = CreateCircleOverlay(HitObject, SliderPosition.End),
             };
@@ -170,6 +196,7 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
 
             updatePartHighlight();
             updateInsertionPreview();
+            updateSplitPreview();
             updateCurveDrag();
         }
 
@@ -208,6 +235,17 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
         }
 
         private bool isControlPointHovered => ControlPointVisualiser?.Pieces.Any(p => p.IsHovered) == true;
+
+        private bool isExtendingAtEnd
+        {
+            get
+            {
+                var keyboard = GetContainingInputManager()?.CurrentState.Keyboard;
+
+                return IsSelected && selectedObjects.Count < 2 && placementControlPoint == null
+                       && keyboard?.ControlPressed == true && keyboard.ShiftPressed && !keyboard.AltPressed;
+            }
+        }
 
         protected override bool OnClick(ClickEvent e)
         {
@@ -342,6 +380,10 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
             // this runs before the blueprint container handles the selection, so reflects the state before this click.
             wasSoleSelectionOnMouseDown = e.Button == MouseButton.Left && IsSelected && selectedObjects.Count == 1
                                           && !e.ControlPressed && !e.ShiftPressed && !e.AltPressed && !isControlPointHovered;
+
+            // while extending the path at its closer end, input is received anywhere (see ReceivePositionalInputAt), but only a left click should be handled away from the slider.
+            if (e.Button != MouseButton.Left && !isControlPointHovered && !BodyPiece.ReceivePositionalInputAt(e.ScreenSpaceMouseDownPosition))
+                return false;
 
             switch (e.Button)
             {
@@ -898,26 +940,10 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
         /// <returns>Whether the slider was split.</returns>
         private bool splitAtPosition(Vector2 position, bool snap)
         {
-            if (editorBeatmap == null || HitObject.RepeatCount > 0)
+            if (editorBeatmap == null || !tryFindSplit(position, snap, out double splitTime, out double distance))
                 return false;
-
-            const double min_split_distance_ms = 2;
 
             double pathDistance = HitObject.Path.Distance;
-
-            if (pathDistance <= 0)
-                return false;
-
-            double distance = findClosestDistance(position - HitObject.Position, pathDistance);
-            double splitTime = HitObject.StartTime + distance / pathDistance * HitObject.SpanDuration;
-
-            if (snap)
-                splitTime = editorBeatmap.SnapTime(splitTime, HitObject.StartTime);
-
-            if (splitTime - HitObject.StartTime < min_split_distance_ms || HitObject.EndTime - splitTime < min_split_distance_ms)
-                return false;
-
-            distance = (splitTime - HitObject.StartTime) / HitObject.SpanDuration * pathDistance;
 
             var (headPoints, tailPoints) = SliderPathSplitter.Split(HitObject.Path, distance);
 
@@ -965,6 +991,65 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
             return true;
 
             static IList<HitSampleInfo> copySamples(IList<HitSampleInfo> samples) => samples.Select(s => s.With()).ToList();
+        }
+
+        /// <summary>
+        /// Finds where the slider would be split by <see cref="splitAtPosition"/>.
+        /// </summary>
+        /// <param name="position">The position to split at, in playfield space.</param>
+        /// <param name="snap">Whether to snap the time of the split to the beat.</param>
+        /// <param name="splitTime">The time of the split.</param>
+        /// <param name="distance">The distance along the path of the split.</param>
+        /// <returns>Whether the slider can be split there.</returns>
+        private bool tryFindSplit(Vector2 position, bool snap, out double splitTime, out double distance)
+        {
+            const double min_split_distance_ms = 2;
+
+            splitTime = distance = 0;
+
+            double pathDistance = HitObject.Path.Distance;
+
+            if (editorBeatmap == null || HitObject.RepeatCount > 0 || pathDistance <= 0)
+                return false;
+
+            distance = findClosestDistance(position - HitObject.Position, pathDistance);
+            splitTime = HitObject.StartTime + distance / pathDistance * HitObject.SpanDuration;
+
+            if (snap)
+                splitTime = editorBeatmap.SnapTime(splitTime, HitObject.StartTime);
+
+            if (splitTime - HitObject.StartTime < min_split_distance_ms || HitObject.EndTime - splitTime < min_split_distance_ms)
+                return false;
+
+            distance = (splitTime - HitObject.StartTime) / HitObject.SpanDuration * pathDistance;
+            return true;
+        }
+
+        private void updateSplitPreview()
+        {
+            var inputState = GetContainingInputManager()?.CurrentState;
+
+            // matches the conditions under which ctrl+right click splits the slider (snapped unless shift is held).
+            if (inputState?.Keyboard.ControlPressed != true || inputState.Keyboard.AltPressed || placementControlPoint != null || isControlPointHovered
+                || !BodyPiece.ReceivePositionalInputAt(inputState.Mouse.Position)
+                || !tryFindSplit(ToLocalSpace(inputState.Mouse.Position), !inputState.Keyboard.ShiftPressed, out _, out double distance))
+            {
+                splitPreview.Alpha = 0;
+                return;
+            }
+
+            double progress = distance / HitObject.Path.Distance;
+
+            Vector2 position = HitObject.StackedPosition + HitObject.Path.PositionAt(progress);
+
+            // the direction of the path at the split, from a short section around it.
+            const double direction_progress_range = 0.01;
+            Vector2 direction = HitObject.Path.PositionAt(Math.Min(1, progress + direction_progress_range)) - HitObject.Path.PositionAt(Math.Max(0, progress - direction_progress_range));
+
+            splitPreview.Position = position;
+            splitPreview.Rotation = direction.LengthSquared > 0 ? MathHelper.RadiansToDegrees(MathF.Atan2(direction.Y, direction.X)) : 0;
+            splitPreview.Height = (float)HitObject.Radius * 2.4f;
+            splitPreview.Alpha = 1;
         }
 
         /// <summary>
@@ -1109,6 +1194,10 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
         public override bool ReceivePositionalInputAt(Vector2 screenSpacePos)
         {
             if (BodyPiece.ReceivePositionalInputAt(screenSpacePos) && (IsSelected || DrawableObject.Body.Alpha > 0 || DrawableObject.HeadCircle.Alpha > 0))
+                return true;
+
+            // ctrl+shift+click extends the path at its closer end, which is possible anywhere rather than only on the slider itself.
+            if (isExtendingAtEnd)
                 return true;
 
             if (ControlPointVisualiser == null)

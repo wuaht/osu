@@ -64,6 +64,9 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.HitCircles
             return base.OnMouseDown(e);
         }
 
+        // placement is also possible outside the playfield while distance snapping, which keeps the circle on the playfield (see OsuHitObjectComposer.CursorInPlacementArea).
+        public override bool ReceivePositionalInputAt(Vector2 screenSpacePos) => base.ReceivePositionalInputAt(screenSpacePos) || composer?.CursorInPlacementArea == true;
+
         public override SnapResult UpdateTimeAndPosition(Vector2 screenSpacePosition, double fallbackTime)
         {
             var result = composer?.TrySnapToNearbyObjects(screenSpacePosition, fallbackTime);

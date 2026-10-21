@@ -69,8 +69,15 @@ namespace osu.Game.Screens.Edit.Timing
             if (movedBookmarks.Length == 0)
                 return;
 
-            beatmap.Bookmarks.RemoveAll(b => movedBookmarks.Contains(b));
-            beatmap.Bookmarks.AddRange(movedBookmarks.Select(b => b + intAdjustment));
+            // keep the bookmarks ordered, as is expected elsewhere (see LegacyEditorBeatmapPatcher).
+            int[] newBookmarks = beatmap.Bookmarks.Where(b => !movedBookmarks.Contains(b))
+                                        .Concat(movedBookmarks.Select(b => b + intAdjustment))
+                                        .Distinct()
+                                        .Order()
+                                        .ToArray();
+
+            beatmap.Bookmarks.Clear();
+            beatmap.Bookmarks.AddRange(newBookmarks);
         }
 
         /// <summary>
