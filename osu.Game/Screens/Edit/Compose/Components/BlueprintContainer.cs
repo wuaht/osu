@@ -214,6 +214,10 @@ namespace osu.Game.Screens.Edit.Compose.Components
                 return true;
             }
 
+            // dragging a selected blueprint while movement is locked should neither move it nor start a drag box selection.
+            if (movementBlockedByLock)
+                return true;
+
             DragBox.HandleDrag(e);
             DragBox.Show();
 
@@ -569,6 +573,16 @@ namespace osu.Game.Screens.Edit.Compose.Components
         private bool isDraggingBlueprint;
 
         /// <summary>
+        /// Whether the current mouse down would have moved the selection, if <see cref="MovementLocked"/> was not set.
+        /// </summary>
+        private bool movementBlockedByLock;
+
+        /// <summary>
+        /// Whether selected blueprints are prevented from being moved by dragging them.
+        /// </summary>
+        protected virtual bool MovementLocked => false;
+
+        /// <summary>
         /// Whether a drag operation was started at all.
         /// </summary>
         private bool wasDragStarted;
@@ -592,6 +606,12 @@ namespace osu.Game.Screens.Edit.Compose.Components
             // A special case is added for when a click selection occurred before the drag
             if (!clickSelectionHandled && !SelectionHandler.SelectedBlueprints.Any(b => b.IsHovered))
                 return false;
+
+            if (MovementLocked)
+            {
+                movementBlockedByLock = true;
+                return true;
+            }
 
             // Movement is tracked from the blueprint of the earliest item, since it only makes sense to distance snap from that item
             movementBlueprints = SortForMovement(SelectionHandler.SelectedBlueprints).Select(b => (b, b.ScreenSpaceSnapPoints)).ToArray();
@@ -626,6 +646,8 @@ namespace osu.Game.Screens.Edit.Compose.Components
         /// <returns>Whether a movement was active.</returns>
         private bool finishSelectionMovement()
         {
+            movementBlockedByLock = false;
+
             if (movementBlueprints == null)
                 return false;
 

@@ -294,6 +294,9 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopEditorWaveformStyle, EditorWaveformStyle.Default);
             SetDefault(OsuSetting.SlopEditorLoopMusic, false);
             SetDefault(OsuSetting.SlopEditorMutedEndsSoftC999, false);
+            SetDefault(OsuSetting.SlopEditorZoomOut, false);
+            SetDefault(OsuSetting.SlopEditorShowGrid, true);
+            SetDefault(OsuSetting.SlopEditorRotateAroundSelection, false);
             SetDefault(OsuSetting.SlopHitsoundEditorFrostedLanes, false);
             SetDefault(OsuSetting.SlopHitsoundEditorToolboxExpandOnHover, true);
             SetDefault(OsuSetting.SlopEditorAutoApplyHitsoundDifficulty, false);
@@ -823,6 +826,21 @@ namespace osu.Game.Configuration
         /// Whether muting object ends in the editor also sets their samples to the soft bank with custom index 999.
         /// </summary>
         SlopEditorMutedEndsSoftC999,
+
+        /// <summary>
+        /// Whether the playfield of the compose screen is shrunk to leave room around it.
+        /// </summary>
+        SlopEditorZoomOut,
+
+        /// <summary>
+        /// Whether the positional snap grid is drawn in the compose screen.
+        /// </summary>
+        SlopEditorShowGrid,
+
+        /// <summary>
+        /// Whether the rotation hotkeys rotate around the selection, instead of around the centre of the playfield.
+        /// </summary>
+        SlopEditorRotateAroundSelection,
 
         /// <summary>
         /// Whether the lanes of the hitsound editor have a frosted glass background, instead of an opaque one.

@@ -133,6 +133,7 @@ namespace osu.Game.Screens.Edit.Compose.Components
 
         private readonly Bindable<bool> showBox = new Bindable<bool>(true);
         private readonly Bindable<bool> showButtons = new Bindable<bool>(true);
+        private readonly Bindable<bool> hotkeysRotateAroundSelection = new Bindable<bool>(true);
 
         [BackgroundDependencyLoader(true)]
         private void load(OsuConfigManager config, Editor? editor)
@@ -142,6 +143,7 @@ namespace osu.Game.Screens.Edit.Compose.Components
             {
                 config.BindWith(OsuSetting.SlopEditorShowSelectionBox, showBox);
                 config.BindWith(OsuSetting.SlopEditorShowSelectionBoxButtons, showButtons);
+                config.BindWith(OsuSetting.SlopEditorRotateAroundSelection, hotkeysRotateAroundSelection);
             }
 
             InternalChildren = new Drawable[]
@@ -229,6 +231,19 @@ namespace osu.Game.Screens.Edit.Compose.Components
             showButtons.BindValueChanged(show => buttons.Alpha = show.NewValue ? 1 : 0, true);
         }
 
+        /// <summary>
+        /// Rotates the selection around the centre of the playfield if the rotation hotkeys are set to do so.
+        /// </summary>
+        /// <returns>Whether the rotation was performed.</returns>
+        private bool rotateAroundPlayfieldByHotkey(float rotation)
+        {
+            if (hotkeysRotateAroundSelection.Value || rotationHandler?.PlayfieldOrigin == null || !rotationHandler.CanRotateAroundPlayfieldOrigin.Value)
+                return false;
+
+            rotationHandler.Rotate(rotation, rotationHandler.PlayfieldOrigin);
+            return true;
+        }
+
         protected override bool OnKeyDown(KeyDownEvent e)
         {
             if (e.Repeat || !e.ControlPressed)
@@ -244,6 +259,9 @@ namespace osu.Game.Screens.Edit.Compose.Components
                     return true;
 
                 case Key.Comma:
+                    if (rotateAroundPlayfieldByHotkey(-90))
+                        return true;
+
                     if (!canRotate.Value || rotateCounterClockwiseButton == null)
                         return false;
 
@@ -251,6 +269,9 @@ namespace osu.Game.Screens.Edit.Compose.Components
                     return true;
 
                 case Key.Period:
+                    if (rotateAroundPlayfieldByHotkey(90))
+                        return true;
+
                     if (!canRotate.Value || rotateClockwiseButton == null)
                         return false;
 

@@ -393,6 +393,10 @@ namespace osu.Game.Screens.Edit
 
             AddInternal(new EditorVolumeMuting());
             AddInternal(new EditorObjectEndMuting());
+
+            var noteLock = new EditorNoteLock();
+            AddInternal(noteLock);
+            dependencies.Cache(noteLock);
             var hitsoundAutoApplier = new HitsoundDifficultyAutoApplier();
             AddInternal(hitsoundAutoApplier);
             dependencies.Cache(hitsoundAutoApplier);

@@ -30,6 +30,14 @@ namespace osu.Game.Screens.Edit.Compose.Components
         [Resolved]
         private HitObjectComposer composer { get; set; } = null!;
 
+        [Resolved]
+        private EditorNoteLock? noteLock { get; set; }
+
+        /// <summary>
+        /// Whether the timing and position of objects are locked by <see cref="EditorNoteLock"/>.
+        /// </summary>
+        protected bool MovementLocked => noteLock?.Enabled.Value == true;
+
         protected override bool ShouldQuickDelete(MouseButtonEvent e)
         {
             if (RightClickAlwaysQuickDeletes && e.Button == MouseButton.Right)

@@ -345,6 +345,39 @@ namespace osu.Game.Localisation
             @"Sets a custom sample set in addition to changing volume when using the object end mute hotkey.");
 
         /// <summary>
+        /// "Zoom out playfield"
+        /// </summary>
+        public static LocalisableString ZoomOutPlayfield => new TranslatableString(getKey(@"zoom_out_playfield"), @"Zoom out playfield");
+
+        /// <summary>
+        /// "Shrinks the playfield of the compose screen, leaving room to work with objects outside of it."
+        /// </summary>
+        public static LocalisableString ZoomOutPlayfieldDescription => new TranslatableString(getKey(@"zoom_out_playfield_description"),
+            @"Shrinks the playfield of the compose screen, leaving room to work with objects outside of it.");
+
+        /// <summary>
+        /// "Show grid"
+        /// </summary>
+        public static LocalisableString ShowGrid => new TranslatableString(getKey(@"show_grid"), @"Show grid");
+
+        /// <summary>
+        /// "Shows the positional snap grid in the compose screen. Grid snapping keeps working while the grid is hidden."
+        /// </summary>
+        public static LocalisableString ShowGridDescription => new TranslatableString(getKey(@"show_grid_description"),
+            @"Shows the positional snap grid in the compose screen. Grid snapping keeps working while the grid is hidden.");
+
+        /// <summary>
+        /// "Rotation hotkeys rotate around the selection"
+        /// </summary>
+        public static LocalisableString RotateAroundSelection => new TranslatableString(getKey(@"rotate_around_selection"), @"Rotation hotkeys rotate around the selection");
+
+        /// <summary>
+        /// "When disabled, the rotation hotkeys rotate the selection around the centre of the playfield."
+        /// </summary>
+        public static LocalisableString RotateAroundSelectionDescription => new TranslatableString(getKey(@"rotate_around_selection_description"),
+            @"When disabled, the rotation hotkeys rotate the selection around the centre of the playfield.");
+
+        /// <summary>
         /// "Frosted hitsound editor lanes"
         /// </summary>
         public static LocalisableString FrostedHitsoundLanes => new TranslatableString(getKey(@"frosted_hitsound_lanes"), @"Frosted hitsound editor lanes");

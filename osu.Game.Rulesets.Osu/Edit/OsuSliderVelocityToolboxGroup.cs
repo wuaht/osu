@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
@@ -205,11 +206,23 @@ namespace osu.Game.Rulesets.Osu.Edit
 
         public bool OnPressed(KeyBindingPressEvent<GlobalAction> e)
         {
-            if (e.Action != GlobalAction.EditorUsePreviousSliderVelocity || e.Repeat)
-                return false;
+            switch (e.Action)
+            {
+                case GlobalAction.EditorUsePreviousSliderVelocity:
+                    if (e.Repeat)
+                        return false;
 
-            usePreviousSliderVelocity();
-            return true;
+                    usePreviousSliderVelocity();
+                    return true;
+
+                case GlobalAction.EditorIncreaseSliderVelocity:
+                case GlobalAction.EditorDecreaseSliderVelocity:
+                    double step = e.ControlPressed ? 0.25 : e.AltPressed ? 0.01 : 0.1;
+                    adjustSliderVelocity(e.Action == GlobalAction.EditorIncreaseSliderVelocity ? step : -step, e.Action);
+                    return true;
+            }
+
+            return false;
         }
 
         public void OnReleased(KeyBindingReleaseEvent<GlobalAction> e)
@@ -237,6 +250,56 @@ namespace osu.Game.Rulesets.Osu.Edit
 
             sliderControl.Current.Value = previousSlider.SliderVelocityMultiplier;
             onScreenDisplay?.Display(new PreviousSliderVelocityToast(sliderControl.Current.Value));
+        }
+
+        /// <summary>
+        /// Adjusts the velocity of every selected slider by <paramref name="amount"/>, or the velocity used for new placements when no sliders are selected.
+        /// </summary>
+        private void adjustSliderVelocity(double amount, GlobalAction action)
+        {
+            var selectedSliders = selectedHitObjects.OfType<Slider>().ToList();
+
+            if (selectedSliders.Count == 0)
+            {
+                sliderControl.Current.Value = clampVelocity(sliderControl.Current.Value + amount);
+                onScreenDisplay?.Display(new SliderVelocityToast(LocalisableString.Interpolate($@"{sliderControl.Current.Value:0.00}x"), action));
+                return;
+            }
+
+            editorBeatmap.BeginChange();
+
+            foreach (var slider in selectedSliders)
+            {
+                slider.SliderVelocityMultiplier = clampVelocity(slider.SliderVelocityMultiplier + amount);
+                editorBeatmap.Update(slider);
+            }
+
+            editorBeatmap.EndChange();
+
+            var velocities = selectedSliders.Select(s => s.SliderVelocityMultiplier).Distinct().ToList();
+
+            onScreenDisplay?.Display(new SliderVelocityToast(velocities.Count == 1
+                ? LocalisableString.Interpolate($@"{velocities[0]:0.00}x")
+                : LocalisableString.Interpolate($@"{amount:+0.00;-0.00}x"), action));
+        }
+
+        private static double clampVelocity(double velocity) => Math.Clamp(Math.Round(velocity, 2), 0.1, 10);
+
+        private partial class SliderVelocityToast : Toast
+        {
+            private readonly GlobalAction action;
+
+            public SliderVelocityToast(LocalisableString value, GlobalAction action)
+                : base(SlopEditorStrings.SliderVelocity, value)
+            {
+                this.action = action;
+            }
+
+            [BackgroundDependencyLoader]
+            private void load(RealmKeyBindingStore keyBindingStore)
+            {
+                ExtraText = keyBindingStore.GetBindingsStringFor(action);
+            }
         }
 
         private partial class PreviousSliderVelocityToast : Toast

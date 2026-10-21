@@ -48,6 +48,18 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
 
         protected PathControlPointVisualiser<Slider>? ControlPointVisualiser { get; private set; }
 
+        /// <summary>
+        /// The index of the first selected control point, or <c>null</c> if no control point is selected.
+        /// </summary>
+        internal int? SelectedControlPointIndex
+        {
+            get
+            {
+                var selected = ControlPointVisualiser?.Pieces.Where(p => p.IsSelected.Value).Select(p => HitObject.Path.ControlPoints.IndexOf(p.ControlPoint)).Where(i => i >= 0).ToList();
+                return selected?.Count > 0 ? selected.Min() : null;
+            }
+        }
+
         [Resolved]
         private IDistanceSnapProvider? distanceSnapProvider { get; set; }
 

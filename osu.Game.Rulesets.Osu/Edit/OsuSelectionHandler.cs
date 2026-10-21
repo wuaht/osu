@@ -321,6 +321,9 @@ namespace osu.Game.Rulesets.Osu.Edit
         /// <param name="delta"></param>
         private bool nudgeSelection(Vector2 delta)
         {
+            if (MovementLocked)
+                return true;
+
             if (!nudgeMovementActive)
             {
                 nudgeMovementActive = true;

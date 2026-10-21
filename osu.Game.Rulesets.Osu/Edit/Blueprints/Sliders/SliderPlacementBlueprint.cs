@@ -361,6 +361,14 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
                 return;
             }
 
+            if (composer?.PlacementCurveType is PathType placementType)
+            {
+                // perfect curves are limited to three points, after which the segment continues as a bezier curve.
+                segmentStart.Type = placementType == PathType.PERFECT_CURVE && currentSegmentLength > 3 ? PathType.BEZIER : placementType;
+                controlPointVisualiser.EnsureValidPathTypes();
+                return;
+            }
+
             switch (currentSegmentLength)
             {
                 case 1:

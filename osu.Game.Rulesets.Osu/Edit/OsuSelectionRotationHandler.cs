@@ -10,6 +10,7 @@ using osu.Framework.Bindables;
 using osu.Game.Rulesets.Objects;
 using osu.Game.Rulesets.Objects.Types;
 using osu.Game.Rulesets.Osu.Objects;
+using osu.Game.Rulesets.Osu.UI;
 using osu.Game.Screens.Edit;
 using osu.Game.Screens.Edit.Compose.Components;
 using osu.Game.Utils;
@@ -46,6 +47,8 @@ namespace osu.Game.Rulesets.Osu.Edit
         }
 
         private OsuHitObject[]? objectsInRotation;
+
+        public override Vector2? PlayfieldOrigin => OsuPlayfield.BASE_SIZE / 2;
 
         private Dictionary<OsuHitObject, Vector2>? originalPositions;
         private Dictionary<IHasPath, Vector2[]>? originalPathControlPointPositions;

@@ -46,7 +46,7 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
         {
             var selected = EditorBeatmap.SelectedHitObjects;
 
-            if (selected.Count == 0)
+            if (selected.Count == 0 || MovementLocked)
                 return;
 
             var timingPoint = EditorBeatmap.ControlPointInfo.TimingPointAt(selected.First().StartTime);

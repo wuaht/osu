@@ -13,6 +13,7 @@ using osu.Framework.Input.Events;
 using osu.Game.Rulesets.Edit;
 using osu.Game.Rulesets.Objects;
 using osu.Game.Rulesets.Objects.Drawables;
+using osuTK.Input;
 
 namespace osu.Game.Screens.Edit.Compose.Components
 {
@@ -23,6 +24,11 @@ namespace osu.Game.Screens.Edit.Compose.Components
 
         [Resolved]
         protected EditorBeatmap Beatmap { get; private set; }
+
+        [Resolved(canBeNull: true)]
+        private EditorNoteLock noteLock { get; set; }
+
+        protected override bool MovementLocked => noteLock?.Enabled.Value == true;
 
         protected readonly HitObjectComposer Composer;
 
@@ -67,6 +73,23 @@ namespace osu.Game.Screens.Edit.Compose.Components
         {
             base.Update();
             usageEventBuffer?.Update();
+        }
+
+        protected override bool OnMouseDown(MouseDownEvent e)
+        {
+            if (e.Button == MouseButton.Left && e.ControlPressed && e.ShiftPressed && noteLock?.Enabled.Value == true)
+            {
+                var hovered = SelectionBlueprints.AliveChildren.Where(b => b.IsSelected).Concat(ApplySelectionOrder(SelectionBlueprints.AliveChildren))
+                                                 .FirstOrDefault(b => b.IsHovered);
+
+                if (hovered != null)
+                {
+                    noteLock.PasteSamples(hovered.Item);
+                    return true;
+                }
+            }
+
+            return base.OnMouseDown(e);
         }
 
         protected override IEnumerable<SelectionBlueprint<HitObject>> SortForMovement(IReadOnlyList<SelectionBlueprint<HitObject>> blueprints)

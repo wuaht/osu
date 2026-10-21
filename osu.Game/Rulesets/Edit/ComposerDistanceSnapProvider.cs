@@ -224,9 +224,47 @@ namespace osu.Game.Rulesets.Edit
                 case GlobalAction.EditorIncreaseDistanceSpacing:
                 case GlobalAction.EditorDecreaseDistanceSpacing:
                     return AdjustDistanceSpacing(e.Action, adjust_step);
+
+                case GlobalAction.EditorContinueDistanceSnap:
+                    return !e.Repeat && continueDistanceSnap();
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// Sets the distance spacing to the one between the last two objects before the selected object, or before the current time.
+        /// </summary>
+        private bool continueDistanceSnap()
+        {
+            if (DistanceSpacingMultiplier.Disabled)
+                return false;
+
+            double time = EditorBeatmap.SelectedHitObjects.Count == 1 ? EditorBeatmap.SelectedHitObjects[0].StartTime : editorClock.CurrentTime;
+
+            HitObject? last = null;
+            HitObject? secondLast = null;
+
+            foreach (var hitObject in EditorBeatmap.HitObjects)
+            {
+                if (hitObject.StartTime > time)
+                    break;
+
+                secondLast = last;
+                last = hitObject;
+            }
+
+            if (last == null || secondLast == null)
+                return false;
+
+            double snap = ReadCurrentDistanceSnap(secondLast, last);
+
+            if (snap <= DistanceSpacingMultiplier.MinValue)
+                return false;
+
+            DistanceSpacingMultiplier.Value = snap;
+            DistanceSnapToggle.Value = TernaryState.True;
+            return true;
         }
 
         public virtual void OnReleased(KeyBindingReleaseEvent<GlobalAction> e)

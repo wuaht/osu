@@ -28,6 +28,11 @@ namespace osu.Game.Screens.Edit.Compose.Components
         public Bindable<bool> CanRotateAroundPlayfieldOrigin { get; private set; } = new BindableBool();
 
         /// <summary>
+        /// The centre of the playfield in the same space as <see cref="DefaultOrigin"/>, or <c>null</c> if rotating around the playfield is not supported.
+        /// </summary>
+        public virtual Vector2? PlayfieldOrigin => null;
+
+        /// <summary>
         /// Implementation-defined origin point to rotate around when no explicit origin is provided.
         /// This field is only assigned during a rotation operation.
         ///

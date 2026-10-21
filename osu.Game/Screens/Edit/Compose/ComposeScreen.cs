@@ -43,6 +43,9 @@ namespace osu.Game.Screens.Edit.Compose
         [Resolved(canBeNull: true)]
         private HitsoundDifficultyAutoApplier hitsoundAutoApplier { get; set; }
 
+        [Resolved(canBeNull: true)]
+        private EditorNoteLock noteLock { get; set; }
+
         private Bindable<string> clipboard { get; set; }
 
         private HitObjectComposer composer;
@@ -153,6 +156,9 @@ namespace osu.Game.Screens.Edit.Compose
 
             if (CanCopy.Value)
                 clipboard.Value = new ClipboardContent(EditorBeatmap).Serialize();
+
+            if (noteLock?.Enabled.Value == true && EditorBeatmap.SelectedHitObjects.Count == 1)
+                noteLock.CopySamples(EditorBeatmap.SelectedHitObjects.Single());
         }
 
         public override void Paste()

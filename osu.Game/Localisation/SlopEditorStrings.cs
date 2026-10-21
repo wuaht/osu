@@ -30,6 +30,136 @@ namespace osu.Game.Localisation
         public static LocalisableString ToggledMutedEnds(int count) => new TranslatableString(getKey(@"toggled_muted_ends"), @"Toggled muted ends for {0} object(s)", count);
 
         /// <summary>
+        /// "Increase slider velocity"
+        /// </summary>
+        public static LocalisableString IncreaseSliderVelocity => new TranslatableString(getKey(@"increase_slider_velocity"), @"Increase slider velocity");
+
+        /// <summary>
+        /// "Decrease slider velocity"
+        /// </summary>
+        public static LocalisableString DecreaseSliderVelocity => new TranslatableString(getKey(@"decrease_slider_velocity"), @"Decrease slider velocity");
+
+        /// <summary>
+        /// "Slider velocity"
+        /// </summary>
+        public static LocalisableString SliderVelocity => new TranslatableString(getKey(@"slider_velocity"), @"Slider velocity");
+
+        /// <summary>
+        /// "Toggle note lock"
+        /// </summary>
+        public static LocalisableString ToggleNoteLock => new TranslatableString(getKey(@"toggle_note_lock"), @"Toggle note lock");
+
+        /// <summary>
+        /// "Note lock"
+        /// </summary>
+        public static LocalisableString NoteLock => new TranslatableString(getKey(@"note_lock"), @"Note lock");
+
+        /// <summary>
+        /// "Copied hitsounds of the selected object"
+        /// </summary>
+        public static LocalisableString SampleNoteCopied => new TranslatableString(getKey(@"sample_note_copied"), @"Copied hitsounds of the selected object");
+
+        /// <summary>
+        /// "Pasted hitsounds"
+        /// </summary>
+        public static LocalisableString SampleNotePasted => new TranslatableString(getKey(@"sample_note_pasted"), @"Pasted hitsounds");
+
+        /// <summary>
+        /// "No hitsounds copied. Copy a single object while note lock is enabled."
+        /// </summary>
+        public static LocalisableString NoSampleNote => new TranslatableString(getKey(@"no_sample_note"), @"No hitsounds copied. Copy a single object while note lock is enabled.");
+
+        /// <summary>
+        /// "Increase bezier degree"
+        /// </summary>
+        public static LocalisableString IncreaseBezierDegree => new TranslatableString(getKey(@"increase_bezier_degree"), @"Increase bezier degree");
+
+        /// <summary>
+        /// "Toggle zoom out"
+        /// </summary>
+        public static LocalisableString ToggleZoomOut => new TranslatableString(getKey(@"toggle_zoom_out"), @"Toggle zoom out");
+
+        /// <summary>
+        /// "Zoom out"
+        /// </summary>
+        public static LocalisableString ZoomOut => new TranslatableString(getKey(@"zoom_out"), @"Zoom out");
+
+        /// <summary>
+        /// "Toggle grid display"
+        /// </summary>
+        public static LocalisableString ToggleGridDisplay => new TranslatableString(getKey(@"toggle_grid_display"), @"Toggle grid display");
+
+        /// <summary>
+        /// "Grid display"
+        /// </summary>
+        public static LocalisableString GridDisplay => new TranslatableString(getKey(@"grid_display"), @"Grid display");
+
+        /// <summary>
+        /// "Rotate selected sliders randomly"
+        /// </summary>
+        public static LocalisableString RandomSliderRotation => new TranslatableString(getKey(@"random_slider_rotation"), @"Rotate selected sliders randomly");
+
+        /// <summary>
+        /// "Randomise selected slider shape"
+        /// </summary>
+        public static LocalisableString RandomSliderShape => new TranslatableString(getKey(@"random_slider_shape"), @"Randomise selected slider shape");
+
+        /// <summary>
+        /// "Switch to perfect curve"
+        /// </summary>
+        public static LocalisableString SwitchToPerfectCurve => new TranslatableString(getKey(@"switch_to_perfect_curve"), @"Switch to perfect curve");
+
+        /// <summary>
+        /// "Switch to bezier curve"
+        /// </summary>
+        public static LocalisableString SwitchToBezierCurve => new TranslatableString(getKey(@"switch_to_bezier_curve"), @"Switch to bezier curve");
+
+        /// <summary>
+        /// "Switch to linear curve"
+        /// </summary>
+        public static LocalisableString SwitchToLinearCurve => new TranslatableString(getKey(@"switch_to_linear_curve"), @"Switch to linear curve");
+
+        /// <summary>
+        /// "Switch to catmull curve"
+        /// </summary>
+        public static LocalisableString SwitchToCatmullCurve => new TranslatableString(getKey(@"switch_to_catmull_curve"), @"Switch to catmull curve");
+
+        /// <summary>
+        /// "Slider curve"
+        /// </summary>
+        public static LocalisableString SliderCurve => new TranslatableString(getKey(@"slider_curve"), @"Slider curve");
+
+        /// <summary>
+        /// "Automatic"
+        /// </summary>
+        public static LocalisableString AutomaticCurve => new TranslatableString(getKey(@"automatic_curve"), @"Automatic");
+
+        /// <summary>
+        /// "Continue with same distance snap"
+        /// </summary>
+        public static LocalisableString ContinueDistanceSnap => new TranslatableString(getKey(@"continue_distance_snap"), @"Continue with same distance snap");
+
+        /// <summary>
+        /// "Toggle rotation hotkey origin"
+        /// </summary>
+        public static LocalisableString ToggleRotationHotkeyOrigin => new TranslatableString(getKey(@"toggle_rotation_hotkey_origin"), @"Toggle rotation hotkey origin");
+
+        /// <summary>
+        /// "Rotation hotkey origin"
+        /// </summary>
+        public static LocalisableString RotationHotkeyOrigin => new TranslatableString(getKey(@"rotation_hotkey_origin"), @"Rotation hotkey origin");
+
+        /// <summary>
+        /// "Selection"
+        /// </summary>
+        public static LocalisableString SelectionOrigin => new TranslatableString(getKey(@"selection_origin"), @"Selection");
+
+        /// <summary>
+        /// "Playfield"
+        /// </summary>
+        public static LocalisableString PlayfieldOrigin => new TranslatableString(getKey(@"playfield_origin"), @"Playfield");
+
+        /// <summary>
         /// "Music volume"
         /// </summary>
         public static LocalisableString MusicVolume => new TranslatableString(getKey(@"music_volume"), @"Music volume");

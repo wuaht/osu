@@ -96,6 +96,11 @@ namespace osu.Game.Rulesets.Osu.Edit
         [Cached]
         private readonly EditorStreamManager streamManager = new EditorStreamManager();
 
+        /// <summary>
+        /// The curve type of newly placed sliders, or <c>null</c> to choose it from the number of control points.
+        /// </summary>
+        public PathType? PlacementCurveType { get; set; }
+
         private Bindable<bool> visualSpacingSnap;
         private Bindable<bool> blanketSnap;
         private Bindable<bool> lineSnap;
@@ -104,6 +109,14 @@ namespace osu.Game.Rulesets.Osu.Edit
         private PatternSnapGuideOverlay patternSnapGuides;
 
         private Bindable<bool> drawScreenBorders;
+
+        private Bindable<bool> zoomOut;
+        private Bindable<bool> showGrid;
+
+        /// <summary>
+        /// The size of the playfield relative to the available space while <see cref="OsuSetting.SlopEditorZoomOut"/> is enabled.
+        /// </summary>
+        private const float zoomed_out_scale = 0.75f;
 
         /// <summary>
         /// Opens a popover to convert <paramref name="slider"/> into a stream with a live preview.
@@ -120,11 +133,11 @@ namespace osu.Game.Rulesets.Osu.Edit
 
             AddInternal(DistanceSnapProvider);
             AddInternal(streamManager);
+            AddInternal(new SliderPathActions());
+            AddInternal(new ComposeDisplayActions());
             DistanceSnapProvider.AttachToToolbox(RightToolbox);
 
-            // Give a bit of breathing room around the playfield content.
-            PlayfieldContentContainer.Padding = new MarginPadding(10);
-
+            // Give a bit of breathing room around the playfield content (see Update()).
             // above the playfield, so that guide lines aren't hidden behind slider bodies.
             PlayfieldContentContainer.Add(patternSnapGuides = new PatternSnapGuideOverlay());
             PlayfieldContentContainer.Add(new OffscreenObjectOverlay(Playfield));
@@ -154,6 +167,11 @@ namespace osu.Game.Rulesets.Osu.Edit
                     AlwaysPresent = true,
                 },
             });
+
+            zoomOut = config.GetBindable<bool>(OsuSetting.SlopEditorZoomOut);
+
+            showGrid = config.GetBindable<bool>(OsuSetting.SlopEditorShowGrid);
+            showGrid.BindValueChanged(_ => updatePositionSnapGridVisibility());
 
             drawScreenBorders = config.GetBindable<bool>(OsuSetting.SlopEditorDrawScreenBorders);
             drawScreenBorders.BindValueChanged(draw => screenBorder.Alpha = draw.NewValue ? 1 : 0, true);
@@ -232,6 +250,10 @@ namespace osu.Game.Rulesets.Osu.Edit
             positionSnapGrid.StartPosition.BindTo(OsuGridToolboxGroup.StartPosition);
 
             positionSnapGrid.RelativeSizeAxes = Axes.Both;
+
+            // grid snapping keeps working while the grid is hidden.
+            positionSnapGrid.AlwaysPresent = true;
+            updatePositionSnapGridVisibility();
             LayerBelowRuleset.Add(positionSnapGrid);
         }
 
@@ -296,9 +318,24 @@ namespace osu.Game.Rulesets.Osu.Edit
 
         private PositionSnapGrid positionSnapGrid;
 
+        private void updatePositionSnapGridVisibility()
+        {
+            if (positionSnapGrid != null)
+                positionSnapGrid.Alpha = showGrid.Value ? 1 : 0;
+        }
+
         protected override void Update()
         {
             base.Update();
+
+            // shrink the playfield by padding its container, which keeps the playfield centred and leaves room for objects outside of it.
+            float zoomOutPadding = zoomOut.Value ? (1 - zoomed_out_scale) / 2 : 0;
+
+            PlayfieldContentContainer.Padding = new MarginPadding
+            {
+                Horizontal = 10 + PlayfieldContentContainer.DrawWidth * zoomOutPadding,
+                Vertical = 10 + PlayfieldContentContainer.DrawHeight * zoomOutPadding,
+            };
 
             if (!(BlueprintContainer.CurrentTool is SelectTool))
             {

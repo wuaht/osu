@@ -23,7 +23,7 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
     {
         protected override LocalisableString Header => SlopSettingsStrings.EditorHeader;
 
-        public override IEnumerable<LocalisableString> FilterTerms => base.FilterTerms.Concat(new LocalisableString[] { "skin", "backup", "autosave", "snap", "blanket", "triangle", "waveform", "hitsound", "frosted", "bn", "nominator", "request", "alias", "break", "own", "border", "fps", "star", "difficulty", "bezier", "curve", "colour", "color", "alt", "pitch", "speed", "stretch", "mods", "preview", "mania", "playfield", "text editor", "notepad", "mute", "c999" });
+        public override IEnumerable<LocalisableString> FilterTerms => base.FilterTerms.Concat(new LocalisableString[] { "skin", "backup", "autosave", "snap", "blanket", "triangle", "waveform", "hitsound", "frosted", "bn", "nominator", "request", "alias", "break", "own", "border", "fps", "star", "difficulty", "bezier", "curve", "colour", "color", "alt", "pitch", "speed", "stretch", "mods", "preview", "mania", "playfield", "text editor", "notepad", "mute", "c999", "zoom", "grid", "rotation", "origin" });
 
         /// <summary>
         /// Dropdown entry representing "use the regular gameplay skin".
@@ -196,6 +196,24 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                     Caption = SlopSettingsStrings.MutedEndsSoftC999,
                     HintText = SlopSettingsStrings.MutedEndsSoftC999Description,
                     Current = config.GetBindable<bool>(OsuSetting.SlopEditorMutedEndsSoftC999),
+                }),
+                new SettingsItemV2(new FormCheckBox
+                {
+                    Caption = SlopSettingsStrings.ZoomOutPlayfield,
+                    HintText = SlopSettingsStrings.ZoomOutPlayfieldDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorZoomOut),
+                }),
+                new SettingsItemV2(new FormCheckBox
+                {
+                    Caption = SlopSettingsStrings.ShowGrid,
+                    HintText = SlopSettingsStrings.ShowGridDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorShowGrid),
+                }),
+                new SettingsItemV2(new FormCheckBox
+                {
+                    Caption = SlopSettingsStrings.RotateAroundSelection,
+                    HintText = SlopSettingsStrings.RotateAroundSelectionDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorRotateAroundSelection),
                 }),
                 new SettingsItemV2(new FormCheckBox
                 {

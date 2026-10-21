@@ -193,6 +193,24 @@ namespace osu.Game.Input.Bindings
             new KeyBinding(new[] { InputKey.Control, InputKey.M }, GlobalAction.EditorMuteEffects),
             new KeyBinding(new[] { InputKey.Semicolon }, GlobalAction.EditorMuteObjectEnds),
             new KeyBinding(new[] { InputKey.BackSlash }, GlobalAction.EditorUsePreviousSliderVelocity),
+            new KeyBinding(new[] { InputKey.BracketRight }, GlobalAction.EditorIncreaseSliderVelocity),
+            new KeyBinding(new[] { InputKey.Control, InputKey.BracketRight }, GlobalAction.EditorIncreaseSliderVelocity),
+            new KeyBinding(new[] { InputKey.Alt, InputKey.BracketRight }, GlobalAction.EditorIncreaseSliderVelocity),
+            new KeyBinding(new[] { InputKey.BracketLeft }, GlobalAction.EditorDecreaseSliderVelocity),
+            new KeyBinding(new[] { InputKey.Control, InputKey.BracketLeft }, GlobalAction.EditorDecreaseSliderVelocity),
+            new KeyBinding(new[] { InputKey.Alt, InputKey.BracketLeft }, GlobalAction.EditorDecreaseSliderVelocity),
+            new KeyBinding(new[] { InputKey.L }, GlobalAction.EditorToggleNoteLock),
+            new KeyBinding(new[] { InputKey.I }, GlobalAction.EditorIncreaseBezierDegree),
+            new KeyBinding(InputKey.None, GlobalAction.EditorToggleZoomOut),
+            new KeyBinding(InputKey.None, GlobalAction.EditorToggleGridDisplay),
+            new KeyBinding(InputKey.None, GlobalAction.EditorRandomSliderRotation),
+            new KeyBinding(InputKey.None, GlobalAction.EditorRandomSliderShape),
+            new KeyBinding(InputKey.None, GlobalAction.EditorSwitchToPerfectCurve),
+            new KeyBinding(InputKey.None, GlobalAction.EditorSwitchToBezierCurve),
+            new KeyBinding(InputKey.None, GlobalAction.EditorSwitchToLinearCurve),
+            new KeyBinding(InputKey.None, GlobalAction.EditorSwitchToCatmullCurve),
+            new KeyBinding(InputKey.None, GlobalAction.EditorContinueDistanceSnap),
+            new KeyBinding(InputKey.None, GlobalAction.EditorToggleRotationHotkeyOrigin),
             new KeyBinding(new[] { InputKey.Control, InputKey.Shift, InputKey.C }, GlobalAction.EditorCopyAsOsuFormat),
         }.Concat(editorUndoRedoKeyBindings);
 
@@ -695,6 +713,48 @@ namespace osu.Game.Input.Bindings
 
         [LocalisableDescription(typeof(SlopEditorStrings), nameof(SlopEditorStrings.MuteObjectEnds))]
         EditorMuteObjectEnds,
+
+        [LocalisableDescription(typeof(SlopEditorStrings), nameof(SlopEditorStrings.IncreaseSliderVelocity))]
+        EditorIncreaseSliderVelocity,
+
+        [LocalisableDescription(typeof(SlopEditorStrings), nameof(SlopEditorStrings.DecreaseSliderVelocity))]
+        EditorDecreaseSliderVelocity,
+
+        [LocalisableDescription(typeof(SlopEditorStrings), nameof(SlopEditorStrings.ToggleNoteLock))]
+        EditorToggleNoteLock,
+
+        [LocalisableDescription(typeof(SlopEditorStrings), nameof(SlopEditorStrings.IncreaseBezierDegree))]
+        EditorIncreaseBezierDegree,
+
+        [LocalisableDescription(typeof(SlopEditorStrings), nameof(SlopEditorStrings.ToggleZoomOut))]
+        EditorToggleZoomOut,
+
+        [LocalisableDescription(typeof(SlopEditorStrings), nameof(SlopEditorStrings.ToggleGridDisplay))]
+        EditorToggleGridDisplay,
+
+        [LocalisableDescription(typeof(SlopEditorStrings), nameof(SlopEditorStrings.RandomSliderRotation))]
+        EditorRandomSliderRotation,
+
+        [LocalisableDescription(typeof(SlopEditorStrings), nameof(SlopEditorStrings.RandomSliderShape))]
+        EditorRandomSliderShape,
+
+        [LocalisableDescription(typeof(SlopEditorStrings), nameof(SlopEditorStrings.SwitchToPerfectCurve))]
+        EditorSwitchToPerfectCurve,
+
+        [LocalisableDescription(typeof(SlopEditorStrings), nameof(SlopEditorStrings.SwitchToBezierCurve))]
+        EditorSwitchToBezierCurve,
+
+        [LocalisableDescription(typeof(SlopEditorStrings), nameof(SlopEditorStrings.SwitchToLinearCurve))]
+        EditorSwitchToLinearCurve,
+
+        [LocalisableDescription(typeof(SlopEditorStrings), nameof(SlopEditorStrings.SwitchToCatmullCurve))]
+        EditorSwitchToCatmullCurve,
+
+        [LocalisableDescription(typeof(SlopEditorStrings), nameof(SlopEditorStrings.ContinueDistanceSnap))]
+        EditorContinueDistanceSnap,
+
+        [LocalisableDescription(typeof(SlopEditorStrings), nameof(SlopEditorStrings.ToggleRotationHotkeyOrigin))]
+        EditorToggleRotationHotkeyOrigin,
     }
 
     public enum GlobalActionCategory
