@@ -1,4 +1,4 @@
-﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
@@ -12,97 +12,105 @@ namespace osu.Game.Overlays.Changelog
 {
     /// <summary>
     /// The changelog of this client, built from its commits which are embedded at build time (see ClientChangelog.targets).
-    /// The commits are shown as their own update stream, with one build per day.
+    /// The released and unreleased commits are shown as their own update streams, with one build per day.
     /// </summary>
     public static class ClientChangelog
     {
         public const string STREAM_NAME = @"client";
 
+        public const string UNSTABLE_STREAM_NAME = @"client-unstable";
+
+        private static readonly Lazy<(List<APIUpdateStream> streams, List<APIChangelogBuild> builds)> changelog = new Lazy<(List<APIUpdateStream>, List<APIChangelogBuild>)>(load);
+
         /// <summary>
-        /// The ids of the local builds and stream, which are negative so that they never clash with online ones.
+        /// The update streams of this client which have any commits.
         /// </summary>
-        private const long stream_id = -1;
-
-        private const string resource_name = @"osu.Game.ClientChangelog.txt";
-
-        private static readonly Lazy<(APIUpdateStream? stream, List<APIChangelogBuild> builds)> changelog = new Lazy<(APIUpdateStream?, List<APIChangelogBuild>)>(load);
+        public static IReadOnlyList<APIUpdateStream> Streams => changelog.Value.streams;
 
         /// <summary>
-        /// The update stream of this client, or null if there are no commits.
-        /// </summary>
-        public static APIUpdateStream? Stream => changelog.Value.stream;
-
-        /// <summary>
-        /// The builds of this client, newest first.
+        /// The builds of all streams of this client, newest first.
         /// </summary>
         public static IReadOnlyList<APIChangelogBuild> Builds => changelog.Value.builds;
 
-        public static bool IsLocal(APIChangelogBuild build) => build.UpdateStream?.Name == STREAM_NAME;
+        public static bool IsLocal(APIChangelogBuild build) => build.UpdateStream?.Name is STREAM_NAME or UNSTABLE_STREAM_NAME;
 
-        private static (APIUpdateStream?, List<APIChangelogBuild>) load()
+        private static (List<APIUpdateStream>, List<APIChangelogBuild>) load()
         {
+            var streams = new List<APIUpdateStream>();
             var builds = new List<APIChangelogBuild>();
-
-            string log;
-
-            using (var resource = typeof(ClientChangelog).Assembly.GetManifestResourceStream(resource_name))
-            {
-                if (resource == null)
-                    return (null, builds);
-
-                using (var reader = new StreamReader(resource))
-                    log = reader.ReadToEnd();
-            }
-
-            var commits = parseCommits(log);
-
-            if (commits.Count == 0)
-                return (null, builds);
-
-            var stream = new APIUpdateStream
-            {
-                Id = stream_id,
-                Name = STREAM_NAME,
-                DisplayName = @"slop!",
-            };
 
             long nextEntryId = -1;
 
-            foreach (var day in commits.GroupBy(c => c.Date.Date).OrderByDescending(d => d.Key))
-            {
-                builds.Add(new APIChangelogBuild
-                {
-                    Id = stream_id - builds.Count - 1,
-                    Version = day.Key.ToString(@"yyyy.MMdd", CultureInfo.InvariantCulture),
-                    DisplayVersion = day.Key.ToString(@"yyyy.Mdd", CultureInfo.InvariantCulture),
-                    CreatedAt = day.Max(c => c.Date),
-                    UpdateStream = stream,
-                    ChangelogEntries = day.OrderBy(c => c.Date).Select(c => new APIChangelogEntry
-                    {
-                        Id = nextEntryId--,
-                        Type = getType(c.Subject),
-                        Category = getCategory(c.Files),
-                        Title = c.Subject,
-                        CreatedAt = c.Date,
-                        GithubUser = new APIChangelogUser { DisplayName = c.Author },
-                    }).ToList(),
-                });
-            }
+            // the ids of the local streams, builds and entries are negative so that they never clash with online ones.
+            loadStream(-1, STREAM_NAME, @"slop!", @"osu.Game.ClientChangelog.txt");
+            loadStream(-2, UNSTABLE_STREAM_NAME, @"slop! unstable", @"osu.Game.ClientChangelogUnstable.txt");
 
-            for (int i = 0; i < builds.Count; i++)
+            return (streams, builds.OrderByDescending(b => b.CreatedAt).ToList());
+
+            void loadStream(long streamId, string name, string displayName, string resourceName)
             {
-                builds[i].Versions = new APIChangelogBuild.VersionNavigation
+                string log;
+
+                using (var resource = typeof(ClientChangelog).Assembly.GetManifestResourceStream(resourceName))
                 {
-                    Next = i > 0 ? builds[i - 1] : null,
-                    Previous = i < builds.Count - 1 ? builds[i + 1] : null,
+                    if (resource == null)
+                        return;
+
+                    using (var reader = new StreamReader(resource))
+                        log = reader.ReadToEnd();
+                }
+
+                var commits = parseCommits(log);
+
+                if (commits.Count == 0)
+                    return;
+
+                var stream = new APIUpdateStream
+                {
+                    Id = streamId,
+                    Name = name,
+                    DisplayName = displayName,
                 };
+
+                var streamBuilds = new List<APIChangelogBuild>();
+
+                foreach (var day in commits.GroupBy(c => c.Date.Date).OrderByDescending(d => d.Key))
+                {
+                    streamBuilds.Add(new APIChangelogBuild
+                    {
+                        // each stream has its own range of build ids.
+                        Id = streamId * 100_000 - streamBuilds.Count - 1,
+                        Version = day.Key.ToString(@"yyyy.MMdd", CultureInfo.InvariantCulture),
+                        DisplayVersion = day.Key.ToString(@"yyyy.Mdd", CultureInfo.InvariantCulture),
+                        CreatedAt = day.Max(c => c.Date),
+                        UpdateStream = stream,
+                        ChangelogEntries = day.OrderBy(c => c.Date).Select(c => new APIChangelogEntry
+                        {
+                            Id = nextEntryId--,
+                            Type = getType(c.Subject),
+                            Category = getCategory(c.Files),
+                            Title = c.Subject,
+                            CreatedAt = c.Date,
+                            GithubUser = new APIChangelogUser { DisplayName = c.Author },
+                        }).ToList(),
+                    });
+                }
+
+                for (int i = 0; i < streamBuilds.Count; i++)
+                {
+                    streamBuilds[i].Versions = new APIChangelogBuild.VersionNavigation
+                    {
+                        Next = i > 0 ? streamBuilds[i - 1] : null,
+                        Previous = i < streamBuilds.Count - 1 ? streamBuilds[i + 1] : null,
+                    };
+                }
+
+                stream.LatestBuild = streamBuilds[0];
+
+                streams.Add(stream);
+                builds.AddRange(streamBuilds);
             }
-
-            stream.LatestBuild = builds[0];
-
-            return (stream, builds);
         }
-
         private static List<Commit> parseCommits(string log)
         {
             var commits = new List<Commit>();

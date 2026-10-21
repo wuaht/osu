@@ -1,11 +1,13 @@
 <Project>
   <!--
-    Embeds the commits of this client (those not on master, which mirrors upstream) as a resource,
-    so that the changelog overlay can show them as their own update stream (see ClientChangelog).
+    Embeds the commits of this client as resources, so that the changelog overlay can show them as their own update streams (see ClientChangelog):
+    the stable stream are the commits on slop which aren't on master (which mirrors upstream),
+    and the unstable stream are the commits on slop-nightly which haven't been released to slop yet.
   -->
   <UsingTask TaskName="WriteClientChangelog" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
     <ParameterGroup>
       <RepositoryDirectory ParameterType="System.String" Required="true" />
+      <Range ParameterType="System.String" Required="true" />
       <OutputFile ParameterType="System.String" Required="true" />
     </ParameterGroup>
     <Task>
@@ -19,7 +21,7 @@
         try
         {
             // only the commits made on the branch itself, not the upstream ones merged into it.
-            var startInfo = new ProcessStartInfo("git", "log --first-parent --no-merges --name-only --format=%x1e%H%x1f%aI%x1f%an%x1f%s master..HEAD")
+            var startInfo = new ProcessStartInfo("git", "log --first-parent --no-merges --name-only --format=%x1e%H%x1f%aI%x1f%an%x1f%s " + Range)
             {
                 WorkingDirectory = RepositoryDirectory,
                 RedirectStandardOutput = true,
@@ -41,7 +43,7 @@
         }
         catch
         {
-            // without git (or a master branch) the changelog of this client is just empty.
+            // without git (or the branches of the range) the changelog is just empty.
         }
 
         Directory.CreateDirectory(Path.GetDirectoryName(OutputFile));
@@ -57,11 +59,15 @@
   <Target Name="EmbedClientChangelog" BeforeTargets="PrepareForBuild;AssignTargetPaths">
     <PropertyGroup>
       <ClientChangelogFile>$(MSBuildProjectDirectory)/$(IntermediateOutputPath)ClientChangelog.txt</ClientChangelogFile>
+      <ClientChangelogUnstableFile>$(MSBuildProjectDirectory)/$(IntermediateOutputPath)ClientChangelogUnstable.txt</ClientChangelogUnstableFile>
     </PropertyGroup>
-    <WriteClientChangelog RepositoryDirectory="$(MSBuildProjectDirectory)" OutputFile="$(ClientChangelogFile)" />
+    <WriteClientChangelog RepositoryDirectory="$(MSBuildProjectDirectory)" Range="master..slop" OutputFile="$(ClientChangelogFile)" />
+    <WriteClientChangelog RepositoryDirectory="$(MSBuildProjectDirectory)" Range="slop..slop-nightly" OutputFile="$(ClientChangelogUnstableFile)" />
     <ItemGroup>
       <EmbeddedResource Include="$(ClientChangelogFile)" LogicalName="osu.Game.ClientChangelog.txt" />
+      <EmbeddedResource Include="$(ClientChangelogUnstableFile)" LogicalName="osu.Game.ClientChangelogUnstable.txt" />
       <FileWrites Include="$(ClientChangelogFile)" />
+      <FileWrites Include="$(ClientChangelogUnstableFile)" />
     </ItemGroup>
   </Target>
 </Project>

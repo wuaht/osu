@@ -1,4 +1,4 @@
-﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 #nullable disable
@@ -49,7 +49,7 @@ namespace osu.Game.Overlays.Changelog
         {
             TabControl.AddItem(ListingString);
 
-            if (ClientChangelog.Stream != null)
+            if (ClientChangelog.Streams.Count > 0)
                 TabControl.AddItem(ClientListingString);
 
             Current.ValueChanged += e =>

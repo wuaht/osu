@@ -1,4 +1,4 @@
-﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 #nullable disable
@@ -186,9 +186,8 @@ namespace osu.Game.Overlays
                     builds = res.Builds;
                     Streams = res.Streams;
 
-                    // this client's changes are only listed in their own tab, but its stream can still be selected like any other.
-                    if (ClientChangelog.Stream != null)
-                        Streams.Add(ClientChangelog.Stream);
+                    // this client's changes are only listed in their own tab, but its streams can still be selected like any other.
+                    Streams.AddRange(ClientChangelog.Streams);
 
                     Header.Populate(Streams);
 

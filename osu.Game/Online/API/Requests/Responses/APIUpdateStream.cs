@@ -45,6 +45,7 @@ namespace osu.Game.Online.API.Requests.Responses
             ["web"] = new Color4(136, 102, 238, 255),
             // the blue of this client's logo.
             [ClientChangelog.STREAM_NAME] = new Color4(4, 102, 200, 255),
+            [ClientChangelog.UNSTABLE_STREAM_NAME] = new Color4(0, 190, 160, 255),
         };
 
         public ColourInfo Colour => KNOWN_STREAMS.TryGetValue(Name, out var colour) ? colour : new Color4(0, 0, 0, 255);
