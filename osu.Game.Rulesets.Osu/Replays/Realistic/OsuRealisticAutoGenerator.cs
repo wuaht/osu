@@ -588,7 +588,9 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
             var current = hitObjects[index];
             var next = hitObjects[index + 1];
 
+            // objects at the same time can't be flowed through, as the cursor would have to move between them instantly.
             return isHitLikeCircle(current) && isHitLikeCircle(next)
+                                            && next.StartTime > current.StartTime
                                             && ApplyModsToTimeDelta(current.StartTime, next.StartTime) <= stream_max_interval;
         }
 

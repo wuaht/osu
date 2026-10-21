@@ -202,6 +202,39 @@ namespace osu.Game.Rulesets.Osu.Tests.Slop
             });
         }
 
+        [Test]
+        public void TestRealisticCursorWithSimultaneousObjects()
+        {
+            AddAssert("cursor position always valid", () =>
+            {
+                var ruleset = new OsuRuleset();
+                var beatmap = new Beatmap { BeatmapInfo = { Ruleset = ruleset.RulesetInfo } };
+                double time = 500;
+
+                // a stream which has several circles at the same time in its middle.
+                for (int i = 0; i < 12; i++)
+                {
+                    beatmap.HitObjects.Add(new HitCircle { StartTime = time, Position = new Vector2(100 + i * 25, 192) });
+
+                    if (i == 5)
+                        beatmap.HitObjects.Add(new HitCircle { StartTime = time, Position = new Vector2(100 + i * 25, 300) });
+                    else
+                        time += 90;
+                }
+
+                var converted = ruleset.CreateBeatmapConverter(beatmap).Convert();
+                var processor = ruleset.CreateBeatmapProcessor(converted);
+                processor?.PreProcess();
+                foreach (var h in converted.HitObjects)
+                    h.ApplyDefaults(converted.ControlPointInfo, converted.Difficulty);
+                processor?.PostProcess();
+
+                var frames = new OsuRealisticAutoGenerator(converted, new List<Mod>()).Generate().Frames.Cast<OsuReplayFrame>().ToList();
+
+                return frames.All(f => float.IsFinite(f.Position.X) && float.IsFinite(f.Position.Y));
+            });
+        }
+
         private static Vector2 positionAt(List<OsuReplayFrame> frames, double time)
         {
             int index = frames.FindLastIndex(f => f.Time <= time);
