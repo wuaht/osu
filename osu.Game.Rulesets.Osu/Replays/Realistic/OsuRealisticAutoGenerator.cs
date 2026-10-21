@@ -139,11 +139,6 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
         /// </summary>
         private const float slider_entry_speed = 0.7f;
 
-        /// <summary>
-        /// How fast the cursor passes through a circle towards the following object, relative to the speed needed to reach it.
-        /// </summary>
-        private const float circle_flow_speed = 0.5f;
-
         private static readonly Vector2 playfield_min = new Vector2(-512, -384);
         private static readonly Vector2 playfield_max = new Vector2(1024, 768);
 
@@ -499,8 +494,9 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
                 leftObject = current;
                 leavePosition = lastTarget;
 
-                // the cursor keeps the momentum it left with. its velocity is in osu!pixels per real second, while movements are planned in milliseconds of beatmap time.
-                leaveVelocity = cursor.Velocity / 1000 * (float)ApplyModsToTimeDelta(time, time + 1);
+                // the cursor keeps the momentum it left a slider with. its velocity is in osu!pixels per real second, while movements are planned in milliseconds of beatmap time.
+                // jumps from circles are aimed directly instead, as players snap to each object of a jump.
+                leaveVelocity = current is Slider ? cursor.Velocity / 1000 * (float)ApplyModsToTimeDelta(time, time + 1) : Vector2.Zero;
             }
 
             Vector2 from = leavePosition;
@@ -555,30 +551,15 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
 
         /// <summary>
         /// The velocity at which the cursor arrives at the object at <paramref name="index"/>, in osu!pixels per millisecond.
-        /// Sliders are entered in the direction of their body, circles are passed through towards the following object.
+        /// Sliders are entered in the direction of their body, while circles are aimed at directly.
         /// </summary>
         private Vector2 arrivalVelocity(int index)
         {
-            var hitObject = hitObjects[index];
+            if (hitObjects[index] is not Slider slider || stillSliderPositions.ContainsKey(slider) || getLeaveTime(slider) <= slider.StartTime)
+                return Vector2.Zero;
 
-            switch (hitObject)
-            {
-                case Slider slider when !stillSliderPositions.ContainsKey(slider) && getLeaveTime(slider) > slider.StartTime:
-                    Vector2 direction = slider.Path.PositionAt(Math.Min(1, slider.Radius / Math.Max(slider.Path.Distance, 1))) - slider.Path.PositionAt(0);
-                    return direction.LengthSquared > 0 ? direction.Normalized() * (float)slider.Velocity * slider_entry_speed : Vector2.Zero;
-
-                case HitCircle:
-                    if (index + 1 >= hitObjects.Count || hitObjects[index + 1] is Spinner)
-                        return Vector2.Zero;
-
-                    var following = hitObjects[index + 1];
-                    double interval = following.StartTime - hitObject.StartTime;
-
-                    return interval > 0 ? (following.StackedPosition - hitObject.StackedPosition) / (float)interval * circle_flow_speed : Vector2.Zero;
-
-                default:
-                    return Vector2.Zero;
-            }
+            Vector2 direction = slider.Path.PositionAt(Math.Min(1, slider.Radius / Math.Max(slider.Path.Distance, 1))) - slider.Path.PositionAt(0);
+            return direction.LengthSquared > 0 ? direction.Normalized() * (float)slider.Velocity * slider_entry_speed : Vector2.Zero;
         }
 
         private static Vector2 clampLength(Vector2 vector, float maxLength) => vector.Length > maxLength ? vector.Normalized() * maxLength : vector;
