@@ -120,24 +120,24 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
         /// <summary>
         /// The longest pause between objects which is flowed through without waiting, in milliseconds.
         /// </summary>
-        private const double flow_max_gap = 400;
+        private const double flow_max_gap = 200;
 
         /// <summary>
         /// The longest tangent of a movement between objects, relative to the distance of the movement.
         /// Keeps the cursor from swinging far away from the objects when it leaves a fast slider towards a close object.
         /// </summary>
-        private const float max_tangent_scale = 1f;
+        private const float max_tangent_scale = 0.5f;
 
         /// <summary>
         /// How much of the velocity the cursor left an object with is kept in the movement towards the next object.
         /// Less than 1, as players slow down while changing direction.
         /// </summary>
-        private const float momentum_amount = 0.6f;
+        private const float momentum_amount = 0.3f;
 
         /// <summary>
         /// How fast the cursor enters a slider in the direction of its body, relative to the speed of the slider ball.
         /// </summary>
-        private const float slider_entry_speed = 0.7f;
+        private const float slider_entry_speed = 0.35f;
 
         private static readonly Vector2 playfield_min = new Vector2(-512, -384);
         private static readonly Vector2 playfield_max = new Vector2(1024, 768);
