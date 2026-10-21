@@ -31,6 +31,7 @@ namespace osu.Game.Tests.Slop
         }
 
         [TestCase(0.5)]
+        [TestCase(1.5)]
         [TestCase(3)]
         [TestCase(4)]
         public void TestTickRateIsKeptOnCreation(double tickRate)

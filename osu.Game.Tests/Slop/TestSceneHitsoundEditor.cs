@@ -1142,26 +1142,31 @@ namespace osu.Game.Tests.Slop
         }
 
         [Test]
-        public void TestDoubleClickLaneTogglesSubLanes()
+        public void TestRightClickLaneTogglesSubLanes()
         {
             var softWhistle = new HitsoundLane(HitSampleInfo.BANK_SOFT, HitSampleInfo.HIT_WHISTLE);
             var subLane = softWhistle.WithCustomIndex(2);
 
-            AddStep("double click lane without custom samples", () => doubleClickHeader(softWhistle));
+            AddStep("right click lane without custom samples", () => rightClickHeader(softWhistle));
             AddAssert("not expanded", () => hitsoundEditor.ExpandedLanes, () => Is.Empty);
 
             AddStep("use custom index 2 for second hitsound", () => hitsoundEditor.SetCustomIndex(new[] { hitsoundEditor.Map.Columns[1] }, 2));
-            AddStep("double click lane", () => doubleClickHeader(softWhistle));
+            AddStep("right click lane", () => rightClickHeader(softWhistle));
             AddUntilStep("sub-lane visible", () => hitsoundEditor.VisibleLanes.Contains(subLane));
 
-            AddStep("double click lane again", () => doubleClickHeader(softWhistle));
+            AddStep("right click lane again", () => rightClickHeader(softWhistle));
             AddUntilStep("sub-lane hidden", () => !hitsoundEditor.VisibleLanes.Contains(subLane));
         }
 
-        private void doubleClickHeader(HitsoundLane lane)
+        private void rightClickHeader(HitsoundLane lane)
         {
             InputManager.MoveMouseTo(headerPosition(lane));
-            InputManager.Click(MouseButton.Left);
+            InputManager.Click(MouseButton.Right);
+        }
+
+        private void clickMenuItem(LocalisableString text)
+        {
+            InputManager.MoveMouseTo(Editor.ChildrenOfType<DrawableOsuMenuItem>().Single(i => i.Item.Text.Value.Equals(text)));
             InputManager.Click(MouseButton.Left);
         }
 
@@ -1175,12 +1180,8 @@ namespace osu.Game.Tests.Slop
             AddStep("expand", () => hitsoundEditor.ToggleExpanded(softWhistle));
             AddUntilStep("sub-lane visible", () => hitsoundEditor.VisibleLanes.Contains(subLane));
 
-            AddStep("double click sub-lane header", () =>
-            {
-                InputManager.MoveMouseTo(headerPosition(subLane));
-                InputManager.Click(MouseButton.Left);
-                InputManager.Click(MouseButton.Left);
-            });
+            AddStep("right click sub-lane header", () => rightClickHeader(subLane));
+            AddStep("click rename", () => clickMenuItem(SlopHitsoundEditorStrings.RenameLane));
             AddUntilStep("text box focused", () => renameTextBox?.HasFocus == true);
 
             AddStep("press W", () => InputManager.Key(Key.W));
@@ -1192,16 +1193,8 @@ namespace osu.Game.Tests.Slop
             AddUntilStep("text box removed", () => renameTextBox == null);
             AddAssert("saved in file of beatmap set", () => storage.Exists(HitsoundLaneNames.GetPath(EditorBeatmap.BeatmapInfo.BeatmapSet!.ID)));
 
-            AddStep("right click sub-lane header", () =>
-            {
-                InputManager.MoveMouseTo(headerPosition(subLane));
-                InputManager.Click(MouseButton.Right);
-            });
-            AddStep("click reset name", () =>
-            {
-                InputManager.MoveMouseTo(Editor.ChildrenOfType<DrawableOsuMenuItem>().Single(i => i.Item.Text.Value.Equals(SlopHitsoundEditorStrings.ResetLaneName)));
-                InputManager.Click(MouseButton.Left);
-            });
+            AddStep("right click sub-lane header", () => rightClickHeader(subLane));
+            AddStep("click reset name", () => clickMenuItem(SlopHitsoundEditorStrings.ResetLaneName));
             AddUntilStep("default name shown", () => !headerTexts.Contains("Kick") && headerTexts.Contains(HitsoundLaneHeaders.GetCustomIndexName(2).ToString()));
             AddAssert("file of beatmap set removed", () => !storage.Exists(HitsoundLaneNames.GetPath(EditorBeatmap.BeatmapInfo.BeatmapSet!.ID)));
         }
