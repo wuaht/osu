@@ -16,7 +16,7 @@ namespace osu.Game.Configuration
         /// </summary>
         public static OsuConfigManager? Config { get; set; }
 
-        public static SlopAutoplayEngine Engine => Config?.Get<SlopAutoplayEngine>(OsuSetting.SlopAutoplayEngine) ?? SlopAutoplayEngine.Default;
+        public static SlopAutoplayEngine Engine => Config?.Get<SlopAutoplayEngine>(OsuSetting.SlopAutoplayEngine) ?? SlopAutoplayEngine.Realistic;
 
         public static SlopAutoplayEngine EditorEngine => Config?.Get<SlopAutoplayEngine>(OsuSetting.SlopEditorAutoplayEngine) ?? SlopAutoplayEngine.Realistic;
 
@@ -34,11 +34,15 @@ namespace osu.Game.Configuration
         /// <summary>
         /// The username of replays created by the given engine.
         /// </summary>
-        public static string GetUsername(SlopAutoplayEngine engine) => engine == SlopAutoplayEngine.Default ? "Autoplay" : engine.GetDescription();
+        public static string GetUsername(SlopAutoplayEngine engine) => engine.GetDescription();
     }
 
     public enum SlopAutoplayEngine
     {
+        /// <summary>
+        /// The original autoplay of the game.
+        /// </summary>
+        [Description("Autoplay")]
         Default,
         Pippi,
 

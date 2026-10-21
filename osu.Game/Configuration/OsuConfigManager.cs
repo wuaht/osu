@@ -408,7 +408,7 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopKeyOverlayColourK2, @"#FFDE00");
             SetDefault(OsuSetting.SlopKeyOverlayColourM1, @"#F8009E");
             SetDefault(OsuSetting.SlopKeyOverlayColourM2, @"#F8009E");
-            SetDefault(OsuSetting.SlopAutoplayEngine, SlopAutoplayEngine.Default);
+            SetDefault(OsuSetting.SlopAutoplayEngine, SlopAutoplayEngine.Realistic);
             SetDefault(OsuSetting.SlopSaveAutoplayReplays, false);
             SetDefault(OsuSetting.SlopAutoPlusFollowSliders, true);
             SetDefault(OsuSetting.SlopAutoPlusFollowSliderEnds, true);
