@@ -93,6 +93,12 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
         private const float still_slider_extent = 1.2f;
 
         /// <summary>
+        /// The longest span of a slider for the cursor to stay still on it, relative to the beat length.
+        /// Kick sliders are usually 1/4 long and buzz sliders have even shorter spans, while longer sliders are followed.
+        /// </summary>
+        private const double still_slider_max_span = 0.25 * 1.1;
+
+        /// <summary>
         /// The longest time between two objects for the cursor to flow through them as part of a stream, in milliseconds.
         /// </summary>
         private const double stream_max_interval = 125;
@@ -136,7 +142,9 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
                     body[j] += slider.StackedPosition;
                 sliderBodies[slider] = body;
 
-                if (body.Count > 0)
+                double beatLength = Beatmap.ControlPointInfo.TimingPointAt(slider.StartTime).BeatLength;
+
+                if (body.Count > 0 && slider.SpanDuration <= beatLength * still_slider_max_span)
                 {
                     Vector2 min = body.Aggregate(Vector2.ComponentMin);
                     Vector2 max = body.Aggregate(Vector2.ComponentMax);

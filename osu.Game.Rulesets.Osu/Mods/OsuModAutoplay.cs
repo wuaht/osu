@@ -28,16 +28,16 @@ namespace osu.Game.Rulesets.Osu.Mods
             switch (engine)
             {
                 case SlopAutoplayEngine.Pippi:
-                    return new ModReplayData(new OsuAutoGenerator(beatmap, mods) { Pippi = true }.Generate(), new ModCreatedUser { Username = "Autoplay" });
+                    return new ModReplayData(new OsuAutoGenerator(beatmap, mods) { Pippi = true }.Generate(), new ModCreatedUser { Username = SlopAutoplaySettings.GetUsername(engine) });
 
                 case SlopAutoplayEngine.AutoPlus:
-                    return new ModReplayData(new OsuAutoPlusGenerator(beatmap, mods, invisibleDummy: useTagCursors).Generate(), new ModCreatedUser { Username = "Auto+" });
+                    return new ModReplayData(new OsuAutoPlusGenerator(beatmap, mods, invisibleDummy: useTagCursors).Generate(), new ModCreatedUser { Username = SlopAutoplaySettings.GetUsername(engine) });
 
                 case SlopAutoplayEngine.Realistic:
-                    return new ModReplayData(new OsuRealisticAutoGenerator(beatmap, mods).Generate(), new ModCreatedUser { Username = "Autoplay" });
+                    return new ModReplayData(new OsuRealisticAutoGenerator(beatmap, mods).Generate(), new ModCreatedUser { Username = SlopAutoplaySettings.GetUsername(engine) });
 
                 default:
-                    return new ModReplayData(new OsuAutoGenerator(beatmap, mods).Generate(), new ModCreatedUser { Username = "Autoplay" });
+                    return new ModReplayData(new OsuAutoGenerator(beatmap, mods).Generate(), new ModCreatedUser { Username = SlopAutoplaySettings.GetUsername(engine) });
             }
         }
 

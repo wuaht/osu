@@ -8,6 +8,7 @@ using osu.Framework.Allocation;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Graphics.Textures;
+using osu.Game.Configuration;
 using osu.Game.Graphics;
 using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Online.OfflineProfiles;
@@ -36,8 +37,11 @@ namespace osu.Game.Users.Drawables
         [BackgroundDependencyLoader]
         private void load(LargeTextureStore textures, OnlineAssetCachingStore onlineTextures, [CanBeNull] OfflineProfileManager offlineProfiles)
         {
+            // bots of autoplay engines which have their own avatar.
+            if (user != null && user.IsBot && user.OnlineID == APIUser.SYSTEM_USER_ID && user.Username == SlopAutoplaySettings.MIKU_NAME)
+                Texture = textures.Get(@"Slop/avatar-miku");
             // offline profiles have local avatars.
-            if (user != null && OfflineProfileUser.IsOfflineProfileID(user.OnlineID))
+            else if (user != null && OfflineProfileUser.IsOfflineProfileID(user.OnlineID))
                 Texture = offlineProfiles?.GetAvatar(user.OnlineID);
             else if (user != null && user.OnlineID > 1)
                 // TODO: The fallback here should not need to exist. Users should be looked up and populated via UserLookupCache or otherwise

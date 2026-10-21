@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System.ComponentModel;
+using osu.Framework.Extensions;
 
 namespace osu.Game.Configuration
 {
@@ -24,6 +25,16 @@ namespace osu.Game.Configuration
         public static double Get(OsuSetting setting, double fallback) => Config?.Get<double>(setting) ?? fallback;
 
         public static int Get(OsuSetting setting, int fallback) => Config?.Get<int>(setting) ?? fallback;
+
+        /// <summary>
+        /// The name shown for the <see cref="SlopAutoplayEngine.Realistic"/> engine, which is also the username of its replays.
+        /// </summary>
+        public const string MIKU_NAME = "Miku";
+
+        /// <summary>
+        /// The username of replays created by the given engine.
+        /// </summary>
+        public static string GetUsername(SlopAutoplayEngine engine) => engine == SlopAutoplayEngine.Default ? "Autoplay" : engine.GetDescription();
     }
 
     public enum SlopAutoplayEngine
@@ -37,7 +48,7 @@ namespace osu.Game.Configuration
         /// <summary>
         /// Moves the cursor like a player would, following a spring towards each target and cutting corners on sliders.
         /// </summary>
-        [Description("Miku")]
+        [Description(SlopAutoplaySettings.MIKU_NAME)]
         Realistic,
     }
 
