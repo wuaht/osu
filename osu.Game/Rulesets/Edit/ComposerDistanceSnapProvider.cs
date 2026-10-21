@@ -333,6 +333,21 @@ namespace osu.Game.Rulesets.Edit
             return DurationToDistance(snappedTime - snapReferenceTime, snapReferenceTime, withVelocity);
         }
 
+        public virtual float FindSnappedSliderDistance(float distance, double startTime, IHasSliderVelocity? withVelocity = null)
+        {
+            double actualEndTime = startTime + DistanceToDuration(distance, startTime, withVelocity);
+
+            // snap using the ticks of the timing point active at the end of the slider, which may differ from the one at its start.
+            double snappedTime = beatSnapProvider.SnapTime(actualEndTime, actualEndTime);
+
+            // we don't want to exceed the actual duration and snap to a point in the future (see FindSnappedDistance).
+            // stepping back can't cross the start of the timing point, as it lies on its own tick grid.
+            if (snappedTime > actualEndTime + 1)
+                snappedTime -= beatSnapProvider.GetBeatLengthAtTime(actualEndTime);
+
+            return DurationToDistance(Math.Max(0, snappedTime - startTime), startTime, withVelocity);
+        }
+
         #endregion
 
         private partial class DistanceSpacingToast : Toast

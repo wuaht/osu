@@ -80,7 +80,7 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders.Components
             if (controlPoints.Count == 0)
                 return;
 
-            if (colourStyle.Value != SliderCurveColourStyle.Line)
+            if (colourStyle.Value != SliderCurveColourStyle.Line && colourStyle.Value != SliderCurveColourStyle.AnchorAndLine)
             {
                 addPath(controlPoints, 0, controlPoints.Count - 1, Color4.White);
                 return;

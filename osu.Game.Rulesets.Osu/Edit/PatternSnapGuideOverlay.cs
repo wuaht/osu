@@ -62,16 +62,24 @@ namespace osu.Game.Rulesets.Osu.Edit
                     lines.Add((path, line.Vertices));
                 }
             }
+
+            // positioned immediately, as this is called after this overlay has been updated in the current frame.
+            updateLines();
         }
 
         protected override void Update()
         {
             base.Update();
 
+            // the lines are positioned every frame as the playfield may move or be resized.
+            updateLines();
+        }
+
+        private void updateLines()
+        {
             if (playfield == null)
                 return;
 
-            // the lines are positioned every frame as the playfield may move or be resized.
             foreach (var (path, vertices) in lines)
             {
                 path.Vertices = vertices.Select(v => ToLocalSpace(playfield.GamefieldToScreenSpace(v))).ToList();

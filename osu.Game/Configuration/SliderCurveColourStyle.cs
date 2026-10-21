@@ -28,5 +28,11 @@ namespace osu.Game.Configuration
         /// </summary>
         [LocalisableDescription(typeof(SlopSettingsStrings), nameof(SlopSettingsStrings.SliderCurveColourLine))]
         Line,
+
+        /// <summary>
+        /// Both the control points and the lines between them are coloured by the curve type of their segment.
+        /// </summary>
+        [LocalisableDescription(typeof(SlopSettingsStrings), nameof(SlopSettingsStrings.SliderCurveColourAnchorAndLine))]
+        AnchorAndLine,
     }
 }

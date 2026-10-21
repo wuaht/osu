@@ -222,7 +222,7 @@ namespace osu.Game.Rulesets.Osu.Tests.Editor
         {
             AddStep("enable rectangular grid", () => InputManager.Key(Key.T));
 
-            AddStep("start grid placement", () => InputManager.Key(Key.Number5));
+            AddStep("start grid placement", () => InputManager.Key(Key.Number6));
             AddStep("move cursor to slider head + (1, 1)", () =>
             {
                 var composer = Editor.ChildrenOfType<RectangularPositionSnapGrid>().Single();
@@ -254,7 +254,7 @@ namespace osu.Game.Rulesets.Osu.Tests.Editor
                 return Precision.AlmostEquals(composer.GridLineRotation.Value, 0.09, 0.1);
             });
 
-            AddStep("start grid placement", () => InputManager.Key(Key.Number5));
+            AddStep("start grid placement", () => InputManager.Key(Key.Number6));
             AddStep("move cursor to slider tail + (1, 1)", () =>
             {
                 var composer = Editor.ChildrenOfType<RectangularPositionSnapGrid>().Single();
@@ -296,7 +296,7 @@ namespace osu.Game.Rulesets.Osu.Tests.Editor
             }));
 
             AddStep("select circle tool", () => InputManager.Key(Key.Number2));
-            AddStep("select grid tool", () => InputManager.Key(Key.Number5));
+            AddStep("select grid tool", () => InputManager.Key(Key.Number6));
             AddStep("move cursor to centre", () => InputManager.MoveMouseTo(Editor));
             AddStep("click", () => InputManager.Click(MouseButton.Left));
             AddStep("move cursor to (-1, -1)", () =>
@@ -329,7 +329,7 @@ namespace osu.Game.Rulesets.Osu.Tests.Editor
         public void TestGridPlacementRevertsToLastTool()
         {
             AddStep("select circle tool", () => InputManager.Key(Key.Number2));
-            AddStep("select grid tool", () => InputManager.Key(Key.Number5));
+            AddStep("select grid tool", () => InputManager.Key(Key.Number6));
             AddStep("move cursor to centre", () => InputManager.MoveMouseTo(Editor));
             AddStep("start grid placement", () => InputManager.Click(MouseButton.Left));
             AddStep("end grid placement", () => InputManager.Click(MouseButton.Left));
@@ -342,7 +342,7 @@ namespace osu.Game.Rulesets.Osu.Tests.Editor
         public void TestGridPlacementDoesNotOverrideToolChange()
         {
             AddStep("select circle tool", () => InputManager.Key(Key.Number2));
-            AddStep("select grid tool", () => InputManager.Key(Key.Number5));
+            AddStep("select grid tool", () => InputManager.Key(Key.Number6));
             AddStep("move cursor to centre", () => InputManager.MoveMouseTo(Editor));
             AddStep("start grid placement", () => InputManager.Click(MouseButton.Left));
             AddStep("select circle tool again", () => InputManager.Key(Key.Number2));

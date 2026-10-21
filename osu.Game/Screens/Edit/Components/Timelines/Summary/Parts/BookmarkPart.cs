@@ -58,9 +58,6 @@ namespace osu.Game.Screens.Edit.Components.Timelines.Summary.Parts
                 get => startTime;
                 set
                 {
-                    if (startTime == value)
-                        return;
-
                     startTime = value;
                     X = startTime;
                 }
@@ -75,11 +72,16 @@ namespace osu.Game.Screens.Edit.Components.Timelines.Summary.Parts
                 Anchor = Anchor.TopLeft;
                 Origin = Anchor.TopCentre;
 
-                Width = LineVisualisation.LINE_WIDTH;
                 Height = 1;
 
                 Colour = colours.Blue;
                 InternalChild = new Box { RelativeSizeAxes = Axes.Both };
+            }
+
+            protected override void Update()
+            {
+                base.Update();
+                Width = LineVisualisation.GetPixelWidth(this);
             }
 
             /// <summary>

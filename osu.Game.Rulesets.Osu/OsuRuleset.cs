@@ -87,7 +87,7 @@ namespace osu.Game.Rulesets.Osu
                         new KeyBinding(InputKey.Number2, OsuAction.EditorHitCircleTool),
                         new KeyBinding(InputKey.Number3, OsuAction.EditorSliderTool),
                         new KeyBinding(InputKey.Number4, OsuAction.EditorSpinnerTool),
-                        new KeyBinding(InputKey.Number5, OsuAction.EditorGridFromPointsTool),
+                        new KeyBinding(InputKey.Number6, OsuAction.EditorGridFromPointsTool),
                         new KeyBinding(InputKey.T, OsuAction.EditorToggleGridSnap),
                         new KeyBinding(InputKey.Y, OsuAction.EditorToggleDistanceSnap),
                         ..GetSlopEditorKeyBindings(),
@@ -97,7 +97,7 @@ namespace osu.Game.Rulesets.Osu
 
         public override IEnumerable<KeyBinding> GetSlopEditorKeyBindings() =>
         [
-            new KeyBinding(InputKey.Number6, OsuAction.EditorStreamTool),
+            new KeyBinding(InputKey.Number5, OsuAction.EditorStreamTool),
         ];
 
         public override IEnumerable<Mod> ConvertFromLegacyMods(LegacyMods mods)

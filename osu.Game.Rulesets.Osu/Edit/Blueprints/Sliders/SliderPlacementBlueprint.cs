@@ -465,7 +465,7 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
             else if (state == SliderPlacementState.Drawing || inputManager.CurrentState.Keyboard.AltPressed)
                 HitObject.Path.ExpectedDistance.Value = (float)HitObject.Path.CalculatedDistance;
             else
-                HitObject.Path.ExpectedDistance.Value = distanceSnapProvider?.FindSnappedDistance((float)HitObject.Path.CalculatedDistance, HitObject.StartTime, HitObject) ?? (float)HitObject.Path.CalculatedDistance;
+                HitObject.Path.ExpectedDistance.Value = distanceSnapProvider?.FindSnappedSliderDistance((float)HitObject.Path.CalculatedDistance, HitObject.StartTime, HitObject) ?? (float)HitObject.Path.CalculatedDistance;
 
             bodyPiece.UpdateFrom(HitObject);
             headCirclePiece.UpdateFrom(HitObject.HeadCircle);

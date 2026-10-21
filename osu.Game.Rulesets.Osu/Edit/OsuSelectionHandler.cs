@@ -151,7 +151,7 @@ namespace osu.Game.Rulesets.Osu.Edit
             if (!e.ControlPressed || !e.ShiftPressed || e.SuperPressed)
                 return base.OnScroll(e);
 
-            if (!RotationHandler.CanRotateAroundSelectionOrigin.Value || RotationHandler.OperationInProgress.Value)
+            if (!canScrollRotate || RotationHandler.OperationInProgress.Value)
                 return base.OnScroll(e);
 
             float scrollComponent = e.ScrollDelta.X + e.ScrollDelta.Y;
@@ -197,14 +197,26 @@ namespace osu.Game.Rulesets.Osu.Edit
         }
 
         /// <summary>
+        /// Whether scroll rotation rotates around the selection, instead of around the centre of the playfield.
+        /// </summary>
+        private bool scrollRotationAroundSelection => config.Get<bool>(OsuSetting.SlopEditorRotateAroundSelection);
+
+        private bool canScrollRotate => scrollRotationAroundSelection
+            ? RotationHandler.CanRotateAroundSelectionOrigin.Value
+            : RotationHandler.CanRotateAroundPlayfieldOrigin.Value;
+
+        /// <summary>
         /// The point which scroll rotation rotates around, in gamefield (osu!pixel) space.
-        /// Either the centre of the hit circles and slider heads of the selection, ignoring slider bodies (a single slider is rotated around its head),
+        /// Either the centre of the playfield (see <see cref="OsuSetting.SlopEditorRotateAroundSelection"/>),
+        /// the centre of the hit circles and slider heads of the selection, ignoring slider bodies (a single slider is rotated around its head),
         /// or the centre of the whole selection (as when rotating via the selection box).
         /// </summary>
         /// <remarks>
         /// Rotation around this point preserves it, so that it stays the same throughout a scroll rotation gesture.
         /// </remarks>
-        private Vector2 getScrollRotationOrigin() => config.Get<bool>(OsuSetting.SlopEditorRotateAroundObjectStarts)
+        private Vector2 getScrollRotationOrigin() => !scrollRotationAroundSelection
+            ? OsuPlayfield.BASE_SIZE / 2
+            : config.Get<bool>(OsuSetting.SlopEditorRotateAroundObjectStarts)
             ? GeometryUtils.MinimumEnclosingCircle(selectedMovableObjects.Select(h => h.Position)).Item1
             : GeometryUtils.MinimumEnclosingCircle(selectedMovableObjects).Item1;
 
@@ -227,7 +239,7 @@ namespace osu.Game.Rulesets.Osu.Edit
             // like osu!stable, the point which is rotated around is shown while rotating, and already while holding the modifiers to show where it is.
             bool showRotationOrigin = state.Keyboard.ControlPressed && state.Keyboard.ShiftPressed && !state.Keyboard.SuperPressed
                                       && !state.Mouse.Buttons.HasAnyButtonPressed
-                                      && RotationHandler.CanRotateAroundSelectionOrigin.Value;
+                                      && canScrollRotate;
 
             if (showRotationOrigin)
                 updateScrollRotationOriginPosition();

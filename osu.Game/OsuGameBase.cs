@@ -22,6 +22,7 @@ using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Textures;
 using osu.Framework.Input;
+using osu.Framework.Input.Bindings;
 using osu.Framework.Input.Handlers;
 using osu.Framework.Input.Handlers.Joystick;
 using osu.Framework.Input.Handlers.Midi;
@@ -465,6 +466,7 @@ namespace osu.Game
 
             KeyBindingStore = new RealmKeyBindingStore(realm, keyCombinationProvider);
             KeyBindingStore.Register(globalBindings, RulesetStore.AvailableRulesets);
+            migrateEditorToolKeys();
             dependencies.Cache(KeyBindingStore);
 
             dependencies.Cache(globalBindings);
@@ -728,6 +730,33 @@ namespace osu.Game
                 throw new InvalidOperationException("Global beatmap bindable must be changed from update thread.");
 
             Logger.Log($"Game-wide working beatmap updated to {beatmap.NewValue}");
+        }
+
+        /// <summary>
+        /// Moves stored osu! editor tool key bindings from the previous defaults (grid tool on 5, stream tool on 6) to the current ones (stream tool on 5, grid tool on 6).
+        /// Bindings the user customised are left alone.
+        /// </summary>
+        private void migrateEditorToolKeys()
+        {
+            if (LocalConfig.Get<bool>(OsuSetting.SlopEditorToolKeysSwapped))
+                return;
+
+            var osuRuleset = RulesetStore.GetRuleset(@"osu");
+
+            if (osuRuleset != null)
+            {
+                var defaults = osuRuleset.CreateInstance().GetDefaultKeyBindings(Rulesets.Ruleset.EDITOR_VARIANT).ToArray();
+                var five = new KeyCombination(InputKey.Number5);
+                var six = new KeyCombination(InputKey.Number6);
+
+                object streamAction = defaults.SingleOrDefault(b => b.KeyCombination.Equals(five))?.Action;
+                object gridAction = defaults.SingleOrDefault(b => b.KeyCombination.Equals(six))?.Action;
+
+                if (streamAction != null && gridAction != null)
+                    KeyBindingStore.SwapBindingsIfUnchanged(osuRuleset.ShortName, Rulesets.Ruleset.EDITOR_VARIANT, streamAction, six, gridAction, five);
+            }
+
+            LocalConfig.SetValue(OsuSetting.SlopEditorToolKeysSwapped, true);
         }
 
         private void onRulesetChanged(ValueChangedEvent<RulesetInfo> r)

@@ -296,7 +296,8 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopEditorMutedEndsSoftC999, false);
             SetDefault(OsuSetting.SlopEditorZoomOut, false);
             SetDefault(OsuSetting.SlopEditorShowGrid, true);
-            SetDefault(OsuSetting.SlopEditorRotateAroundSelection, false);
+            SetDefault(OsuSetting.SlopEditorRotateAroundSelection, true);
+            SetDefault(OsuSetting.SlopEditorToolKeysSwapped, false);
             SetDefault(OsuSetting.SlopHitsoundEditorFrostedLanes, false);
             SetDefault(OsuSetting.SlopHitsoundEditorToolboxExpandOnHover, true);
             SetDefault(OsuSetting.SlopEditorAutoApplyHitsoundDifficulty, false);
@@ -374,7 +375,7 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopEditorDifficultyStars, true);
             SetDefault(OsuSetting.SlopEditorAlwaysIgnoreBeatmapSamples, false);
             SetDefault(OsuSetting.SlopEditorPointInsertPreview, false);
-            SetDefault(OsuSetting.SlopEditorSliderCurveColour, SliderCurveColourStyle.Line);
+            SetDefault(OsuSetting.SlopEditorSliderCurveColour, SliderCurveColourStyle.AnchorAndLine);
             SetDefault(OsuSetting.SlopEditorDisableAltDistanceSnap, false);
             SetDefault(OsuSetting.SlopEditorSliderPartOnFirstClick, false);
             SetDefault(OsuSetting.SlopEditorNoAudioStretch, false);
@@ -838,9 +839,15 @@ namespace osu.Game.Configuration
         SlopEditorShowGrid,
 
         /// <summary>
-        /// Whether the rotation hotkeys rotate around the selection, instead of around the centre of the playfield.
+        /// Whether the rotation hotkeys and scroll rotation rotate around the selection, instead of around the centre of the playfield.
         /// </summary>
         SlopEditorRotateAroundSelection,
+
+        /// <summary>
+        /// Whether the stored osu! editor tool key bindings were migrated to the stream tool being on 5 and the grid tool on 6.
+        /// Not exposed to the user.
+        /// </summary>
+        SlopEditorToolKeysSwapped,
 
         /// <summary>
         /// Whether the lanes of the hitsound editor have a frosted glass background, instead of an opaque one.

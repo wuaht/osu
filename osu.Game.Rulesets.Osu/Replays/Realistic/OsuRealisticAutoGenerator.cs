@@ -49,11 +49,28 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
 
         private static readonly DynamicsParameters resting = new DynamicsParameters(2, 1, 1);
 
+        /// <summary>
+        /// How far the cursor wanders around its target while following a slider, relative to the slider's radius.
+        /// </summary>
+        private const float slider_wander_amount = 0.45f;
+
+        /// <summary>
+        /// How long it takes the wandering offset to change direction, in milliseconds.
+        /// </summary>
+        private const double slider_wander_interval = 220;
+
+        /// <summary>
+        /// How far from the centre of the slider body the cursor may move, relative to the slider's radius.
+        /// Slightly smaller than 1, so that the cursor stays visibly inside the body including its border.
+        /// </summary>
+        private const float slider_body_limit = 0.8f;
+
         private static readonly Vector2 playfield_min = new Vector2(-512, -384);
         private static readonly Vector2 playfield_max = new Vector2(1024, 768);
 
         private readonly IReadOnlyList<OsuHitObject> hitObjects;
         private readonly Dictionary<Slider, LenientSliderPath> sliderPaths = new Dictionary<Slider, LenientSliderPath>();
+        private readonly Dictionary<Slider, List<Vector2>> sliderBodies = new Dictionary<Slider, List<Vector2>>();
         private readonly Dictionary<OsuHitObject, double> leaveTimes = new Dictionary<OsuHitObject, double>();
 
         private SecondOrderDynamics cursor = null!;
@@ -72,6 +89,12 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
 
                 var next = i + 1 < hitObjects.Count ? hitObjects[i + 1] : null;
                 sliderPaths[slider] = new LenientSliderPath(slider, next is Spinner ? null : next);
+
+                var body = new List<Vector2>();
+                slider.Path.GetPathToProgress(body, 0, 1);
+                for (int j = 0; j < body.Count; j++)
+                    body[j] += slider.StackedPosition;
+                sliderBodies[slider] = body;
             }
         }
 
@@ -238,10 +261,68 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
             float followAmount = (float)(Math.Clamp(1 - slider.Velocity / 2, 0, 1) * Math.Clamp((slider.SpanDuration - 50) / 100, 0, 1));
             Vector2 target = Vector2.Lerp(sliderPaths[slider].PositionAt(aheadTime), ballPositionAt(slider, aheadTime), followAmount);
 
+            // players don't follow the exact centre of the slider, but wander around within the body.
+            target += wanderOffset(slider, aheadTime) * (float)slider.Radius * slider_wander_amount;
+
             moveTo(dt, target, tracking);
 
-            // stay inside the follow circle, so that no ticks are missed.
+            // stay inside the slider body.
+            var body = sliderBodies[slider];
+            if (body.Count > 0)
+                cursor.ConstrainToCircle(closestPointOnPath(body, cursor.Position), (float)slider.Radius * slider_body_limit);
+
+            // staying inside the follow circle takes priority, so that no ticks are missed even where the body overlaps itself.
             cursor.ConstrainToCircle(ballPositionAt(slider, time), (float)slider.Radius * 2);
+        }
+
+        /// <summary>
+        /// A smoothly changing offset with a length of at most 1, which is always the same for the same slider and time.
+        /// </summary>
+        private static Vector2 wanderOffset(Slider slider, double time)
+        {
+            double t = (time - slider.StartTime) / slider_wander_interval;
+            Vector2 seed = slider.StackedPosition + new Vector2((float)(slider.StartTime % 10000), 0);
+
+            Vector2 offset = new Vector2(smoothNoise(seed, t) * 2 - 1, smoothNoise(seed + new Vector2(0, 7), t) * 2 - 1);
+            return offset.Length > 1 ? offset.Normalized() : offset;
+        }
+
+        /// <summary>
+        /// Smoothly interpolates between pseudo-random values at whole numbers of <paramref name="t"/>.
+        /// </summary>
+        private static float smoothNoise(Vector2 seed, double t)
+        {
+            double knot = Math.Floor(t);
+            float progress = (float)(t - knot);
+            float a = RealisticMath.Random(seed + new Vector2((float)knot, 0));
+            float b = RealisticMath.Random(seed + new Vector2((float)knot + 1, 0));
+
+            return a + (b - a) * progress * progress * (3 - 2 * progress);
+        }
+
+        private static Vector2 closestPointOnPath(List<Vector2> path, Vector2 position)
+        {
+            Vector2 closest = path[0];
+            float closestDistance = Vector2.DistanceSquared(position, closest);
+
+            for (int i = 1; i < path.Count; i++)
+            {
+                Vector2 start = path[i - 1];
+                Vector2 segment = path[i] - start;
+                float lengthSquared = segment.LengthSquared;
+                float progress = lengthSquared > 0 ? Math.Clamp(Vector2.Dot(position - start, segment) / lengthSquared, 0, 1) : 0;
+
+                Vector2 point = start + segment * progress;
+                float distance = Vector2.DistanceSquared(position, point);
+
+                if (distance < closestDistance)
+                {
+                    closest = point;
+                    closestDistance = distance;
+                }
+            }
+
+            return closest;
         }
 
         private void approach(double time, float dt, OsuHitObject current, OsuHitObject next)

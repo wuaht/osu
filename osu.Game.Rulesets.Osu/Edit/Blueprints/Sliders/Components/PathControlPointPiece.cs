@@ -240,7 +240,7 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders.Components
             if (ControlPoint.Type is not PathType pathType)
                 return colours.Yellow;
 
-            if (curveColourStyle.Value != SliderCurveColourStyle.Anchor)
+            if (curveColourStyle.Value != SliderCurveColourStyle.Anchor && curveColourStyle.Value != SliderCurveColourStyle.AnchorAndLine)
             {
                 // only anchors which start a new segment are highlighted.
                 return hitObject.Path.ControlPoints.IndexOf(ControlPoint) > 0 ? colours.Red : colours.Yellow;

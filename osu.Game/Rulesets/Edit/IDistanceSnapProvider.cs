@@ -80,5 +80,14 @@ namespace osu.Game.Rulesets.Edit
         /// consumers are expected to include that multiplier as they see fit.
         /// </summary>
         float FindSnappedDistance(float distance, double snapReferenceTime, IHasSliderVelocity? withVelocity = null);
+
+        /// <summary>
+        /// Snaps the length of a slider starting at <paramref name="startTime"/> so that its end lands on a beat tick.
+        /// Unlike <see cref="FindSnappedDistance"/>, the end is snapped to the ticks of the timing point active at the end,
+        /// so that sliders spanning a timing point end on the ticks of the later timing point.
+        /// The slider's velocity is still derived from the timing point at <paramref name="startTime"/>.
+        /// </summary>
+        float FindSnappedSliderDistance(float distance, double startTime, IHasSliderVelocity? withVelocity = null)
+            => FindSnappedDistance(distance, startTime, withVelocity);
     }
 }

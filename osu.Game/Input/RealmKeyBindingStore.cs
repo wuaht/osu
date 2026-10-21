@@ -117,6 +117,37 @@ namespace osu.Game.Input
             });
         }
 
+        /// <summary>
+        /// Swaps the key bindings of two actions, but only if each action has exactly one binding and they match the given combinations.
+        /// Used to migrate changed defaults without touching bindings the user customised.
+        /// </summary>
+        /// <param name="rulesetName">The short name of the ruleset the actions belong to.</param>
+        /// <param name="variant">The variant the actions belong to.</param>
+        /// <param name="actionA">The first action, expected to be bound to <paramref name="oldA"/>.</param>
+        /// <param name="oldA">The combination <paramref name="actionA"/> is expected to be bound to.</param>
+        /// <param name="actionB">The second action, expected to be bound to <paramref name="oldB"/>.</param>
+        /// <param name="oldB">The combination <paramref name="actionB"/> is expected to be bound to.</param>
+        /// <returns>Whether the bindings were swapped.</returns>
+        public bool SwapBindingsIfUnchanged(string rulesetName, int variant, object actionA, KeyCombination oldA, object actionB, KeyCombination oldB)
+        {
+            return realm.Write(r =>
+            {
+                var bindings = r.All<RealmKeyBinding>().Where(b => b.RulesetName == rulesetName && b.Variant == variant).ToList();
+                var bindingsA = bindings.Where(b => b.ActionInt == (int)actionA).ToList();
+                var bindingsB = bindings.Where(b => b.ActionInt == (int)actionB).ToList();
+
+                if (bindingsA.Count != 1 || bindingsB.Count != 1)
+                    return false;
+
+                if (!bindingsA[0].KeyCombination.Equals(oldA) || !bindingsB[0].KeyCombination.Equals(oldB))
+                    return false;
+
+                bindingsA[0].KeyCombination = oldB;
+                bindingsB[0].KeyCombination = oldA;
+                return true;
+            });
+        }
+
         private void insertDefaults(Realm realm, List<RealmKeyBinding> existingBindings, IEnumerable<IKeyBinding> defaults, string? rulesetName = null, int? variant = null)
         {
             // compare counts in database vs defaults for each action type.

@@ -140,7 +140,7 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders.Components
             Insert(newControlPoints, insertionIndex, new PathControlPoint(position));
 
             var newPath = new SliderPath(newControlPoints.ToArray());
-            newPath.ExpectedDistance.Value = distanceSnapProvider?.FindSnappedDistance((float)newPath.CalculatedDistance, slider.StartTime, slider) ?? newPath.CalculatedDistance;
+            newPath.ExpectedDistance.Value = distanceSnapProvider?.FindSnappedSliderDistance((float)newPath.CalculatedDistance, slider.StartTime, slider) ?? newPath.CalculatedDistance;
 
             vertices.Clear();
             newPath.GetPathToProgress(vertices, 0, 1);

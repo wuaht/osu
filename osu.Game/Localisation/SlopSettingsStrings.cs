@@ -367,15 +367,15 @@ namespace osu.Game.Localisation
             @"Shows the positional snap grid in the compose screen. Grid snapping keeps working while the grid is hidden.");
 
         /// <summary>
-        /// "Rotation hotkeys rotate around the selection"
+        /// "Rotate around the selection"
         /// </summary>
-        public static LocalisableString RotateAroundSelection => new TranslatableString(getKey(@"rotate_around_selection"), @"Rotation hotkeys rotate around the selection");
+        public static LocalisableString RotateAroundSelection => new TranslatableString(getKey(@"rotate_around_selection"), @"Rotate around the selection");
 
         /// <summary>
-        /// "When disabled, the rotation hotkeys rotate the selection around the centre of the playfield."
+        /// "When disabled, the rotation hotkeys and ctrl+shift+scroll rotate the selection around the centre of the playfield."
         /// </summary>
         public static LocalisableString RotateAroundSelectionDescription => new TranslatableString(getKey(@"rotate_around_selection_description"),
-            @"When disabled, the rotation hotkeys rotate the selection around the centre of the playfield.");
+            @"When disabled, the rotation hotkeys and ctrl+shift+scroll rotate the selection around the centre of the playfield.");
 
         /// <summary>
         /// "Frosted hitsound editor lanes"
@@ -1077,6 +1077,11 @@ namespace osu.Game.Localisation
         /// "Line"
         /// </summary>
         public static LocalisableString SliderCurveColourLine => new TranslatableString(getKey(@"slider_curve_colour_line"), @"Line");
+
+        /// <summary>
+        /// "Anchor and line"
+        /// </summary>
+        public static LocalisableString SliderCurveColourAnchorAndLine => new TranslatableString(getKey(@"slider_curve_colour_anchor_and_line"), @"Anchor and line");
 
         /// <summary>
         /// "Disable Alt for distance snap"

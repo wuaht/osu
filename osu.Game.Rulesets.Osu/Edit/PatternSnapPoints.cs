@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using osu.Framework.Utils;
 using osu.Game.Rulesets.Objects.Types;
 using osu.Game.Rulesets.Osu.Objects;
@@ -80,6 +81,12 @@ namespace osu.Game.Rulesets.Osu.Edit
             for (int i = 0; i < Line.Length - 1; i++)
                 yield return new PatternSnapGuideLine(new[] { Line[i] + direction * ObjectRadius, Line[i + 1] - direction * ObjectRadius }, PatternSnapping.GUIDE_LINE_ALPHA);
         }
+
+        // the points are recalculated every frame, so the line is compared by its positions rather than by reference.
+        public virtual bool Equals(LineSnapPoint? other)
+            => other != null && Position == other.Position && ObjectRadius == other.ObjectRadius && Line.SequenceEqual(other.Line);
+
+        public override int GetHashCode() => HashCode.Combine(Position, ObjectRadius, Line.Length);
     }
 
     /// <summary>

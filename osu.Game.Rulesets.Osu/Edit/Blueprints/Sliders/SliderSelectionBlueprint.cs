@@ -124,24 +124,14 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
                 splitPreview = new Container
                 {
                     Origin = Anchor.Centre,
-                    Width = 5,
+                    Width = 2,
                     Alpha = 0,
-                    Children = new Drawable[]
+                    // a subtle transparent grey line across the path.
+                    Child = new Box
                     {
-                        new Box
-                        {
-                            RelativeSizeAxes = Axes.Both,
-                            Colour = Color4.White,
-                        },
-                        new Box
-                        {
-                            Anchor = Anchor.Centre,
-                            Origin = Anchor.Centre,
-                            RelativeSizeAxes = Axes.Both,
-                            Size = new Vector2(0.4f, 0.97f),
-                            Colour = Color4.Red,
-                        },
-                    }
+                        RelativeSizeAxes = Axes.Both,
+                        Colour = new Color4(0.6f, 0.6f, 0.6f, 0.6f),
+                    },
                 },
                 HeadOverlay = CreateCircleOverlay(HitObject, SliderPosition.Start),
                 TailOverlay = CreateCircleOverlay(HitObject, SliderPosition.End),
@@ -482,7 +472,7 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
 
                 // Add a small amount to the proposed distance to make it easier to snap to the full length of the slider.
                 if (!ignoreBeatSnap)
-                    proposedDistance = distanceSnapProvider?.FindSnappedDistance((float)proposedDistance + 1, HitObject.StartTime, HitObject) ?? proposedDistance;
+                    proposedDistance = distanceSnapProvider?.FindSnappedSliderDistance((float)proposedDistance + 1, HitObject.StartTime, HitObject) ?? proposedDistance;
 
                 // the slider may be extended beyond the path's calculated distance, which extends its last segment in a straight line.
                 proposedDistance = Math.Max(proposedDistance, ignoreBeatSnap ? 1 : minDistance);

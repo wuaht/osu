@@ -162,6 +162,10 @@ namespace osu.Game.Screens.Edit
         {
             findChangedIndices(result, LegacyDecoder<Beatmap>.Section.HitObjects, out var removedIndices, out var addedIndices);
 
+            // the removed objects get replaced by new instances, so remember which of them were selected to carry the selection over to their replacements.
+            var removedSelected = removedIndices.Select(i => editorBeatmap.SelectedHitObjects.Contains(editorBeatmap.HitObjects[i])).ToList();
+            var removedSelectedStartTimes = removedIndices.Where((_, k) => removedSelected[k]).Select(i => editorBeatmap.HitObjects[i].StartTime).ToList();
+
             for (int i = removedIndices.Count - 1; i >= 0; i--)
                 editorBeatmap.RemoveAt(removedIndices[i]);
 
@@ -169,8 +173,19 @@ namespace osu.Game.Screens.Edit
             {
                 var newBeatmap = getNewBeatmap();
 
-                foreach (int i in addedIndices)
-                    editorBeatmap.Insert(i, newBeatmap.HitObjects[i]);
+                for (int k = 0; k < addedIndices.Count; k++)
+                {
+                    var hitObject = newBeatmap.HitObjects[addedIndices[k]];
+                    editorBeatmap.Insert(addedIndices[k], hitObject);
+
+                    // objects which were modified pair up one to one, otherwise fall back to matching the start time.
+                    bool wasSelected = addedIndices.Count == removedIndices.Count
+                        ? removedSelected[k]
+                        : removedSelectedStartTimes.Any(t => Math.Abs(t - hitObject.StartTime) < 1);
+
+                    if (wasSelected)
+                        editorBeatmap.SelectedHitObjects.Add(hitObject);
+                }
             }
         }
 

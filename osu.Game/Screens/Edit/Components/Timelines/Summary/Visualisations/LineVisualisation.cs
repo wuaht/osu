@@ -13,7 +13,10 @@ namespace osu.Game.Screens.Edit.Components.Timelines.Summary.Visualisations
     /// </summary>
     public partial class LineVisualisation : Box
     {
-        public const float LINE_WIDTH = 0.5f;
+        /// <summary>
+        /// The width of the line in screen-space pixels.
+        /// </summary>
+        public const float LINE_WIDTH = 1;
 
         public readonly double StartTime;
 
@@ -25,11 +28,29 @@ namespace osu.Game.Screens.Edit.Components.Timelines.Summary.Visualisations
             Anchor = Anchor.TopLeft;
             Origin = Anchor.TopCentre;
 
-            Width = LINE_WIDTH;
             Height = 1;
 
             X = (float)startTime;
             StartTime = startTime;
+        }
+
+        protected override void Update()
+        {
+            base.Update();
+            Width = GetPixelWidth(this);
+        }
+
+        /// <summary>
+        /// Computes the local width that makes a line exactly <see cref="LINE_WIDTH"/> screen-space pixels wide.
+        /// A line thinner than one pixel can fall between pixel centres and is then not drawn at all, depending on its position.
+        /// </summary>
+        public static float GetPixelWidth(Drawable line)
+        {
+            if (line.Parent == null)
+                return LINE_WIDTH;
+
+            float pixelsPerUnit = (line.Parent.ToScreenSpace(Vector2.UnitX) - line.Parent.ToScreenSpace(Vector2.Zero)).Length;
+            return pixelsPerUnit > 0 ? LINE_WIDTH / pixelsPerUnit : LINE_WIDTH;
         }
 
         /// <summary>

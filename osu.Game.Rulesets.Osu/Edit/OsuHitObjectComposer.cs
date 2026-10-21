@@ -563,6 +563,11 @@ namespace osu.Game.Rulesets.Osu.Edit
         private readonly List<PatternSnapPoint> snappedPatternSnapPoints = new List<PatternSnapPoint>();
 
         /// <summary>
+        /// The maximum distance in osu!pixels at which an object is considered to be located at a pattern snap point.
+        /// </summary>
+        private const float pattern_snap_point_tolerance = 1;
+
+        /// <summary>
         /// The positions in the current frame which arcs of moved sliders can be snapped to, or <c>null</c> if not yet calculated in this frame.
         /// These are the centres of arcs of other sliders (<see cref="sliderBlanketSnap"/>), and the positions of circles and slider ends (<see cref="blanketSnap"/>),
         /// with the arc at that position if there is one.
@@ -760,7 +765,14 @@ namespace osu.Game.Rulesets.Osu.Edit
 
             var positions = objects.SelectMany(getSnappablePositions).ToList();
 
-            return snappedPatternSnapPoints.Where(p => positions.Any(pos => Vector2.Distance(pos, p.Position) < 1)).ToList();
+            // an object may complete multiple patterns at once (e.g. a triangle, a line and a blanket), all of which are displayed,
+            // not only the one it was snapped to. the pattern snap points aren't calculated when only the arc of a slider was snapped.
+            patternSnapPoints ??= calculatePatternSnapPoints(Playfield);
+
+            return snappedPatternSnapPoints.Concat(patternSnapPoints.Select(p => p.point))
+                                           .Distinct()
+                                           .Where(p => positions.Any(pos => Vector2.Distance(pos, p.Position) < pattern_snap_point_tolerance))
+                                           .ToList();
         }
 
         private static IEnumerable<Vector2> getSnappablePositions(OsuHitObject hitObject)
