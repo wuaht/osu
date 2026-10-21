@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -26,6 +27,7 @@ using osu.Framework.Input.Bindings;
 using osu.Framework.Input.Events;
 using osu.Framework.Input.StateChanges;
 using osu.Framework.Logging;
+using osu.Framework.Platform;
 using osu.Framework.Screens;
 using osu.Framework.Threading;
 using osu.Game.Beatmaps;
@@ -164,6 +166,9 @@ namespace osu.Game.Screens.Select
 
         [Resolved]
         private IOverlayManager? overlayManager { get; set; }
+
+        [Resolved]
+        private GameHost host { get; set; } = null!;
 
         private InputManager inputManager = null!;
 
@@ -351,6 +356,7 @@ namespace osu.Game.Screens.Select
         protected virtual ModSelectOverlay CreateModSelectOverlay() => new UserModSelectOverlay
         {
             ShowPresets = true,
+            AllowDefaultMods = true,
         };
 
         private void requestRecommendedSelection(IEnumerable<GroupedBeatmap> groupedBeatmaps)
@@ -1256,10 +1262,63 @@ namespace osu.Game.Screens.Select
                     yield return new OsuMenuItem(CommonStrings.CopyLink, MenuItemType.Standard, () => (game as OsuGame)?.CopyToClipboard(url));
             }
 
+            foreach (var i in CreateBeatmapFileMenuActions(beatmap))
+                yield return i;
+
             yield return new OsuMenuItemSpacer();
 
             foreach (var i in CreateCollectionMenuActions(beatmap))
                 yield return i;
+        }
+
+        /// <summary>
+        /// Menu items for copying the online IDs of <paramref name="beatmap"/> and opening its files (like osu!stable).
+        /// </summary>
+        protected IEnumerable<OsuMenuItem> CreateBeatmapFileMenuActions(BeatmapInfo beatmap)
+        {
+            if (beatmap.OnlineID > 0)
+            {
+                yield return new OsuMenuItem(SlopSongSelectStrings.CopyBeatmapId, MenuItemType.Standard, () => (game as OsuGame)?.CopyToClipboard(beatmap.OnlineID.ToString()))
+                {
+                    Icon = FontAwesome.Regular.Copy
+                };
+            }
+
+            if (beatmap.BeatmapSet?.OnlineID > 0)
+            {
+                int setId = beatmap.BeatmapSet.OnlineID;
+
+                yield return new OsuMenuItem(SlopSongSelectStrings.CopyBeatmapSetId, MenuItemType.Standard, () => (game as OsuGame)?.CopyToClipboard(setId.ToString()))
+                {
+                    Icon = FontAwesome.Regular.Copy
+                };
+            }
+
+            if (beatmap.BeatmapSet != null)
+            {
+                yield return new OsuMenuItem(SlopSongSelectStrings.OpenBeatmapFolder, MenuItemType.Standard, () => openBeatmapFolder(beatmap.BeatmapSet))
+                {
+                    Icon = FontAwesome.Regular.FolderOpen
+                };
+            }
+        }
+
+        private void openBeatmapFolder(BeatmapSetInfo beatmapSet)
+        {
+            // files are stored by hash, so a copy with the actual filenames is opened instead.
+            // changes to the copy are not imported back, as there is no way to tell when the user is done with it.
+            Task.Run(async () =>
+            {
+                try
+                {
+                    var operation = await beatmaps.BeginExternalEditing(beatmapSet.Detach()).ConfigureAwait(false);
+                    host.OpenFileExternally(operation.MountedPath.TrimDirectorySeparator() + Path.DirectorySeparatorChar);
+                }
+                catch (Exception e)
+                {
+                    Logger.Error(e, "Failed to open the beatmap folder.");
+                }
+            });
         }
 
         protected IEnumerable<OsuMenuItem> CreateCollectionMenuActions(BeatmapInfo beatmap)

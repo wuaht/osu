@@ -198,17 +198,19 @@ namespace osu.Game.Graphics.UserInterfaceV2
             switch (args.Action)
             {
                 case NotifyCollectionChangedAction.Add:
-                    lockedStates.InsertRange(Math.Min(args.NewStartingIndex, lockedStates.Count), Enumerable.Repeat(false, args.NewItems!.Count));
+                    // the initial notification of the bound list has no starting index.
+                    int insertIndex = args.NewStartingIndex < 0 ? lockedStates.Count : Math.Min(args.NewStartingIndex, lockedStates.Count);
+                    lockedStates.InsertRange(insertIndex, Enumerable.Repeat(false, args.NewItems!.Count));
                     break;
 
-                case NotifyCollectionChangedAction.Remove:
+                case NotifyCollectionChangedAction.Remove when args.OldStartingIndex >= 0 && args.OldStartingIndex < lockedStates.Count:
                     lockedStates.RemoveRange(args.OldStartingIndex, Math.Min(args.OldItems!.Count, lockedStates.Count - args.OldStartingIndex));
                     break;
 
-                case NotifyCollectionChangedAction.Move:
+                case NotifyCollectionChangedAction.Move when args.OldStartingIndex >= 0 && args.OldStartingIndex < lockedStates.Count && args.NewStartingIndex >= 0:
                     bool movedState = lockedStates[args.OldStartingIndex];
                     lockedStates.RemoveAt(args.OldStartingIndex);
-                    lockedStates.Insert(args.NewStartingIndex, movedState);
+                    lockedStates.Insert(Math.Min(args.NewStartingIndex, lockedStates.Count), movedState);
                     break;
             }
 

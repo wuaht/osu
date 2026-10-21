@@ -268,6 +268,17 @@ namespace osu.Game.Localisation
             @"Objects snap to positions which continue a straight line of equally spaced visible objects.");
 
         /// <summary>
+        /// "Snap to triangle centres"
+        /// </summary>
+        public static LocalisableString TriangleCentreSnap => new TranslatableString(getKey(@"triangle_centre_snap"), @"Snap to triangle centres");
+
+        /// <summary>
+        /// "Objects snap to the centre of equilateral triangles formed by three visible objects."
+        /// </summary>
+        public static LocalisableString TriangleCentreSnapDescription => new TranslatableString(getKey(@"triangle_centre_snap_description"),
+            @"Objects snap to the centre of equilateral triangles formed by three visible objects.");
+
+        /// <summary>
         /// "Slider blanket snapping"
         /// </summary>
         public static LocalisableString SliderBlanketSnap => new TranslatableString(getKey(@"slider_blanket_snap"), @"Slider blanket snapping");

@@ -106,6 +106,7 @@ namespace osu.Game.Rulesets.Osu.Edit
         private Bindable<bool> visualSpacingSnap;
         private Bindable<bool> blanketSnap;
         private Bindable<bool> lineSnap;
+        private Bindable<bool> triangleCentreSnap;
         private Bindable<bool> sliderBlanketSnap;
 
         private PatternSnapGuideOverlay patternSnapGuides;
@@ -131,6 +132,7 @@ namespace osu.Game.Rulesets.Osu.Edit
             visualSpacingSnap = config.GetBindable<bool>(OsuSetting.SlopEditorVisualSpacingSnap);
             blanketSnap = config.GetBindable<bool>(OsuSetting.SlopEditorBlanketSnap);
             lineSnap = config.GetBindable<bool>(OsuSetting.SlopEditorLineSnap);
+            triangleCentreSnap = config.GetBindable<bool>(OsuSetting.SlopEditorTriangleCentreSnap);
             sliderBlanketSnap = config.GetBindable<bool>(OsuSetting.SlopEditorSliderBlanketSnap);
 
             AddInternal(DistanceSnapProvider);
@@ -721,7 +723,7 @@ namespace osu.Game.Rulesets.Osu.Edit
         {
             var points = new List<PatternSnapPoint>();
 
-            if (InputManager.CurrentState.Keyboard.ControlPressed || (!visualSpacingSnap.Value && !blanketSnap.Value && !lineSnap.Value))
+            if (InputManager.CurrentState.Keyboard.ControlPressed || (!visualSpacingSnap.Value && !blanketSnap.Value && !lineSnap.Value && !triangleCentreSnap.Value))
                 return new List<(PatternSnapPoint, Vector2)>();
 
             var objects = getPatternSnapObjects();
@@ -734,6 +736,9 @@ namespace osu.Game.Rulesets.Osu.Edit
 
             if (lineSnap.Value)
                 PatternSnapping.AddLineSnapPoints(objects, points);
+
+            if (triangleCentreSnap.Value)
+                PatternSnapping.AddTriangleCentreSnapPoints(objects, points);
 
             return points.Select(p => (p, playfield.GamefieldToScreenSpace(p.Position))).ToList();
         }

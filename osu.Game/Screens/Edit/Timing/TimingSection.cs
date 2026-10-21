@@ -16,6 +16,7 @@ namespace osu.Game.Screens.Edit.Timing
     {
         private LabelledTimeSignature timeSignature = null!;
         private LabelledSwitchButton omitBarLine = null!;
+        private RoundedButton equalizeButton = null!;
 
         [Resolved]
         private OsuConfigManager configManager { get; set; } = null!;
@@ -37,6 +38,13 @@ namespace osu.Game.Screens.Edit.Timing
                     Label = "Time Signature"
                 },
                 omitBarLine = new LabelledSwitchButton { Label = "Skip Bar Line" },
+                equalizeButton = new RoundedButton
+                {
+                    Text = SlopEditorStrings.EqualizeSliderVelocity,
+                    TooltipText = SlopEditorStrings.EqualizeSliderVelocityDescription,
+                    RelativeSizeAxes = Axes.X,
+                    Action = equalize,
+                },
             });
         }
 
@@ -71,9 +79,17 @@ namespace osu.Game.Screens.Edit.Timing
 
                 timeSignature.Current = point.NewValue.TimeSignatureBindable;
                 omitBarLine.Current = point.NewValue.OmitFirstBarLineBindable;
+                // like osu!stable, only possible for timing points which have a previous timing point.
+                equalizeButton.Enabled.Value = SliderVelocityEqualizer.CanEqualize(Beatmap, point.NewValue);
 
                 isRebinding = false;
             }
+        }
+
+        private void equalize()
+        {
+            if (ControlPoint.Value is TimingControlPoint point)
+                SliderVelocityEqualizer.Equalize(Beatmap, point);
         }
 
         protected override TimingControlPoint CreatePoint(ControlPointGroup selectedGroup)

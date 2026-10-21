@@ -69,6 +69,37 @@ namespace osu.Game.Localisation
         /// </summary>
         public static LocalisableString OnlineIdsValue(int beatmapId, int beatmapSetId) => new TranslatableString(getKey(@"beatmap_set_ids_value"), @"{0} / {1}", beatmapId, beatmapSetId);
 
+        /// <summary>
+        /// "Copy beatmap ID"
+        /// </summary>
+        public static LocalisableString CopyBeatmapId => new TranslatableString(getKey(@"copy_beatmap_id"), @"Copy beatmap ID");
+
+        /// <summary>
+        /// "Copy beatmap set ID"
+        /// </summary>
+        public static LocalisableString CopyBeatmapSetId => new TranslatableString(getKey(@"copy_beatmap_set_id"), @"Copy beatmap set ID");
+
+        /// <summary>
+        /// "Open folder"
+        /// </summary>
+        public static LocalisableString OpenBeatmapFolder => new TranslatableString(getKey(@"open_beatmap_folder"), @"Open folder");
+
+        /// <summary>
+        /// "Right click to set the current mods as the default for this ruleset. Hold Ctrl to also deselect the default mods."
+        /// </summary>
+        public static LocalisableString DeselectAllModsTooltip => new TranslatableString(getKey(@"deselect_all_mods_tooltip"),
+            @"Right click to set the current mods as the default for this ruleset. Hold Ctrl to also deselect the default mods.");
+
+        /// <summary>
+        /// "Set {1} as the default mods for {0}"
+        /// </summary>
+        public static LocalisableString DefaultModsSet(string ruleset, string mods) => new TranslatableString(getKey(@"default_mods_set"), @"Set {1} as the default mods for {0}", ruleset, mods);
+
+        /// <summary>
+        /// "Cleared the default mods for {0}"
+        /// </summary>
+        public static LocalisableString DefaultModsCleared(string ruleset) => new TranslatableString(getKey(@"default_mods_cleared"), @"Cleared the default mods for {0}", ruleset);
+
         private static string getKey(string key) => $"{prefix}:{key}";
     }
 }

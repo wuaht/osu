@@ -319,6 +319,47 @@ namespace osu.Game.Localisation
         /// </summary>
         public static LocalisableString UseAsTemplateFailed => new TranslatableString(getKey(@"use_as_template_failed"), @"Failed to create a new beatmap set from this difficulty.");
 
+        /// <summary>
+        /// "Equalize slider velocity"
+        /// </summary>
+        public static LocalisableString EqualizeSliderVelocity => new TranslatableString(getKey(@"equalize_slider_velocity"), @"Equalize slider velocity");
+
+        /// <summary>
+        /// "Sets the slider velocity of objects in this section so that they keep the speed from before the BPM change. Useful for lower difficulties."
+        /// </summary>
+        public static LocalisableString EqualizeSliderVelocityDescription => new TranslatableString(getKey(@"equalize_slider_velocity_description"),
+            @"Sets the slider velocity of objects in this section so that they keep the speed from before the BPM change. Useful for lower difficulties.");
+
+        /// <summary>
+        /// "Property transformer"
+        /// </summary>
+        public static LocalisableString PropertyTransformer => new TranslatableString(getKey(@"property_transformer"), @"Property transformer");
+
+        /// <summary>
+        /// "Property transformer..."
+        /// </summary>
+        public static LocalisableString PropertyTransformerEllipsis => new TranslatableString(getKey(@"property_transformer_ellipsis"), @"Property transformer...");
+
+        /// <summary>
+        /// "BPM"
+        /// </summary>
+        public static LocalisableString PropertyTransformerBpm => new TranslatableString(getKey(@"property_transformer_bpm"), @"BPM");
+
+        /// <summary>
+        /// "Slider velocity"
+        /// </summary>
+        public static LocalisableString PropertyTransformerSliderVelocity => new TranslatableString(getKey(@"property_transformer_slider_velocity"), @"Slider velocity");
+
+        /// <summary>
+        /// "Volume"
+        /// </summary>
+        public static LocalisableString PropertyTransformerVolume => new TranslatableString(getKey(@"property_transformer_volume"), @"Volume");
+
+        /// <summary>
+        /// "Apply"
+        /// </summary>
+        public static LocalisableString PropertyTransformerApply => new TranslatableString(getKey(@"property_transformer_apply"), @"Apply");
+
         private static string getKey(string key) => $"{prefix}:{key}";
     }
 }

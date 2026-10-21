@@ -11,10 +11,12 @@ using osu.Framework.Extensions.LocalisationExtensions;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Screens;
 using osu.Game.Beatmaps;
+using osu.Game.Configuration;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Localisation;
 using osu.Game.Online.API;
 using osu.Game.Overlays;
+using osu.Game.Overlays.Mods;
 using osu.Game.Overlays.Notifications;
 using osu.Game.Rulesets.Mods;
 using osu.Game.Screens.Edit;
@@ -32,6 +34,14 @@ namespace osu.Game.Screens.Select
 
         private PlayerLoader? playerLoader;
         private IReadOnlyList<Mod>? modsAtGameplayStart;
+
+        /// <summary>
+        /// Whether the default mods were already selected when song select was first entered.
+        /// </summary>
+        private static bool defaultModsApplied;
+
+        [Resolved]
+        private OsuConfigManager config { get; set; } = null!;
 
         [Resolved]
         private BeatmapSetOverlay? beatmapOverlay { get; set; }
@@ -61,6 +71,44 @@ namespace osu.Game.Screens.Select
             AddInternal(new SongSelectTouchInputDetector());
         }
 
+        protected override void LoadComplete()
+        {
+            base.LoadComplete();
+
+            // like osu!stable, the default mods of a ruleset are selected when switching to it.
+            // scheduled to run after the selected mods were converted to the new ruleset.
+            Ruleset.BindValueChanged(_ => Schedule(() =>
+            {
+                if (this.IsCurrentScreen())
+                    applyDefaultMods();
+            }));
+        }
+
+        public override void OnEntering(ScreenTransitionEvent e)
+        {
+            base.OnEntering(e);
+
+            // like osu!stable, the default mods are selected the first time song select is entered.
+            if (!defaultModsApplied)
+            {
+                defaultModsApplied = true;
+                applyDefaultMods();
+            }
+        }
+
+        private void applyDefaultMods()
+        {
+            if (Mods.Disabled || !Ruleset.Value.Available)
+                return;
+
+            var defaults = DefaultMods.Get(config, Ruleset.Value.CreateInstance());
+
+            if (defaults.Length == 0)
+                return;
+
+            Mods.Value = Mods.Value.Where(m => m.Type == ModType.System).Concat(defaults).ToArray();
+        }
+
         public override IEnumerable<OsuMenuItem> GetForwardActions(BeatmapInfo beatmap)
         {
             yield return new OsuMenuItem(ButtonSystemStrings.Play.ToSentence(), MenuItemType.Highlighted, () => SelectAndRun(beatmap, OnStart)) { Icon = FontAwesome.Solid.Check };
@@ -74,9 +122,12 @@ namespace osu.Game.Screens.Select
 
                 if (beatmap.GetOnlineURL(api, Ruleset.Value) is string url)
                     yield return new OsuMenuItem(CommonStrings.CopyLink, MenuItemType.Standard, () => game?.CopyToClipboard(url));
-
-                yield return new OsuMenuItemSpacer();
             }
+
+            foreach (var i in CreateBeatmapFileMenuActions(beatmap))
+                yield return i;
+
+            yield return new OsuMenuItemSpacer();
 
             foreach (var i in CreateCollectionMenuActions(beatmap))
                 yield return i;

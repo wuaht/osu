@@ -157,6 +157,12 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                 }),
                 new SettingsItemV2(new FormCheckBox
                 {
+                    Caption = SlopSettingsStrings.TriangleCentreSnap,
+                    HintText = SlopSettingsStrings.TriangleCentreSnapDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorTriangleCentreSnap),
+                }),
+                new SettingsItemV2(new FormCheckBox
+                {
                     Caption = SlopSettingsStrings.SliderBlanketSnap,
                     HintText = SlopSettingsStrings.SliderBlanketSnapDescription,
                     Current = config.GetBindable<bool>(OsuSetting.SlopEditorSliderBlanketSnap),

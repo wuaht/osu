@@ -601,9 +601,6 @@ namespace osu.Game.Screens.Edit
             base.LoadComplete();
             setUpClipboardActionAvailability();
 
-            if (supportsBackgroundAlignment)
-                ApplyToBackground(b => ((EditorBackgroundScreen)b).AlignmentTarget = () => (currentScreen as ComposeScreen)?.Composer?.Playfield);
-
             lastSaveTime = Time.Current;
 
             Mode.Value = isNewBeatmap ? EditorScreenMode.SongSetup : EditorScreenMode.Compose;
@@ -1231,6 +1228,10 @@ namespace osu.Game.Screens.Edit
         {
             base.OnEntering(e);
             setUpTrack(seekToStart: true);
+
+            // the background can only be accessed once the screen is pushed.
+            if (supportsBackgroundAlignment)
+                ApplyToBackground(b => ((EditorBackgroundScreen)b).AlignmentTarget = () => (currentScreen as ComposeScreen)?.Composer?.Playfield);
         }
 
         public override void OnResuming(ScreenTransitionEvent e)

@@ -90,6 +90,48 @@ namespace osu.Game.Rulesets.Osu.Edit
     }
 
     /// <summary>
+    /// The centre of an equilateral triangle formed by three other objects.
+    /// </summary>
+    /// <param name="Position">The centre of the triangle, in gamefield (osu!pixel) space.</param>
+    /// <param name="Corners">The positions of the three objects forming the triangle.</param>
+    /// <param name="ObjectRadius">The radius of the objects, which guide lines are drawn between the edges of.</param>
+    public record TriangleCentreSnapPoint(Vector2 Position, Vector2[] Corners, float ObjectRadius) : PatternSnapPoint(Position)
+    {
+        public override IEnumerable<PatternSnapGuideLine> CreateGuideLines()
+        {
+            for (int i = 0; i < Corners.Length; i++)
+            {
+                // the edges of the triangle, between the edges of the objects.
+                if (createLineBetweenObjects(Corners[i], Corners[(i + 1) % Corners.Length], PatternSnapping.GUIDE_LINE_ALPHA) is PatternSnapGuideLine edge)
+                    yield return edge;
+
+                // the lines from the corners to the centre hint at where the object is placed.
+                if (createLineBetweenObjects(Corners[i], Position, PatternSnapping.GUIDE_LINE_ALPHA * 0.35f) is PatternSnapGuideLine spoke)
+                    yield return spoke;
+            }
+        }
+
+        private PatternSnapGuideLine? createLineBetweenObjects(Vector2 from, Vector2 to, float alpha)
+        {
+            Vector2 direction = to - from;
+            float length = direction.Length;
+
+            if (length - 2 * ObjectRadius < 1)
+                return null;
+
+            direction /= length;
+
+            return new PatternSnapGuideLine(new[] { from + direction * ObjectRadius, to - direction * ObjectRadius }, alpha);
+        }
+
+        // the points are recalculated every frame, so the triangle is compared by its positions rather than by reference.
+        public virtual bool Equals(TriangleCentreSnapPoint? other)
+            => other != null && Position == other.Position && ObjectRadius == other.ObjectRadius && Corners.SequenceEqual(other.Corners);
+
+        public override int GetHashCode() => HashCode.Combine(Position, ObjectRadius, Corners.Length);
+    }
+
+    /// <summary>
     /// The centre of a circular arc of a slider. An object placed there is perfectly blanketed by the slider.
     /// </summary>
     public record BlanketSnapPoint(Vector2 Position, CircularArcProperties Arc) : PatternSnapPoint(Position)
@@ -167,6 +209,12 @@ namespace osu.Game.Rulesets.Osu.Edit
         /// Closer objects are rather stacked than forming a line.
         /// </summary>
         private const float min_line_spacing = 0.5f;
+
+        /// <summary>
+        /// The maximum ratio between the longest and the shortest side of a triangle for it to be considered equilateral.
+        /// Placing objects by hand is imprecise, so triangles which are only roughly equilateral have a centre as well.
+        /// </summary>
+        public const float MAX_TRIANGLE_SIDE_RATIO = 1.15f;
 
         /// <summary>
         /// The maximum distance in osu!pixels at which positions are considered equal when looking for objects forming a line.
@@ -282,6 +330,63 @@ namespace osu.Game.Rulesets.Osu.Edit
 
                 added.Add(new LineSnapPoint(position, line.ToArray(), radius));
             }
+        }
+
+        /// <summary>
+        /// Adds the centres of all (roughly) equilateral triangles which can be formed with three of the given objects.
+        /// </summary>
+        /// <param name="objects">The objects to form triangles with.</param>
+        /// <param name="output">The list to add the snap points to.</param>
+        public static void AddTriangleCentreSnapPoints(IReadOnlyList<OsuHitObject> objects, List<PatternSnapPoint> output)
+        {
+            var positions = getPositions(objects);
+
+            for (int i = 0; i < positions.Count; i++)
+            {
+                for (int j = i + 1; j < positions.Count; j++)
+                {
+                    var a = positions[i];
+                    var b = positions[j];
+
+                    // a slider's head and tail don't form a pattern with each other.
+                    if (a.owner == b.owner)
+                        continue;
+
+                    float radius = (float)objects[a.owner].Radius;
+                    float ab = Vector2.Distance(a.position, b.position);
+
+                    // closer objects overlap, which is not visual spacing.
+                    if (ab < radius * min_visual_spacing_distance - 0.5f)
+                        continue;
+
+                    for (int k = j + 1; k < positions.Count; k++)
+                    {
+                        var c = positions[k];
+
+                        if (c.owner == a.owner || c.owner == b.owner)
+                            continue;
+
+                        if (!IsRoughlyEquilateral(ab, Vector2.Distance(b.position, c.position), Vector2.Distance(c.position, a.position)))
+                            continue;
+
+                        Vector2 centre = (a.position + b.position + c.position) / 3;
+
+                        if (isInPlayfield(centre) && !containsPosition(positions, centre))
+                            output.Add(new TriangleCentreSnapPoint(centre, new[] { a.position, b.position, c.position }, radius));
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Whether a triangle with the given side lengths is (roughly) equilateral, see <see cref="MAX_TRIANGLE_SIDE_RATIO"/>.
+        /// </summary>
+        public static bool IsRoughlyEquilateral(float a, float b, float c)
+        {
+            float min = Math.Min(a, Math.Min(b, c));
+            float max = Math.Max(a, Math.Max(b, c));
+
+            return min > 0 && max / min <= MAX_TRIANGLE_SIDE_RATIO;
         }
 
         /// <summary>

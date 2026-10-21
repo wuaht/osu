@@ -66,6 +66,8 @@ namespace osu.Game.Screens.Edit.Compose.Components
                 };
             }
 
+            yield return new OsuMenuItem(SlopEditorStrings.PropertyTransformerEllipsis, MenuItemType.Standard, showPropertyTransformer);
+
             yield return new OsuMenuItem(EditorStrings.Sample) { Items = getSampleSubmenuItems().ToArray(), };
             yield return new OsuMenuItem(EditorStrings.Bank) { Items = getBankSubmenuItems().ToArray(), };
         }
@@ -129,6 +131,19 @@ namespace osu.Game.Screens.Edit.Compose.Components
                 Items = composer.SelectionAdditionBankStates.Select(kvp =>
                     new TernaryStateToggleMenuItem(kvp.Value.Description) { State = { BindTarget = kvp.Value } }).ToArray()
             };
+        }
+
+        private void showPropertyTransformer()
+        {
+            var objects = SelectedItems.ToArray();
+
+            if (objects.Length == 0)
+                return;
+
+            AddInternal(new PropertyTransformerAnchor(objects)
+            {
+                Position = ToLocalSpace(GetContainingInputManager()!.CurrentState.Mouse.Position),
+            });
         }
 
         #endregion

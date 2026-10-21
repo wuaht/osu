@@ -214,6 +214,119 @@ namespace osu.Game.Rulesets.Osu.Tests.Slop
             return output.Cast<LineSnapPoint>().ToList();
         }
 
+        [Test]
+        public void TestTriangleCentre()
+        {
+            var points = triangleCentres(
+                new HitCircle { Position = new Vector2(100, 300) },
+                new HitCircle { Position = new Vector2(250, 300) },
+                new HitCircle { Position = new Vector2(175, 300 - triangle_height) });
+
+            Assert.That(points, Has.Count.EqualTo(1));
+            assertContains(points, new Vector2(175, 300 - triangle_height / 3));
+        }
+
+        [Test]
+        public void TestTriangleCentreOfRoughlyEquilateralTriangle()
+        {
+            // the third object is placed slightly off, as when placing it by hand.
+            var points = triangleCentres(
+                new HitCircle { Position = new Vector2(100, 300) },
+                new HitCircle { Position = new Vector2(250, 300) },
+                new HitCircle { Position = new Vector2(185, 300 - triangle_height + 5) });
+
+            Assert.That(points, Has.Count.EqualTo(1));
+            assertContains(points, new Vector2((100 + 250 + 185) / 3f, (900 - triangle_height + 5) / 3));
+        }
+
+        [Test]
+        public void TestNoTriangleCentreForOtherTriangles()
+        {
+            // a right-angled triangle.
+            Assert.That(triangleCentres(
+                new HitCircle { Position = new Vector2(100, 300) },
+                new HitCircle { Position = new Vector2(250, 300) },
+                new HitCircle { Position = new Vector2(100, 150) }), Is.Empty);
+
+            // objects on a line.
+            Assert.That(triangleCentres(
+                new HitCircle { Position = new Vector2(100, 300) },
+                new HitCircle { Position = new Vector2(200, 300) },
+                new HitCircle { Position = new Vector2(300, 300) }), Is.Empty);
+        }
+
+        [Test]
+        public void TestNoTriangleCentreForOverlappingObjects()
+        {
+            // an equilateral triangle whose objects overlap each other.
+            Assert.That(triangleCentres(
+                new HitCircle { Position = new Vector2(100, 300) },
+                new HitCircle { Position = new Vector2(130, 300) },
+                new HitCircle { Position = new Vector2(115, 300 - 15 * MathF.Sqrt(3)) }), Is.Empty);
+        }
+
+        [Test]
+        public void TestNoTriangleCentreWithHeadAndTailOfSameSlider()
+        {
+            // the head and tail of the slider form an equilateral triangle with the circle, but a slider is only one corner.
+            var slider = createSlider(new Vector2(100, 300), new PathControlPoint(Vector2.Zero, PathType.LINEAR), new PathControlPoint(new Vector2(150, 0)));
+
+            Assert.That(triangleCentres(slider, new HitCircle { Position = new Vector2(175, 300 - triangle_height) }), Is.Empty);
+        }
+
+        [Test]
+        public void TestTriangleCentreWithSliderTail()
+        {
+            var slider = createSlider(new Vector2(0, 300), new PathControlPoint(Vector2.Zero, PathType.LINEAR), new PathControlPoint(new Vector2(100, 0)));
+
+            var points = triangleCentres(
+                slider,
+                new HitCircle { Position = new Vector2(250, 300) },
+                new HitCircle { Position = new Vector2(175, 300 - triangle_height) });
+
+            Assert.That(points, Has.Count.EqualTo(1));
+            assertContains(points, new Vector2(175, 300 - triangle_height / 3));
+        }
+
+        [Test]
+        public void TestNoTriangleCentreAtOccupiedPosition()
+        {
+            Assert.That(triangleCentres(
+                new HitCircle { Position = new Vector2(100, 300) },
+                new HitCircle { Position = new Vector2(250, 300) },
+                new HitCircle { Position = new Vector2(175, 300 - triangle_height) },
+                new HitCircle { Position = new Vector2(175, 300 - triangle_height / 3) }), Is.Empty);
+        }
+
+        [Test]
+        public void TestTriangleCentreGuideLines()
+        {
+            var output = new List<PatternSnapPoint>();
+            PatternSnapping.AddTriangleCentreSnapPoints(new OsuHitObject[]
+            {
+                new HitCircle { Position = new Vector2(100, 350) },
+                new HitCircle { Position = new Vector2(400, 350) },
+                new HitCircle { Position = new Vector2(250, 350 - 2 * triangle_height) },
+            }, output);
+
+            // three edges and three lines to the centre (the triangle is large enough for the lines to the centre to be visible between the objects).
+            Assert.That(output.Single().CreateGuideLines().Count(), Is.EqualTo(6));
+        }
+
+        [TestCase(150, 150, 150, true)]
+        [TestCase(150, 160, 170, true)]
+        [TestCase(150, 150, 180, false)]
+        [TestCase(0, 0, 0, false)]
+        public void TestIsRoughlyEquilateral(float a, float b, float c, bool expected)
+            => Assert.That(PatternSnapping.IsRoughlyEquilateral(a, b, c), Is.EqualTo(expected));
+
+        private static List<Vector2> triangleCentres(params OsuHitObject[] objects)
+        {
+            var output = new List<PatternSnapPoint>();
+            PatternSnapping.AddTriangleCentreSnapPoints(objects, output);
+            return output.Select(p => p.Position).ToList();
+        }
+
         private static List<Vector2> visualSpacing(params OsuHitObject[] objects)
         {
             var output = new List<PatternSnapPoint>();

@@ -124,6 +124,11 @@ namespace osu.Game.Overlays.Mods
         public readonly Bindable<WorkingBeatmap?> Beatmap = new Bindable<WorkingBeatmap?>();
         public readonly Bindable<RulesetInfo?> Ruleset = new Bindable<RulesetInfo?>();
 
+        /// <summary>
+        /// Whether the deselect all button supports the per-ruleset <see cref="DefaultMods"/>.
+        /// </summary>
+        public bool AllowDefaultMods { get; init; }
+
         [Resolved]
         private ScreenFooter? footer { get; set; }
 

@@ -274,6 +274,8 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopColourEffectSpeed, 1f, 0.1f, 5f, 0.05f);
             SetDefault(OsuSetting.SlopColourEffectRainbowSaturation, 0.7f, 0f, 1f, 0.01f);
 
+            SetDefault(OsuSetting.SlopDefaultMods, string.Empty);
+
             SetDefault(OsuSetting.SlopEditorSkin, string.Empty);
             SetDefault(OsuSetting.SlopEditorSkinInTestMode, false);
             SetDefault(OsuSetting.SlopEditorBackupOnSave, true);
@@ -286,6 +288,7 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopEditorVisualSpacingSnap, true);
             SetDefault(OsuSetting.SlopEditorBlanketSnap, true);
             SetDefault(OsuSetting.SlopEditorLineSnap, true);
+            SetDefault(OsuSetting.SlopEditorTriangleCentreSnap, true);
             SetDefault(OsuSetting.SlopEditorSliderBlanketSnap, true);
             SetDefault(OsuSetting.SlopEditorRotateAroundObjectStarts, true);
             SetDefault(OsuSetting.SlopEditorTimelineSliderVelocityWithAlt, false);
@@ -765,6 +768,11 @@ namespace osu.Game.Configuration
         SlopColourEffectRainbowSaturation,
 
         /// <summary>
+        /// The mods which are selected by default for each ruleset, serialised as JSON.
+        /// </summary>
+        SlopDefaultMods,
+
+        /// <summary>
         /// The ID of the skin to use exclusively inside the beatmap editor.
         /// An empty value means the regular gameplay skin is used.
         /// </summary>
@@ -891,6 +899,11 @@ namespace osu.Game.Configuration
         /// Whether objects in the beatmap editor snap to positions which continue straight lines of equally spaced visible objects.
         /// </summary>
         SlopEditorLineSnap,
+
+        /// <summary>
+        /// Whether objects in the beatmap editor snap to the centre of equilateral triangles formed by three visible objects.
+        /// </summary>
+        SlopEditorTriangleCentreSnap,
 
         /// <summary>
         /// Whether sliders snap to positions where their circular arcs share the centre of circular arcs of other sliders, such that one blankets the other.
