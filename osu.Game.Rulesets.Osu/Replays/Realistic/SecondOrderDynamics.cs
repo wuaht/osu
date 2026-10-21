@@ -63,6 +63,11 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
         }
 
         /// <summary>
+        /// Forgets the previous target, so that a jump to a new target doesn't give the position a sudden kick.
+        /// </summary>
+        public void ResetTarget() => previousTarget = null;
+
+        /// <summary>
         /// Moves the position onto the edge of the given circle if it is outside of it, and stops any movement away from the circle.
         /// </summary>
         public void ConstrainToCircle(Vector2 centre, float radius)

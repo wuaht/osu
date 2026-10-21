@@ -76,10 +76,21 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
         private const double slider_timing_interval = 400;
 
         /// <summary>
-        /// How far from its centre a slider with repeats may extend to be treated as a buzz slider, relative to the slider's radius.
-        /// The cursor stays still on buzz sliders, as the follow circle covers the whole slider.
+        /// How long the cursor takes to settle onto a slider's target after hitting its head, in milliseconds.
         /// </summary>
-        private const float buzz_slider_extent = 1.2f;
+        private const double slider_entry_duration = 150;
+
+        /// <summary>
+        /// How far the cursor may run ahead of or fall behind the slider ball at most, relative to the slider's radius.
+        /// Keeps the cursor well within the follow circle on fast sliders.
+        /// </summary>
+        private const float slider_timing_max_distance = 0.75f;
+
+        /// <summary>
+        /// How far from its centre a slider may extend for the cursor to stay still on it, relative to the slider's radius.
+        /// This applies to short buzz and kick sliders, as the follow circle covers the whole slider.
+        /// </summary>
+        private const float still_slider_extent = 1.2f;
 
         private static readonly Vector2 playfield_min = new Vector2(-512, -384);
         private static readonly Vector2 playfield_max = new Vector2(1024, 768);
@@ -87,10 +98,16 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
         private readonly IReadOnlyList<OsuHitObject> hitObjects;
         private readonly Dictionary<Slider, LenientSliderPath> sliderPaths = new Dictionary<Slider, LenientSliderPath>();
         private readonly Dictionary<Slider, List<Vector2>> sliderBodies = new Dictionary<Slider, List<Vector2>>();
-        private readonly Dictionary<Slider, Vector2> buzzSliderPositions = new Dictionary<Slider, Vector2>();
+        private readonly Dictionary<Slider, Vector2> stillSliderPositions = new Dictionary<Slider, Vector2>();
         private readonly Dictionary<OsuHitObject, double> leaveTimes = new Dictionary<OsuHitObject, double>();
 
         private SecondOrderDynamics cursor = null!;
+
+        private OsuHitObject? targetSource;
+        private OsuHitObject? leftObject;
+        private Vector2 leavePosition;
+        private Slider? enteredSlider;
+        private Vector2 sliderEntryOffset;
 
         public OsuRealisticAutoGenerator(IBeatmap beatmap, IReadOnlyList<Mod> mods)
             : base(beatmap, mods)
@@ -113,14 +130,14 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
                     body[j] += slider.StackedPosition;
                 sliderBodies[slider] = body;
 
-                if (body.Count > 0 && slider.RepeatCount > 0)
+                if (body.Count > 0)
                 {
                     Vector2 min = body.Aggregate(Vector2.ComponentMin);
                     Vector2 max = body.Aggregate(Vector2.ComponentMax);
                     Vector2 centre = closestPointOnPath(body, (min + max) / 2);
 
-                    if (body.All(p => Vector2.Distance(p, centre) <= slider.Radius * buzz_slider_extent))
-                        buzzSliderPositions[slider] = centre;
+                    if (body.All(p => Vector2.Distance(p, centre) <= slider.Radius * still_slider_extent))
+                        stillSliderPositions[slider] = centre;
                 }
             }
         }
@@ -137,6 +154,9 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
             double endTime = Math.Max(hitObjects.Max(h => h.GetEndTime()) + end_padding, buttonEvents[^1].time);
 
             cursor = new SecondOrderDynamics(SPINNER_CENTRE);
+            targetSource = null;
+            leftObject = null;
+            enteredSlider = null;
 
             int currentIndex = -1;
             int nextHitIndex = 0;
@@ -246,10 +266,12 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
                 switch (current)
                 {
                     case Spinner spinner:
+                        setTargetSource(spinner);
                         spin(time, dt, spinner);
                         return;
 
                     case Slider slider:
+                        setTargetSource(slider);
                         followSlider(time, dt, slider);
                         return;
                 }
@@ -257,12 +279,27 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
 
             if (current != null && next != null)
             {
+                setTargetSource(next);
                 approach(time, dt, current, next);
                 return;
             }
 
             // before the first object, move towards it. after the last object, rest.
+            setTargetSource(next);
             moveTo(dt, next?.StackedPosition ?? cursor.Position, resting);
+        }
+
+        /// <summary>
+        /// Sets the object which the cursor's target currently follows.
+        /// The target jumps when this changes, which must not be mistaken for a fast moving target.
+        /// </summary>
+        private void setTargetSource(OsuHitObject? source)
+        {
+            if (source == targetSource)
+                return;
+
+            targetSource = source;
+            cursor.ResetTarget();
         }
 
         private void spin(double time, float dt, Spinner spinner)
@@ -282,16 +319,19 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
 
         private void followSlider(double time, float dt, Slider slider)
         {
-            // short sliders with repeats are buzzed by holding the cursor still within the follow circle.
-            if (buzzSliderPositions.TryGetValue(slider, out Vector2 buzzPosition))
+            // short buzz and kick sliders are held by keeping the cursor still within the follow circle.
+            if (stillSliderPositions.TryGetValue(slider, out Vector2 stillPosition))
             {
-                moveTo(dt, buzzPosition, tracking);
+                moveTo(dt, enterSlider(time, slider, stillPosition), tracking);
                 cursor.ConstrainToCircle(ballPositionAt(slider, time), (float)slider.Radius * 2);
                 return;
             }
 
             // players don't follow the slider ball at exactly its speed, but run slightly ahead of it or fall slightly behind.
-            double timingOffset = ApplyModsToRate(time, slider_timing_variation) * (smoothNoise(slider.StackedPosition + new Vector2(13, (float)(slider.StartTime % 10000)), (time - slider.StartTime) / slider_timing_interval) * 2 - 1);
+            // the offset fades in after the head is hit, so that the target doesn't jump along the slider.
+            double maxTimingOffset = Math.Min(ApplyModsToRate(time, slider_timing_variation), slider.Radius * slider_timing_max_distance / Math.Max(slider.Velocity, 0.001));
+            double timingFadeIn = Math.Clamp((time - slider.StartTime) / slider_timing_interval, 0, 1);
+            double timingOffset = maxTimingOffset * timingFadeIn * (smoothNoise(slider.StackedPosition + new Vector2(13, (float)(slider.StartTime % 10000)), (time - slider.StartTime) / slider_timing_interval) * 2 - 1);
             double aheadTime = Math.Clamp(time + ApplyModsToRate(time, tracking_lag) + timingOffset, slider.StartTime, slider.EndTime);
 
             // slow sliders are followed closely, fast and short sliders cut corners.
@@ -301,7 +341,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
             // players don't follow the exact centre of the slider, but wander around within the body.
             target += wanderOffset(slider, aheadTime) * (float)slider.Radius * slider_wander_amount;
 
-            moveTo(dt, target, tracking);
+            moveTo(dt, enterSlider(time, slider, target), tracking);
 
             // stay inside the slider body.
             var body = sliderBodies[slider];
@@ -310,6 +350,23 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
 
             // staying inside the follow circle takes priority, so that no ticks are missed even where the body overlaps itself.
             cursor.ConstrainToCircle(ballPositionAt(slider, time), (float)slider.Radius * 2);
+        }
+
+        /// <summary>
+        /// Smoothly moves the target from where the cursor hit the slider onto <paramref name="target"/>.
+        /// Without this, the cursor would snap from the hit position onto the slider's target in a single frame.
+        /// </summary>
+        private Vector2 enterSlider(double time, Slider slider, Vector2 target)
+        {
+            if (enteredSlider != slider)
+            {
+                enteredSlider = slider;
+                sliderEntryOffset = cursor.Position - target;
+            }
+
+            // the offset moves along with the slider, so that the cursor doesn't fall behind on fast sliders.
+            double progress = Math.Clamp(ApplyModsToTimeDelta(slider.StartTime, time) / slider_entry_duration, 0, 1);
+            return target + sliderEntryOffset * (float)(1 - progress * progress * (3 - 2 * progress));
         }
 
         /// <summary>
@@ -365,7 +422,15 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
         private void approach(double time, float dt, OsuHitObject current, OsuHitObject next)
         {
             double leaveTime = getLeaveTime(current);
-            Vector2 from = current is Slider slider ? sliderPaths[slider].PositionAt(leaveTime) : current.StackedEndPosition;
+
+            // movements start where the cursor left the previous object, so that the target doesn't jump.
+            if (leftObject != current)
+            {
+                leftObject = current;
+                leavePosition = current is Slider ? cursor.Position : current.StackedEndPosition;
+            }
+
+            Vector2 from = leavePosition;
 
             // aim for the near side of the next object, never at exactly the same spot.
             Vector2 to = RealisticMath.MoveIntoCircle((from + next.StackedPosition) / 2, next.StackedPosition, (float)next.Radius * 0.5f)

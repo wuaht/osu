@@ -1,11 +1,13 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
 using osu.Framework.Testing;
 using osu.Game.Beatmaps;
+using osu.Game.Beatmaps.ControlPoints;
 using osu.Game.Configuration;
 using osu.Game.Rulesets.Mods;
 using osu.Game.Rulesets.Objects;
@@ -13,6 +15,7 @@ using osu.Game.Rulesets.Objects.Types;
 using osu.Game.Rulesets.Osu.Objects;
 using osu.Game.Rulesets.Osu.Replays;
 using osu.Game.Rulesets.Osu.Replays.AutoPlus;
+using osu.Game.Rulesets.Osu.Replays.Realistic;
 using osu.Game.Rulesets.Osu.Tests.Mods;
 using osu.Game.Rulesets.Scoring;
 using osuTK;
@@ -114,6 +117,51 @@ namespace osu.Game.Rulesets.Osu.Tests.Slop
             });
         }
 
+        [Test]
+        public void TestRealisticCursorDoesNotTeleport()
+        {
+            AddAssert("no sudden jumps", () =>
+            {
+                var ruleset = new OsuRuleset();
+                var beatmap = createSliderBeatmap();
+                beatmap.BeatmapInfo.Ruleset = ruleset.RulesetInfo;
+
+                var converted = ruleset.CreateBeatmapConverter(beatmap).Convert();
+                var processor = ruleset.CreateBeatmapProcessor(converted);
+                processor?.PreProcess();
+                foreach (var h in converted.HitObjects)
+                    h.ApplyDefaults(converted.ControlPointInfo, converted.Difficulty);
+                processor?.PostProcess();
+
+                var frames = new OsuRealisticAutoGenerator(converted, new List<Mod>()).Generate().Frames.Cast<OsuReplayFrame>().ToList();
+
+                // a teleport shows as a frame which moves much further than the frames around it would suggest.
+                double maxRatio = 0;
+
+                for (int i = 2; i < frames.Count - 1; i++)
+                {
+                    double dt = frames[i].Time - frames[i - 1].Time;
+                    if (dt <= 0)
+                        continue;
+
+                    float step = Vector2.Distance(frames[i].Position, frames[i - 1].Position);
+                    double neighbourSpeed = Math.Max(Vector2.Distance(frames[i - 1].Position, frames[i - 2].Position) / Math.Max(frames[i - 1].Time - frames[i - 2].Time, 1),
+                        Vector2.Distance(frames[i + 1].Position, frames[i].Position) / Math.Max(frames[i + 1].Time - frames[i].Time, 1));
+
+                    // ignore small movements, which can't be seen as jumps.
+                    if (step < 8)
+                        continue;
+
+                    double ratio = step / dt / Math.Max(neighbourSpeed, 0.05);
+                    TestContext.WriteLine($"{frames[i].Time:F1}: step {step:F1} dt {dt:F1} ratio {ratio:F2}");
+                    maxRatio = Math.Max(maxRatio, ratio);
+                }
+
+                TestContext.WriteLine($"max ratio {maxRatio:F2}");
+                return maxRatio < 3;
+            });
+        }
+
         private void setEngine(SlopAutoplayEngine engine, bool tag)
         {
             AddStep($"set engine to {engine}", () =>
@@ -139,6 +187,49 @@ namespace osu.Game.Rulesets.Osu.Tests.Slop
                                       && Player.ScoreProcessor.Statistics.GetValueOrDefault(HitResult.LargeTickMiss) == 0
                                       && Player.ScoreProcessor.Accuracy.Value == 1,
             });
+        }
+
+        /// <summary>
+        /// Jumps onto sliders of different speeds and lengths, including short kick and buzz sliders.
+        /// </summary>
+        private static Beatmap createSliderBeatmap()
+        {
+            var objects = new List<HitObject>();
+            double time = 500;
+
+            for (int i = 0; i < 24; i++)
+            {
+                objects.Add(new HitCircle { StartTime = time, Position = new Vector2(i % 2 == 0 ? 80 : 420, 300), NewCombo = true });
+                time += 200;
+
+                double velocity = new[] { 0.6, 1.5, 3 }[i % 3];
+                float length = new[] { 30f, 60f, 200f, 25f }[i % 4];
+
+                objects.Add(new Slider
+                {
+                    StartTime = time,
+                    Position = new Vector2(i % 2 == 0 ? 300 : 120, 80),
+                    RepeatCount = length <= 30 && i % 5 == 0 ? 4 : 0,
+                    SliderVelocityMultiplier = velocity,
+                    Path = new SliderPath(new[]
+                    {
+                        new PathControlPoint(Vector2.Zero, PathType.LINEAR),
+                        new PathControlPoint(new Vector2(length * 0.7f, length * 0.7f)),
+                    }),
+                });
+
+                time += 1000;
+            }
+
+            var beatmap = new Beatmap
+            {
+                HitObjects = objects,
+                BeatmapInfo = { Difficulty = { ApproachRate = 9, CircleSize = 4, OverallDifficulty = 8 } },
+            };
+
+            // 200 bpm, so that no slider lasts until the next object.
+            beatmap.ControlPointInfo.Add(0, new TimingControlPoint { BeatLength = 300 });
+            return beatmap;
         }
 
         private static Beatmap createBeatmap()
