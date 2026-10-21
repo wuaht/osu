@@ -87,7 +87,12 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders.Components
         private void load(OsuConfigManager config)
         {
             limitedDistanceSnap = config.GetBindable<bool>(OsuSetting.EditorLimitedDistanceSnap);
+            stackSnap = config.GetBindable<bool>(OsuSetting.SlopEditorStackSnap);
+            anchorSnap = config.GetBindable<bool>(OsuSetting.SlopEditorAnchorSnap);
         }
+
+        private Bindable<bool> stackSnap;
+        private Bindable<bool> anchorSnap;
 
         protected override void LoadComplete()
         {
@@ -455,15 +460,28 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders.Components
             Vector2 oldPosition = hitObject.Position;
             double oldStartTime = hitObject.StartTime;
 
+            Vector2 mousePosition = e.MousePosition;
+            bool axisSnap = OsuBlueprintContainer.IsAxisSnapActive(e);
+
+            // like osu!stable, the anchors are restricted to the axis along which they were moved the most, without any other snapping.
+            if (axisSnap)
+                mousePosition = e.MouseDownPosition + OsuBlueprintContainer.SnapToAxis(e.MousePosition - e.MouseDownPosition);
+
             if (selectedControlPoints.Contains(hitObject.Path.ControlPoints[0]))
             {
                 // Special handling for selections containing head control point - the position of the hit object changes which means the snapped position and time have to be taken into account
-                Vector2 newHeadPosition = Parent!.ToScreenSpace(e.MousePosition + (dragStartPositions[0] - dragStartPositions[draggedControlPointIndex]));
+                Vector2 newHeadPosition = Parent!.ToScreenSpace(mousePosition + (dragStartPositions[0] - dragStartPositions[draggedControlPointIndex]));
 
-                var result = positionSnapProvider?.TrySnapToNearbyObjects(newHeadPosition, oldStartTime);
-                result ??= positionSnapProvider?.TrySnapToDistanceGrid(newHeadPosition, limitedDistanceSnap.Value ? oldStartTime : null);
-                if (positionSnapProvider?.TrySnapToPositionGrid(result?.ScreenSpacePosition ?? newHeadPosition, result?.Time ?? oldStartTime) is SnapResult gridSnapResult)
-                    result = gridSnapResult;
+                SnapResult result = null;
+
+                if (!axisSnap)
+                {
+                    result = positionSnapProvider?.TrySnapToNearbyObjects(newHeadPosition, oldStartTime, stackSnap.Value);
+                    result ??= positionSnapProvider?.TrySnapToDistanceGrid(newHeadPosition, limitedDistanceSnap.Value ? oldStartTime : null);
+                    if (positionSnapProvider?.TrySnapToPositionGrid(result?.ScreenSpacePosition ?? newHeadPosition, result?.Time ?? oldStartTime) is SnapResult gridSnapResult)
+                        result = gridSnapResult;
+                }
+
                 result ??= new SnapResult(newHeadPosition, oldStartTime);
 
                 Vector2 movementDelta = Parent!.ToLocalSpace(result.ScreenSpacePosition) - hitObject.Position;
@@ -484,17 +502,22 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders.Components
             }
             else
             {
-                Vector2 newControlPointPosition = Parent!.ToScreenSpace(e.MousePosition);
+                Vector2 newControlPointPosition = Parent!.ToScreenSpace(mousePosition);
 
                 // Snapping inherited B-spline control points to nearby objects would be unintuitive, because snapping them does not equate to snapping the interpolated slider path.
                 bool shouldSnapToNearbyObjects = dragPathTypes[draggedControlPointIndex] is not null ||
                                                  dragPathTypes[..draggedControlPointIndex].LastOrDefault(t => t is not null)?.Type != SplineType.BSpline;
 
                 SnapResult result = null;
-                if (shouldSnapToNearbyObjects)
-                    result = positionSnapProvider?.TrySnapToNearbyObjects(newControlPointPosition, oldStartTime);
-                if (positionSnapProvider?.TrySnapToPositionGrid(result?.ScreenSpacePosition ?? newControlPointPosition, result?.Time ?? oldStartTime) is SnapResult gridSnapResult)
-                    result = gridSnapResult;
+
+                if (!axisSnap)
+                {
+                    if (shouldSnapToNearbyObjects)
+                        result = positionSnapProvider?.TrySnapToNearbyObjects(newControlPointPosition, oldStartTime, anchorSnap.Value);
+                    if (positionSnapProvider?.TrySnapToPositionGrid(result?.ScreenSpacePosition ?? newControlPointPosition, result?.Time ?? oldStartTime) is SnapResult gridSnapResult)
+                        result = gridSnapResult;
+                }
+
                 result ??= new SnapResult(newControlPointPosition, oldStartTime);
 
                 Vector2 movementDelta = Parent!.ToLocalSpace(result.ScreenSpacePosition) - dragStartPositions[draggedControlPointIndex] - hitObject.Position;
@@ -509,7 +532,7 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders.Components
 
             // Snap the path to the current beat divisor before checking length validity.
             // While holding alt, the length is not snapped and the slider follows its whole path.
-            snapLength(e.AltPressed);
+            snapLength(e.AltPressed && !axisSnap);
 
             if (!hitObject.Path.HasValidLengthForPlacement)
             {
@@ -519,7 +542,7 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders.Components
                 hitObject.Position = oldPosition;
                 hitObject.StartTime = oldStartTime;
                 // Snap the path length again to undo the invalid length.
-                snapLength(e.AltPressed);
+                snapLength(e.AltPressed && !axisSnap);
                 return;
             }
 

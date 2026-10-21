@@ -96,6 +96,8 @@ namespace osu.Game.Rulesets.Osu.Edit
         [Cached]
         private readonly EditorStreamManager streamManager = new EditorStreamManager();
 
+        private readonly OsuSelectionAngledFlipHandler angledFlipHandler = new OsuSelectionAngledFlipHandler();
+
         /// <summary>
         /// The curve type of newly placed sliders, or <c>null</c> to choose it from the number of control points.
         /// </summary>
@@ -133,6 +135,7 @@ namespace osu.Game.Rulesets.Osu.Edit
 
             AddInternal(DistanceSnapProvider);
             AddInternal(streamManager);
+            AddInternal(angledFlipHandler);
             AddInternal(new SliderPathActions());
             AddInternal(new ComposeDisplayActions());
             DistanceSnapProvider.AttachToToolbox(RightToolbox);
@@ -141,8 +144,10 @@ namespace osu.Game.Rulesets.Osu.Edit
             // above the playfield, so that guide lines aren't hidden behind slider bodies.
             PlayfieldContentContainer.Add(patternSnapGuides = new PatternSnapGuideOverlay());
             PlayfieldContentContainer.Add(new OffscreenObjectOverlay(Playfield));
+            PlayfieldContentContainer.Add(new TrueSliderEndOverlay(Playfield));
             PlayfieldContentContainer.Add(new SnapTargetAnchorOverlay(Playfield, () => EditorBeatmap.SelectedHitObjects.OfType<Slider>()));
             PlayfieldContentContainer.Add(DrawableRuleset.CreatePlayfieldAdjustmentContainer().WithChild(new StreamEditOverlay()));
+            PlayfieldContentContainer.Add(DrawableRuleset.CreatePlayfieldAdjustmentContainer().WithChild(new AngledFlipPreviewLine(angledFlipHandler)));
 
             LayerBelowRuleset.Add(
                 distanceSnapGridContainer = new Container
@@ -201,6 +206,7 @@ namespace osu.Game.Rulesets.Osu.Edit
                     {
                         RotationHandler = BlueprintContainer.SelectionHandler.RotationHandler,
                         ScaleHandler = (OsuSelectionScaleHandler)BlueprintContainer.SelectionHandler.ScaleHandler,
+                        AngledFlipHandler = angledFlipHandler,
                         GridToolbox = OsuGridToolboxGroup,
                     },
                     new GenerateToolboxGroup(),
@@ -360,10 +366,13 @@ namespace osu.Game.Rulesets.Osu.Edit
             currentFrame++;
         }
 
+        /// <param name="screenSpacePosition">The position to snap.</param>
+        /// <param name="fallbackTime">The time to use if no time could be determined from the snap.</param>
+        /// <param name="snapToObjects">Whether to snap onto other objects, rather than only to patterns.</param>
         [CanBeNull]
-        public SnapResult TrySnapToNearbyObjects(Vector2 screenSpacePosition, double? fallbackTime = null)
+        public SnapResult TrySnapToNearbyObjects(Vector2 screenSpacePosition, double? fallbackTime = null, bool snapToObjects = true)
         {
-            if (!snapToVisibleBlueprints(screenSpacePosition, out var snapResult))
+            if (!snapToVisibleBlueprints(screenSpacePosition, snapToObjects, out var snapResult))
                 return null;
 
             if (DistanceSnapProvider.DistanceSnapToggle.Value != TernaryState.True || distanceSnapGrid == null)
@@ -489,10 +498,10 @@ namespace osu.Game.Rulesets.Osu.Edit
             return new SnapResult(positionSnapGrid.ToScreenSpace(pos), fallbackTime, playfield);
         }
 
-        private bool snapToVisibleBlueprints(Vector2 screenSpacePosition, out SnapResult snapResult)
+        private bool snapToVisibleBlueprints(Vector2 screenSpacePosition, bool snapToObjects, out SnapResult snapResult)
         {
             // check other on-screen objects for snapping/stacking
-            var blueprints = BlueprintContainer.SelectionBlueprints.AliveChildren;
+            var blueprints = snapToObjects ? BlueprintContainer.SelectionBlueprints.AliveChildren : Enumerable.Empty<SelectionBlueprint<HitObject>>();
 
             var playfield = PlayfieldAtScreenSpacePosition(screenSpacePosition);
 

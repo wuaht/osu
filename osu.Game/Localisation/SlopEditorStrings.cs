@@ -160,6 +160,22 @@ namespace osu.Game.Localisation
         public static LocalisableString PlayfieldOrigin => new TranslatableString(getKey(@"playfield_origin"), @"Playfield");
 
         /// <summary>
+        /// "Toggle angled flip control"
+        /// </summary>
+        public static LocalisableString ToggleAngledFlipControl => new TranslatableString(getKey(@"toggle_angled_flip_control"), @"Toggle angled flip control");
+
+        /// <summary>
+        /// "Line angle (degrees)"
+        /// </summary>
+        public static LocalisableString AngledFlipLineAngle => new TranslatableString(getKey(@"angled_flip_line_angle"), @"Line angle (degrees)");
+
+        /// <summary>
+        /// "The angle of the line to mirror the selection over. Positive angles are clockwise from the horizontal."
+        /// </summary>
+        public static LocalisableString AngledFlipLineAngleDescription => new TranslatableString(getKey(@"angled_flip_line_angle_description"),
+            @"The angle of the line to mirror the selection over. Positive angles are clockwise from the horizontal.");
+
+        /// <summary>
         /// "Music volume"
         /// </summary>
         public static LocalisableString MusicVolume => new TranslatableString(getKey(@"music_volume"), @"Music volume");

@@ -1,6 +1,7 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using osu.Framework.Allocation;
@@ -22,6 +23,8 @@ namespace osu.Game.Rulesets.Osu.Edit
     {
         private Bindable<bool> limitedDistanceSnap { get; set; } = null!;
 
+        private Bindable<bool> stackSnap { get; set; } = null!;
+
         public new OsuHitObjectComposer Composer => (OsuHitObjectComposer)base.Composer;
 
         public OsuBlueprintContainer(OsuHitObjectComposer composer)
@@ -33,6 +36,7 @@ namespace osu.Game.Rulesets.Osu.Edit
         private void load(OsuConfigManager config)
         {
             limitedDistanceSnap = config.GetBindable<bool>(OsuSetting.EditorLimitedDistanceSnap);
+            stackSnap = config.GetBindable<bool>(OsuSetting.SlopEditorStackSnap);
         }
 
         protected override SelectionHandler<HitObject> CreateSelectionHandler() => new OsuSelectionHandler();
@@ -58,6 +62,15 @@ namespace osu.Game.Rulesets.Osu.Edit
         {
             Vector2 distanceTravelled = e.ScreenSpaceMousePosition - e.ScreenSpaceMouseDownPosition;
 
+            if (IsAxisSnapActive(e))
+            {
+                // like osu!stable, the movement is restricted to the axis along which the selection was moved the most, without any other snapping.
+                var axisBlueprint = blueprints.First();
+                Vector2 axisPosition = axisBlueprint.originalSnapPositions.First() + SnapToAxis(distanceTravelled);
+
+                return SelectionHandler.HandleMovement(new MoveSelectionEvent<HitObject>(axisBlueprint.blueprint, axisPosition - axisBlueprint.blueprint.ScreenSpaceSelectionPoint));
+            }
+
             for (int i = 0; i < blueprints.Count; i++)
             {
                 if (checkSnappingBlueprintToNearbyObjects(blueprints[i].blueprint, distanceTravelled, blueprints[i].originalSnapPositions))
@@ -78,7 +91,7 @@ namespace osu.Game.Rulesets.Osu.Edit
             var referenceBlueprint = blueprints.First().blueprint;
 
             // Retrieve a snapped position.
-            var result = Composer.TrySnapToNearbyObjects(movePosition);
+            var result = Composer.TrySnapToNearbyObjects(movePosition, snapToObjects: stackSnap.Value);
             result ??= Composer.TrySnapToDistanceGrid(movePosition, limitedDistanceSnap.Value ? referenceBlueprint.Item.StartTime : null);
             if (Composer.TrySnapToPositionGrid(result?.ScreenSpacePosition ?? movePosition, result?.Time) is SnapResult gridSnapResult)
                 result = gridSnapResult;
@@ -89,6 +102,18 @@ namespace osu.Game.Rulesets.Osu.Edit
                 ApplySnapResultTime(result, referenceBlueprint.Item.StartTime);
             return moved;
         }
+
+        /// <summary>
+        /// Whether dragged objects and slider anchors are restricted to one axis, which is done by holding Ctrl+Alt while dragging (like osu!stable).
+        /// </summary>
+        public static bool IsAxisSnapActive(UIEvent e) => e.ControlPressed && e.AltPressed;
+
+        /// <summary>
+        /// Restricts a movement to the axis along which it is the largest.
+        /// </summary>
+        public static Vector2 SnapToAxis(Vector2 movement) => Math.Abs(movement.X) > Math.Abs(movement.Y)
+            ? new Vector2(movement.X, 0)
+            : new Vector2(0, movement.Y);
 
         /// <summary>
         /// Check for snapping the centres of the circular arcs of a slider to the centres of arcs of other sliders, such that one slider blankets the other.
@@ -140,7 +165,7 @@ namespace osu.Game.Rulesets.Osu.Edit
                 Vector2 originalPosition = originalPositions[i];
                 var testPosition = originalPosition + distanceTravelled;
 
-                var positionalResult = Composer.TrySnapToNearbyObjects(testPosition);
+                var positionalResult = Composer.TrySnapToNearbyObjects(testPosition, snapToObjects: stackSnap.Value);
 
                 if (positionalResult == null || positionalResult.ScreenSpacePosition == testPosition) continue;
 

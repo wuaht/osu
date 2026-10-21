@@ -26,13 +26,16 @@ namespace osu.Game.Rulesets.Osu.Edit
         private readonly BindableBool canMove = new BindableBool();
         private readonly AggregateBindable<bool> canRotate = new AggregateBindable<bool>((x, y) => x || y);
         private readonly AggregateBindable<bool> canScale = new AggregateBindable<bool>((x, y) => x || y);
+        private readonly BindableBool canFlip = new BindableBool();
 
         private EditorToolButton moveButton = null!;
         private EditorToolButton rotateButton = null!;
         private EditorToolButton scaleButton = null!;
+        private EditorToolButton angledFlipButton = null!;
 
         public SelectionRotationHandler RotationHandler { get; init; } = null!;
         public OsuSelectionScaleHandler ScaleHandler { get; init; } = null!;
+        public OsuSelectionAngledFlipHandler AngledFlipHandler { get; init; } = null!;
 
         public OsuGridToolboxGroup GridToolbox { get; init; } = null!;
 
@@ -59,7 +62,10 @@ namespace osu.Game.Rulesets.Osu.Edit
                         () => new PreciseRotationPopover(RotationHandler, GridToolbox)),
                     scaleButton = new EditorToolButton("Scale",
                         () => new SpriteIcon { Icon = FontAwesome.Solid.ExpandArrowsAlt },
-                        () => new PreciseScalePopover(ScaleHandler, GridToolbox))
+                        () => new PreciseScalePopover(ScaleHandler, GridToolbox)),
+                    angledFlipButton = new EditorToolButton("Angled flip",
+                        () => new SpriteIcon { Icon = FontAwesome.Solid.Slash },
+                        () => new PreciseAngledFlipPopover(AngledFlipHandler, GridToolbox))
                 }
             };
 
@@ -79,11 +85,14 @@ namespace osu.Game.Rulesets.Osu.Edit
             canScale.AddSource(ScaleHandler.CanScaleY);
             canScale.AddSource(ScaleHandler.CanScaleFromPlayfieldOrigin);
 
+            canFlip.BindTo(AngledFlipHandler.CanFlip);
+
             // bindings to `Enabled` on the buttons are decoupled on purpose
             // due to the weird `OsuButton` behaviour of resetting `Enabled` to `false` when `Action` is set.
             canMove.BindValueChanged(move => moveButton.Enabled.Value = move.NewValue, true);
             canRotate.Result.BindValueChanged(rotate => rotateButton.Enabled.Value = rotate.NewValue, true);
             canScale.Result.BindValueChanged(scale => scaleButton.Enabled.Value = scale.NewValue, true);
+            canFlip.BindValueChanged(flip => angledFlipButton.Enabled.Value = flip.NewValue, true);
         }
 
         public bool OnPressed(KeyBindingPressEvent<GlobalAction> e)
@@ -109,6 +118,13 @@ namespace osu.Game.Rulesets.Osu.Edit
                 {
                     if (!ScaleHandler.OperationInProgress.Value || scaleButton.Selected.Value)
                         scaleButton.TriggerClick();
+                    return true;
+                }
+
+                case GlobalAction.EditorToggleAngledFlipControl:
+                {
+                    if (!AngledFlipHandler.OperationInProgress.Value || angledFlipButton.Selected.Value)
+                        angledFlipButton.TriggerClick();
                     return true;
                 }
             }

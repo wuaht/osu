@@ -134,16 +134,22 @@ namespace osu.Game.Screens.Edit.Compose.Components
         private readonly Bindable<bool> showBox = new Bindable<bool>(true);
         private readonly Bindable<bool> showButtons = new Bindable<bool>(true);
         private readonly Bindable<bool> hotkeysRotateAroundSelection = new Bindable<bool>(true);
+        private readonly Bindable<int> customRotation = new Bindable<int>(60);
+
+        private bool editorPresent;
 
         [BackgroundDependencyLoader(true)]
         private void load(OsuConfigManager config, Editor? editor)
         {
+            editorPresent = editor != null;
+
             // the visibility settings only apply to the beatmap editor (this is also used by the skin editor, which relies on the box for all operations).
             if (editor != null)
             {
                 config.BindWith(OsuSetting.SlopEditorShowSelectionBox, showBox);
                 config.BindWith(OsuSetting.SlopEditorShowSelectionBoxButtons, showButtons);
                 config.BindWith(OsuSetting.SlopEditorRotateAroundSelection, hotkeysRotateAroundSelection);
+                config.BindWith(OsuSetting.SlopEditorCustomRotation, customRotation);
             }
 
             InternalChildren = new Drawable[]
@@ -244,10 +250,43 @@ namespace osu.Game.Screens.Edit.Compose.Components
             return true;
         }
 
+        /// <summary>
+        /// Rotates the selection by the custom rotation angle from the settings (like osu!stable's Ctrl+Alt+&lt; and Ctrl+Alt+&gt;).
+        /// </summary>
+        /// <returns>Whether the rotation was performed.</returns>
+        private bool rotateByCustomAngle(int direction)
+        {
+            float rotation = direction * customRotation.Value;
+
+            if (rotation == 0)
+                return false;
+
+            if (rotateAroundPlayfieldByHotkey(rotation))
+                return true;
+
+            if (!canRotate.Value || rotationHandler == null)
+                return false;
+
+            rotationHandler.Rotate(rotation);
+            return true;
+        }
+
         protected override bool OnKeyDown(KeyDownEvent e)
         {
             if (e.Repeat || !e.ControlPressed)
                 return false;
+
+            if (e.AltPressed && editorPresent)
+            {
+                switch (e.Key)
+                {
+                    case Key.Comma:
+                        return rotateByCustomAngle(-1);
+
+                    case Key.Period:
+                        return rotateByCustomAngle(1);
+                }
+            }
 
             switch (e.Key)
             {
