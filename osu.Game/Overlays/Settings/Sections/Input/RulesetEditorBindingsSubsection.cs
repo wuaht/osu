@@ -19,15 +19,23 @@ namespace osu.Game.Overlays.Settings.Sections.Input
 
         private const int variant = Rulesets.Ruleset.EDITOR_VARIANT;
 
-        public RulesetEditorBindingsSubsection(RulesetInfo ruleset)
+        /// <param name="ruleset">The ruleset.</param>
+        /// <param name="slop">Whether to list the editor actions which are exclusive to this client instead of all others.</param>
+        public RulesetEditorBindingsSubsection(RulesetInfo ruleset, bool slop = false)
         {
             Ruleset = ruleset;
 
             var rulesetInstance = ruleset.CreateInstance();
+            var slopActions = rulesetInstance.GetSlopEditorKeyBindings().Select(b => b.Action).ToHashSet();
 
             Header = ruleset.Name;
-            Defaults = rulesetInstance.GetDefaultKeyBindings(variant);
+            Defaults = rulesetInstance.GetDefaultKeyBindings(variant).Where(b => slopActions.Contains(b.Action) == slop);
         }
+
+        /// <summary>
+        /// Whether this subsection lists any key bindings.
+        /// </summary>
+        public bool HasKeyBindings => Defaults.Any();
 
         protected override IEnumerable<RealmKeyBinding> GetKeyBindings(Realm realm)
         {

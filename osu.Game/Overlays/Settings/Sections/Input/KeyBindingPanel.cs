@@ -6,6 +6,7 @@ using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Sprites;
+using osu.Framework.Localisation;
 using osu.Game.Graphics;
 using osu.Game.Input.Bindings;
 using osu.Game.Localisation;
@@ -62,10 +63,28 @@ namespace osu.Game.Overlays.Settings.Sections.Input
             {
                 ChildrenEnumerable = new KeyBindingsSubsection[]
                 {
-                    new GlobalKeyBindingsSubsection(CommonStrings.General, GlobalActionCategory.Editor),
+                    new GlobalKeyBindingsSubsection(CommonStrings.General, GlobalActionCategory.Editor, GlobalActionCategory.SlopEditor),
                     new GlobalKeyBindingsSubsection(InputSettingsStrings.EditorTestPlaySection, GlobalActionCategory.EditorTestPlay),
                 }.Concat(rulesetEditorVariants),
             });
+
+            AddSection(new SlopKeyBindingsSection
+            {
+                ChildrenEnumerable = new KeyBindingsSubsection[]
+                {
+                    new GlobalKeyBindingsSubsection(SlopSettingsStrings.EditorHeader, GlobalActionCategory.SlopEditor, GlobalActionCategory.Editor),
+                }.Concat(rulesetsWithKeyBindings.Select(r => new RulesetEditorBindingsSubsection(r, slop: true)).Where(s => s.HasKeyBindings)),
+            });
+        }
+
+        /// <summary>
+        /// Lists the key bindings which are exclusive to this client.
+        /// </summary>
+        private partial class SlopKeyBindingsSection : SettingsSection
+        {
+            public override LocalisableString Header => SlopSettingsStrings.SlopSectionHeader;
+
+            public override Drawable CreateIcon() => new SlopSection.SlopSectionIcon();
         }
     }
 }

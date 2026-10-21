@@ -39,7 +39,7 @@ namespace osu.Game.Overlays.Settings.Sections
             };
         }
 
-        private partial class SlopSectionIcon : Sprite
+        public partial class SlopSectionIcon : Sprite
         {
             [BackgroundDependencyLoader]
             private void load(TextureStore textures)

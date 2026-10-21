@@ -35,6 +35,7 @@ namespace osu.Game.Input.Bindings
         /// </remarks>
         public override IEnumerable<IKeyBinding> DefaultKeyBindings => globalKeyBindings
                                                                        .Concat(editorKeyBindings)
+                                                                       .Concat(slopEditorKeyBindings)
                                                                        .Concat(editorTestPlayKeyBindings)
                                                                        .Concat(inGameKeyBindings)
                                                                        .Concat(replayKeyBindings)
@@ -72,6 +73,9 @@ namespace osu.Game.Input.Bindings
 
                 case GlobalActionCategory.EditorTestPlay:
                     return editorTestPlayKeyBindings;
+
+                case GlobalActionCategory.SlopEditor:
+                    return slopEditorKeyBindings;
 
                 default:
                     throw new ArgumentOutOfRangeException(nameof(category), category, $"Unexpected {nameof(GlobalActionCategory)}");
@@ -132,8 +136,6 @@ namespace osu.Game.Input.Bindings
             new KeyBinding(new[] { InputKey.F3 }, GlobalAction.EditorTimingMode),
             new KeyBinding(new[] { InputKey.F4 }, GlobalAction.EditorSetupMode),
             new KeyBinding(new[] { InputKey.Control, InputKey.Shift, InputKey.A }, GlobalAction.EditorVerifyMode),
-            new KeyBinding(new[] { InputKey.Control, InputKey.Shift, InputKey.H }, GlobalAction.EditorHitsoundMode),
-            new KeyBinding(new[] { InputKey.Control, InputKey.Shift, InputKey.N }, GlobalAction.EditorNominatorsMode),
             new KeyBinding(new[] { InputKey.Number1 }, GlobalAction.EditorSelectTool),
             new KeyBinding(new[] { InputKey.Q }, GlobalAction.EditorToggleNewCombo),
             new KeyBinding(new[] { InputKey.W }, GlobalAction.EditorToggleWhistleSound),
@@ -189,6 +191,15 @@ namespace osu.Game.Input.Bindings
             new KeyBinding(new[] { InputKey.Control, InputKey.L }, GlobalAction.EditorDiscardUnsavedChanges),
             new KeyBinding(new[] { InputKey.Control, InputKey.Shift, InputKey.U }, GlobalAction.EditorSubmitBeatmap),
             new KeyBinding(new[] { InputKey.Control, InputKey.Shift, InputKey.O }, GlobalAction.EditorEditExternally),
+        };
+
+        /// <summary>
+        /// Editor key bindings which are exclusive to this client.
+        /// </summary>
+        private static IEnumerable<KeyBinding> slopEditorKeyBindings => new[]
+        {
+            new KeyBinding(new[] { InputKey.Control, InputKey.Shift, InputKey.H }, GlobalAction.EditorHitsoundMode),
+            new KeyBinding(new[] { InputKey.Control, InputKey.Shift, InputKey.N }, GlobalAction.EditorNominatorsMode),
             new KeyBinding(new[] { InputKey.M }, GlobalAction.EditorMuteMusic),
             new KeyBinding(new[] { InputKey.Control, InputKey.M }, GlobalAction.EditorMuteEffects),
             new KeyBinding(new[] { InputKey.Semicolon }, GlobalAction.EditorMuteObjectEnds),
@@ -767,5 +778,6 @@ namespace osu.Game.Input.Bindings
         AudioControl,
         Overlays,
         EditorTestPlay,
+        SlopEditor,
     }
 }

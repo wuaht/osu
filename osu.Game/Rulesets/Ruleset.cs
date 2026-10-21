@@ -342,6 +342,12 @@ namespace osu.Game.Rulesets
         public virtual IEnumerable<KeyBinding> GetDefaultKeyBindings(int variant = 0) => Array.Empty<KeyBinding>();
 
         /// <summary>
+        /// Get the default keys of the editor actions which are exclusive to this client.
+        /// These have to be included in <see cref="GetDefaultKeyBindings"/> for <see cref="EDITOR_VARIANT"/>, but are listed in their own key binding section.
+        /// </summary>
+        public virtual IEnumerable<KeyBinding> GetSlopEditorKeyBindings() => Array.Empty<KeyBinding>();
+
+        /// <summary>
         /// Text that describes what variants in a ruleset are.
         /// Override this to provide better copy than the generic "Variant" text which may not tell users much.
         /// </summary>
