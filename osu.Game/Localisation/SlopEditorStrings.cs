@@ -360,6 +360,11 @@ namespace osu.Game.Localisation
         /// </summary>
         public static LocalisableString PropertyTransformerApply => new TranslatableString(getKey(@"property_transformer_apply"), @"Apply");
 
+        /// <summary>
+        /// "Test in other mode"
+        /// </summary>
+        public static LocalisableString TestInOtherMode => new TranslatableString(getKey(@"test_in_other_mode"), @"Test in other mode");
+
         private static string getKey(string key) => $"{prefix}:{key}";
     }
 }

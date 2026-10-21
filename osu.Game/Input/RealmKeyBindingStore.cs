@@ -148,6 +148,32 @@ namespace osu.Game.Input
             });
         }
 
+        /// <summary>
+        /// Moves the key binding of an action to a new combination, but only if the action has exactly one binding and it matches the given combination.
+        /// Used to migrate changed defaults without touching bindings the user customised.
+        /// </summary>
+        /// <param name="rulesetName">The short name of the ruleset the action belongs to, or <c>null</c> for global actions.</param>
+        /// <param name="variant">The variant the action belongs to, or <c>null</c> for global actions.</param>
+        /// <param name="action">The action to rebind.</param>
+        /// <param name="oldCombination">The combination <paramref name="action"/> is expected to be bound to.</param>
+        /// <param name="newCombination">The combination to bind <paramref name="action"/> to.</param>
+        /// <returns>Whether the binding was moved.</returns>
+        public bool RebindIfUnchanged(string? rulesetName, int? variant, object action, KeyCombination oldCombination, KeyCombination newCombination)
+        {
+            return realm.Write(r =>
+            {
+                var bindings = r.All<RealmKeyBinding>().ToList()
+                                .Where(b => b.RulesetName == rulesetName && b.Variant == variant && b.ActionInt == (int)action)
+                                .ToList();
+
+                if (bindings.Count != 1 || !bindings[0].KeyCombination.Equals(oldCombination))
+                    return false;
+
+                bindings[0].KeyCombination = newCombination;
+                return true;
+            });
+        }
+
         private void insertDefaults(Realm realm, List<RealmKeyBinding> existingBindings, IEnumerable<IKeyBinding> defaults, string? rulesetName = null, int? variant = null)
         {
             // compare counts in database vs defaults for each action type.

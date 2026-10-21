@@ -301,6 +301,7 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopEditorShowGrid, true);
             SetDefault(OsuSetting.SlopEditorRotateAroundSelection, true);
             SetDefault(OsuSetting.SlopEditorToolKeysSwapped, false);
+            SetDefault(OsuSetting.SlopAngledFlipKeyMoved, false);
             SetDefault(OsuSetting.SlopHitsoundEditorFrostedLanes, false);
             SetDefault(OsuSetting.SlopHitsoundEditorToolboxExpandOnHover, true);
             SetDefault(OsuSetting.SlopEditorAutoApplyHitsoundDifficulty, false);
@@ -864,6 +865,7 @@ namespace osu.Game.Configuration
         /// Not exposed to the user.
         /// </summary>
         SlopEditorToolKeysSwapped,
+        SlopAngledFlipKeyMoved,
 
         /// <summary>
         /// Whether the lanes of the hitsound editor have a frosted glass background, instead of an opaque one.

@@ -50,6 +50,7 @@ using osu.Game.Overlays.Notifications;
 using osu.Game.Overlays.OSD;
 using osu.Game.Rulesets;
 using osu.Game.Rulesets.Edit;
+using osu.Game.Rulesets.Mods;
 using osu.Game.Rulesets.Objects;
 using osu.Game.Rulesets.Objects.Types;
 using osu.Game.Screens.Backgrounds;
@@ -652,7 +653,13 @@ namespace osu.Game.Screens.Edit
             PlaybackSpeed.Value = state.PlaybackSpeed;
         });
 
-        public void TestGameplay()
+        public void TestGameplay() => TestGameplay(null);
+
+        /// <summary>
+        /// Starts a gameplay test of the current beatmap.
+        /// </summary>
+        /// <param name="convertTo">The ruleset to convert the beatmap to for the test, or <c>null</c> to test it in its own ruleset.</param>
+        public void TestGameplay([CanBeNull] RulesetInfo convertTo)
         {
             clock.Stop();
 
@@ -671,7 +678,81 @@ namespace osu.Game.Screens.Edit
                 pushEditorPlayer();
             }
 
-            void pushEditorPlayer() => this.Push(new EditorPlayerLoader(this));
+            void pushEditorPlayer()
+            {
+                if (convertTo != null && !convertTo.Equals(editorBeatmap.BeatmapInfo.Ruleset))
+                {
+                    rulesetBeforeConvertTest = Ruleset.Value;
+                    modsBeforeConvertTest = Mods.Value;
+
+                    // the player picks up the game-wide ruleset and mods, so they are swapped for the duration of the test and restored on resume.
+                    Ruleset.Value = convertTo;
+                    Mods.Value = Array.Empty<Mod>();
+                }
+
+                this.Push(new EditorPlayerLoader(this));
+            }
+        }
+
+        [CanBeNull]
+        private RulesetInfo rulesetBeforeConvertTest;
+
+        [CanBeNull]
+        private IReadOnlyList<Mod> modsBeforeConvertTest;
+
+        private void restoreAfterConvertTest()
+        {
+            if (rulesetBeforeConvertTest == null)
+                return;
+
+            Ruleset.Value = rulesetBeforeConvertTest;
+            Mods.Value = modsBeforeConvertTest ?? Array.Empty<Mod>();
+
+            rulesetBeforeConvertTest = null;
+            modsBeforeConvertTest = null;
+        }
+
+        /// <summary>
+        /// Returns the rulesets other than the beatmap's own that it can be converted to, like song select only offers converts of osu! beatmaps.
+        /// </summary>
+        public static IEnumerable<RulesetInfo> GetConvertTargets(IBeatmap beatmap, IEnumerable<RulesetInfo> availableRulesets)
+        {
+            if (beatmap.BeatmapInfo.Ruleset.OnlineID != 0)
+                yield break;
+
+            foreach (var ruleset in availableRulesets)
+            {
+                if (ruleset.Equals(beatmap.BeatmapInfo.Ruleset) || !ruleset.Available)
+                    continue;
+
+                bool canConvert;
+
+                try
+                {
+                    canConvert = ruleset.CreateInstance().CreateBeatmapConverter(beatmap).CanConvert();
+                }
+                catch (Exception e)
+                {
+                    Logger.Error(e, $"Failed to check whether the beatmap can be converted to {ruleset.Name}");
+                    canConvert = false;
+                }
+
+                if (canConvert)
+                    yield return ruleset;
+            }
+        }
+
+        private EditorMenuItem createConvertTestMenu()
+        {
+            var items = GetConvertTargets(editorBeatmap.PlayableBeatmap, rulesets.AvailableRulesets)
+                        .Select(r => new EditorMenuItem(r.Name, MenuItemType.Standard, () => TestGameplay(r)))
+                        .ToArray<MenuItem>();
+
+            return new EditorMenuItem(SlopEditorStrings.TestInOtherMode)
+            {
+                Items = items,
+                Action = { Disabled = items.Length == 0 },
+            };
         }
 
         private bool attemptMutationOperation(Func<bool> mutationOperation)
@@ -1237,6 +1318,7 @@ namespace osu.Game.Screens.Edit
         public override void OnResuming(ScreenTransitionEvent e)
         {
             base.OnResuming(e);
+            restoreAfterConvertTest();
             setUpTrack();
         }
 
@@ -1809,6 +1891,7 @@ namespace osu.Game.Screens.Edit
             yield return createDifficultyCreationMenu();
             yield return createDifficultySwitchMenu();
             yield return new EditorMenuItem(SlopEditorStrings.UseAsTemplateForNewSet, MenuItemType.Standard, useAsTemplateForNewSet) { Action = { Disabled = !canSave } };
+            yield return createConvertTestMenu();
             yield return new OsuMenuItemSpacer();
             yield return new EditorMenuItem(EditorStrings.DeleteDifficulty, MenuItemType.Destructive, deleteDifficulty) { Action = { Disabled = Beatmap.Value.BeatmapSetInfo.Beatmaps.Count < 2 } };
             yield return new OsuMenuItemSpacer();

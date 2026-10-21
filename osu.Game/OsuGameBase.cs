@@ -467,6 +467,7 @@ namespace osu.Game
             KeyBindingStore = new RealmKeyBindingStore(realm, keyCombinationProvider);
             KeyBindingStore.Register(globalBindings, RulesetStore.AvailableRulesets);
             migrateEditorToolKeys();
+            migrateAngledFlipKey();
             dependencies.Cache(KeyBindingStore);
 
             dependencies.Cache(globalBindings);
@@ -757,6 +758,22 @@ namespace osu.Game
             }
 
             LocalConfig.SetValue(OsuSetting.SlopEditorToolKeysSwapped, true);
+        }
+
+        /// <summary>
+        /// Moves the stored angled flip key binding from its previous default (Ctrl+Shift+F, which clashes with converting sliders to streams) to the current one.
+        /// A binding the user customised is left alone.
+        /// </summary>
+        private void migrateAngledFlipKey()
+        {
+            if (LocalConfig.Get<bool>(OsuSetting.SlopAngledFlipKeyMoved))
+                return;
+
+            KeyBindingStore.RebindIfUnchanged(null, null, GlobalAction.EditorToggleAngledFlipControl,
+                new KeyCombination(InputKey.Control, InputKey.Shift, InputKey.F),
+                new KeyCombination(InputKey.Control, InputKey.Shift, InputKey.L));
+
+            LocalConfig.SetValue(OsuSetting.SlopAngledFlipKeyMoved, true);
         }
 
         private void onRulesetChanged(ValueChangedEvent<RulesetInfo> r)
