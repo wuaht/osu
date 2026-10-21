@@ -93,3 +93,4 @@ upstream ([they don't accept AI](https://github.com/ppy/osu/blob/master/README.m
 - [Mapping Tools](https://github.com/olibomby/mapping_tools) <img width="13" alt="Mapping Tools" src="assets/credit-mt.png">
 - [osucad](https://github.com/minetoblend/osucad) <img width="13" alt="osucad" src="assets/credit-osucad.png"> & his [osu! fork](https://github.com/minetoblend/osu)
 - claude
+- 

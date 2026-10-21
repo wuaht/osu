@@ -106,12 +106,12 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
         /// <summary>
         /// How far from their centres objects in streams are passed through, relative to their radius.
         /// </summary>
-        private const float stream_deviation = 0.35f;
+        private const float stream_deviation = 0.15f;
 
         /// <summary>
         /// How far the cursor trembles while flowing through streams, relative to the radius of the objects.
         /// </summary>
-        private const float stream_tremor = 0.12f;
+        private const float stream_tremor = 0.01f;
 
         /// <summary>
         /// The time between changes in the direction of the trembling, in milliseconds.
