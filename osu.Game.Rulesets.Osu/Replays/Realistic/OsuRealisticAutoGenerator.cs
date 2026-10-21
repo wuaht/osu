@@ -103,6 +103,21 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
         /// </summary>
         private const double stream_max_interval = 125;
 
+        /// <summary>
+        /// How far from their centres objects in streams are passed through, relative to their radius.
+        /// </summary>
+        private const float stream_deviation = 0.35f;
+
+        /// <summary>
+        /// How far the cursor trembles while flowing through streams, relative to the radius of the objects.
+        /// </summary>
+        private const float stream_tremor = 0.12f;
+
+        /// <summary>
+        /// The time between changes in the direction of the trembling, in milliseconds.
+        /// </summary>
+        private const double stream_tremor_interval = 35;
+
         private static readonly Vector2 playfield_min = new Vector2(-512, -384);
         private static readonly Vector2 playfield_max = new Vector2(1024, 768);
 
@@ -463,7 +478,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
             // aim for the near side of the next object, never at exactly the same spot.
             // streams are aimed at their centres instead, as they are flowed through.
             Vector2 to = flowsInto(currentIndex + 1)
-                ? next.StackedPosition
+                ? flowPoint(currentIndex + 1)
                 : RealisticMath.MoveIntoCircle((from + next.StackedPosition) / 2, next.StackedPosition, (float)next.Radius * 0.5f)
                   + new Vector2(RealisticMath.Random(next.StackedPosition) - 0.5f, RealisticMath.Random(next.StackedPosition + new Vector2(1, 0)) - 0.5f) * (float)next.Radius * 0.25f;
 
@@ -496,8 +511,8 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
         /// Moves through a stream in one continuous motion, instead of stopping at every object.
         /// </summary>
         /// <remarks>
-        /// The target follows a Catmull-Rom spline through the centres of the objects, parametrised by time.
-        /// This keeps the speed constant through evenly spaced streams, and only eases in and out at their start and end.
+        /// The target follows a Catmull-Rom spline through points near the centres of the objects, parametrised by time.
+        /// This keeps the speed mostly constant through evenly spaced streams, and only eases in and out at their start and end.
         /// </remarks>
         private void flow(double time, float dt, int currentIndex)
         {
@@ -519,12 +534,32 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
             float t2 = t * t;
             float t3 = t2 * t;
 
-            Vector2 target = (2 * t3 - 3 * t2 + 1) * current.StackedPosition
+            Vector2 target = (2 * t3 - 3 * t2 + 1) * flowPoint(currentIndex)
                              + (t3 - 2 * t2 + t) * startTangent
-                             + (-2 * t3 + 3 * t2) * next.StackedPosition
+                             + (-2 * t3 + 3 * t2) * flowPoint(currentIndex + 1)
                              + (t3 - t2) * endTangent;
 
+            // the hand trembles slightly while moving fast.
+            double tremor = aheadTime / stream_tremor_interval;
+            target += new Vector2(smoothNoise(new Vector2(3, 11), tremor) * 2 - 1, smoothNoise(new Vector2(5, 13), tremor) * 2 - 1) * (float)current.Radius * stream_tremor;
+
             moveTo(dt, target, tracking);
+        }
+
+        /// <summary>
+        /// The point the cursor passes through on the object at <paramref name="index"/> in a stream.
+        /// Players don't hit the exact centre of every object, so this is a random point near it.
+        /// </summary>
+        private Vector2 flowPoint(int index)
+        {
+            var hitObject = hitObjects[index];
+            Vector2 seed = hitObject.StackedPosition + new Vector2((float)(hitObject.StartTime % 10000), 3);
+
+            Vector2 offset = new Vector2(RealisticMath.Random(seed) * 2 - 1, RealisticMath.Random(seed + new Vector2(0, 1)) * 2 - 1);
+            if (offset.Length > 1)
+                offset.Normalize();
+
+            return hitObject.StackedPosition + offset * (float)hitObject.Radius * stream_deviation;
         }
 
         /// <summary>
@@ -539,7 +574,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
             var previous = hitObjects[index - 1];
             var following = hitObjects[index + 1];
 
-            return (following.StackedPosition - previous.StackedPosition) / (float)(following.StartTime - previous.StartTime);
+            return (flowPoint(index + 1) - flowPoint(index - 1)) / (float)(following.StartTime - previous.StartTime);
         }
 
         /// <summary>
