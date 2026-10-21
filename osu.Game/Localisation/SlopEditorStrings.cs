@@ -20,6 +20,16 @@ namespace osu.Game.Localisation
         public static LocalisableString MuteEffects => new TranslatableString(getKey(@"mute_effects"), @"Mute effects");
 
         /// <summary>
+        /// "Mute object ends"
+        /// </summary>
+        public static LocalisableString MuteObjectEnds => new TranslatableString(getKey(@"mute_object_ends"), @"Mute object ends");
+
+        /// <summary>
+        /// "Toggled muted ends for {0} object(s)"
+        /// </summary>
+        public static LocalisableString ToggledMutedEnds(int count) => new TranslatableString(getKey(@"toggled_muted_ends"), @"Toggled muted ends for {0} object(s)", count);
+
+        /// <summary>
         /// "Music volume"
         /// </summary>
         public static LocalisableString MusicVolume => new TranslatableString(getKey(@"music_volume"), @"Music volume");

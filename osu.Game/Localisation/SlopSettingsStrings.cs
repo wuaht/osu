@@ -334,6 +334,17 @@ namespace osu.Game.Localisation
             @"When the end of the track is reached during playback in the editor, playback continues from the start.");
 
         /// <summary>
+        /// "Set muted object ends to Soft:C999"
+        /// </summary>
+        public static LocalisableString MutedEndsSoftC999 => new TranslatableString(getKey(@"muted_ends_soft_c999"), @"Set muted object ends to Soft:C999");
+
+        /// <summary>
+        /// "Sets a custom sample set in addition to changing volume when using the object end mute hotkey."
+        /// </summary>
+        public static LocalisableString MutedEndsSoftC999Description => new TranslatableString(getKey(@"muted_ends_soft_c999_description"),
+            @"Sets a custom sample set in addition to changing volume when using the object end mute hotkey.");
+
+        /// <summary>
         /// "Frosted hitsound editor lanes"
         /// </summary>
         public static LocalisableString FrostedHitsoundLanes => new TranslatableString(getKey(@"frosted_hitsound_lanes"), @"Frosted hitsound editor lanes");

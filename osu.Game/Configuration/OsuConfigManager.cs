@@ -293,6 +293,7 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopEditorShowOffscreenObjects, false);
             SetDefault(OsuSetting.SlopEditorWaveformStyle, EditorWaveformStyle.Default);
             SetDefault(OsuSetting.SlopEditorLoopMusic, false);
+            SetDefault(OsuSetting.SlopEditorMutedEndsSoftC999, false);
             SetDefault(OsuSetting.SlopHitsoundEditorFrostedLanes, false);
             SetDefault(OsuSetting.SlopHitsoundEditorToolboxExpandOnHover, true);
             SetDefault(OsuSetting.SlopEditorAutoApplyHitsoundDifficulty, false);
@@ -817,6 +818,11 @@ namespace osu.Game.Configuration
         /// Whether playback in the beatmap editor continues from the start of the track when the end is reached.
         /// </summary>
         SlopEditorLoopMusic,
+
+        /// <summary>
+        /// Whether muting object ends in the editor also sets their samples to the soft bank with custom index 999.
+        /// </summary>
+        SlopEditorMutedEndsSoftC999,
 
         /// <summary>
         /// Whether the lanes of the hitsound editor have a frosted glass background, instead of an opaque one.

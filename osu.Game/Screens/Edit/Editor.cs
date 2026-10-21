@@ -392,6 +392,7 @@ namespace osu.Game.Screens.Edit
             AddInternal(bookmarkController);
 
             AddInternal(new EditorVolumeMuting());
+            AddInternal(new EditorObjectEndMuting());
             var hitsoundAutoApplier = new HitsoundDifficultyAutoApplier();
             AddInternal(hitsoundAutoApplier);
             dependencies.Cache(hitsoundAutoApplier);
