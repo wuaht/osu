@@ -110,6 +110,7 @@ namespace osu.Game.Rulesets.Edit
         private void load(OsuConfigManager config, Editor? editor, IBindable<IReadOnlyList<Mod>>? mods)
         {
             autoSeekOnPlacement = config.GetBindable<bool>(OsuSetting.EditorAutoSeekOnPlacement);
+            loadAdditionFlashes(config);
 
             if (editor != null)
                 composerFocusMode.BindTo(editor.ComposerFocusMode);
@@ -371,6 +372,8 @@ namespace osu.Game.Rulesets.Edit
         protected override void Update()
         {
             base.Update();
+
+            updateAdditionFlashes();
 
             if (ApplyHorizontalCentering)
             {

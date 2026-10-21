@@ -50,6 +50,7 @@ namespace osu.Game.Screens.Edit.Components.TernaryButtons
         private Color4 selectedIconColour;
 
         public Drawable Icon { get; private set; } = null!;
+        private Box flashLayer = null!;
         protected HotkeyDisplay HotkeyDisplay { get; private set; } = null!;
         public Hotkey? Hotkey { get; init; }
 
@@ -67,6 +68,14 @@ namespace osu.Game.Screens.Edit.Components.TernaryButtons
 
             defaultIconColour = defaultBackgroundColour.Darken(0.5f);
             selectedIconColour = selectedBackgroundColour.Lighten(0.5f);
+
+            Add(flashLayer = new Box
+            {
+                RelativeSizeAxes = Axes.Both,
+                Blending = BlendingParameters.Additive,
+                Colour = Color4.White,
+                Alpha = 0,
+            });
 
             Add(Icon = (CreateIcon?.Invoke() ?? new Circle()).With(b =>
             {
@@ -109,6 +118,11 @@ namespace osu.Game.Screens.Edit.Components.TernaryButtons
 
             Toggle();
         }
+
+        /// <summary>
+        /// Briefly flashes this button, e.g. when the hitsound it represents is played.
+        /// </summary>
+        public void Flash() => flashLayer.FadeTo(0.3f).FadeOut(250, Easing.Out);
 
         public void Toggle()
         {

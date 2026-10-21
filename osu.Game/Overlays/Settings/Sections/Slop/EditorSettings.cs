@@ -295,6 +295,38 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                 }),
                 new SettingsItemV2(new FormCheckBox
                 {
+                    Caption = SlopSettingsStrings.EditorFlashAdditions,
+                    HintText = SlopSettingsStrings.EditorFlashAdditionsDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorFlashAdditions),
+                }),
+                new SettingsItemV2(new FormCheckBox
+                {
+                    Caption = SlopSettingsStrings.EditorTrueSliderEnds,
+                    HintText = SlopSettingsStrings.EditorTrueSliderEndsDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorTrueSliderEnds),
+                }),
+                new SettingsItemV2(new FormCheckBox
+                {
+                    Caption = SlopSettingsStrings.EditorAnchorSnap,
+                    HintText = SlopSettingsStrings.EditorAnchorSnapDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorAnchorSnap),
+                }),
+                new SettingsItemV2(new FormCheckBox
+                {
+                    Caption = SlopSettingsStrings.EditorStackSnap,
+                    HintText = SlopSettingsStrings.EditorStackSnapDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorStackSnap),
+                }),
+                new SettingsItemV2(new FormSliderBar<int>
+                {
+                    Caption = SlopSettingsStrings.EditorCustomRotation,
+                    HintText = SlopSettingsStrings.EditorCustomRotationDescription,
+                    Current = config.GetBindable<int>(OsuSetting.SlopEditorCustomRotation),
+                    KeyboardStep = 1,
+                    LabelFormat = v => $@"{v}°",
+                }),
+                new SettingsItemV2(new FormCheckBox
+                {
                     Caption = SlopSettingsStrings.DisableAltDistanceSnap,
                     HintText = SlopSettingsStrings.DisableAltDistanceSnapDescription,
                     Current = config.GetBindable<bool>(OsuSetting.SlopEditorDisableAltDistanceSnap),

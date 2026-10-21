@@ -2,7 +2,9 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Globalization;
 using osu.Framework.Graphics;
+using osu.Framework.Input.Events;
 using osu.Game.Graphics.Sprites;
 using osu.Framework.Allocation;
 using osu.Framework.Graphics.Containers;
@@ -186,7 +188,10 @@ namespace osu.Game.Screens.Edit.Components
                 {
                     trackTimer.Alpha = 0;
                     inputTextBox.Alpha = 1;
-                    inputTextBox.Text = editorClock.CurrentTime.ToEditorFormattedString();
+                    // holding alt shows the raw time in milliseconds instead (like osu!stable).
+                    inputTextBox.Text = showRawTime
+                        ? Math.Round(editorClock.CurrentTime).ToString(CultureInfo.InvariantCulture)
+                        : editorClock.CurrentTime.ToEditorFormattedString();
                     Schedule(() =>
                     {
                         GetContainingFocusManager()!.ChangeFocus(inputTextBox);
@@ -201,6 +206,14 @@ namespace osu.Game.Screens.Edit.Components
                     trackTimer.Alpha = 1;
                     inputTextBox.Alpha = 0;
                 };
+            }
+
+            private bool showRawTime;
+
+            protected override bool OnClick(ClickEvent e)
+            {
+                showRawTime = e.AltPressed;
+                return base.OnClick(e);
             }
 
             private double? lastTime;

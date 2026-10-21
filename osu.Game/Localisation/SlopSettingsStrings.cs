@@ -1195,6 +1195,61 @@ namespace osu.Game.Localisation
         public static LocalisableString EditorAutoplayEngineDescription => new TranslatableString(getKey(@"editor_autoplay_engine_description"), @"The autoplay engine which plays the map in the editor. Miku moves the cursor like a player would, cutting corners on sliders");
 
         /// <summary>
+        /// "Flash addition hitsounds"
+        /// </summary>
+        public static LocalisableString EditorFlashAdditions => new TranslatableString(getKey(@"editor_flash_additions"), @"Flash addition hitsounds");
+
+        /// <summary>
+        /// "Flashes the whistle, finish and clap buttons during playback whenever that addition is played."
+        /// </summary>
+        public static LocalisableString EditorFlashAdditionsDescription => new TranslatableString(getKey(@"editor_flash_additions_description"),
+            @"Flashes the whistle, finish and clap buttons during playback whenever that addition is played.");
+
+        /// <summary>
+        /// "Show true slider ends"
+        /// </summary>
+        public static LocalisableString EditorTrueSliderEnds => new TranslatableString(getKey(@"editor_true_slider_ends"), @"Show true slider ends");
+
+        /// <summary>
+        /// "Marks the point on each slider at which its end is actually judged, which is slightly before its visual end."
+        /// </summary>
+        public static LocalisableString EditorTrueSliderEndsDescription => new TranslatableString(getKey(@"editor_true_slider_ends_description"),
+            @"Marks the point on each slider at which its end is actually judged, which is slightly before its visual end.");
+
+        /// <summary>
+        /// "Anchor snaps"
+        /// </summary>
+        public static LocalisableString EditorAnchorSnap => new TranslatableString(getKey(@"editor_anchor_snap"), @"Anchor snaps");
+
+        /// <summary>
+        /// "Dragged slider anchors snap to nearby objects and the anchors of other sliders."
+        /// </summary>
+        public static LocalisableString EditorAnchorSnapDescription => new TranslatableString(getKey(@"editor_anchor_snap_description"),
+            @"Dragged slider anchors snap to nearby objects and the anchors of other sliders.");
+
+        /// <summary>
+        /// "Stack snaps"
+        /// </summary>
+        public static LocalisableString EditorStackSnap => new TranslatableString(getKey(@"editor_stack_snap"), @"Stack snaps");
+
+        /// <summary>
+        /// "Dragged objects snap onto nearby objects, which makes stacking them easy."
+        /// </summary>
+        public static LocalisableString EditorStackSnapDescription => new TranslatableString(getKey(@"editor_stack_snap_description"),
+            @"Dragged objects snap onto nearby objects, which makes stacking them easy.");
+
+        /// <summary>
+        /// "Custom rotation angle"
+        /// </summary>
+        public static LocalisableString EditorCustomRotation => new TranslatableString(getKey(@"editor_custom_rotation"), @"Custom rotation angle");
+
+        /// <summary>
+        /// "The angle by which Ctrl+Alt+, and Ctrl+Alt+. rotate the selection."
+        /// </summary>
+        public static LocalisableString EditorCustomRotationDescription => new TranslatableString(getKey(@"editor_custom_rotation_description"),
+            @"The angle by which Ctrl+Alt+, and Ctrl+Alt+. rotate the selection.");
+
+        /// <summary>
         /// "Text editor"
         /// </summary>
         public static LocalisableString EditorTextEditor => new TranslatableString(getKey(@"editor_text_editor"), @"Text editor");

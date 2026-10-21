@@ -388,6 +388,11 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopEditorSnapSliderEndsToLaterTimingPoints, true);
             SetDefault(OsuSetting.SlopEditorAutoplayCursorSkin, string.Empty);
             SetDefault(OsuSetting.SlopEditorAutoplayEngine, SlopAutoplayEngine.Realistic);
+            SetDefault(OsuSetting.SlopEditorFlashAdditions, false);
+            SetDefault(OsuSetting.SlopEditorTrueSliderEnds, false);
+            SetDefault(OsuSetting.SlopEditorAnchorSnap, true);
+            SetDefault(OsuSetting.SlopEditorStackSnap, true);
+            SetDefault(OsuSetting.SlopEditorCustomRotation, 60, 0, 180);
             SetDefault(OsuSetting.SlopMinimalReplayFrames, false);
             SetDefault(OsuSetting.SlopSkipIntro, false);
             SetDefault(OsuSetting.SlopInstantScreenTransitions, false);
@@ -1296,6 +1301,31 @@ namespace osu.Game.Configuration
         /// The autoplay engine used to generate the replay which drives gameplay in the editor.
         /// </summary>
         SlopEditorAutoplayEngine,
+
+        /// <summary>
+        /// Whether the whistle, finish and clap buttons flash in the editor whenever their addition is played.
+        /// </summary>
+        SlopEditorFlashAdditions,
+
+        /// <summary>
+        /// Whether sliders are displayed with the end at which they are actually judged in the editor.
+        /// </summary>
+        SlopEditorTrueSliderEnds,
+
+        /// <summary>
+        /// Whether dragged slider anchors snap to nearby objects and other anchors.
+        /// </summary>
+        SlopEditorAnchorSnap,
+
+        /// <summary>
+        /// Whether dragged objects snap onto other objects to stack them.
+        /// </summary>
+        SlopEditorStackSnap,
+
+        /// <summary>
+        /// The angle in degrees by which the selection is rotated with the custom rotation shortcuts.
+        /// </summary>
+        SlopEditorCustomRotation,
 
         /// <summary>
         /// Whether replays only record frames which contain important data, such as key presses and judgements.
