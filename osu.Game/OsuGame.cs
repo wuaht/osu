@@ -168,6 +168,10 @@ namespace osu.Game
 
         private Container overlayOffsetContainer;
 
+        private Container backbufferBleedContainer;
+
+        private Container screenStackBleedOffsetContainer;
+
         private OnScreenDisplay onScreenDisplay;
 
         private DialogOverlay dialogOverlay;
@@ -1144,11 +1148,20 @@ namespace osu.Game
                             Children = new Drawable[]
                             {
                                 backReceptor = new ScreenFooter.BackReceptor(),
-                                // Allows drawables such as frosted slider bodies to blur the screen contents behind them.
-                                new OnDemandBackbufferProvider
+                                // the backbuffer would otherwise clip away the background behind the transparent toolbar while it is active.
+                                backbufferBleedContainer = new Container
                                 {
                                     RelativeSizeAxes = Axes.Both,
-                                    Child = ScreenStack = new OsuScreenStack { RelativeSizeAxes = Axes.Both },
+                                    // Allows drawables such as frosted slider bodies to blur the screen contents behind them.
+                                    Child = new OnDemandBackbufferProvider
+                                    {
+                                        RelativeSizeAxes = Axes.Both,
+                                        Child = screenStackBleedOffsetContainer = new Container
+                                        {
+                                            RelativeSizeAxes = Axes.Both,
+                                            Child = ScreenStack = new OsuScreenStack { RelativeSizeAxes = Axes.Both },
+                                        },
+                                    },
                                 },
                                 logoContainer = new Container { RelativeSizeAxes = Axes.Both },
                                 // TODO: what is this? why is this?
@@ -1784,7 +1797,10 @@ namespace osu.Game
             overlayOffsetContainer.Padding = new MarginPadding { Top = toolbarOffset };
 
             // the toolbar is transparent, so let the background continue behind it.
-            ScreenStack.BackgroundBleedTop = ScreenStack.ToLocalSpace(ToScreenSpace(new Vector2(0, toolbarOffset))).Y - ScreenStack.ToLocalSpace(ToScreenSpace(Vector2.Zero)).Y;
+            float backgroundBleed = ScreenStack.ToLocalSpace(ToScreenSpace(new Vector2(0, toolbarOffset))).Y - ScreenStack.ToLocalSpace(ToScreenSpace(Vector2.Zero)).Y;
+            ScreenStack.BackgroundBleedTop = backgroundBleed;
+            backbufferBleedContainer.Padding = new MarginPadding { Top = -backgroundBleed };
+            screenStackBleedOffsetContainer.Padding = new MarginPadding { Top = backgroundBleed };
 
             adjustGlobalScreenOffset();
 
