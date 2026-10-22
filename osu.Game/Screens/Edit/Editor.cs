@@ -1311,8 +1311,9 @@ namespace osu.Game.Screens.Edit
             setUpTrack(seekToStart: true);
 
             // the background can only be accessed once the screen is pushed.
+            // the composer loads asynchronously, so its playfield is only available once it has loaded.
             if (supportsBackgroundAlignment)
-                ApplyToBackground(b => ((EditorBackgroundScreen)b).AlignmentTarget = () => (currentScreen as ComposeScreen)?.Composer?.Playfield);
+                ApplyToBackground(b => ((EditorBackgroundScreen)b).AlignmentTarget = () => (currentScreen as ComposeScreen)?.Composer is { IsLoaded: true } composer ? composer.Playfield : null);
         }
 
         public override void OnResuming(ScreenTransitionEvent e)
