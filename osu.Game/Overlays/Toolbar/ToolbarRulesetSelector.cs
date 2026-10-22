@@ -46,10 +46,6 @@ namespace osu.Game.Overlays.Toolbar
         {
             AddRangeInternal(new[]
             {
-                new ToolbarButtonGroupBackground
-                {
-                    Depth = 1,
-                },
                 ModeButtonLine = new Container
                 {
                     Size = new Vector2(Toolbar.HEIGHT, 3),

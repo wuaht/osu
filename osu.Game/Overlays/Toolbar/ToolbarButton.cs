@@ -84,6 +84,13 @@ namespace osu.Game.Overlays.Toolbar
                             CornerExponent = 3f,
                             Children = new Drawable[]
                             {
+                                // the toolbar itself is transparent, so give each button a slightly darkened background.
+                                new Box
+                                {
+                                    RelativeSizeAxes = Axes.Both,
+                                    Colour = Colour4.Black,
+                                    Alpha = 0.35f,
+                                },
                                 HoverBackground = new Box
                                 {
                                     RelativeSizeAxes = Axes.Both,
@@ -205,31 +212,6 @@ namespace osu.Game.Overlays.Toolbar
 
         public void OnReleased(KeyBindingReleaseEvent<GlobalAction> e)
         {
-        }
-    }
-
-    /// <summary>
-    /// A slightly darkened, rounded background for a group of toolbar buttons, used as the toolbar itself is transparent.
-    /// </summary>
-    public partial class ToolbarButtonGroupBackground : Container
-    {
-        public ToolbarButtonGroupBackground()
-        {
-            RelativeSizeAxes = Axes.Both;
-            Padding = new MarginPadding(4);
-
-            Child = new Container
-            {
-                RelativeSizeAxes = Axes.Both,
-                Masking = true,
-                CornerRadius = 8,
-                Child = new Box
-                {
-                    RelativeSizeAxes = Axes.Both,
-                    Colour = Colour4.Black,
-                    Alpha = 0.35f,
-                },
-            };
         }
     }
 

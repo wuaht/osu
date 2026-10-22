@@ -59,6 +59,13 @@ namespace osu.Game.Overlays.Toolbar
                             CornerExponent = 3f,
                             Children = new Drawable[]
                             {
+                                // the toolbar itself is transparent, so give the clock a slightly darkened background.
+                                new Box
+                                {
+                                    RelativeSizeAxes = Axes.Both,
+                                    Colour = Color4.Black,
+                                    Alpha = 0.35f,
+                                },
                                 hoverBackground = new Box
                                 {
                                     RelativeSizeAxes = Axes.Both,

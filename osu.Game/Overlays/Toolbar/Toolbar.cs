@@ -92,7 +92,6 @@ namespace osu.Game.Overlays.Toolbar
                                 Depth = float.MinValue,
                                 Children = new Drawable[]
                                 {
-                                    new ToolbarButtonGroupBackground(),
                                     new FillFlowContainer
                                     {
                                         Direction = FillDirection.Horizontal,
@@ -136,7 +135,6 @@ namespace osu.Game.Overlays.Toolbar
                                 Origin = Anchor.TopRight,
                                 Children = new Drawable[]
                                 {
-                                    new ToolbarButtonGroupBackground(),
                                     new FillFlowContainer
                                     {
                                         Anchor = Anchor.TopRight,
