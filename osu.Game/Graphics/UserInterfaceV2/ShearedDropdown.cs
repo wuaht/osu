@@ -199,7 +199,7 @@ namespace osu.Game.Graphics.UserInterfaceV2
             [BackgroundDependencyLoader]
             private void load()
             {
-                labelBox.Colour = colourProvider.Background3;
+                labelBox.Colour = colourProvider.Background3.Opacity(0.6f);
             }
 
             protected override void LoadComplete()
@@ -236,7 +236,8 @@ namespace osu.Game.Graphics.UserInterfaceV2
             {
                 bool hovered = Enabled.Value && IsHovered;
                 var hoveredColour = colourProvider.Light4;
-                var unhoveredColour = colourProvider.Background5;
+                // translucent, so that the background behind the control stays visible.
+                var unhoveredColour = colourProvider.Background5.Opacity(0.5f);
 
                 Colour = Enabled.Value ? Color4.White : OsuColour.Gray(0.6f);
 

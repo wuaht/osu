@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using osu.Framework.Allocation;
+using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
@@ -90,7 +91,8 @@ namespace osu.Game.Screens.Footer
                 background = new Box
                 {
                     RelativeSizeAxes = Axes.Both,
-                    Colour = colourProvider.Background5
+                    // translucent, so that the background behind the footer stays visible.
+                    Colour = colourProvider.Background5.Opacity(0.5f)
                 },
                 new GridContainer
                 {
@@ -405,7 +407,7 @@ namespace osu.Game.Screens.Footer
         {
             colourProvider.ChangeColourScheme(hue);
 
-            background.FadeColour(colourProvider.Background5, 150, Easing.OutQuint);
+            background.FadeColour(colourProvider.Background5.Opacity(0.5f), 150, Easing.OutQuint);
 
             foreach (var button in leftButtonsFlow)
                 button.UpdateDisplay();

@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using osu.Framework.Allocation;
+using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
@@ -92,7 +93,8 @@ namespace osu.Game.Graphics.UserInterface
         [BackgroundDependencyLoader]
         private void load(OverlayColourProvider colourProvider)
         {
-            background.Colour = colourProvider.Background3;
+            // translucent, so that the background behind the control stays visible.
+            background.Colour = colourProvider.Background3.Opacity(0.5f);
         }
 
         public override bool HandleNonPositionalInput => TextBox.HandleNonPositionalInput;
@@ -112,8 +114,8 @@ namespace osu.Game.Graphics.UserInterface
             [BackgroundDependencyLoader]
             private void load(OverlayColourProvider colourProvider)
             {
-                BackgroundFocused = colourProvider.Background4;
-                BackgroundUnfocused = colourProvider.Background4;
+                BackgroundFocused = colourProvider.Background4.Opacity(0.3f);
+                BackgroundUnfocused = colourProvider.Background4.Opacity(0.3f);
 
                 Placeholder.Font = OsuFont.GetFont(size: FontSize, weight: FontWeight.SemiBold);
                 PlaceholderText = CommonStrings.InputSearch;

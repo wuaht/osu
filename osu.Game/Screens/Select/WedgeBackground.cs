@@ -13,12 +13,6 @@ namespace osu.Game.Screens.Select
 {
     internal sealed partial class WedgeBackground : InputBlockingContainer
     {
-        public float StartAlpha { get; init; } = 0.9f;
-
-        public float FinalAlpha { get; init; } = 0.6f;
-
-        public float WidthForGradient { get; init; } = 0.3f;
-
         [BackgroundDependencyLoader]
         private void load(OverlayColourProvider colourProvider)
         {
@@ -26,27 +20,21 @@ namespace osu.Game.Screens.Select
 
             InternalChildren = new Drawable[]
             {
+                // like the toolbar, only slightly darken the background behind the wedge.
+                new Box
+                {
+                    RelativeSizeAxes = Axes.Both,
+                    Colour = Colour4.Black,
+                    Alpha = 0.2f,
+                },
+                // keeps the colour scheme's accent (e.g. orange in the editor's song select).
                 new Box
                 {
                     Blending = BlendingParameters.Additive,
                     RelativeSizeAxes = Axes.Both,
                     Width = 0.6f,
-                    Alpha = 0.5f,
+                    Alpha = 0.35f,
                     Colour = ColourInfo.GradientHorizontal(colourProvider.Background2, colourProvider.Background2.Opacity(0)),
-                },
-                new Box
-                {
-                    RelativeSizeAxes = Axes.Both,
-                    Width = 1 - WidthForGradient,
-                    Colour = colourProvider.Background5.Opacity(StartAlpha),
-                },
-                new Box
-                {
-                    Anchor = Anchor.TopRight,
-                    Origin = Anchor.TopRight,
-                    RelativeSizeAxes = Axes.Both,
-                    Width = WidthForGradient,
-                    Colour = ColourInfo.GradientHorizontal(colourProvider.Background5.Opacity(StartAlpha), colourProvider.Background5.Opacity(FinalAlpha)),
                 },
             };
         }

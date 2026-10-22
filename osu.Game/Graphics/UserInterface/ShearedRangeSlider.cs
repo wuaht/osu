@@ -116,7 +116,7 @@ namespace osu.Game.Graphics.UserInterface
                                 new Box
                                 {
                                     RelativeSizeAxes = Axes.Both,
-                                    Colour = colourProvider.Background3,
+                                    Colour = colourProvider.Background3.Opacity(0.6f),
                                 },
                                 new OsuSpriteText
                                 {
