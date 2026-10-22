@@ -9,13 +9,13 @@ namespace osu.Game.Users
     public static class SlopMedals
     {
         /// <summary>
-        /// Unlocked by watching a <see cref="Configuration.SlopAutoplayEngine.Realistic"/> autoplay all the way to the results screen.
+        /// Unlocked by watching a <see cref="Configuration.SlopAutoplayEngine.Realistic"/> autoplay of a Hatsune Miku map all the way to the results screen.
         /// </summary>
         public static Medal Miku => new Medal
         {
             Name = @"World is Mine",
             InternalName = @"slop-miku",
-            Description = @"Sit back and watch Miku play a whole map. She had it under control the entire time.",
+            Description = @"Sit back and watch Miku play a whole map of her own songs. She had it under control the entire time.",
             LocalTexture = @"Slop/medal-miku",
         };
     }

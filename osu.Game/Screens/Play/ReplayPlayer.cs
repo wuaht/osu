@@ -178,7 +178,7 @@ namespace osu.Game.Screens.Play
 
         protected override ResultsScreen CreateResults(ScoreInfo score)
         {
-            if (isAutoplayPlayback && !skippedHitObjects && score.User.Username == SlopAutoplaySettings.MIKU_NAME)
+            if (isAutoplayPlayback && !skippedHitObjects && score.User.Username == SlopAutoplaySettings.MIKU_NAME && isMikuBeatmap())
                 unlockMikuMedal();
 
             return new SoloResultsScreen(score)
@@ -204,6 +204,18 @@ namespace osu.Game.Screens.Play
             // skipping the intro or a break jumps over empty time only, which still counts as watching the whole map.
             if (GameplayState.Beatmap.HitObjects.Any(h => h.StartTime > lastObservedTime && h.StartTime < seekTime))
                 skippedHitObjects = true;
+        }
+
+        /// <summary>
+        /// Whether the current beatmap has anything to do with Hatsune Miku, judging by its metadata.
+        /// </summary>
+        private bool isMikuBeatmap()
+        {
+            var metadata = Beatmap.Value.Metadata;
+            string[] fields = { metadata.Title, metadata.TitleUnicode, metadata.Artist, metadata.ArtistUnicode, metadata.Source, metadata.Tags };
+
+            return fields.Any(f => !string.IsNullOrEmpty(f)
+                                   && (f.Contains(@"miku", StringComparison.OrdinalIgnoreCase) || f.Contains(@"ミク", StringComparison.Ordinal)));
         }
 
         private void unlockMikuMedal()
