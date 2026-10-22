@@ -94,7 +94,7 @@ namespace osu.Game.Graphics.UserInterface
         private void load(OverlayColourProvider colourProvider)
         {
             // translucent, so that the background behind the control stays visible.
-            background.Colour = colourProvider.Background3.Opacity(0.5f);
+            background.Colour = colourProvider.Background3.Opacity(0.85f);
         }
 
         public override bool HandleNonPositionalInput => TextBox.HandleNonPositionalInput;
@@ -114,8 +114,8 @@ namespace osu.Game.Graphics.UserInterface
             [BackgroundDependencyLoader]
             private void load(OverlayColourProvider colourProvider)
             {
-                BackgroundFocused = colourProvider.Background4.Opacity(0.3f);
-                BackgroundUnfocused = colourProvider.Background4.Opacity(0.3f);
+                BackgroundFocused = colourProvider.Background4.Opacity(0.6f);
+                BackgroundUnfocused = colourProvider.Background4.Opacity(0.6f);
 
                 Placeholder.Font = OsuFont.GetFont(size: FontSize, weight: FontWeight.SemiBold);
                 PlaceholderText = CommonStrings.InputSearch;

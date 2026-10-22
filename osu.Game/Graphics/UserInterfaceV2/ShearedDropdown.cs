@@ -138,7 +138,6 @@ namespace osu.Game.Graphics.UserInterfaceV2
                                 LabelContainer = new Container
                                 {
                                     Depth = float.MaxValue,
-                                    CornerRadius = ShearedButton.CORNER_RADIUS,
                                     Masking = true,
                                     AutoSizeAxes = Axes.Both,
                                     Children = new Drawable[]
@@ -199,7 +198,7 @@ namespace osu.Game.Graphics.UserInterfaceV2
             [BackgroundDependencyLoader]
             private void load()
             {
-                labelBox.Colour = colourProvider.Background3.Opacity(0.6f);
+                labelBox.Colour = colourProvider.Background3.Opacity(0.9f);
             }
 
             protected override void LoadComplete()
@@ -218,7 +217,8 @@ namespace osu.Game.Graphics.UserInterfaceV2
                 searchBar.Padding = new MarginPadding { Left = LabelContainer.DrawWidth };
 
                 // By limiting the width we avoid this box showing up as an outline around the drawables that are on top of it.
-                Background.Padding = new MarginPadding { Left = LabelContainer.DrawWidth - ShearedButton.CORNER_RADIUS };
+                // it must not overlap the label box either, as both are translucent.
+                Background.Padding = new MarginPadding { Left = LabelContainer.DrawWidth };
             }
 
             protected override bool OnHover(HoverEvent e)
@@ -237,7 +237,7 @@ namespace osu.Game.Graphics.UserInterfaceV2
                 bool hovered = Enabled.Value && IsHovered;
                 var hoveredColour = colourProvider.Light4;
                 // translucent, so that the background behind the control stays visible.
-                var unhoveredColour = colourProvider.Background5.Opacity(0.5f);
+                var unhoveredColour = colourProvider.Background5.Opacity(0.8f);
 
                 Colour = Enabled.Value ? Color4.White : OsuColour.Gray(0.6f);
 

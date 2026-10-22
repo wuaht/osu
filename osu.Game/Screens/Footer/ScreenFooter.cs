@@ -91,8 +91,8 @@ namespace osu.Game.Screens.Footer
                 background = new Box
                 {
                     RelativeSizeAxes = Axes.Both,
-                    // translucent, so that the background behind the footer stays visible.
-                    Colour = colourProvider.Background5.Opacity(0.5f)
+                    // transparent, as the translucent buttons would otherwise show a darker band where they overlap the footer.
+                    Colour = colourProvider.Background5.Opacity(0)
                 },
                 new GridContainer
                 {
@@ -407,7 +407,7 @@ namespace osu.Game.Screens.Footer
         {
             colourProvider.ChangeColourScheme(hue);
 
-            background.FadeColour(colourProvider.Background5.Opacity(0.5f), 150, Easing.OutQuint);
+            background.FadeColour(colourProvider.Background5.Opacity(0), 150, Easing.OutQuint);
 
             foreach (var button in leftButtonsFlow)
                 button.UpdateDisplay();

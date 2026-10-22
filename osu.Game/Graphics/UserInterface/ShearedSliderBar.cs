@@ -119,7 +119,7 @@ namespace osu.Game.Graphics.UserInterface
         private void load(OverlayColourProvider? colourProvider, OsuColour colours)
         {
             AccentColour = colourProvider?.Highlight1 ?? colours.Pink;
-            BackgroundColour = (colourProvider?.Background5 ?? colours.PinkDarker.Darken(1)).Opacity(0.5f);
+            BackgroundColour = (colourProvider?.Background5 ?? colours.PinkDarker.Darken(1)).Opacity(0.8f);
         }
 
         protected override void Update()
