@@ -92,11 +92,6 @@ namespace osu.Game.Overlays.Toolbar
                                 Depth = float.MinValue,
                                 Children = new Drawable[]
                                 {
-                                    new Box
-                                    {
-                                        Colour = OsuColour.Gray(0.1f),
-                                        RelativeSizeAxes = Axes.Both,
-                                    },
                                     new FillFlowContainer
                                     {
                                         Direction = FillDirection.Horizontal,
@@ -129,14 +124,6 @@ namespace osu.Game.Overlays.Toolbar
                                             rulesetSelector = new ToolbarRulesetSelector()
                                         }
                                     },
-                                    new Box
-                                    {
-                                        Colour = ColourInfo.GradientHorizontal(OsuColour.Gray(0.1f).Opacity(0), OsuColour.Gray(0.1f)),
-                                        Width = 50,
-                                        RelativeSizeAxes = Axes.Y,
-                                        Anchor = Anchor.TopRight,
-                                        Origin = Anchor.TopRight,
-                                    },
                                 }
                             },
                             new Container
@@ -148,11 +135,6 @@ namespace osu.Game.Overlays.Toolbar
                                 Origin = Anchor.TopRight,
                                 Children = new Drawable[]
                                 {
-                                    new Box
-                                    {
-                                        Colour = OsuColour.Gray(0.1f),
-                                        RelativeSizeAxes = Axes.Both,
-                                    },
                                     new FillFlowContainer
                                     {
                                         Anchor = Anchor.TopRight,
@@ -212,13 +194,9 @@ namespace osu.Game.Overlays.Toolbar
             public ToolbarBackground()
             {
                 RelativeSizeAxes = Axes.Both;
+                // the toolbar itself is transparent, only the hover gradient remains to keep button descriptions legible.
                 Children = new Drawable[]
                 {
-                    new Box
-                    {
-                        RelativeSizeAxes = Axes.Both,
-                        Colour = OsuColour.Gray(0.1f),
-                    },
                     gradientBackground = new Box
                     {
                         RelativeSizeAxes = Axes.X,
