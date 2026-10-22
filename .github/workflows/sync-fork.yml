@@ -15,4 +15,5 @@ jobs:
       - name: Sync master with ppy/osu
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh repo sync ${{ github.repository }} --branch master
+        # --force setzt master hart auf ppy/master, damit er nie ahead/behind ist
+        run: gh repo sync ${{ github.repository }} --branch master --force
