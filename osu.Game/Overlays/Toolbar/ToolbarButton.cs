@@ -208,6 +208,31 @@ namespace osu.Game.Overlays.Toolbar
         }
     }
 
+    /// <summary>
+    /// A slightly darkened, rounded background for a group of toolbar buttons, used as the toolbar itself is transparent.
+    /// </summary>
+    public partial class ToolbarButtonGroupBackground : Container
+    {
+        public ToolbarButtonGroupBackground()
+        {
+            RelativeSizeAxes = Axes.Both;
+            Padding = new MarginPadding(4);
+
+            Child = new Container
+            {
+                RelativeSizeAxes = Axes.Both,
+                Masking = true,
+                CornerRadius = 8,
+                Child = new Box
+                {
+                    RelativeSizeAxes = Axes.Both,
+                    Colour = Colour4.Black,
+                    Alpha = 0.35f,
+                },
+            };
+        }
+    }
+
     public partial class OpaqueBackground : Container
     {
         public OpaqueBackground()
