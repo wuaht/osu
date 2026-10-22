@@ -179,6 +179,8 @@ namespace osu.Game.Screens.Select
 
         private IDisposable? modSelectOverlayRegistration;
 
+        private const float top_clip_bleed = 1000;
+
         protected SongSelect()
         {
             // ReSharper disable once VirtualMemberCallInConstructor
@@ -196,132 +198,149 @@ namespace osu.Game.Screens.Select
             {
                 new ScrollAdjustsVolume(),
                 onlineLookupSource,
-                mainContent = new Container
+                // the toolbar is transparent, so clip anything extending above the top of the screen (e.g. hidden wedge corners or carousel panels).
+                // only the top edge is clipped, as content is allowed to extend into the footer and beyond the sides of the screen.
+                new Container
                 {
-                    Anchor = Anchor.Centre,
-                    Origin = Anchor.Centre,
                     RelativeSizeAxes = Axes.Both,
-                    Padding = new MarginPadding { Bottom = ScreenFooter.HEIGHT },
-                    Child = new OsuContextMenuContainer
+                    Padding = new MarginPadding { Left = -top_clip_bleed, Right = -top_clip_bleed, Bottom = -top_clip_bleed },
+                    Child = new Container
                     {
                         RelativeSizeAxes = Axes.Both,
-                        Child = new PopoverContainer
+                        Masking = true,
+                        Child = new Container
                         {
                             RelativeSizeAxes = Axes.Both,
-                            Children = new Drawable[]
+                            Padding = new MarginPadding { Left = top_clip_bleed, Right = top_clip_bleed, Bottom = top_clip_bleed },
+                            Child = mainContent = new Container
                             {
-                                new Box
+                                Anchor = Anchor.Centre,
+                                Origin = Anchor.Centre,
+                                RelativeSizeAxes = Axes.Both,
+                                Padding = new MarginPadding { Bottom = ScreenFooter.HEIGHT },
+                                Child = new OsuContextMenuContainer
                                 {
                                     RelativeSizeAxes = Axes.Both,
-                                    Width = 0.6f,
-                                    Colour = ColourInfo.GradientHorizontal(Color4.Black.Opacity(0.3f), Color4.Black.Opacity(0f)),
-                                },
-                                mainGridContainer = new GridContainer // used for max width implementation
-                                {
-                                    RelativeSizeAxes = Axes.Both,
-                                    Content = new[]
+                                    Child = new PopoverContainer
                                     {
-                                        new[]
+                                        RelativeSizeAxes = Axes.Both,
+                                        Children = new Drawable[]
                                         {
-                                            new Container
+                                            new Box
                                             {
                                                 RelativeSizeAxes = Axes.Both,
-                                                // Ensure the left components are on top of the carousel both visually (although they should never overlay)
-                                                // but more importantly, for input purposes to allow the scroll-to-selection logic to override carousel's
-                                                // screen-wide scroll handling.
-                                                Depth = float.MinValue,
-                                                Shear = OsuGame.SHEAR,
-                                                Padding = new MarginPadding
+                                                Width = 0.6f,
+                                                Colour = ColourInfo.GradientHorizontal(Color4.Black.Opacity(0.3f), Color4.Black.Opacity(0f)),
+                                            },
+                                            mainGridContainer = new GridContainer // used for max width implementation
+                                            {
+                                                RelativeSizeAxes = Axes.Both,
+                                                Content = new[]
                                                 {
-                                                    Top = -CORNER_RADIUS_HIDE_OFFSET,
-                                                    Left = -CORNER_RADIUS_HIDE_OFFSET,
-                                                },
-                                                Children = new Drawable[]
-                                                {
-                                                    new Container
+                                                    new[]
                                                     {
-                                                        // Pad enough to only reset scroll when well into the left wedge areas.
-                                                        Padding = new MarginPadding { Right = 40 },
-                                                        RelativeSizeAxes = Axes.Both,
-                                                        Child = new LeftSideInteractionContainer(() => carousel.ScrollToSelection())
+                                                        new Container
                                                         {
                                                             RelativeSizeAxes = Axes.Both,
-                                                        },
-                                                    },
-                                                    wedgesContainer = new FillFlowContainer
-                                                    {
-                                                        RelativeSizeAxes = Axes.Both,
-                                                        Direction = FillDirection.Vertical,
-                                                        Children = new Drawable[]
-                                                        {
-                                                            new ShearAligningWrapper(titleWedge = new BeatmapTitleWedge
+                                                            // Ensure the left components are on top of the carousel both visually (although they should never overlay)
+                                                            // but more importantly, for input purposes to allow the scroll-to-selection logic to override carousel's
+                                                            // screen-wide scroll handling.
+                                                            Depth = float.MinValue,
+                                                            Shear = OsuGame.SHEAR,
+                                                            Padding = new MarginPadding
                                                             {
-                                                                TopPadding = TopPadding,
-                                                            }),
-                                                            new InputBlockingContainer
-                                                            {
-                                                                RelativeSizeAxes = Axes.X,
-                                                                Height = 4
+                                                                Top = -CORNER_RADIUS_HIDE_OFFSET,
+                                                                Left = -CORNER_RADIUS_HIDE_OFFSET,
                                                             },
-                                                            new ShearAligningWrapper(detailsArea = CreateDetailsArea()),
-                                                        },
-                                                    },
-                                                }
-                                            },
-                                            Empty(),
-                                            new Container
-                                            {
-                                                RelativeSizeAxes = Axes.Both,
-                                                Children = new Drawable[]
-                                                {
-                                                    rightGradientBackground = new Box
-                                                    {
-                                                        Anchor = Anchor.TopRight,
-                                                        Origin = Anchor.TopRight,
-                                                        Colour = ColourInfo.GradientHorizontal(Color4.Black.Opacity(0.0f), Color4.Black.Opacity(0.5f)),
-                                                        RelativeSizeAxes = Axes.Both,
-                                                    },
-                                                    new Container
-                                                    {
-                                                        RelativeSizeAxes = Axes.Both,
-                                                        Padding = new MarginPadding
-                                                        {
-                                                            Top = FilterControl.HEIGHT_FROM_SCREEN_TOP + 5,
-                                                            Bottom = 5,
-                                                        },
-                                                        Children = new Drawable[]
-                                                        {
-                                                            carousel = new BeatmapCarousel
+                                                            Children = new Drawable[]
                                                             {
-                                                                BleedTop = FilterControl.HEIGHT_FROM_SCREEN_TOP + 5,
-                                                                BleedBottom = ScreenFooter.HEIGHT + 5,
-                                                                RelativeSizeAxes = Axes.Both,
-                                                                RequestPresentBeatmap = b => SelectAndRun(b, OnStart),
-                                                                RequestSelection = queueBeatmapSelection,
-                                                                RequestRecommendedSelection = requestRecommendedSelection,
-                                                                NewItemsPresented = newItemsPresented,
-                                                            },
-                                                            noResultsPlaceholder = new NoResultsPlaceholder
-                                                            {
-                                                                RequestClearFilterText = () => FilterControl.Search(string.Empty)
+                                                                new Container
+                                                                {
+                                                                    // Pad enough to only reset scroll when well into the left wedge areas.
+                                                                    Padding = new MarginPadding { Right = 40 },
+                                                                    RelativeSizeAxes = Axes.Both,
+                                                                    Child = new LeftSideInteractionContainer(() => carousel.ScrollToSelection())
+                                                                    {
+                                                                        RelativeSizeAxes = Axes.Both,
+                                                                    },
+                                                                },
+                                                                wedgesContainer = new FillFlowContainer
+                                                                {
+                                                                    RelativeSizeAxes = Axes.Both,
+                                                                    Direction = FillDirection.Vertical,
+                                                                    Children = new Drawable[]
+                                                                    {
+                                                                        new ShearAligningWrapper(titleWedge = new BeatmapTitleWedge
+                                                                        {
+                                                                            TopPadding = TopPadding,
+                                                                        }),
+                                                                        new InputBlockingContainer
+                                                                        {
+                                                                            RelativeSizeAxes = Axes.X,
+                                                                            Height = 4
+                                                                        },
+                                                                        new ShearAligningWrapper(detailsArea = CreateDetailsArea()),
+                                                                    },
+                                                                },
                                                             }
-                                                        }
-                                                    },
-                                                    FilterControl = new FilterControl
-                                                    {
-                                                        Anchor = Anchor.TopRight,
-                                                        Origin = Anchor.TopRight,
-                                                        RelativeSizeAxes = Axes.X,
-                                                        ScopedBeatmapSet = { BindTarget = ScopedBeatmapSet },
+                                                        },
+                                                        Empty(),
+                                                        new Container
+                                                        {
+                                                            RelativeSizeAxes = Axes.Both,
+                                                            Children = new Drawable[]
+                                                            {
+                                                                rightGradientBackground = new Box
+                                                                {
+                                                                    Anchor = Anchor.TopRight,
+                                                                    Origin = Anchor.TopRight,
+                                                                    Colour = ColourInfo.GradientHorizontal(Color4.Black.Opacity(0.0f), Color4.Black.Opacity(0.5f)),
+                                                                    RelativeSizeAxes = Axes.Both,
+                                                                },
+                                                                new Container
+                                                                {
+                                                                    RelativeSizeAxes = Axes.Both,
+                                                                    Padding = new MarginPadding
+                                                                    {
+                                                                        Top = FilterControl.HEIGHT_FROM_SCREEN_TOP + 5,
+                                                                        Bottom = 5,
+                                                                    },
+                                                                    Children = new Drawable[]
+                                                                    {
+                                                                        carousel = new BeatmapCarousel
+                                                                        {
+                                                                            BleedTop = FilterControl.HEIGHT_FROM_SCREEN_TOP + 5,
+                                                                            BleedBottom = ScreenFooter.HEIGHT + 5,
+                                                                            RelativeSizeAxes = Axes.Both,
+                                                                            RequestPresentBeatmap = b => SelectAndRun(b, OnStart),
+                                                                            RequestSelection = queueBeatmapSelection,
+                                                                            RequestRecommendedSelection = requestRecommendedSelection,
+                                                                            NewItemsPresented = newItemsPresented,
+                                                                        },
+                                                                        noResultsPlaceholder = new NoResultsPlaceholder
+                                                                        {
+                                                                            RequestClearFilterText = () => FilterControl.Search(string.Empty)
+                                                                        }
+                                                                    }
+                                                                },
+                                                                FilterControl = new FilterControl
+                                                                {
+                                                                    Anchor = Anchor.TopRight,
+                                                                    Origin = Anchor.TopRight,
+                                                                    RelativeSizeAxes = Axes.X,
+                                                                    ScopedBeatmapSet = { BindTarget = ScopedBeatmapSet },
+                                                                },
+                                                            }
+                                                        },
                                                     },
                                                 }
                                             },
-                                        },
-                                    }
-                                },
+                                        }
+                                    },
+                                }
                             }
                         },
-                    }
+                    },
                 },
                 skinnableContent = new SkinnableContainer(new GlobalSkinnableContainerLookup(GlobalSkinnableContainers.SongSelect))
                 {

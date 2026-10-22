@@ -1783,6 +1783,9 @@ namespace osu.Game
             ScreenOffsetContainer.Padding = new MarginPadding { Top = toolbarOffset };
             overlayOffsetContainer.Padding = new MarginPadding { Top = toolbarOffset };
 
+            // the toolbar is transparent, so let the background continue behind it.
+            ScreenStack.BackgroundBleedTop = ScreenStack.ToLocalSpace(ToScreenSpace(new Vector2(0, toolbarOffset))).Y - ScreenStack.ToLocalSpace(ToScreenSpace(Vector2.Zero)).Y;
+
             adjustGlobalScreenOffset();
 
             GlobalCursorDisplay.ShowCursor = (ScreenStack.CurrentScreen as IOsuScreen)?.CursorVisible ?? false;

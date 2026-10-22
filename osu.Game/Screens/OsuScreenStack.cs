@@ -23,6 +23,15 @@ namespace osu.Game.Screens
             set => base.Padding = value;
         }
 
+        /// <summary>
+        /// How far the background should extend above the top of this stack, e.g. to also be visible behind the transparent toolbar.
+        /// </summary>
+        public float BackgroundBleedTop
+        {
+            get => -parallaxContainer.Padding.Top;
+            set => parallaxContainer.Padding = new MarginPadding { Top = -value };
+        }
+
         public OsuScreenStack()
         {
             InternalChild = parallaxContainer = new ParallaxContainer
