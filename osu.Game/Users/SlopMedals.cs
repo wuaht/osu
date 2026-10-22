@@ -15,7 +15,7 @@ namespace osu.Game.Users
         {
             Name = @"World is Mine",
             InternalName = @"slop-miku",
-            Description = @"Sit back and watch Miku play a whole map of her own songs. She had it under control the entire time.",
+            Description = @"She had it under control the entire time.",
             LocalTexture = @"Slop/medal-miku",
         };
     }
