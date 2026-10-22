@@ -31,6 +31,8 @@ namespace osu.Game.Screens.Backgrounds
         private Bindable<Skin> skin;
         private Bindable<BackgroundSource> source;
         private Bindable<IntroSequence> introSequence;
+        private Bindable<bool> mikuTakeover;
+        private Bindable<bool> mikuMedalUnlocked;
         private readonly SeasonalBackgroundLoader seasonalBackgroundLoader = new SeasonalBackgroundLoader();
 
         [Resolved]
@@ -48,6 +50,8 @@ namespace osu.Game.Screens.Backgrounds
             skin = skinManager.CurrentSkin.GetBoundCopy();
             source = config.GetBindable<BackgroundSource>(OsuSetting.MenuBackgroundSource);
             introSequence = config.GetBindable<IntroSequence>(OsuSetting.IntroSequence);
+            mikuTakeover = config.GetBindable<bool>(OsuSetting.SlopMikuTakeover);
+            mikuMedalUnlocked = config.GetBindable<bool>(OsuSetting.SlopMikuMedalUnlocked);
 
             AddInternal(seasonalBackgroundLoader);
         }
@@ -61,6 +65,8 @@ namespace osu.Game.Screens.Backgrounds
             source.ValueChanged += _ => Scheduler.AddOnce(next);
             beatmap.ValueChanged += _ => Scheduler.AddOnce(next);
             introSequence.ValueChanged += _ => Scheduler.AddOnce(next);
+            mikuTakeover.ValueChanged += _ => Scheduler.AddOnce(next);
+            mikuMedalUnlocked.ValueChanged += _ => Scheduler.AddOnce(next);
             seasonalBackgroundLoader.SeasonalBackgroundChanged += () => Scheduler.AddOnce(next);
 
             currentDisplay = RNG.Next(0, background_count);
@@ -136,6 +142,18 @@ namespace osu.Game.Screens.Backgrounds
 
         private Background createBackground()
         {
+            // miku takeover pins its own background, above seasonal and beatmap backgrounds.
+            if (mikuTakeover.Value && mikuMedalUnlocked.Value)
+            {
+                var mikuBackground = new Background(@"Menu/menu-background-4");
+
+                if (mikuBackground.Equals(background))
+                    return background;
+
+                mikuBackground.Depth = currentDisplay;
+                return mikuBackground;
+            }
+
             // seasonal background loading gets highest priority.
             Background newBackground = seasonalBackgroundLoader.LoadNextBackground();
 

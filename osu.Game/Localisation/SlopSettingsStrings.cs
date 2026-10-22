@@ -1576,9 +1576,9 @@ namespace osu.Game.Localisation
         public static LocalisableString MikuTakeover => new TranslatableString(getKey(@"miku_takeover"), @"Miku Takeover");
 
         /// <summary>
-        /// "Miku takes over the menu logo and the triangles intro."
+        /// "Miku takes over the menu logo, the menu background and the triangles intro."
         /// </summary>
-        public static LocalisableString MikuTakeoverDescription => new TranslatableString(getKey(@"miku_takeover_description"), @"Miku takes over the menu logo and the triangles intro.");
+        public static LocalisableString MikuTakeoverDescription => new TranslatableString(getKey(@"miku_takeover_description"), @"Miku takes over the menu logo, the menu background and the triangles intro.");
 
         private static string getKey(string key) => $"{prefix}:{key}";
     }
