@@ -74,13 +74,19 @@ namespace osu.Game.Overlays
             if (details == null)
                 return;
 
-            var medal = new Medal
+            Display(new Medal
             {
                 Name = details.Title,
                 InternalName = details.Slug,
                 Description = details.Description,
-            };
+            });
+        }
 
+        /// <summary>
+        /// Queues the unlock animation of the given medal.
+        /// </summary>
+        public void Display(Medal medal)
+        {
             var medalAnimation = new MedalAnimation(medal);
 
             Logger.Log($"Queueing medal unlock for \"{medal.Name}\" ({queuedMedals.Count} to display)");

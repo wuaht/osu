@@ -1570,6 +1570,16 @@ namespace osu.Game.Localisation
         /// </summary>
         public static LocalisableString AllowOverlaysDuringGameplayDescription => new TranslatableString(getKey(@"allow_overlays_during_gameplay_description"), @"The settings, chat and other overlays can be opened with their hotkeys while playing, without pausing first.");
 
+        /// <summary>
+        /// "Miku Takeover"
+        /// </summary>
+        public static LocalisableString MikuTakeover => new TranslatableString(getKey(@"miku_takeover"), @"Miku Takeover");
+
+        /// <summary>
+        /// "Miku takes over the menu logo and the triangles intro."
+        /// </summary>
+        public static LocalisableString MikuTakeoverDescription => new TranslatableString(getKey(@"miku_takeover_description"), @"Miku takes over the menu logo and the triangles intro.");
+
         private static string getKey(string key) => $"{prefix}:{key}";
     }
 }

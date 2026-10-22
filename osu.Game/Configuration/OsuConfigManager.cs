@@ -420,6 +420,8 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopKeyOverlayColourM2, @"#F8009E");
             SetDefault(OsuSetting.SlopAutoplayEngine, SlopAutoplayEngine.Realistic);
             SetDefault(OsuSetting.SlopSaveAutoplayReplays, false);
+            SetDefault(OsuSetting.SlopMikuMedalUnlocked, false);
+            SetDefault(OsuSetting.SlopMikuTakeover, false);
             SetDefault(OsuSetting.SlopAutoPlusFollowSliders, true);
             SetDefault(OsuSetting.SlopAutoPlusFollowSliderEnds, true);
             SetDefault(OsuSetting.SlopAutoPlusRotation, false);
@@ -1457,6 +1459,16 @@ namespace osu.Game.Configuration
         /// Whether replays of autoplay plays should be saved after finishing the map.
         /// </summary>
         SlopSaveAutoplayReplays,
+
+        /// <summary>
+        /// Whether the client-side Miku medal was unlocked by watching a Miku autoplay up to the results screen.
+        /// </summary>
+        SlopMikuMedalUnlocked,
+
+        /// <summary>
+        /// Whether the menu logo and the triangles intro use the Miku variants (requires <see cref="SlopMikuMedalUnlocked"/>).
+        /// </summary>
+        SlopMikuTakeover,
 
         /// <summary>
         /// Whether Auto+ follows the slider ball.

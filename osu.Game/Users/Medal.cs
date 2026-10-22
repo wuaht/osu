@@ -11,5 +11,10 @@ namespace osu.Game.Users
         public string InternalName { get; set; }
         public string ImageUrl => $@"https://s.ppy.sh/images/medals-client/{InternalName}@2x.png";
         public string Description { get; set; }
+
+        /// <summary>
+        /// A texture from the game's resources which is shown instead of <see cref="ImageUrl"/>, for medals which only exist client-side.
+        /// </summary>
+        public string LocalTexture { get; set; }
     }
 }

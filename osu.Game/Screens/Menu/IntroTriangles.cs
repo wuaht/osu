@@ -15,6 +15,7 @@ using osu.Framework.Graphics.Textures;
 using osu.Framework.Screens;
 using osu.Framework.Timing;
 using osu.Framework.Utils;
+using osu.Game.Configuration;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.Sprites;
@@ -301,20 +302,22 @@ namespace osu.Game.Screens.Menu
                 }
 
                 [BackgroundDependencyLoader]
-                private void load(LargeTextureStore textures)
+                private void load(LargeTextureStore textures, OsuConfigManager config)
                 {
+                    bool miku = config.Get<bool>(OsuSetting.SlopMikuTakeover) && config.Get<bool>(OsuSetting.SlopMikuMedalUnlocked);
+
                     InternalChildren = new Drawable[]
                     {
                         highlight = new LogoAnimation
                         {
                             RelativeSizeAxes = Axes.Both,
-                            Texture = textures.Get(@"Intro/Triangles/logo-highlight"),
+                            Texture = textures.Get(miku ? @"Intro/Triangles/logo-miku-highlight" : @"Intro/Triangles/logo-highlight"),
                             Colour = Color4.White,
                         },
                         background = new LogoAnimation
                         {
                             RelativeSizeAxes = Axes.Both,
-                            Texture = textures.Get(@"Intro/Triangles/logo-background"),
+                            Texture = textures.Get(miku ? @"Intro/Triangles/logo-miku-background" : @"Intro/Triangles/logo-background"),
                             Colour = OsuColour.Gray(0.6f),
                         },
                     };

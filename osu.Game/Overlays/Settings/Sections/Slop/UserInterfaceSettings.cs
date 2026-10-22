@@ -4,6 +4,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using osu.Framework.Allocation;
+using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Localisation;
 using osu.Game.Configuration;
@@ -16,11 +17,15 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
     {
         protected override LocalisableString Header => SlopSettingsStrings.UserInterfaceHeader;
 
-        public override IEnumerable<LocalisableString> FilterTerms => base.FilterTerms.Concat(new LocalisableString[] { "intro", "startup", "menu", "navigation", "transition", "fade", "instant" });
+        public override IEnumerable<LocalisableString> FilterTerms => base.FilterTerms.Concat(new LocalisableString[] { "intro", "startup", "menu", "navigation", "transition", "fade", "instant", "logo", "miku" });
+
+        private Bindable<bool> mikuMedalUnlocked = null!;
 
         [BackgroundDependencyLoader]
         private void load(OsuConfigManager config)
         {
+            SettingsItemV2 mikuTakeoverItem;
+
             Children = new Drawable[]
             {
                 new SettingsItemV2(new FormCheckBox
@@ -35,7 +40,17 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                     HintText = SlopSettingsStrings.InstantScreenTransitionsDescription,
                     Current = config.GetBindable<bool>(OsuSetting.SlopInstantScreenTransitions),
                 }),
+                mikuTakeoverItem = new SettingsItemV2(new FormCheckBox
+                {
+                    Caption = SlopSettingsStrings.MikuTakeover,
+                    HintText = SlopSettingsStrings.MikuTakeoverDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopMikuTakeover),
+                }),
             };
+
+            // the toggle is an easter egg, which only shows up once its medal has been unlocked.
+            mikuMedalUnlocked = config.GetBindable<bool>(OsuSetting.SlopMikuMedalUnlocked);
+            mikuMedalUnlocked.BindValueChanged(e => mikuTakeoverItem.CanBeShown.Value = e.NewValue, true);
         }
     }
 }

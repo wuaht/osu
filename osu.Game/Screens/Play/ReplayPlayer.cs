@@ -15,6 +15,7 @@ using osu.Game.Configuration;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Containers;
 using osu.Game.Input.Bindings;
+using osu.Game.Overlays;
 using osu.Game.Rulesets.Mods;
 using osu.Game.Scoring;
 using osu.Game.Screens.Play.HUD;
@@ -51,6 +52,18 @@ namespace osu.Game.Screens.Play
         private PlaybackSettings? playbackSettings;
 
         public ReplayOverlay ReplayOverlay { get; private set; } = null!;
+
+        [Resolved]
+        private MedalOverlay? medalOverlay { get; set; }
+
+        private OsuConfigManager config = null!;
+
+        /// <summary>
+        /// Whether a seek jumped over hit objects, which means the replay wasn't watched all the way through.
+        /// </summary>
+        private bool skippedHitObjects;
+
+        private double lastObservedTime;
 
         protected override bool CheckModsAllowFailure()
         {
@@ -90,8 +103,12 @@ namespace osu.Game.Screens.Play
         [BackgroundDependencyLoader]
         private void load(OsuConfigManager config)
         {
+            this.config = config;
+
             if (!LoadedBeatmapSuccessfully)
                 return;
+
+            GameplayClockContainer.OnSeek += checkSkippedHitObjects;
 
             AddInternal(leaderboardProvider);
 
@@ -159,12 +176,46 @@ namespace osu.Game.Screens.Play
 
         protected override bool ImportReplayScore => isAutoplayPlayback && SlopAutoplaySettings.Get(OsuSetting.SlopSaveAutoplayReplays, false);
 
-        protected override ResultsScreen CreateResults(ScoreInfo score) => new SoloResultsScreen(score)
+        protected override ResultsScreen CreateResults(ScoreInfo score)
         {
-            // Only show the relevant button otherwise things look silly.
-            AllowWatchingReplay = !isAutoplayPlayback,
-            AllowRetry = isAutoplayPlayback,
-        };
+            if (isAutoplayPlayback && !skippedHitObjects && score.User.Username == SlopAutoplaySettings.MIKU_NAME)
+                unlockMikuMedal();
+
+            return new SoloResultsScreen(score)
+            {
+                // Only show the relevant button otherwise things look silly.
+                AllowWatchingReplay = !isAutoplayPlayback,
+                AllowRetry = isAutoplayPlayback,
+            };
+        }
+
+        protected override void Update()
+        {
+            base.Update();
+
+            if (LoadedBeatmapSuccessfully)
+                lastObservedTime = GameplayClockContainer.CurrentTime;
+        }
+
+        private void checkSkippedHitObjects()
+        {
+            double seekTime = GameplayClockContainer.CurrentTime;
+
+            // skipping the intro or a break jumps over empty time only, which still counts as watching the whole map.
+            if (GameplayState.Beatmap.HitObjects.Any(h => h.StartTime > lastObservedTime && h.StartTime < seekTime))
+                skippedHitObjects = true;
+        }
+
+        private void unlockMikuMedal()
+        {
+            var unlocked = config.GetBindable<bool>(OsuSetting.SlopMikuMedalUnlocked);
+
+            if (unlocked.Value)
+                return;
+
+            unlocked.Value = true;
+            medalOverlay?.Display(SlopMedals.Miku);
+        }
 
         public bool OnPressed(KeyBindingPressEvent<GlobalAction> e)
         {

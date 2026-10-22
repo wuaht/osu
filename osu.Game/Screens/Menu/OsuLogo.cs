@@ -9,6 +9,7 @@ using osu.Framework.Allocation;
 using osu.Framework.Audio;
 using osu.Framework.Audio.Sample;
 using osu.Framework.Audio.Track;
+using osu.Framework.Bindables;
 using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Colour;
@@ -19,6 +20,7 @@ using osu.Framework.Graphics.Textures;
 using osu.Framework.Input.Events;
 using osu.Framework.Utils;
 using osu.Game.Beatmaps.ControlPoints;
+using osu.Game.Configuration;
 using osu.Game.Graphics.Backgrounds;
 using osu.Game.Graphics.Containers;
 using osu.Game.Overlays;
@@ -62,7 +64,16 @@ namespace osu.Game.Screens.Menu
         protected Sample SampleDownbeat;
 
         private readonly Container colourAndTriangles;
+        private readonly Box colourBox;
         private readonly TrianglesV2 triangles;
+
+        private static readonly ColourInfo default_colour = ColourInfo.GradientVertical(Color4Extensions.FromHex(@"023e7d"), Color4Extensions.FromHex(@"0466c8"));
+        private static readonly ColourInfo default_triangles_colour = ColourInfo.GradientVertical(Color4Extensions.FromHex(@"0466c8"), Color4Extensions.FromHex(@"023e7d"));
+        private static readonly ColourInfo miku_colour = ColourInfo.GradientVertical(Color4Extensions.FromHex(@"00605d"), Color4Extensions.FromHex(@"1fafa5"));
+        private static readonly ColourInfo miku_triangles_colour = ColourInfo.GradientVertical(Color4Extensions.FromHex(@"1fafa5"), Color4Extensions.FromHex(@"00605d"));
+
+        private Bindable<bool> mikuTakeover;
+        private Bindable<bool> mikuMedalUnlocked;
 
         /// <summary>
         /// Return value decides whether the logo should play its own sample for the click action.
@@ -185,10 +196,10 @@ namespace osu.Game.Screens.Menu
                                                                     Origin = Anchor.Centre,
                                                                     Children = new Drawable[]
                                                                     {
-                                                                        new Box
+                                                                        colourBox = new Box
                                                                         {
                                                                             RelativeSizeAxes = Axes.Both,
-                                                                            Colour = ColourInfo.GradientVertical(Color4Extensions.FromHex(@"023e7d"), Color4Extensions.FromHex(@"0466c8")),
+                                                                            Colour = default_colour,
                                                                         },
                                                                         triangles = new TrianglesV2
                                                                         {
@@ -197,7 +208,7 @@ namespace osu.Game.Screens.Menu
                                                                             Thickness = 0.009f,
                                                                             ScaleAdjust = 3,
                                                                             SpawnRatio = 1.4f,
-                                                                            Colour = ColourInfo.GradientVertical(Color4Extensions.FromHex(@"0466c8"), Color4Extensions.FromHex(@"023e7d")),
+                                                                            Colour = default_triangles_colour,
                                                                             RelativeSizeAxes = Axes.Both,
                                                                         },
                                                                     }
@@ -275,15 +286,28 @@ namespace osu.Game.Screens.Menu
         }
 
         [BackgroundDependencyLoader]
-        private void load(TextureStore textures, AudioManager audio)
+        private void load(TextureStore textures, AudioManager audio, OsuConfigManager config)
         {
             sampleClick = audio.Samples.Get(@"Menu/osu-logo-select");
 
             SampleBeat = audio.Samples.Get(@"Menu/osu-logo-heartbeat");
             SampleDownbeat = audio.Samples.Get(@"Menu/osu-logo-downbeat");
 
-            logo.Texture = textures.Get(@"Menu/logo");
-            ripple.Texture = textures.Get(@"Menu/logo");
+            mikuTakeover = config.GetBindable<bool>(OsuSetting.SlopMikuTakeover);
+            mikuMedalUnlocked = config.GetBindable<bool>(OsuSetting.SlopMikuMedalUnlocked);
+
+            mikuTakeover.BindValueChanged(_ => updateLogo(textures));
+            mikuMedalUnlocked.BindValueChanged(_ => updateLogo(textures));
+            updateLogo(textures);
+        }
+
+        private void updateLogo(TextureStore textures)
+        {
+            bool miku = mikuTakeover.Value && mikuMedalUnlocked.Value;
+
+            logo.Texture = ripple.Texture = textures.Get(miku ? @"Menu/mikulogo" : @"Menu/logo");
+            colourBox.Colour = miku ? miku_colour : default_colour;
+            triangles.Colour = miku ? miku_triangles_colour : default_triangles_colour;
         }
 
         private int lastBeatIndex;

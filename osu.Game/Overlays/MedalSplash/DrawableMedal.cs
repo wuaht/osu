@@ -119,7 +119,7 @@ namespace osu.Game.Overlays.MedalSplash
         [BackgroundDependencyLoader]
         private void load(OsuColour colours, TextureStore textures, LargeTextureStore largeTextures)
         {
-            medalSprite.Texture = largeTextures.Get(medal.ImageUrl);
+            medalSprite.Texture = medal.LocalTexture != null ? textures.Get(medal.LocalTexture) : largeTextures.Get(medal.ImageUrl);
             medalGlow.Texture = textures.Get(@"MedalSplash/medal-glow");
             description.Colour = colours.BlueLight;
         }
