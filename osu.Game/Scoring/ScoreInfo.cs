@@ -8,6 +8,7 @@ using JetBrains.Annotations;
 using Newtonsoft.Json;
 using osu.Framework.Localisation;
 using osu.Game.Beatmaps;
+using osu.Game.Configuration;
 using osu.Game.Database;
 using osu.Game.Models;
 using osu.Game.Online.API;
@@ -185,6 +186,8 @@ namespace osu.Game.Scoring
                 Id = RealmUser.OnlineID,
                 Username = RealmUser.Username,
                 CountryCode = RealmUser.CountryCode,
+                // the bot flag isn't persisted to realm, so restore it for stored miku autoplay scores to keep her avatar.
+                IsBot = isStoredMikuAutoplay,
             };
             set
             {
@@ -221,6 +224,11 @@ namespace osu.Game.Scoring
         #endregion
 
         #region Properties required to make things work with existing usages
+
+        private bool isStoredMikuAutoplay =>
+            RealmUser.OnlineID == APIUser.SYSTEM_USER_ID
+            && RealmUser.Username == SlopAutoplaySettings.MIKU_NAME
+            && APIMods.Any(m => m.Acronym is @"AT" or @"CN");
 
         public int UserID => RealmUser.OnlineID;
 

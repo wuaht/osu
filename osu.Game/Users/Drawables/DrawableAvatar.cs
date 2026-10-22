@@ -38,8 +38,7 @@ namespace osu.Game.Users.Drawables
         private void load(LargeTextureStore textures, OnlineAssetCachingStore onlineTextures, [CanBeNull] OfflineProfileManager offlineProfiles)
         {
             // bots of autoplay engines which have their own avatar.
-            // the bot flag isn't persisted to realm, so stored scores (e.g. on local leaderboards) only match by system id and name.
-            if (user != null && user.OnlineID == APIUser.SYSTEM_USER_ID && user.Username == SlopAutoplaySettings.MIKU_NAME)
+            if (user != null && user.IsBot && user.OnlineID == APIUser.SYSTEM_USER_ID && user.Username == SlopAutoplaySettings.MIKU_NAME)
                 Texture = textures.Get(@"Slop/avatar-miku");
             // offline profiles have local avatars.
             else if (user != null && OfflineProfileUser.IsOfflineProfileID(user.OnlineID))
