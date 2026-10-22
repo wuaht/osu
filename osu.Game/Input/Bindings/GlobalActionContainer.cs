@@ -223,6 +223,8 @@ namespace osu.Game.Input.Bindings
             new KeyBinding(InputKey.None, GlobalAction.EditorContinueDistanceSnap),
             new KeyBinding(InputKey.None, GlobalAction.EditorToggleRotationHotkeyOrigin),
             new KeyBinding(new[] { InputKey.Control, InputKey.Shift, InputKey.L }, GlobalAction.EditorToggleAngledFlipControl),
+            new KeyBinding(new[] { InputKey.Control, InputKey.Alt, InputKey.Period }, GlobalAction.EditorRotateByCustomAngleClockwise),
+            new KeyBinding(new[] { InputKey.Control, InputKey.Alt, InputKey.Comma }, GlobalAction.EditorRotateByCustomAngleCounterclockwise),
             new KeyBinding(new[] { InputKey.Control, InputKey.Shift, InputKey.C }, GlobalAction.EditorCopyAsOsuFormat),
         }.Concat(editorUndoRedoKeyBindings);
 
@@ -770,6 +772,12 @@ namespace osu.Game.Input.Bindings
 
         [LocalisableDescription(typeof(SlopEditorStrings), nameof(SlopEditorStrings.ToggleAngledFlipControl))]
         EditorToggleAngledFlipControl,
+
+        [LocalisableDescription(typeof(SlopEditorStrings), nameof(SlopEditorStrings.RotateByCustomAngleClockwise))]
+        EditorRotateByCustomAngleClockwise,
+
+        [LocalisableDescription(typeof(SlopEditorStrings), nameof(SlopEditorStrings.RotateByCustomAngleCounterclockwise))]
+        EditorRotateByCustomAngleCounterclockwise,
     }
 
     public enum GlobalActionCategory

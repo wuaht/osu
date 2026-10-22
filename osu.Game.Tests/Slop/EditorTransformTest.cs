@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
@@ -43,6 +44,26 @@ namespace osu.Game.Tests.Slop
             Assert.That(second.SliderVelocityMultiplier, Is.EqualTo(0.6).Within(0.0001));
             Assert.That(before.SliderVelocityMultiplier, Is.EqualTo(1.2));
             Assert.That(after.SliderVelocityMultiplier, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void TestEqualizeKeepsSliderEndsSnapped()
+        {
+            var beatmap = createBeatmap((0, 500), (1000, 250));
+
+            addSlider(beatmap, 500, 1.2);
+            var slider = addSlider(beatmap, 1000, 1);
+            slider.RepeatCount = 1;
+            beatmap.Update(slider);
+
+            SliderVelocityEqualizer.Equalize(beatmap, beatmap.ControlPointInfo.TimingPoints[1]);
+
+            double tick = beatmap.GetBeatLengthAtTime(slider.StartTime);
+            double spanDuration = slider.Duration / slider.SpanCount();
+
+            Assert.That(slider.SliderVelocityMultiplier, Is.EqualTo(0.6).Within(0.0001));
+            Assert.That(spanDuration / tick, Is.EqualTo(Math.Round(spanDuration / tick)).Within(0.001));
+            Assert.That(spanDuration, Is.GreaterThan(0));
         }
 
         [Test]

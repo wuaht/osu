@@ -37,7 +37,9 @@ void main(void)
     if (v_WhiteBlend > 0.5)
         col = pow(mix(pow(col, vec3(2.2)), vec3(1.0), linearstep(32.0 * timeInterp, 32.0 * timeInterp + 0.75, dist)), vec3(1.0 / 2.2));
 
-    o_Colour = vec4(col * max(alpha, 0.0), 1.0);
+    // premultiplied, with the real coverage in the alpha channel, so that the trail stays transparent when it's drawn into a buffer.
+    alpha = max(alpha, 0.0);
+    o_Colour = vec4(col * alpha, alpha);
 }
 
 #endif

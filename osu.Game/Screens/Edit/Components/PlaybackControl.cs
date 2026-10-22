@@ -1,6 +1,7 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using osuTK;
@@ -190,6 +191,19 @@ namespace osu.Game.Screens.Edit.Components
                 Current.Value = 1;
             }
 
+            protected override void UpdateAfterChildren()
+            {
+                base.UpdateAfterChildren();
+
+                // the values are spread with equal gaps between them, from the left edge (lined up with the label above) to the right edge.
+                var items = TabContainer.Children;
+                float itemsWidth = items.Sum(i => i.DrawWidth);
+                float spacing = items.Count > 1 ? Math.Max(0, (DrawWidth - itemsWidth) / (items.Count - 1)) : 0;
+
+                if (TabContainer.Spacing.X != spacing)
+                    TabContainer.Spacing = new Vector2(spacing, 0);
+            }
+
             public partial class PlaybackTabItem : TabItem<double>
             {
                 private const float fade_duration = 200;
@@ -200,13 +214,11 @@ namespace osu.Game.Screens.Edit.Components
                 public PlaybackTabItem(double value)
                     : base(value)
                 {
-                    RelativeSizeAxes = Axes.Both;
-
-                    Width = 1f / tempo_values.Length;
+                    RelativeSizeAxes = Axes.Y;
+                    AutoSizeAxes = Axes.X;
 
                     Children = new Drawable[]
                     {
-                        // left-aligned within each tab, so that the first value lines up with the "playback speed" label above.
                         text = new OsuSpriteText
                         {
                             Origin = Anchor.TopLeft,

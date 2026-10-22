@@ -9,17 +9,19 @@ using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
+using osu.Framework.Input.Bindings;
 using osu.Framework.Input.Events;
 using osu.Game.Configuration;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Sprites;
+using osu.Game.Input.Bindings;
 using osuTK;
 using osuTK.Input;
 
 namespace osu.Game.Screens.Edit.Compose.Components
 {
     [Cached]
-    public partial class SelectionBox : CompositeDrawable
+    public partial class SelectionBox : CompositeDrawable, IKeyBindingHandler<GlobalAction>
     {
         public const float BORDER_RADIUS = 3;
 
@@ -251,7 +253,7 @@ namespace osu.Game.Screens.Edit.Compose.Components
         }
 
         /// <summary>
-        /// Rotates the selection by the custom rotation angle from the settings (like osu!stable's Ctrl+Alt+&lt; and Ctrl+Alt+&gt;).
+        /// Rotates the selection by the custom rotation angle from the settings (like osu!stable's Ctrl+Alt+&lt; and Ctrl+Alt+&gt;, which are the default key bindings).
         /// </summary>
         /// <returns>Whether the rotation was performed.</returns>
         private bool rotateByCustomAngle(int direction)
@@ -271,22 +273,35 @@ namespace osu.Game.Screens.Edit.Compose.Components
             return true;
         }
 
+        public bool OnPressed(KeyBindingPressEvent<GlobalAction> e)
+        {
+            if (e.Repeat || !editorPresent)
+                return false;
+
+            switch (e.Action)
+            {
+                case GlobalAction.EditorRotateByCustomAngleClockwise:
+                    return rotateByCustomAngle(1);
+
+                case GlobalAction.EditorRotateByCustomAngleCounterclockwise:
+                    return rotateByCustomAngle(-1);
+            }
+
+            return false;
+        }
+
+        public void OnReleased(KeyBindingReleaseEvent<GlobalAction> e)
+        {
+        }
+
         protected override bool OnKeyDown(KeyDownEvent e)
         {
             if (e.Repeat || !e.ControlPressed)
                 return false;
 
-            if (e.AltPressed && editorPresent)
-            {
-                switch (e.Key)
-                {
-                    case Key.Comma:
-                        return rotateByCustomAngle(-1);
-
-                    case Key.Period:
-                        return rotateByCustomAngle(1);
-                }
-            }
+            // these are the default key bindings of the custom angle rotation in the editor, which shouldn't fall back to rotating by 90 degrees.
+            if (e.AltPressed && editorPresent && (e.Key == Key.Comma || e.Key == Key.Period))
+                return false;
 
             switch (e.Key)
             {

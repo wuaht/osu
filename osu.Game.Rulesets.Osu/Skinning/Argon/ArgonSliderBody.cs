@@ -13,13 +13,16 @@ namespace osu.Game.Rulesets.Osu.Skinning.Argon
         // Eventually this would be a user setting.
         public float BodyAlpha { get; init; } = 1;
 
+        // kept here as well, as the path is recreated when the body is recycled.
+        private bool darkenBody = true;
+
         protected override void LoadComplete()
         {
             const float path_radius = ArgonMainCirclePiece.OUTER_GRADIENT_SIZE / 2;
 
             base.LoadComplete();
 
-            AccentColourBindable.BindValueChanged(accent => BorderColour = accent.NewValue, true);
+            AccentColourBindable.BindValueChanged(accent => BorderColour = GetSkinBorderColour() ?? accent.NewValue, true);
             ScaleBindable.BindValueChanged(scale => PathRadius = path_radius * scale.NewValue, true);
 
             // This border size thing is kind of weird, hey.
@@ -28,12 +31,16 @@ namespace osu.Game.Rulesets.Osu.Skinning.Argon
             BorderSize = intended_thickness / Default.DrawableSliderPath.BORDER_PORTION;
         }
 
-        protected override Default.DrawableSliderPath CreateSliderPath() => new DrawableSliderPath();
+        protected override Default.DrawableSliderPath CreateSliderPath() => new DrawableSliderPath { DarkenBody = darkenBody };
 
         protected override Color4 GetBodyAccentColour(ISkinSource skin, Color4 hitObjectAccentColour)
         {
             // frosted slider bodies are more transparent to let the blurred backdrop show through.
             float alpha = FrostedSliders.Value ? BodyAlpha * (0.85f - 0.75f * Frostiness.Value) : BodyAlpha;
+
+            // a custom track colour is shown as is, it would be barely distinguishable from black if it was darkened like the combo colour.
+            darkenBody = GetSkinTrackColour() == null;
+            ((DrawableSliderPath)Path).DarkenBody = darkenBody;
 
             return base.GetBodyAccentColour(skin, hitObjectAccentColour).Opacity(alpha);
         }
@@ -45,12 +52,14 @@ namespace osu.Game.Rulesets.Osu.Skinning.Argon
                 BackdropTintStrength = 0.6f;
             }
 
+            public bool DarkenBody { get; set; } = true;
+
             protected override Color4 ColourAt(float position)
             {
                 if (CalculatedBorderPortion != 0f && position <= CalculatedBorderPortion)
                     return BorderColour;
 
-                return AccentColour.Darken(4);
+                return DarkenBody ? AccentColour.Darken(4) : AccentColour;
             }
         }
     }

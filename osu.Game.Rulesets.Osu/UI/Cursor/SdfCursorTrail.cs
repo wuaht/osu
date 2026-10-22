@@ -281,6 +281,20 @@ namespace osu.Game.Rulesets.Osu.UI.Cursor
                 AlphaEquation = BlendingEquation.Max,
             };
 
+            /// <summary>
+            /// Adds the (premultiplied) colours like additive blending, but blends the alpha regularly.
+            /// Additive alpha made the faded parts of the trail opaque in buffers that are drawn with transparency later on (e.g. in osu!fps), which showed as a black trail.
+            /// </summary>
+            private static readonly BlendingParameters composite_blending = new BlendingParameters
+            {
+                Source = BlendingType.One,
+                Destination = BlendingType.One,
+                SourceAlpha = BlendingType.One,
+                DestinationAlpha = BlendingType.OneMinusSrcAlpha,
+                RGBEquation = BlendingEquation.Add,
+                AlphaEquation = BlendingEquation.Add,
+            };
+
             protected override void Draw(IRenderer renderer)
             {
                 base.Draw(renderer);
@@ -352,7 +366,7 @@ namespace osu.Game.Rulesets.Osu.UI.Cursor
                 renderer.PopScissor();
                 renderer.PopMaskingInfo();
 
-                renderer.SetBlend(BlendingParameters.Additive);
+                renderer.SetBlend(composite_blending);
 
                 textureShader.Bind();
                 renderer.DrawFrameBuffer(frameBuffer, rootRectangle, DrawColourInfo.Colour);

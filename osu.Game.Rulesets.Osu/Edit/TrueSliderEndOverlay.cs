@@ -25,6 +25,11 @@ namespace osu.Game.Rulesets.Osu.Edit
     {
         private const float ring_thickness = 3f;
 
+        /// <summary>
+        /// The duration over which a marker fades out after the end of its slider has been judged.
+        /// </summary>
+        private const double fade_out_duration = 100;
+
         private readonly Playfield playfield;
 
         private Bindable<bool> enabled = null!;
@@ -80,8 +85,12 @@ namespace osu.Game.Rulesets.Osu.Edit
                     marker.Position = centre;
                     marker.Size = new Vector2(2 * Vector2.Distance(centre, edge));
 
-                    // fades in and out along with the slider, at half its opacity (like osu!stable).
-                    marker.Alpha = drawable.Alpha * 0.5f;
+                    // fades in along with the slider, at half its opacity (like osu!stable).
+                    // the slider itself stays alive for a while after it ends in the editor, but the marker is only relevant until the end is judged.
+                    double timeAfterTrueEnd = drawable.Time.Current - GetTrueEndTime(slider);
+                    float fadeOut = (float)Math.Clamp(1 - timeAfterTrueEnd / fade_out_duration, 0, 1);
+
+                    marker.Alpha = drawable.Alpha * 0.5f * fadeOut;
                 }
             }
 

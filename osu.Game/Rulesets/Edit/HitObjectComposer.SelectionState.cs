@@ -360,7 +360,7 @@ namespace osu.Game.Rulesets.Edit
 
             foreach (var kvp in SelectionSampleStates)
             {
-                yield return new DrawableTernaryButton<GlobalAction>
+                var button = new DrawableTernaryButton<GlobalAction>
                 {
                     Current = kvp.Value,
                     Description = kvp.Key.Replace(@"hit", string.Empty).Titleize(),
@@ -368,6 +368,9 @@ namespace osu.Game.Rulesets.Edit
                     Action = GetActionForSample(kvp.Key),
                     Hotkey = new Hotkey(GetActionForSample(kvp.Key)),
                 };
+
+                additionButtons[kvp.Key] = button;
+                yield return button;
             }
         }
 

@@ -1255,10 +1255,10 @@ namespace osu.Game.Localisation
         public static LocalisableString EditorCustomRotation => new TranslatableString(getKey(@"editor_custom_rotation"), @"Custom rotation angle");
 
         /// <summary>
-        /// "The angle by which Ctrl+Alt+, and Ctrl+Alt+. rotate the selection."
+        /// "The angle by which the "Rotate by custom angle" key bindings rotate the selection."
         /// </summary>
         public static LocalisableString EditorCustomRotationDescription => new TranslatableString(getKey(@"editor_custom_rotation_description"),
-            @"The angle by which Ctrl+Alt+, and Ctrl+Alt+. rotate the selection.");
+            @"The angle by which the ""Rotate by custom angle"" key bindings rotate the selection.");
 
         /// <summary>
         /// "Text editor"

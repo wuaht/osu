@@ -92,8 +92,19 @@ namespace osu.Game.Rulesets.Osu.Skinning.Default
             comboColour.B + (1 - comboColour.B) * combo_border_whiteness,
             1);
 
-        protected virtual Color4 GetBorderColour(ISkinSource skin) => Color4.White;
+        // the slider colours of a beatmap override the skin (like osu!stable), non-legacy skins don't provide any themselves.
+        protected virtual Color4 GetBorderColour(ISkinSource skin) => GetSkinBorderColour() ?? Color4.White;
 
-        protected virtual Color4 GetBodyAccentColour(ISkinSource skin, Color4 hitObjectAccentColour) => hitObjectAccentColour;
+        /// <summary>
+        /// The slider border colour of the beatmap or skin, if any.
+        /// </summary>
+        protected Color4? GetSkinBorderColour() => skin.GetConfig<OsuSkinColour, Color4>(OsuSkinColour.SliderBorder)?.Value;
+
+        protected virtual Color4 GetBodyAccentColour(ISkinSource skin, Color4 hitObjectAccentColour) => GetSkinTrackColour() ?? hitObjectAccentColour;
+
+        /// <summary>
+        /// The slider track colour of the beatmap or skin, if any.
+        /// </summary>
+        protected Color4? GetSkinTrackColour() => skin.GetConfig<OsuSkinColour, Color4>(OsuSkinColour.SliderTrackOverride)?.Value;
     }
 }

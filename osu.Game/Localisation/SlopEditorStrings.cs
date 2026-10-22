@@ -165,6 +165,16 @@ namespace osu.Game.Localisation
         public static LocalisableString ToggleAngledFlipControl => new TranslatableString(getKey(@"toggle_angled_flip_control"), @"Toggle angled flip control");
 
         /// <summary>
+        /// "Rotate by custom angle clockwise"
+        /// </summary>
+        public static LocalisableString RotateByCustomAngleClockwise => new TranslatableString(getKey(@"rotate_by_custom_angle_clockwise"), @"Rotate by custom angle clockwise");
+
+        /// <summary>
+        /// "Rotate by custom angle counterclockwise"
+        /// </summary>
+        public static LocalisableString RotateByCustomAngleCounterclockwise => new TranslatableString(getKey(@"rotate_by_custom_angle_counterclockwise"), @"Rotate by custom angle counterclockwise");
+
+        /// <summary>
         /// "Line angle (degrees)"
         /// </summary>
         public static LocalisableString AngledFlipLineAngle => new TranslatableString(getKey(@"angled_flip_line_angle"), @"Line angle (degrees)");

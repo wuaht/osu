@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using osu.Framework.Bindables;
-using osu.Framework.Testing;
 using osu.Game.Audio;
 using osu.Game.Configuration;
 using osu.Game.Rulesets.Objects;
@@ -26,6 +25,9 @@ namespace osu.Game.Rulesets.Edit
         private Bindable<bool> flashAdditions = null!;
 
         private double? lastAdditionFlashTime;
+
+        // the buttons can't be found through their current bindable, as it is bound to the sample state rather than being it.
+        private readonly Dictionary<string, DrawableTernaryButton> additionButtons = new Dictionary<string, DrawableTernaryButton>();
 
         private void loadAdditionFlashes(OsuConfigManager config)
         {
@@ -54,13 +56,10 @@ namespace osu.Game.Rulesets.Edit
             if (additions.Count == 0)
                 return;
 
-            foreach (var button in togglesCollection.ChildrenOfType<DrawableTernaryButton>())
+            foreach (string name in additions)
             {
-                foreach (var (name, state) in SelectionSampleStates)
-                {
-                    if (ReferenceEquals(button.Current, state) && additions.Contains(name))
-                        button.Flash();
-                }
+                if (additionButtons.TryGetValue(name, out var button))
+                    button.Flash();
             }
         }
 
