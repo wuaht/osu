@@ -124,9 +124,13 @@ namespace osu.Game.Screens.Menu
             [Resolved]
             private OsuGameBase game { get; set; }
 
+            private bool miku;
+
             [BackgroundDependencyLoader]
-            private void load()
+            private void load(OsuConfigManager config)
             {
+                miku = config.Get<bool>(OsuSetting.SlopMikuTakeover) && config.Get<bool>(OsuSetting.SlopMikuMedalUnlocked);
+
                 InternalChildren = new Drawable[]
                 {
                     triangles = new GlitchingTriangles
@@ -206,7 +210,7 @@ namespace osu.Game.Screens.Menu
 
                     using (BeginDelayedSequence(text_4))
                     {
-                        welcomeText.FadeIn().OnComplete(t => t.Text = "welcome to slop!");
+                        welcomeText.FadeIn().OnComplete(t => t.Text = miku ? "welcome to miku!" : "welcome to slop!");
                         welcomeText.TransformTo(nameof(welcomeText.Spacing), new Vector2(50, 0), 5000);
                     }
 
