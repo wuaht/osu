@@ -57,6 +57,8 @@ $packId = 'slop'
 $packTitle = 'slop!'
 $stableBranch = 'slop'
 $nightlyBranch = 'slop-nightly'
+# osu-framework and osu-resources have no nightly branch, both channels are built from this one.
+$libraryBranch = 'slop'
 
 $root = $PSScriptRoot
 $fpsDir = Join-Path $root 'osu-fps'
@@ -160,8 +162,8 @@ if (-not $SkipUpload)
     {
         # The release is built from the local checkouts, so they must match what is on GitHub.
         Assert-Pushed $root 'osu'
-        Assert-Pushed (Join-Path $root '../osu-framework') 'osu-framework'
-        Assert-Pushed (Join-Path $root '../osu-resources') 'osu-resources'
+        Assert-Pushed (Join-Path $root '../osu-framework') 'osu-framework' $libraryBranch
+        Assert-Pushed (Join-Path $root '../osu-resources') 'osu-resources' $libraryBranch
         # osu!fps is released by tagging the submodule's commit, so it must be on GitHub as well.
         Assert-Pushed $fpsDir 'osu-fps' $fpsBranch
     }
