@@ -75,6 +75,26 @@ namespace osu.Game.Screens.Menu
         private Bindable<bool> mikuTakeover;
         private Bindable<bool> mikuMedalUnlocked;
 
+        private readonly Sprite mikuEyes;
+        private readonly Sprite mikuPupils;
+
+        /// <summary>
+        /// The centre of miku's eyes, relative to the centre of the logo texture.
+        /// </summary>
+        private static readonly Vector2 miku_eyes_centre = new Vector2(-4, 383);
+
+        /// <summary>
+        /// How far miku's pupils may move away from their resting position, in logo texture pixels.
+        /// </summary>
+        private static readonly Vector2 miku_pupils_range = new Vector2(14, 5);
+
+        /// <summary>
+        /// The cursor distance from miku's eyes (in logo texture pixels) at which her pupils reach their full range.
+        /// </summary>
+        private const float miku_pupils_full_range_distance = 600;
+
+        private const float logo_texture_size = 1024;
+
         /// <summary>
         /// Return value decides whether the logo should play its own sample for the click action.
         /// </summary>
@@ -222,6 +242,19 @@ namespace osu.Game.Screens.Menu
                                                                 },
                                                             },
                                                         },
+                                                        // miku's eyes sit behind the logo, which has holes for them.
+                                                        mikuEyes = new Sprite
+                                                        {
+                                                            Anchor = Anchor.Centre,
+                                                            Origin = Anchor.Centre,
+                                                            Alpha = 0,
+                                                        },
+                                                        mikuPupils = new Sprite
+                                                        {
+                                                            Anchor = Anchor.Centre,
+                                                            Origin = Anchor.Centre,
+                                                            Alpha = 0,
+                                                        },
                                                         logo = new Sprite
                                                         {
                                                             Anchor = Anchor.Centre,
@@ -306,8 +339,35 @@ namespace osu.Game.Screens.Menu
             bool miku = mikuTakeover.Value && mikuMedalUnlocked.Value;
 
             logo.Texture = ripple.Texture = textures.Get(miku ? @"Menu/mikulogo" : @"Menu/logo");
+
+            mikuEyes.Texture = textures.Get(@"Menu/mikulogo-eyes");
+            mikuPupils.Texture = textures.Get(@"Menu/mikulogo-pupils");
+            mikuEyes.Alpha = mikuPupils.Alpha = miku ? 1 : 0;
             colourBox.Colour = miku ? miku_colour : default_colour;
             triangles.Colour = miku ? miku_triangles_colour : default_triangles_colour;
+        }
+
+        private void updateMikuPupils()
+        {
+            var inputManager = GetContainingInputManager();
+
+            if (inputManager == null || mikuPupils.DrawWidth == 0)
+                return;
+
+            float textureScale = mikuPupils.DrawWidth / logo_texture_size;
+
+            // work in logo texture pixels, so that the range stays the same regardless of the logo's size.
+            Vector2 cursor = mikuEyes.ToLocalSpace(inputManager.CurrentState.Mouse.Position) / textureScale;
+            Vector2 direction = cursor - (new Vector2(logo_texture_size / 2) + miku_eyes_centre);
+
+            float distance = direction.Length;
+            Vector2 target = distance > 0
+                ? direction / distance * Math.Min(1, distance / miku_pupils_full_range_distance) * miku_pupils_range
+                : Vector2.Zero;
+
+            mikuPupils.Position = new Vector2(
+                (float)Interpolation.Damp(mikuPupils.Position.X, target.X * textureScale, 0.995f, Time.Elapsed),
+                (float)Interpolation.Damp(mikuPupils.Position.Y, target.Y * textureScale, 0.995f, Time.Elapsed));
         }
 
         private int lastBeatIndex;
@@ -388,6 +448,9 @@ namespace osu.Game.Screens.Menu
         protected override void Update()
         {
             base.Update();
+
+            if (mikuPupils.Alpha > 0)
+                updateMikuPupils();
 
             const float scale_adjust_cutoff = 0.4f;
 
