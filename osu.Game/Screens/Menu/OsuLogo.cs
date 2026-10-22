@@ -243,16 +243,19 @@ namespace osu.Game.Screens.Menu
                                                             },
                                                         },
                                                         // miku's eyes sit behind the logo, which has holes for them.
+                                                        // they bypass auto-sizing, as the moving pupils would otherwise resize the logo's background.
                                                         mikuEyes = new Sprite
                                                         {
                                                             Anchor = Anchor.Centre,
                                                             Origin = Anchor.Centre,
+                                                            BypassAutoSizeAxes = Axes.Both,
                                                             Alpha = 0,
                                                         },
                                                         mikuPupils = new Sprite
                                                         {
                                                             Anchor = Anchor.Centre,
                                                             Origin = Anchor.Centre,
+                                                            BypassAutoSizeAxes = Axes.Both,
                                                             Alpha = 0,
                                                         },
                                                         logo = new Sprite
