@@ -11,6 +11,7 @@ using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
+using osu.Game.Configuration;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Sprites;
 
@@ -47,11 +48,17 @@ namespace osu.Game.Screens.Menu
             Alpha = 0;
         }
 
+        [Resolved(canBeNull: true)]
+        private OsuConfigManager config { get; set; }
+
         [BackgroundDependencyLoader]
         private void load()
         {
             const int line_offset = 80;
             const int circle_offset = 250;
+
+            // miku takeover swaps the blue logo fill for teal.
+            bool miku = config != null && config.Get<bool>(OsuSetting.SlopMikuTakeover) && config.Get<bool>(OsuSetting.SlopMikuMedalUnlocked);
 
             Children = new Drawable[]
             {
@@ -96,7 +103,7 @@ namespace osu.Game.Screens.Menu
                         },
                     }
                 },
-                bigRing = new Ring(Color4Extensions.FromHex(@"B6C5E9"), 0.85f),
+                bigRing = new Ring(Color4Extensions.FromHex(miku ? @"B6E9E4" : @"B6C5E9"), 0.85f),
                 mediumRing = new Ring(Color4.White.Opacity(130), 0.7f),
                 smallRing = new Ring(Color4.White, 0.6f),
                 welcomeText = new OsuSpriteText
@@ -123,7 +130,7 @@ namespace osu.Game.Screens.Menu
                             Origin = Anchor.Centre,
                             RelativeSizeAxes = Axes.Both,
                             Height = 0,
-                            Colour = Color4Extensions.FromHex(@"C6D8FF").Opacity(160),
+                            Colour = Color4Extensions.FromHex(miku ? @"C6FFF8" : @"C6D8FF").Opacity(160),
                         },
                         foregroundFill = new Box
                         {
@@ -141,28 +148,28 @@ namespace osu.Game.Screens.Menu
                     Anchor = Anchor.Centre,
                     Origin = Anchor.TopCentre,
                     Position = new Vector2(0, circle_offset),
-                    Colour = Color4Extensions.FromHex(@"002855"),
+                    Colour = Color4Extensions.FromHex(miku ? @"003a38" : @"002855"),
                 },
                 blueCircle = new Circle
                 {
                     Anchor = Anchor.Centre,
                     Origin = Anchor.CentreRight,
                     Position = new Vector2(-circle_offset, 0),
-                    Colour = Color4Extensions.FromHex(@"023e7d"),
+                    Colour = Color4Extensions.FromHex(miku ? @"00605d" : @"023e7d"),
                 },
                 yellowCircle = new Circle
                 {
                     Anchor = Anchor.Centre,
                     Origin = Anchor.BottomCentre,
                     Position = new Vector2(0, -circle_offset),
-                    Colour = Color4Extensions.FromHex(@"0353a4"),
+                    Colour = Color4Extensions.FromHex(miku ? @"008a84" : @"0353a4"),
                 },
                 pinkCircle = new Circle
                 {
                     Anchor = Anchor.Centre,
                     Origin = Anchor.CentreLeft,
                     Position = new Vector2(circle_offset, 0),
-                    Colour = Color4Extensions.FromHex(@"0466c8"),
+                    Colour = Color4Extensions.FromHex(miku ? @"1fafa5" : @"0466c8"),
                 },
             };
 

@@ -8,12 +8,14 @@ using JetBrains.Annotations;
 using osu.Framework.Allocation;
 using osu.Framework.Audio;
 using osu.Framework.Audio.Sample;
+using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Graphics.Textures;
 using osu.Game.Audio;
+using osu.Game.Configuration;
 using osu.Game.Online.API;
 using osu.Game.Skinning;
 using osuTK;
@@ -111,8 +113,10 @@ namespace osu.Game.Screens.Menu
             public LogoVisualisation LogoVisualisation { get; private set; }
 
             [BackgroundDependencyLoader]
-            private void load(TextureStore textures, IAPIProvider api)
+            private void load(TextureStore textures, IAPIProvider api, OsuConfigManager config)
             {
+                bool miku = config.Get<bool>(OsuSetting.SlopMikuTakeover) && config.Get<bool>(OsuSetting.SlopMikuMedalUnlocked);
+
                 Origin = Anchor.Centre;
                 Anchor = Anchor.Centre;
 
@@ -130,7 +134,7 @@ namespace osu.Game.Screens.Menu
                                 RelativeSizeAxes = Axes.Both,
                                 Anchor = Anchor.Centre,
                                 Origin = Anchor.Centre,
-                                Colour = Color4.DarkBlue,
+                                Colour = miku ? Color4Extensions.FromHex(@"00605d") : Color4.DarkBlue,
                                 Size = OsuLogo.SCALE_ADJUST,
                             },
                             new Circle
