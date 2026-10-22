@@ -5,8 +5,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using osu.Game.Beatmaps;
+using osu.Game.Configuration;
 using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Scoring;
+using osu.Game.Users;
 
 namespace osu.Game.Rulesets.Mods
 {
@@ -27,6 +29,8 @@ namespace osu.Game.Rulesets.Mods
                         Id = replayData.User.OnlineID,
                         Username = replayData.User.Username,
                         IsBot = replayData.User.IsBot,
+                        // miku is from japan.
+                        CountryCode = replayData.User.IsBot && replayData.User.Username == SlopAutoplaySettings.MIKU_NAME ? CountryCode.JP : CountryCode.Unknown,
                     }
                 }
             };

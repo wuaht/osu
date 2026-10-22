@@ -185,7 +185,8 @@ namespace osu.Game.Scoring
             {
                 Id = RealmUser.OnlineID,
                 Username = RealmUser.Username,
-                CountryCode = RealmUser.CountryCode,
+                // older stored miku scores were saved without her country.
+                CountryCode = isStoredMikuAutoplay ? CountryCode.JP : RealmUser.CountryCode,
                 // the bot flag isn't persisted to realm, so restore it for stored miku autoplay scores to keep her avatar.
                 IsBot = isStoredMikuAutoplay,
             };
