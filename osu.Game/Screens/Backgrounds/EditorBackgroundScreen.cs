@@ -37,6 +37,11 @@ namespace osu.Game.Screens.Backgrounds
         private BeatmapBackgroundWithStoryboard background = null!;
 
         private readonly Container content;
+
+        /// <summary>
+        /// A blurred, full-screen copy of the background, filling the area outside of <see cref="content"/> while it is aligned with the playfield.
+        /// </summary>
+        private readonly Container backdrop;
         private readonly Box blackBox;
 
         // We retrieve IBindable<WorkingBeatmap> from our dependency cache instead of passing WorkingBeatmap directly into EditorBackgroundScreen.
@@ -59,6 +64,11 @@ namespace osu.Game.Screens.Backgrounds
                         Colour = Color4.Black,
                         RelativeSizeAxes = Axes.Both,
                     },
+                    backdrop = new Container
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Alpha = 0,
+                    },
                     content = new EditorSkinProvidingContainer(editorBeatmap)
                     {
                         RelativeSizeAxes = Axes.Both,
@@ -75,6 +85,7 @@ namespace osu.Game.Screens.Backgrounds
             alignBackground = config.GetBindable<bool>(OsuSetting.SlopEditorAlignBackground);
 
             content.Child = createContent();
+            backdrop.Child = createBackdrop();
         }
 
         protected override void LoadComplete()
@@ -104,6 +115,7 @@ namespace osu.Game.Screens.Backgrounds
                     content.Origin = Anchor.Centre;
                     content.Size = new Vector2(background_height * scale * DrawWidth / DrawHeight, background_height * scale);
                     content.Position = new Vector2(playfield.Centre.X, playfield.Centre.Y - playfield_shift * scale);
+                    backdrop.Alpha = 1;
                     return;
                 }
             }
@@ -112,11 +124,13 @@ namespace osu.Game.Screens.Backgrounds
             content.Origin = Anchor.TopLeft;
             content.Size = Vector2.One;
             content.Position = Vector2.Zero;
+            backdrop.Alpha = 0;
         }
 
         private const float playfield_height = 384;
         private const float background_height = 480;
         private const float playfield_shift = 8;
+        private const float backdrop_blur_sigma = 20;
 
         public override void OnEntering(ScreenTransitionEvent e)
         {
@@ -135,7 +149,9 @@ namespace osu.Game.Screens.Backgrounds
         public void RefreshBackgroundAsync()
         {
             cancellationTokenSource?.Cancel();
-            LoadComponentAsync(createContent(), d => content.Child = d, (cancellationTokenSource = new CancellationTokenSource()).Token);
+            cancellationTokenSource = new CancellationTokenSource();
+            LoadComponentAsync(createContent(), d => content.Child = d, cancellationTokenSource.Token);
+            LoadComponentAsync(createBackdrop(), d => backdrop.Child = d, cancellationTokenSource.Token);
         }
 
         private Drawable createContent() => background = new BeatmapBackgroundWithStoryboard(beatmap.Value)
@@ -143,6 +159,13 @@ namespace osu.Game.Screens.Backgrounds
             RelativeSizeAxes = Axes.Both,
             ShowStoryboard = { BindTarget = showStoryboard },
         };
+
+        private Drawable createBackdrop()
+        {
+            var backdropBackground = new BeatmapBackground(beatmap.Value);
+            backdropBackground.BlurTo(new Vector2(backdrop_blur_sigma));
+            return backdropBackground;
+        }
 
         public override bool Equals(BackgroundScreen? other)
         {
