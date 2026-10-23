@@ -226,11 +226,17 @@ namespace osu.Game.Screens.Select
                                         RelativeSizeAxes = Axes.Both,
                                         Children = new Drawable[]
                                         {
-                                            new Box
+                                            new Container
                                             {
                                                 RelativeSizeAxes = Axes.Both,
-                                                Width = 0.6f,
-                                                Colour = ColourInfo.GradientHorizontal(Color4.Black.Opacity(0.3f), Color4.Black.Opacity(0f)),
+                                                // extend behind the translucent footer, as the gradient would otherwise end in a visible line above it.
+                                                Padding = new MarginPadding { Bottom = -ScreenFooter.HEIGHT },
+                                                Child = new Box
+                                                {
+                                                    RelativeSizeAxes = Axes.Both,
+                                                    Width = 0.6f,
+                                                    Colour = ColourInfo.GradientHorizontal(Color4.Black.Opacity(0.3f), Color4.Black.Opacity(0f)),
+                                                },
                                             },
                                             mainGridContainer = new GridContainer // used for max width implementation
                                             {
