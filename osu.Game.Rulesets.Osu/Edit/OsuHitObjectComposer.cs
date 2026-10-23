@@ -126,6 +126,15 @@ namespace osu.Game.Rulesets.Osu.Edit
         /// </summary>
         public void ShowStreamConversion(Slider slider) => LayerBelowRuleset.Add(new StreamConversionAnchor(slider));
 
+        /// <summary>
+        /// Opens the slider generator next to <paramref name="screenSpacePosition"/>.
+        /// </summary>
+        public void ShowSliderGeneration(Vector2 screenSpacePosition, Action onClosed) => AddInternal(new SliderGenerationAnchor(onClosed)
+        {
+            // not added to the playfield, which moves when the toolboxes expand or contract.
+            Position = ToLocalSpace(screenSpacePosition),
+        });
+
         [BackgroundDependencyLoader]
         private void load(OsuConfigManager config)
         {

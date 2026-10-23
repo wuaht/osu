@@ -9,7 +9,6 @@ using osu.Framework.Allocation;
 using osu.Framework.Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
-using osu.Framework.Graphics.Cursor;
 using osu.Framework.Graphics.UserInterface;
 using osu.Framework.Input.Events;
 using osu.Game.Graphics;
@@ -27,55 +26,25 @@ namespace osu.Game.Screens.Edit.Compose.Components
     /// <summary>
     /// An invisible drawable at the position the context menu was opened at, which hosts a <see cref="PropertyTransformerPopover"/>.
     /// </summary>
-    public partial class PropertyTransformerAnchor : Drawable, IHasPopover
+    public partial class PropertyTransformerAnchor : DraggablePopoverAnchor
     {
         private readonly IReadOnlyCollection<HitObject> objects;
 
         public PropertyTransformerAnchor(IReadOnlyCollection<HitObject> objects)
         {
             this.objects = objects;
-
-            Origin = Anchor.Centre;
-            Size = new Vector2(1);
         }
 
-        protected override void LoadComplete()
-        {
-            base.LoadComplete();
-            Schedule(this.ShowPopover);
-        }
-
-        public Popover GetPopover() => new PropertyTransformerPopover(objects)
-        {
-            Closed = () => this.Delay(500).Expire(),
-            // the popover follows its target, so dragging it moves the anchor.
-            Pinned = screenSpacePosition => Position = Parent!.ToLocalSpace(screenSpacePosition),
-            Dragged = screenSpaceDelta => Position = Parent!.ToLocalSpace(Parent.ToScreenSpace(Position) + screenSpaceDelta),
-        };
+        protected override DraggablePopover CreatePopover() => new PropertyTransformerPopover(objects);
     }
 
-    public partial class PropertyTransformerPopover : OsuPopover
+    public partial class PropertyTransformerPopover : DraggablePopover
     {
         private const float label_width = 110;
         private const float input_width = 60;
         private const float operator_width = 16;
         private const float preview_width = 100;
         private const float row_height = 30;
-
-        public Action? Closed { get; init; }
-
-        /// <summary>
-        /// Invoked with the screen space distance the popover was dragged by.
-        /// </summary>
-        public Action<Vector2>? Dragged { get; init; }
-
-        /// <summary>
-        /// Invoked with the screen space centre of the popover when it starts being dragged for the first time.
-        /// From then on, the popover is centred on its target instead of picking a side next to it.
-        /// </summary>
-        public Action<Vector2>? Pinned { get; init; }
-
-        private bool pinned;
 
         private readonly IReadOnlyCollection<HitObject> objects;
 
@@ -160,25 +129,6 @@ namespace osu.Game.Screens.Edit.Compose.Components
             this.HidePopover();
         }
 
-        // text boxes and buttons handle their own drags, so this only triggers on the empty parts of the popover.
-        protected override bool OnDragStart(DragStartEvent e)
-        {
-            if (Dragged == null)
-                return false;
-
-            // picking the side with the most space would make the popover jump around while it is dragged.
-            if (!pinned && Pinned != null)
-            {
-                Pinned(Body.ScreenSpaceDrawQuad.Centre);
-                AllowableAnchors = new[] { Anchor.Centre };
-                pinned = true;
-            }
-
-            return true;
-        }
-
-        protected override void OnDrag(DragEvent e) => Dragged?.Invoke(e.ScreenSpaceMousePosition - e.ScreenSpaceLastMousePosition);
-
         public override bool OnPressed(KeyBindingPressEvent<GlobalAction> e)
         {
             if (e.Action == GlobalAction.Select && !e.Repeat)
@@ -188,23 +138,6 @@ namespace osu.Game.Screens.Edit.Compose.Components
             }
 
             return base.OnPressed(e);
-        }
-
-        private bool wasShown;
-
-        protected override void PopIn()
-        {
-            base.PopIn();
-            wasShown = true;
-        }
-
-        protected override void PopOut()
-        {
-            base.PopOut();
-
-            // PopOut is also called when the popover is loaded in its initial hidden state, which must not close it.
-            if (wasShown)
-                Closed?.Invoke();
         }
 
         private static string formatRange(IEnumerable<double> values, Func<double, string> format)

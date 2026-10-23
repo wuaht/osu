@@ -375,6 +375,51 @@ namespace osu.Game.Localisation
         /// </summary>
         public static LocalisableString TestInOtherMode => new TranslatableString(getKey(@"test_in_other_mode"), @"Test in other mode");
 
+        /// <summary>
+        /// "Slider generator"
+        /// </summary>
+        public static LocalisableString SliderGenerator => new TranslatableString(getKey(@"slider_generator"), @"Slider generator");
+
+        /// <summary>
+        /// "Slider"
+        /// </summary>
+        public static LocalisableString SliderGeneratorButton => new TranslatableString(getKey(@"slider_generator_button"), @"Slider");
+
+        /// <summary>
+        /// "Segments"
+        /// </summary>
+        public static LocalisableString SliderGeneratorSegments => new TranslatableString(getKey(@"slider_generator_segments"), @"Segments");
+
+        /// <summary>
+        /// "Arc chance"
+        /// </summary>
+        public static LocalisableString SliderGeneratorArcChance => new TranslatableString(getKey(@"slider_generator_arc_chance"), @"Arc chance");
+
+        /// <summary>
+        /// "Length (beats)"
+        /// </summary>
+        public static LocalisableString SliderGeneratorLength => new TranslatableString(getKey(@"slider_generator_length"), @"Length (beats)");
+
+        /// <summary>
+        /// "Rotation"
+        /// </summary>
+        public static LocalisableString SliderGeneratorRotation => new TranslatableString(getKey(@"slider_generator_rotation"), @"Rotation");
+
+        /// <summary>
+        /// "Seed"
+        /// </summary>
+        public static LocalisableString SliderGeneratorSeed => new TranslatableString(getKey(@"slider_generator_seed"), @"Seed");
+
+        /// <summary>
+        /// "New seed"
+        /// </summary>
+        public static LocalisableString SliderGeneratorNewSeed => new TranslatableString(getKey(@"slider_generator_new_seed"), @"New seed");
+
+        /// <summary>
+        /// "Create"
+        /// </summary>
+        public static LocalisableString SliderGeneratorCreate => new TranslatableString(getKey(@"slider_generator_create"), @"Create");
+
         private static string getKey(string key) => $"{prefix}:{key}";
     }
 }
