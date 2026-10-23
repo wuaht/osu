@@ -52,6 +52,10 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
 
         private EditorSkinDropdown cursorSkinDropdown = null!;
 
+        private Bindable<EditorUnsnapMode> unsnapMode = null!;
+
+        private SettingsItemV2 unsnapDivisorsItem = null!;
+
         private IDisposable? realmSubscription;
 
         [BackgroundDependencyLoader]
@@ -112,6 +116,18 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                     Caption = SlopSettingsStrings.WaveformStyle,
                     HintText = SlopSettingsStrings.WaveformStyleDescription,
                     Current = config.GetBindable<EditorWaveformStyle>(OsuSetting.SlopEditorWaveformStyle),
+                }),
+                new SettingsItemV2(new FormEnumDropdown<EditorUnsnapMode>
+                {
+                    Caption = SlopSettingsStrings.UnsnapMode,
+                    HintText = SlopSettingsStrings.UnsnapModeDescription,
+                    Current = unsnapMode = config.GetBindable<EditorUnsnapMode>(OsuSetting.SlopEditorUnsnapMode),
+                }),
+                unsnapDivisorsItem = new SettingsItemV2(new FormTextBox
+                {
+                    Caption = SlopSettingsStrings.UnsnapDivisors,
+                    HintText = SlopSettingsStrings.UnsnapDivisorsDescription,
+                    Current = config.GetBindable<string>(OsuSetting.SlopEditorUnsnapDivisors),
                 }),
                 new SettingsItemV2(new FormCheckBox
                 {
@@ -415,6 +431,8 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
             {
                 cursorSkinSetting.Value = skin.NewValue.ID == Guid.Empty ? string.Empty : skin.NewValue.ID.ToString();
             });
+
+            unsnapMode.BindValueChanged(mode => unsnapDivisorsItem.Alpha = mode.NewValue == EditorUnsnapMode.Enabled ? 1 : 0, true);
         }
 
         private void skinsChanged(IRealmCollection<SkinInfo> sender, ChangeSet? changes)

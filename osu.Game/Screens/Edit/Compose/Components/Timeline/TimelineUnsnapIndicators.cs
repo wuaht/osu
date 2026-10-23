@@ -5,11 +5,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using osu.Framework.Allocation;
+using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Cursor;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Localisation;
+using osu.Game.Configuration;
 using osu.Game.Graphics;
 using osu.Game.Rulesets.Objects;
 using osu.Game.Rulesets.Objects.Types;
@@ -28,9 +30,9 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
         private const float in_piece_icon_size = 9;
 
         /// <summary>
-        /// Unsnaps below this are ignored, as all object ends have these due to the way slider velocity works.
+        /// The maximum distance in milliseconds from a (truncated) tick for a node to still be considered snapped, like osu!stable.
         /// </summary>
-        private const double minimum_unsnap = 1;
+        private const int snap_leniency = 2;
 
         private readonly HitObject hitObject;
 
@@ -46,6 +48,18 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
         [Resolved]
         private OsuColour colours { get; set; } = null!;
 
+        [Resolved]
+        private BindableBeatDivisor? beatDivisor { get; set; }
+
+        private Bindable<EditorUnsnapMode> unsnapMode = null!;
+
+        private Bindable<string> unsnapDivisors = null!;
+
+        /// <summary>
+        /// The divisors a node may be snapped to without being considered unsnapped.
+        /// </summary>
+        private int[] allowedDivisors = Array.Empty<int>();
+
         private double[] displayedUnsnaps = Array.Empty<double>();
 
         public TimelineUnsnapIndicators(HitObject hitObject, HitObjectPointPiece? headPiece = null)
@@ -56,6 +70,44 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
             RelativeSizeAxes = Axes.Both;
         }
 
+        [BackgroundDependencyLoader]
+        private void load(OsuConfigManager config)
+        {
+            unsnapMode = config.GetBindable<EditorUnsnapMode>(OsuSetting.SlopEditorUnsnapMode);
+            unsnapDivisors = config.GetBindable<string>(OsuSetting.SlopEditorUnsnapDivisors);
+        }
+
+        protected override void LoadComplete()
+        {
+            base.LoadComplete();
+
+            unsnapMode.BindValueChanged(_ => updateAllowedDivisors());
+            unsnapDivisors.BindValueChanged(_ => updateAllowedDivisors());
+            beatDivisor?.BindValueChanged(_ => updateAllowedDivisors());
+            updateAllowedDivisors();
+        }
+
+        private void updateAllowedDivisors()
+        {
+            switch (unsnapMode.Value)
+            {
+                case EditorUnsnapMode.Enabled:
+                    allowedDivisors = unsnapDivisors.Value.Split(',')
+                                                    .Select(d => int.TryParse(d.Trim(), out int divisor) ? divisor : 0)
+                                                    .Where(d => d > 0)
+                                                    .ToArray();
+                    break;
+
+                case EditorUnsnapMode.CurrentDivisor:
+                    allowedDivisors = new[] { beatDivisor?.Value ?? editorBeatmap?.BeatmapInfo.BeatDivisor ?? 4 };
+                    break;
+
+                default:
+                    allowedDivisors = Array.Empty<int>();
+                    break;
+            }
+        }
+
         protected override void Update()
         {
             base.Update();
@@ -63,7 +115,10 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
             if (editorBeatmap == null)
                 return;
 
-            double[] unsnaps = getNodeTimes().Select(getUnsnap).ToArray();
+            // Like osu!stable, nothing is marked as unsnapped without any allowed divisors.
+            double[] unsnaps = allowedDivisors.Length == 0
+                ? new double[getNodeTimes().Count()]
+                : getNodeTimes().Select(getUnsnap).ToArray();
 
             if (unsnaps.SequenceEqual(displayedUnsnaps))
                 return;
@@ -75,7 +130,7 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
 
             for (int i = 0; i < unsnaps.Length; i++)
             {
-                if (Math.Abs(unsnaps[i]) < minimum_unsnap)
+                if (unsnaps[i] == 0)
                     continue;
 
                 var icon = new UnsnapIcon(unsnaps[i], unsnaps.Length > 1 ? getNodeName(i, unsnaps.Length) : null);
@@ -101,7 +156,43 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
             }
         }
 
-        private double getUnsnap(double time) => time - editorBeatmap!.ControlPointInfo.GetClosestSnappedTime(time);
+        /// <summary>
+        /// Returns how far the node at <paramref name="time"/> is off the beat, or 0 if it counts as snapped.
+        /// </summary>
+        private double getUnsnap(double time)
+        {
+            if (isSnapped((int)time))
+                return 0;
+
+            return time - editorBeatmap!.ControlPointInfo.GetClosestSnappedTime(time);
+        }
+
+        /// <summary>
+        /// Matches osu!stable's timeline check: tick times are truncated to integers and a node is snapped if it is
+        /// within <see cref="snap_leniency"/> of the tick before or after it for any of the <see cref="allowedDivisors"/>.
+        /// </summary>
+        private bool isSnapped(int time)
+        {
+            var timingPoint = editorBeatmap!.ControlPointInfo.TimingPointAt(time);
+
+            foreach (int divisor in allowedDivisors)
+            {
+                double tickLength = timingPoint.BeatLength / divisor;
+                double offsetTime = time - timingPoint.Time;
+
+                int tickIndex = (int)(offsetTime / tickLength);
+                if (offsetTime < 0)
+                    tickIndex--;
+
+                int previousTick = (int)(tickIndex * tickLength + timingPoint.Time);
+                int nextTick = (int)((tickIndex + 1) * tickLength + timingPoint.Time);
+
+                if (Math.Abs(time - previousTick) <= snap_leniency || Math.Abs(time - nextTick) <= snap_leniency)
+                    return true;
+            }
+
+            return false;
+        }
 
         private IEnumerable<double> getNodeTimes()
         {

@@ -459,6 +459,43 @@ namespace osu.Game.Localisation
         public static LocalisableString WaveformStyleOnsets => new TranslatableString(getKey(@"waveform_style_onsets"), @"Onsets");
 
         /// <summary>
+        /// "Unsnap indicators"
+        /// </summary>
+        public static LocalisableString UnsnapMode => new TranslatableString(getKey(@"unsnap_mode"), @"Unsnap indicators");
+
+        /// <summary>
+        /// "Which divisors objects may be snapped to before an unsnap icon is displayed above them in the timeline."
+        /// </summary>
+        public static LocalisableString UnsnapModeDescription => new TranslatableString(getKey(@"unsnap_mode_description"),
+            @"Which divisors objects may be snapped to before an unsnap icon is displayed above them in the timeline.");
+
+        /// <summary>
+        /// "Unsnap divisors"
+        /// </summary>
+        public static LocalisableString UnsnapModeEnabled => new TranslatableString(getKey(@"unsnap_mode_enabled"), @"Unsnap divisors");
+
+        /// <summary>
+        /// "Current divisor"
+        /// </summary>
+        public static LocalisableString UnsnapModeCurrentDivisor => new TranslatableString(getKey(@"unsnap_mode_current_divisor"), @"Current divisor");
+
+        /// <summary>
+        /// "Disabled"
+        /// </summary>
+        public static LocalisableString UnsnapModeDisabled => new TranslatableString(getKey(@"unsnap_mode_disabled"), @"Disabled");
+
+        /// <summary>
+        /// "Unsnap divisors (comma-separated)"
+        /// </summary>
+        public static LocalisableString UnsnapDivisors => new TranslatableString(getKey(@"unsnap_divisors"), @"Unsnap divisors (comma-separated)");
+
+        /// <summary>
+        /// "Objects within 2 ms of a tick of any of these divisors aren't marked as unsnapped, like in osu!stable."
+        /// </summary>
+        public static LocalisableString UnsnapDivisorsDescription => new TranslatableString(getKey(@"unsnap_divisors_description"),
+            @"Objects within 2 ms of a tick of any of these divisors aren't marked as unsnapped, like in osu!stable.");
+
+        /// <summary>
         /// "Online"
         /// </summary>
         public static LocalisableString OnlineHeader => new TranslatableString(getKey(@"online_header"), @"Online");

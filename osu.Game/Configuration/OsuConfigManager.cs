@@ -295,6 +295,8 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopEditorShowDifficultyStrains, false);
             SetDefault(OsuSetting.SlopEditorShowOffscreenObjects, false);
             SetDefault(OsuSetting.SlopEditorWaveformStyle, EditorWaveformStyle.Default);
+            SetDefault(OsuSetting.SlopEditorUnsnapMode, EditorUnsnapMode.Enabled);
+            SetDefault(OsuSetting.SlopEditorUnsnapDivisors, @"10,12,16");
             SetDefault(OsuSetting.SlopEditorLoopMusic, false);
             SetDefault(OsuSetting.SlopEditorMutedEndsSoftC999, false);
             SetDefault(OsuSetting.SlopEditorZoomOut, false);
@@ -837,6 +839,16 @@ namespace osu.Game.Configuration
         /// How the waveform is displayed in the timeline of the beatmap editor.
         /// </summary>
         SlopEditorWaveformStyle,
+
+        /// <summary>
+        /// Which divisors hit object nodes may be snapped to before they are marked as unsnapped in the timeline of the beatmap editor.
+        /// </summary>
+        SlopEditorUnsnapMode,
+
+        /// <summary>
+        /// The comma-separated divisors hit object nodes may be snapped to with <see cref="EditorUnsnapMode.Enabled"/>.
+        /// </summary>
+        SlopEditorUnsnapDivisors,
 
         /// <summary>
         /// Whether playback in the beatmap editor continues from the start of the track when the end is reached.
