@@ -108,16 +108,13 @@ namespace osu.Game.Overlays
                         RelativeSizeAxes = Axes.Both,
                         // The backdrop is blurred at a quarter of the resolution, which is visually indistinguishable but much cheaper.
                         EffectBufferScale = new Vector2(0.25f),
-                    },
-                    new Box
-                    {
-                        Anchor = Anchor.TopRight,
-                        Origin = Anchor.TopRight,
-                        Scale = new Vector2(2, 1), // over-extend to the left for transitions
-                        RelativeSizeAxes = Axes.Both,
-                        // translucent, so that the background behind the settings stays visible.
-                        Colour = colourProvider.Background4.Opacity(0.4f),
-                        Alpha = 1,
+                        // the backdrop is only blurred behind the content of the container, so the background has to be inside it.
+                        Child = new Box
+                        {
+                            RelativeSizeAxes = Axes.Both,
+                            // translucent, so that the background behind the settings stays visible.
+                            Colour = colourProvider.Background4.Opacity(0.4f),
+                        },
                     },
                     loading = new LoadingLayer
                     {
