@@ -61,6 +61,7 @@ using osu.Game.Screens.Edit.Design;
 using osu.Game.Screens.Edit.GameplayTest;
 using osu.Game.Screens.Edit.Hitsounding;
 using osu.Game.Screens.Edit.Nominators;
+using osu.Game.Screens.Edit.Resnapping;
 using osu.Game.Screens.Edit.Setup;
 using osu.Game.Screens.Edit.Submission;
 using osu.Game.Screens.Edit.Timing;
@@ -305,6 +306,7 @@ namespace osu.Game.Screens.Edit
             autosaveToBackups = config.GetBindable<bool>(OsuSetting.SlopEditorAutosaveToBackups);
             myMapsAliases = config.GetBindable<string>(OsuSetting.SlopEditorMyMapsAliases);
             noAutomaticBreaks = config.GetBindable<bool>(OsuSetting.SlopEditorNoAutomaticBreaks);
+            mutedEndsSoftC999 = config.GetBindable<bool>(OsuSetting.SlopEditorMutedEndsSoftC999);
 
             var loadableBeatmap = Beatmap.Value;
 
@@ -558,7 +560,7 @@ namespace osu.Game.Screens.Edit
                                         Items = new MenuItem[]
                                         {
                                             new EditorMenuItem(EditorStrings.SetPreviewPointToCurrent, MenuItemType.Standard, SetPreviewPointToCurrentTime),
-                                            new EditorMenuItem(EditorStrings.SnapAllNotesToCurrentSnapDivisor, MenuItemType.Destructive, confirmSnapAllHitObjectsToCurrentDivisor),
+                                            new EditorMenuItem(SlopEditorStrings.CleanUpMap, MenuItemType.Destructive, confirmCleanUpMap),
                                             new EditorMenuItem(EditorStrings.Synchronise, MenuItemType.Destructive, confirmSyncTimingAttributes)
                                             {
                                                 Action = { Disabled = loadableBeatmap.BeatmapSetInfo.Beatmaps.Count < 2 }
@@ -934,6 +936,7 @@ namespace osu.Game.Screens.Edit
         private Bindable<bool> autosaveToBackups;
         private Bindable<string> myMapsAliases;
         private Bindable<bool> noAutomaticBreaks;
+        private Bindable<bool> mutedEndsSoftC999;
 
         /// <summary>
         /// The state hash of the last autosave written to the backups folder.
@@ -1597,18 +1600,19 @@ namespace osu.Game.Screens.Edit
 
         private void confirmSyncTimingAttributes()
         {
-            dialogOverlay.Push(new SyncTimingConfirmationDialog((syncBookmarks, syncPreviewPoint) =>
+            dialogOverlay.Push(new SyncTimingConfirmationDialog(options =>
             {
                 if (Beatmap.Value.BeatmapSetInfo.Beatmaps.Count <= 1)
                     return;
 
-                if (!syncBookmarks && !syncPreviewPoint)
+                if (!options.Bookmarks && !options.PreviewPoint && !options.Timing)
                     return;
 
                 completePendingSave();
 
                 int[] sourceBookmarks = editorBeatmap.Bookmarks.ToArray();
                 int sourcePreviewTime = editorBeatmap.BeatmapInfo.Metadata.PreviewTime;
+                var sourceTimingPoints = editorBeatmap.ControlPointInfo.TimingPoints.Select(t => (TimingControlPoint)t.DeepClone()).ToArray();
 
                 foreach (var beatmapInfo in Beatmap.Value.BeatmapSetInfo.Beatmaps)
                 {
@@ -1620,17 +1624,23 @@ namespace osu.Game.Screens.Edit
                         var targetWorking = beatmapManager.GetWorkingBeatmap(beatmapInfo);
                         var playable = targetWorking.GetPlayableBeatmap(beatmapInfo.Ruleset);
 
-                        if (syncBookmarks)
+                        if (options.Timing)
+                        {
+                            playable.ControlPointInfo = EditorBeatmap.ConvertControlPoints(playable.ControlPointInfo);
+                            TimingCopier.Apply(playable, sourceTimingPoints, options.TimingMode, options.Divisors);
+                        }
+
+                        if (options.Bookmarks)
                             playable.Bookmarks = sourceBookmarks;
 
-                        if (syncPreviewPoint)
+                        if (options.PreviewPoint)
                             beatmapInfo.Metadata.PreviewTime = sourcePreviewTime;
 
                         beatmapManager.Save(beatmapInfo, playable, targetWorking.GetSkin(), targetWorking.Storyboard);
                     }
                     catch (Exception e)
                     {
-                        Logger.Error(e, $@"Failed to sync bookmarks/preview to {beatmapInfo.GetDisplayTitle()}");
+                        Logger.Error(e, $@"Failed to sync timing attributes to {beatmapInfo.GetDisplayTitle()}");
                         return;
                     }
                 }
@@ -1639,9 +1649,9 @@ namespace osu.Game.Screens.Edit
             }));
         }
 
-        private void confirmSnapAllHitObjectsToCurrentDivisor()
+        private void confirmCleanUpMap()
         {
-            dialogOverlay.Push(new SnapAllNotesConfirmationDialog(SnapAllHitObjectsToCurrentDivisor));
+            dialogOverlay.Push(new CleanUpMapDialog(options => MapCleaner.Apply(editorBeatmap, options with { MuteWithSoftC999 = mutedEndsSoftC999.Value })));
         }
 
         protected void SnapAllHitObjectsToCurrentDivisor() => editorBeatmap.SnapAllHitObjectsToCurrentDivisor();

@@ -420,6 +420,81 @@ namespace osu.Game.Localisation
         /// </summary>
         public static LocalisableString SliderGeneratorCreate => new TranslatableString(getKey(@"slider_generator_create"), @"Create");
 
+        /// <summary>
+        /// "Preserve beat spacing"
+        /// </summary>
+        public static LocalisableString TimingCopierPreserveBeatSpacing => new TranslatableString(getKey(@"timing_copier_preserve_beat_spacing"), @"Preserve beat spacing");
+
+        /// <summary>
+        /// "Resnap"
+        /// </summary>
+        public static LocalisableString TimingCopierResnap => new TranslatableString(getKey(@"timing_copier_resnap"), @"Resnap");
+
+        /// <summary>
+        /// "Keep objects fixed"
+        /// </summary>
+        public static LocalisableString TimingCopierKeepObjectsFixed => new TranslatableString(getKey(@"timing_copier_keep_objects_fixed"), @"Keep objects fixed");
+
+        /// <summary>
+        /// "Timing (replaces the timing of other difficulties)"
+        /// </summary>
+        public static LocalisableString SyncTimingOptionTiming => new TranslatableString(getKey(@"sync_timing_option_timing"), @"Timing (replaces the timing of other difficulties)");
+
+        /// <summary>
+        /// "Object handling"
+        /// </summary>
+        public static LocalisableString SyncTimingObjectHandling => new TranslatableString(getKey(@"sync_timing_object_handling"), @"Object handling");
+
+        /// <summary>
+        /// "Beat divisors"
+        /// </summary>
+        public static LocalisableString BeatDivisors => new TranslatableString(getKey(@"beat_divisors"), @"Beat divisors");
+
+        /// <summary>
+        /// "Comma-separated fractions of a beat. Objects snap to the closest tick of any of them."
+        /// </summary>
+        public static LocalisableString BeatDivisorsHint => new TranslatableString(getKey(@"beat_divisors_hint"), @"Comma-separated fractions of a beat. Objects snap to the closest tick of any of them.");
+
+        /// <summary>
+        /// "Clean up map"
+        /// </summary>
+        public static LocalisableString CleanUpMap => new TranslatableString(getKey(@"clean_up_map"), @"Clean up map");
+
+        /// <summary>
+        /// "This tidies up the current difficulty. Redundant control points are always removed."
+        /// </summary>
+        public static LocalisableString CleanUpMapBody => new TranslatableString(getKey(@"clean_up_map_body"), @"This tidies up the current difficulty. Redundant control points are always removed.");
+
+        /// <summary>
+        /// "Resnap objects"
+        /// </summary>
+        public static LocalisableString CleanUpResnapObjects => new TranslatableString(getKey(@"clean_up_resnap_objects"), @"Resnap objects");
+
+        /// <summary>
+        /// "Resnap bookmarks"
+        /// </summary>
+        public static LocalisableString CleanUpResnapBookmarks => new TranslatableString(getKey(@"clean_up_resnap_bookmarks"), @"Resnap bookmarks");
+
+        /// <summary>
+        /// "Remove hitsounds"
+        /// </summary>
+        public static LocalisableString CleanUpRemoveHitsounds => new TranslatableString(getKey(@"clean_up_remove_hitsounds"), @"Remove hitsounds");
+
+        /// <summary>
+        /// "Remove muting"
+        /// </summary>
+        public static LocalisableString CleanUpRemoveMuting => new TranslatableString(getKey(@"clean_up_remove_muting"), @"Remove muting");
+
+        /// <summary>
+        /// "Mute unclickable hitsounds"
+        /// </summary>
+        public static LocalisableString CleanUpMuteUnclickableHitsounds => new TranslatableString(getKey(@"clean_up_mute_unclickable_hitsounds"), @"Mute unclickable hitsounds");
+
+        /// <summary>
+        /// "Mutes slider repeats, slider tails and spinner ends. Ignored when removing muting."
+        /// </summary>
+        public static LocalisableString CleanUpMuteUnclickableHitsoundsHint => new TranslatableString(getKey(@"clean_up_mute_unclickable_hitsounds_hint"), @"Mutes slider repeats, slider tails and spinner ends. Ignored when removing muting.");
+
         private static string getKey(string key) => $"{prefix}:{key}";
     }
 }

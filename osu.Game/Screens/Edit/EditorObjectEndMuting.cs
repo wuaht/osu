@@ -66,8 +66,8 @@ namespace osu.Game.Screens.Edit
                 var endSamples = getEndSamples(hitObject);
 
                 setEndSamples(hitObject, endSamples.All(s => s.Volume <= MUTED_VOLUME)
-                    ? unmute(endSamples, getReferenceSamples(hitObject))
-                    : mute(endSamples));
+                    ? Unmute(endSamples, getReferenceSamples(hitObject))
+                    : Mute(endSamples, softC999.Value));
 
                 editorBeatmap.Update(hitObject);
             }
@@ -82,15 +82,21 @@ namespace osu.Game.Screens.Edit
         {
         }
 
-        private List<HitSampleInfo> mute(IList<HitSampleInfo> samples)
+        /// <summary>
+        /// Mutes <paramref name="samples"/>, optionally by switching them to the soft:C999 custom sample set.
+        /// </summary>
+        public static List<HitSampleInfo> Mute(IList<HitSampleInfo> samples, bool softC999)
         {
-            if (!softC999.Value)
+            if (!softC999)
                 return samples.Select(s => s.With(newVolume: MUTED_VOLUME)).ToList();
 
             return samples.Select(s => s.With(newBank: HitSampleInfo.BANK_SOFT, newSuffix: MUTED_SUFFIX, newVolume: MUTED_VOLUME, newUseBeatmapSamples: true)).ToList();
         }
 
-        private static List<HitSampleInfo> unmute(IList<HitSampleInfo> samples, IList<HitSampleInfo>? referenceSamples)
+        /// <summary>
+        /// Restores muted <paramref name="samples"/> to the volume (and custom sample set) of <paramref name="referenceSamples"/>.
+        /// </summary>
+        public static List<HitSampleInfo> Unmute(IList<HitSampleInfo> samples, IList<HitSampleInfo>? referenceSamples)
         {
             int volume = referenceSamples?.Count > 0 ? referenceSamples.Max(s => s.Volume) : 100;
 

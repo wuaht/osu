@@ -2,51 +2,111 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
-using osu.Game.Graphics.UserInterface;
+using osu.Game.Graphics.Containers;
+using osu.Game.Graphics.UserInterfaceV2;
 using osu.Game.Localisation;
+using osu.Game.Overlays;
 using osu.Game.Overlays.Dialog;
+using osu.Game.Screens.Edit.Resnapping;
 using osuTK;
 
 namespace osu.Game.Screens.Edit
 {
     public partial class SyncTimingConfirmationDialog : DangerousActionDialog
     {
+        [Cached]
+        private readonly OverlayColourProvider colourProvider = new OverlayColourProvider(OverlayColourScheme.Plum);
+
         private readonly BindableBool syncBookmarks = new BindableBool(true);
         private readonly BindableBool syncPreviewPoint = new BindableBool(true);
+        private readonly BindableBool syncTiming = new BindableBool();
+        private readonly Bindable<TimingCopierResnapMode> timingMode = new Bindable<TimingCopierResnapMode>();
+        private readonly Bindable<string> divisors = new Bindable<string>(BeatDivisorList.DEFAULT);
 
-        public SyncTimingConfirmationDialog(Action<bool, bool> syncAction)
+        private readonly FillFlowContainer<Drawable> timingOptions;
+
+        public SyncTimingConfirmationDialog(Action<SyncTimingOptions> syncAction)
         {
             HeaderText = EditorDialogsStrings.SyncTimingConfirmationHeader;
             BodyText = EditorDialogsStrings.SyncTimingConfirmationBody;
 
-            DangerousAction = () => syncAction(syncBookmarks.Value, syncPreviewPoint.Value);
+            DangerousAction = () =>
+            {
+                if (!BeatDivisorList.TryParse(divisors.Value, out double[] parsedDivisors))
+                    BeatDivisorList.TryParse(BeatDivisorList.DEFAULT, out parsedDivisors);
 
-            MainContent.Child = new FillFlowContainer
+                syncAction(new SyncTimingOptions(syncBookmarks.Value, syncPreviewPoint.Value, syncTiming.Value, timingMode.Value, parsedDivisors));
+            };
+
+            FormTextBox divisorTextBox;
+
+            MainContent.Child = new ReverseChildIDFillFlowContainer<Drawable>
             {
                 Margin = new MarginPadding { Top = 20 },
-                Anchor = Anchor.Centre,
-                Origin = Anchor.Centre,
-                Width = 400,
+                Padding = new MarginPadding { Horizontal = 20 },
+                RelativeSizeAxes = Axes.X,
                 AutoSizeAxes = Axes.Y,
                 Direction = FillDirection.Vertical,
-                Spacing = new Vector2(5),
+                Spacing = new Vector2(7),
                 Children = new Drawable[]
                 {
-                    new OsuCheckbox
+                    new FormCheckBox
                     {
-                        LabelText = EditorDialogsStrings.SyncTimingOptionBookmarks,
-                        Current = { BindTarget = syncBookmarks },
+                        Caption = EditorDialogsStrings.SyncTimingOptionBookmarks,
+                        Current = syncBookmarks,
                     },
-                    new OsuCheckbox
+                    new FormCheckBox
                     {
-                        LabelText = EditorDialogsStrings.SyncTimingOptionPreviewPoint,
-                        Current = { BindTarget = syncPreviewPoint },
+                        Caption = EditorDialogsStrings.SyncTimingOptionPreviewPoint,
+                        Current = syncPreviewPoint,
+                    },
+                    new FormCheckBox
+                    {
+                        Caption = SlopEditorStrings.SyncTimingOptionTiming,
+                        Current = syncTiming,
+                    },
+                    timingOptions = new ReverseChildIDFillFlowContainer<Drawable>
+                    {
+                        RelativeSizeAxes = Axes.X,
+                        AutoSizeAxes = Axes.Y,
+                        Direction = FillDirection.Vertical,
+                        Spacing = new Vector2(7),
+                        Children = new Drawable[]
+                        {
+                            new FormEnumDropdown<TimingCopierResnapMode>
+                            {
+                                Caption = SlopEditorStrings.SyncTimingObjectHandling,
+                                Current = timingMode,
+                            },
+                            divisorTextBox = new FormTextBox
+                            {
+                                Caption = SlopEditorStrings.BeatDivisors,
+                                HintText = SlopEditorStrings.BeatDivisorsHint,
+                                Current = divisors,
+                            },
+                        }
                     },
                 }
             };
+
+            divisorTextBox.OnCommit += (_, _) =>
+            {
+                if (!BeatDivisorList.TryParse(divisors.Value, out _))
+                    divisors.SetDefault();
+            };
+        }
+
+        protected override void LoadComplete()
+        {
+            base.LoadComplete();
+
+            syncTiming.BindValueChanged(e => timingOptions.Alpha = e.NewValue ? 1 : 0, true);
         }
     }
+
+    public record SyncTimingOptions(bool Bookmarks, bool PreviewPoint, bool Timing, TimingCopierResnapMode TimingMode, double[] Divisors);
 }
