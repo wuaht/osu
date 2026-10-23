@@ -3,6 +3,8 @@
 
 using System;
 using System.Collections.Generic;
+using osu.Game.Rulesets.Objects;
+using osu.Game.Rulesets.Objects.Types;
 using osu.Game.Rulesets.Osu.UI;
 using osuTK;
 
@@ -37,6 +39,67 @@ namespace osu.Game.Rulesets.Osu.Edit
             int nodeBudget = 6 + rng.Next(15);
 
             return provider(head, tail, nodeBudget, rng);
+        }
+
+        /// <summary>
+        /// Gives every segment of <paramref name="points"/> a random type, so that the path mixes bezier, perfect curve, linear, catmull and B-spline anchors.
+        /// </summary>
+        /// <param name="points">The control points of the path, where every point with a type starts a new segment.</param>
+        /// <param name="rng">The random number generator.</param>
+        public static void RandomiseSegmentTypes(IReadOnlyList<PathControlPoint> points, Random rng)
+        {
+            for (int start = 0; start < points.Count - 1; start++)
+            {
+                if (points[start].Type == null)
+                    continue;
+
+                int end = start + 1;
+
+                while (end < points.Count - 1 && points[end].Type == null)
+                    end++;
+
+                points[start].Type = randomSegmentType(points, start, end, rng);
+            }
+        }
+
+        private static PathType randomSegmentType(IReadOnlyList<PathControlPoint> points, int start, int end, Random rng)
+        {
+            int pointCount = end - start + 1;
+
+            // a straight segment looks the same with every type.
+            if (pointCount == 2)
+                return rng.Next(2) == 0 ? PathType.LINEAR : PathType.BEZIER;
+
+            var candidates = new List<PathType> { PathType.BEZIER, PathType.BEZIER, PathType.CATMULL, PathType.LINEAR };
+
+            if (pointCount == 3 && isShortArc(points[start].Position, points[start + 1].Position, points[end].Position))
+            {
+                candidates.Add(PathType.PERFECT_CURVE);
+                candidates.Add(PathType.PERFECT_CURVE);
+            }
+
+            if (pointCount > 3)
+            {
+                candidates.Add(PathType.BSpline(2));
+                candidates.Add(PathType.BSpline(3));
+            }
+
+            return candidates[rng.Next(candidates.Count)];
+        }
+
+        /// <summary>
+        /// Whether the arc through the three points stays below half a circle, so that a perfect curve doesn't swing far outside of its points.
+        /// </summary>
+        private static bool isShortArc(Vector2 start, Vector2 middle, Vector2 end)
+        {
+            Vector2 chord = end - start;
+            float lengthSquared = chord.LengthSquared;
+
+            if (lengthSquared < 0.0001f)
+                return false;
+
+            float t = Vector2.Dot(middle - start, chord) / lengthSquared;
+            return t > 0 && t < 1;
         }
 
         private static List<Vector2> chaoticBlob(Vector2 head, Vector2 tail, int nodeBudget, Random rng)

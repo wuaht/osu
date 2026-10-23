@@ -281,7 +281,7 @@ namespace osu.Game.Rulesets.Osu.Edit
         }
 
         /// <summary>
-        /// Replaces the path of the selected slider with a random bezier path between its head and its last control point.
+        /// Replaces the path of the selected slider with a random path of mixed segment types between its head and its last control point.
         /// </summary>
         private bool randomiseSliderShape()
         {
@@ -327,6 +327,8 @@ namespace osu.Game.Rulesets.Osu.Edit
             // the tail must not be lost to rounding, otherwise the slider would end elsewhere.
             if (newPoints.Count == 1)
                 newPoints.Add(new PathControlPoint(controlPoints[^1].Position));
+
+            RandomSliderShapes.RandomiseSegmentTypes(newPoints, rng);
 
             editorBeatmap.BeginChange();
 
