@@ -63,6 +63,7 @@ namespace osu.Game.Rulesets.Osu.Edit
         private readonly IBindable<double> toolboxVelocity = new Bindable<double>(1);
 
         private Slider? slider;
+        private HitObject[] previousSelection = Array.Empty<HitObject>();
         private bool began;
         private bool committed;
 
@@ -242,6 +243,11 @@ namespace osu.Game.Rulesets.Osu.Edit
                 slider = new Slider();
                 slider.Samples.Add(slider.CreateHitSampleInfo());
                 editorBeatmap.Add(slider);
+
+                // selecting the slider shows its control points while it is being generated.
+                previousSelection = editorBeatmap.SelectedHitObjects.ToArray();
+                editorBeatmap.SelectedHitObjects.Clear();
+                editorBeatmap.SelectedHitObjects.Add(slider);
             }
 
             slider.StartTime = startTime;
@@ -295,7 +301,11 @@ namespace osu.Game.Rulesets.Osu.Edit
             if (began && !committed)
             {
                 if (slider != null)
+                {
                     editorBeatmap.Remove(slider);
+                    editorBeatmap.SelectedHitObjects.Clear();
+                    editorBeatmap.SelectedHitObjects.AddRange(previousSelection.Where(editorBeatmap.HitObjects.Contains));
+                }
 
                 changeHandler?.EndChange();
                 began = false;
