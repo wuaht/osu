@@ -97,7 +97,8 @@ namespace osu.Game.Overlays
                         Origin = Anchor.TopRight,
                         Scale = new Vector2(2, 1), // over-extend to the left for transitions
                         RelativeSizeAxes = Axes.Both,
-                        Colour = colourProvider.Background4,
+                        // translucent, so that the background behind the settings stays visible.
+                        Colour = colourProvider.Background4.Opacity(0.4f),
                         Alpha = 1,
                     },
                     loading = new LoadingLayer
@@ -317,7 +318,7 @@ namespace osu.Game.Overlays
             {
                 HeaderBackground = new Box
                 {
-                    Colour = colourProvider.Background5,
+                    Colour = colourProvider.Background5.Opacity(0.5f),
                     RelativeSizeAxes = Axes.Both
                 };
 

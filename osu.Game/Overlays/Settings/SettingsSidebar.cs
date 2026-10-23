@@ -3,6 +3,7 @@
 
 using System;
 using osu.Framework.Allocation;
+using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Extensions.LocalisationExtensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
@@ -40,7 +41,8 @@ namespace osu.Game.Overlays.Settings
         {
             AddInternal(new Box
             {
-                Colour = colourProvider.Background5,
+                // the panel's translucent background already extends behind the sidebar, so this only darkens it slightly.
+                Colour = colourProvider.Background5.Opacity(0.3f),
                 RelativeSizeAxes = Axes.Both,
                 Depth = float.MaxValue
             });
