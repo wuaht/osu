@@ -557,6 +557,23 @@ namespace osu.Game.Beatmaps
                         snapshot.Hash = beatmapImporter.ComputeHash(liveBeatmapSet);
                         snapshot.Status = BeatmapOnlineStatus.LocallyModified;
 
+                        // Only the saved difficulty's file changes here. The detached set may hold outdated file hashes of the other difficulties
+                        // (e.g. if it was fetched before a previous background save became visible on the update thread),
+                        // which would leave those difficulties pointing at files that no longer exist.
+                        foreach (var otherBeatmap in snapshot.Beatmaps)
+                        {
+                            if (otherBeatmap.ID == beatmapId)
+                                continue;
+
+                            var liveOtherBeatmap = liveBeatmapSet.Beatmaps.FirstOrDefault(b => b.ID == otherBeatmap.ID);
+
+                            if (liveOtherBeatmap != null)
+                            {
+                                otherBeatmap.Hash = liveOtherBeatmap.Hash;
+                                otherBeatmap.MD5Hash = liveOtherBeatmap.MD5Hash;
+                            }
+                        }
+
                         snapshot.CopyChangesToRealm(liveBeatmapSet);
 
                         snapshotBeatmap.TransferCollectionReferences(r, oldMd5Hash);
@@ -577,6 +594,9 @@ namespace osu.Game.Beatmaps
 
                 return (Action)(() =>
                 {
+                    // the write happened on another thread, so bring it into the update thread's realm before anything is refetched from it.
+                    Realm.Run(r => r.Refresh());
+
                     // see save() for why this is done right away.
                     if (ProcessSavedBeatmap != null)
                         workingBeatmapCache.Invalidate(setInfo);
