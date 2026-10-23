@@ -35,13 +35,13 @@ namespace osu.Game.Screens.Edit.Resnapping
 
             if (options.ResnapObjects)
             {
-                foreach (var hitObject in beatmap.HitObjects)
+                foreach (var hitObject in beatmap.HitObjects.ToArray())
                 {
                     if (Resnapper.ResnapStart(beatmap, hitObject, options.Divisors))
                         changed.Add(hitObject);
                 }
 
-                foreach (var hitObject in beatmap.HitObjects)
+                foreach (var hitObject in beatmap.HitObjects.ToArray())
                 {
                     if (Resnapper.ResnapEnd(beatmap, hitObject, options.Divisors))
                         changed.Add(hitObject);
@@ -56,7 +56,7 @@ namespace osu.Game.Screens.Edit.Resnapping
                 beatmap.Bookmarks.AddRange(bookmarks);
             }
 
-            foreach (var hitObject in beatmap.HitObjects)
+            foreach (var hitObject in beatmap.HitObjects.ToArray())
             {
                 bool hitObjectChanged = false;
 
