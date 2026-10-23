@@ -30,9 +30,10 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
         private const float in_piece_icon_size = 9;
 
         /// <summary>
-        /// The maximum distance in milliseconds from a (truncated) tick for a node to still be considered snapped, like osu!stable.
+        /// The maximum distance in milliseconds from a (truncated) tick for a node to still be considered snapped.
+        /// osu!stable allows 2 ms.
         /// </summary>
-        private const int snap_leniency = 2;
+        private const int snap_leniency = 1;
 
         private readonly HitObject hitObject;
 
@@ -168,7 +169,7 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
         }
 
         /// <summary>
-        /// Matches osu!stable's timeline check: tick times are truncated to integers and a node is snapped if it is
+        /// Like osu!stable's timeline check, tick times are truncated to integers and a node is snapped if it is
         /// within <see cref="snap_leniency"/> of the tick before or after it for any of the <see cref="allowedDivisors"/>.
         /// </summary>
         private bool isSnapped(int time)

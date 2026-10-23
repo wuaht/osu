@@ -490,10 +490,10 @@ namespace osu.Game.Localisation
         public static LocalisableString UnsnapDivisors => new TranslatableString(getKey(@"unsnap_divisors"), @"Unsnap divisors (comma-separated)");
 
         /// <summary>
-        /// "Objects within 2 ms of a tick of any of these divisors aren't marked as unsnapped, like in osu!stable."
+        /// "Objects within 1 ms of a tick of any of these divisors aren't marked as unsnapped."
         /// </summary>
         public static LocalisableString UnsnapDivisorsDescription => new TranslatableString(getKey(@"unsnap_divisors_description"),
-            @"Objects within 2 ms of a tick of any of these divisors aren't marked as unsnapped, like in osu!stable.");
+            @"Objects within 1 ms of a tick of any of these divisors aren't marked as unsnapped.");
 
         /// <summary>
         /// "Online"
