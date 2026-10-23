@@ -194,9 +194,15 @@ namespace osu.Game.Overlays.Toolbar
             public ToolbarBackground()
             {
                 RelativeSizeAxes = Axes.Both;
-                // the toolbar itself is transparent, only the hover gradient remains to keep button descriptions legible.
                 Children = new Drawable[]
                 {
+                    // the same slight darkening as behind song select's wedges.
+                    new Box
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Colour = Colour4.Black,
+                        Alpha = 0.2f,
+                    },
                     gradientBackground = new Box
                     {
                         RelativeSizeAxes = Axes.X,
