@@ -368,9 +368,7 @@ namespace osu.Game.Screens.Menu
                 ? direction / distance * Math.Min(1, distance / miku_pupils_full_range_distance) * miku_pupils_range
                 : Vector2.Zero;
 
-            mikuPupils.Position = new Vector2(
-                (float)Interpolation.Damp(mikuPupils.Position.X, target.X * textureScale, 0.995f, Time.Elapsed),
-                (float)Interpolation.Damp(mikuPupils.Position.Y, target.Y * textureScale, 0.995f, Time.Elapsed));
+            mikuPupils.Position = target * textureScale;
         }
 
         private int lastBeatIndex;
