@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using osu.Framework.Allocation;
+using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Input.Events;
 using osu.Game.Graphics.UserInterface;
@@ -23,7 +24,8 @@ namespace osu.Game.Overlays.Settings
         [BackgroundDependencyLoader]
         private void load()
         {
-            BackgroundColour = ColourProvider.Background5;
+            // translucent like the sidebar itself, so that the background behind the settings stays visible.
+            BackgroundColour = ColourProvider.Background5.Opacity(0.3f);
             Hover.Colour = ColourProvider.Light4;
         }
 
