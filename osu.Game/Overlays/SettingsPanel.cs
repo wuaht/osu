@@ -18,6 +18,7 @@ using osu.Framework.Graphics.Effects;
 using osu.Framework.Graphics.Primitives;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Input.Events;
+using osu.Game.Configuration;
 using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Overlays.Settings;
@@ -36,6 +37,8 @@ namespace osu.Game.Overlays
         public const float TRANSITION_LENGTH = 600;
 
         private const float sidebar_width = SettingsSidebar.EXPANDED_WIDTH;
+
+        private const float frosted_blur_sigma = 15;
 
         /// <summary>
         /// The width of the settings panel content, excluding the sidebar.
@@ -81,9 +84,15 @@ namespace osu.Game.Overlays
             AutoSizeAxes = Axes.X;
         }
 
+        private BackdropBlurContainer frostedBackground;
+
+        private readonly Bindable<bool> frosted = new Bindable<bool>();
+
         [BackgroundDependencyLoader]
-        private void load()
+        private void load(OsuConfigManager config)
         {
+            config.BindWith(OsuSetting.SlopFrostedSettings, frosted);
+
             InternalChild = ContentContainer = new NonMaskedContent
             {
                 X = -WIDTH + ExpandedPosition,
@@ -91,6 +100,15 @@ namespace osu.Game.Overlays
                 RelativeSizeAxes = Axes.Y,
                 Children = new Drawable[]
                 {
+                    frostedBackground = new BackdropBlurContainer
+                    {
+                        Anchor = Anchor.TopRight,
+                        Origin = Anchor.TopRight,
+                        Scale = new Vector2(2, 1), // over-extend to the left for transitions
+                        RelativeSizeAxes = Axes.Both,
+                        // The backdrop is blurred at a quarter of the resolution, which is visually indistinguishable but much cheaper.
+                        EffectBufferScale = new Vector2(0.25f),
+                    },
                     new Box
                     {
                         Anchor = Anchor.TopRight,
@@ -167,6 +185,14 @@ namespace osu.Game.Overlays
         protected virtual Drawable CreateHeader() => new Container();
 
         protected virtual Drawable CreateFooter() => new Container();
+
+        protected override void LoadComplete()
+        {
+            base.LoadComplete();
+
+            // a zero blur skips the backdrop entirely, so it costs nothing while disabled.
+            frosted.BindValueChanged(f => frostedBackground.BlurSigma = f.NewValue ? new Vector2(frosted_blur_sigma) : Vector2.Zero, true);
+        }
 
         protected override void PopIn()
         {

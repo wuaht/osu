@@ -401,6 +401,7 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopMinimalReplayFrames, false);
             SetDefault(OsuSetting.SlopSkipIntro, false);
             SetDefault(OsuSetting.SlopInstantScreenTransitions, false);
+            SetDefault(OsuSetting.SlopFrostedSettings, true);
             SetDefault(OsuSetting.SlopBackupOnUpdate, true);
             SetDefault(OsuSetting.SlopStrainGraphLowColour, @"#FFFFFF");
             SetDefault(OsuSetting.SlopStrainGraphHighColour, @"#FFFFFF");
@@ -1364,6 +1365,11 @@ namespace osu.Game.Configuration
         /// Whether the fade transitions of screens are finished instantly.
         /// </summary>
         SlopInstantScreenTransitions,
+
+        /// <summary>
+        /// Whether the background of the settings is blurred behind them (frosted glass).
+        /// </summary>
+        SlopFrostedSettings,
 
         /// <summary>
         /// Whether the beatmap files of a beatmap set are backed up before it gets updated.

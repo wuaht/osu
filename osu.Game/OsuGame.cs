@@ -170,6 +170,8 @@ namespace osu.Game
 
         private Container backbufferBleedContainer;
 
+        private OnDemandBackbufferProvider overlayBackbufferProvider;
+
         private Container screenStackBleedOffsetContainer;
 
         private OnScreenDisplay onScreenDisplay;
@@ -1135,72 +1137,83 @@ namespace osu.Game
 
             AddRange(new Drawable[]
             {
-                ScreenOffsetContainer = new Container
+                // Allows overlays such as the frosted settings to blur the screen contents behind them.
+                overlayBackbufferProvider = new OnDemandBackbufferProvider
                 {
                     RelativeSizeAxes = Axes.Both,
                     Children = new Drawable[]
                     {
-                        ScreenContainer = new ScalingContainer(ScalingMode.ExcludeOverlays)
+                        ScreenOffsetContainer = new Container
                         {
                             RelativeSizeAxes = Axes.Both,
-                            Anchor = Anchor.Centre,
-                            Origin = Anchor.Centre,
                             Children = new Drawable[]
                             {
-                                backReceptor = new ScreenFooter.BackReceptor(),
-                                // the backbuffer would otherwise clip away the background behind the transparent toolbar while it is active.
-                                backbufferBleedContainer = new Container
+                                ScreenContainer = new ScalingContainer(ScalingMode.ExcludeOverlays)
                                 {
                                     RelativeSizeAxes = Axes.Both,
-                                    // Allows drawables such as frosted slider bodies to blur the screen contents behind them.
-                                    Child = new OnDemandBackbufferProvider
+                                    Anchor = Anchor.Centre,
+                                    Origin = Anchor.Centre,
+                                    Children = new Drawable[]
                                     {
-                                        RelativeSizeAxes = Axes.Both,
-                                        Child = screenStackBleedOffsetContainer = new Container
+                                        backReceptor = new ScreenFooter.BackReceptor(),
+                                        // the backbuffer would otherwise clip away the background behind the transparent toolbar while it is active.
+                                        backbufferBleedContainer = new Container
                                         {
                                             RelativeSizeAxes = Axes.Both,
-                                            Child = ScreenStack = new OsuScreenStack { RelativeSizeAxes = Axes.Both },
+                                            // Allows drawables such as frosted slider bodies to blur the screen contents behind them.
+                                            Child = new OnDemandBackbufferProvider
+                                            {
+                                                RelativeSizeAxes = Axes.Both,
+                                                Child = screenStackBleedOffsetContainer = new Container
+                                                {
+                                                    RelativeSizeAxes = Axes.Both,
+                                                    Child = ScreenStack = new OsuScreenStack { RelativeSizeAxes = Axes.Both },
+                                                },
+                                            },
                                         },
-                                    },
-                                },
-                                logoContainer = new Container { RelativeSizeAxes = Axes.Both },
-                                // TODO: what is this? why is this?
-                                // TODO: this is being screen scaled even though it's probably AN OVERLAY.
-                                footerBasedOverlayContent = new Container
-                                {
-                                    Depth = -1,
-                                    RelativeSizeAxes = Axes.Both,
-                                },
-                                new PopoverContainer
-                                {
-                                    // Ensure the footer is displayed above any content and/or overlays.
-                                    Depth = -1,
-                                    RelativeSizeAxes = Axes.Both,
-                                    Child = screenStackFooter = new ScreenStackFooter(ScreenStack, backReceptor)
-                                    {
-                                        // TODO: this is really really weird and should not exist.
-                                        RequestLogoInFront = inFront => ScreenContainer.ChangeChildDepth(logoContainer, inFront ? float.MinValue : 0),
-                                        BackButtonPressed = handleBackButton
-                                    },
+                                        logoContainer = new Container { RelativeSizeAxes = Axes.Both },
+                                        // TODO: what is this? why is this?
+                                        // TODO: this is being screen scaled even though it's probably AN OVERLAY.
+                                        footerBasedOverlayContent = new Container
+                                        {
+                                            Depth = -1,
+                                            RelativeSizeAxes = Axes.Both,
+                                        },
+                                        new PopoverContainer
+                                        {
+                                            // Ensure the footer is displayed above any content and/or overlays.
+                                            Depth = -1,
+                                            RelativeSizeAxes = Axes.Both,
+                                            Child = screenStackFooter = new ScreenStackFooter(ScreenStack, backReceptor)
+                                            {
+                                                // TODO: this is really really weird and should not exist.
+                                                RequestLogoInFront = inFront => ScreenContainer.ChangeChildDepth(logoContainer, inFront ? float.MinValue : 0),
+                                                BackButtonPressed = handleBackButton
+                                            },
+                                        },
+                                    }
                                 },
                             }
                         },
-                    }
-                },
-                overlayOffsetContainer = new Container
-                {
-                    RelativeSizeAxes = Axes.Both,
-                    Children = new Drawable[]
-                    {
-                        overlayContent = new Container { RelativeSizeAxes = Axes.Both },
-                        leftFloatingOverlayContent = new Container { RelativeSizeAxes = Axes.Both },
-                        rightFloatingOverlayContent = new Container { RelativeSizeAxes = Axes.Both },
+                        overlayOffsetContainer = new Container
+                        {
+                            RelativeSizeAxes = Axes.Both,
+                            Children = new Drawable[]
+                            {
+                                overlayContent = new Container { RelativeSizeAxes = Axes.Both },
+                                leftFloatingOverlayContent = new Container { RelativeSizeAxes = Axes.Both },
+                                rightFloatingOverlayContent = new Container { RelativeSizeAxes = Axes.Both },
+                            }
+                        },
                     }
                 },
                 topMostOverlayContent = new Container { RelativeSizeAxes = Axes.Both },
                 idleTracker,
                 new ConfineMouseTracker(),
             });
+
+            // overlays are loaded with the dependencies of the game rather than of their parent, so the provider has to be cached here.
+            Dependencies.CacheAs<IBackbufferProvider>(overlayBackbufferProvider);
 
             // Load volume overlay before anything else, so users can adjust volume as soon as feasible after startup.
             loadComponentSingleFile(volume = new VolumeOverlay(), leftFloatingOverlayContent.Add, true);

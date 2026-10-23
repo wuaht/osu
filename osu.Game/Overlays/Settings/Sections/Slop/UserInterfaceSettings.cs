@@ -17,7 +17,7 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
     {
         protected override LocalisableString Header => SlopSettingsStrings.UserInterfaceHeader;
 
-        public override IEnumerable<LocalisableString> FilterTerms => base.FilterTerms.Concat(new LocalisableString[] { "intro", "startup", "menu", "navigation", "transition", "fade", "instant", "logo", "miku" });
+        public override IEnumerable<LocalisableString> FilterTerms => base.FilterTerms.Concat(new LocalisableString[] { "intro", "startup", "menu", "navigation", "transition", "fade", "instant", "logo", "miku", "frosted", "blur", "glass", "transparent" });
 
         private Bindable<bool> mikuMedalUnlocked = null!;
 
@@ -39,6 +39,12 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                     Caption = SlopSettingsStrings.InstantScreenTransitions,
                     HintText = SlopSettingsStrings.InstantScreenTransitionsDescription,
                     Current = config.GetBindable<bool>(OsuSetting.SlopInstantScreenTransitions),
+                }),
+                new SettingsItemV2(new FormCheckBox
+                {
+                    Caption = SlopSettingsStrings.FrostedSettings,
+                    HintText = SlopSettingsStrings.FrostedSettingsDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopFrostedSettings),
                 }),
                 mikuTakeoverItem = new SettingsItemV2(new FormCheckBox
                 {

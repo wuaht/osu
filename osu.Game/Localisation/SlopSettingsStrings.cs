@@ -1571,6 +1571,16 @@ namespace osu.Game.Localisation
         public static LocalisableString AllowOverlaysDuringGameplayDescription => new TranslatableString(getKey(@"allow_overlays_during_gameplay_description"), @"The settings, chat and other overlays can be opened with their hotkeys while playing, without pausing first.");
 
         /// <summary>
+        /// "Frosted settings"
+        /// </summary>
+        public static LocalisableString FrostedSettings => new TranslatableString(getKey(@"frosted_settings"), @"Frosted settings");
+
+        /// <summary>
+        /// "Blurs the background behind the settings like frosted glass, which keeps them readable on busy backgrounds."
+        /// </summary>
+        public static LocalisableString FrostedSettingsDescription => new TranslatableString(getKey(@"frosted_settings_description"), @"Blurs the background behind the settings like frosted glass, which keeps them readable on busy backgrounds.");
+
+        /// <summary>
         /// "Miku Takeover"
         /// </summary>
         public static LocalisableString MikuTakeover => new TranslatableString(getKey(@"miku_takeover"), @"Miku Takeover");
