@@ -93,6 +93,7 @@ namespace osu.Game.Database
             {
                 Logger.Log("Beginning background data store processing..");
 
+                repairDifficultiesWithMissingFiles();
                 clearOutdatedStarRatings();
                 populateMissingStarRatings();
                 processOnlineBeatmapSetsWithNoUpdate();
@@ -116,6 +117,92 @@ namespace osu.Game.Database
 
                 Logger.Log("Finished background data store processing!");
             });
+        }
+
+        /// <summary>
+        /// Reconnects difficulties whose hash doesn't match any file of their set (which load as empty beatmaps) to their beatmap file.
+        /// Background saves in the editor could leave difficulties in this state by writing back an outdated hash.
+        /// </summary>
+        private void repairDifficultiesWithMissingFiles()
+        {
+            Logger.Log("Querying for difficulties with missing beatmap files...");
+
+            HashSet<Guid> beatmapSetIds = new HashSet<Guid>();
+
+            realmAccess.Run(r =>
+            {
+                foreach (var set in r.All<BeatmapSetInfo>().Where(s => !s.DeletePending))
+                {
+                    if (set.Beatmaps.Any(b => b.File == null))
+                        beatmapSetIds.Add(set.ID);
+                }
+            });
+
+            if (beatmapSetIds.Count == 0)
+                return;
+
+            Logger.Log($"Found {beatmapSetIds.Count} beatmap sets with difficulties missing their beatmap file.");
+
+            var filesStorage = storage.GetStorageForDirectory(@"files");
+            HashSet<Guid> repairedSetIds = new HashSet<Guid>();
+
+            realmAccess.Write(r =>
+            {
+                foreach (var id in beatmapSetIds)
+                {
+                    var set = r.Find<BeatmapSetInfo>(id);
+
+                    if (set == null)
+                        continue;
+
+                    var missing = set.Beatmaps.Where(b => b.File == null).ToList();
+
+                    // beatmap files which no other difficulty of the set points at.
+                    var unusedFiles = set.Files.Where(f => f.Filename.EndsWith(@".osu", StringComparison.OrdinalIgnoreCase)
+                                                           && set.Beatmaps.All(b => b.Hash != f.File.Hash))
+                                         .ToList();
+
+                    foreach (var beatmap in missing)
+                    {
+                        var file = unusedFiles.Count == 1
+                            ? unusedFiles[0]
+                            : unusedFiles.SingleOrDefault(f => f.Filename.EndsWith($@"[{beatmap.DifficultyName}].osu", StringComparison.OrdinalIgnoreCase));
+
+                        if (file == null)
+                        {
+                            Logger.Log($"Could not find the beatmap file of {beatmap}.");
+                            continue;
+                        }
+
+                        using (var stream = filesStorage.GetStream(file.File.GetStoragePath()))
+                        {
+                            if (stream == null)
+                                continue;
+
+                            beatmap.MD5Hash = stream.ComputeMD5Hash();
+                        }
+
+                        beatmap.Hash = file.File.Hash;
+                        unusedFiles.Remove(file);
+                        repairedSetIds.Add(set.ID);
+
+                        Logger.Log($"Reconnected {beatmap} to its beatmap file {file.Filename}.");
+                    }
+                }
+            });
+
+            // the statistics and star ratings of the repaired difficulties were calculated from an empty beatmap.
+            foreach (var id in repairedSetIds)
+            {
+                realmAccess.Run(r =>
+                {
+                    var set = r.Find<BeatmapSetInfo>(id);
+                    if (set == null) return;
+
+                    ((IWorkingBeatmapCache)beatmapManager).Invalidate(set);
+                    beatmapUpdater.Process(set, MetadataLookupScope.None);
+                });
+            }
         }
 
         /// <summary>
