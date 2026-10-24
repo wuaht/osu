@@ -364,13 +364,13 @@ namespace osu.Game.Overlays.Discord
                     background = new Container
                     {
                         RelativeSizeAxes = Axes.Both,
-                        Alpha = 0.5f,
+                        Alpha = 0.85f,
                     },
                     // Banners and profile colours can be bright, so they are darkened enough to keep the text readable, especially further right.
                     new Box
                     {
                         RelativeSizeAxes = Axes.Both,
-                        Colour = ColourInfo.GradientHorizontal(colourProvider.Background4.Opacity(0.3f), colourProvider.Background4.Opacity(0.6f)),
+                        Colour = ColourInfo.GradientHorizontal(colourProvider.Background4.Opacity(0.1f), colourProvider.Background4.Opacity(0.5f)),
                     },
                     hover = new Box
                     {
@@ -557,8 +557,19 @@ namespace osu.Game.Overlays.Discord
 
             private static void showColour(Box box, Color4 colour)
             {
+                // Saturate the colour so that it stands out on the dark card.
+                const float saturation_boost = 1.4f;
+
+                float grey = (colour.R + colour.G + colour.B) / 3;
+
+                colour = new Color4(
+                    Math.Clamp(grey + (colour.R - grey) * saturation_boost, 0, 1),
+                    Math.Clamp(grey + (colour.G - grey) * saturation_boost, 0, 1),
+                    Math.Clamp(grey + (colour.B - grey) * saturation_boost, 0, 1),
+                    1);
+
                 // Darken bright colours (like the white of a sketched avatar) to keep the text and tags readable.
-                const float max_luminance = 0.25f;
+                const float max_luminance = 0.35f;
 
                 float luminance = 0.2126f * colour.R + 0.7152f * colour.G + 0.0722f * colour.B;
 
