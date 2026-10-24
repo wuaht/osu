@@ -273,9 +273,9 @@ namespace osu.Game.Localisation
         public static LocalisableString LoadingLinkPreview => new TranslatableString(getKey(@"loading_link_preview"), @"Loading preview...");
 
         /// <summary>
-        /// "The linked site will see your IP address"
+        /// "Connects to this site to load the preview"
         /// </summary>
-        public static LocalisableString LinkPreviewHint => new TranslatableString(getKey(@"link_preview_hint"), @"The linked site will see your IP address");
+        public static LocalisableString LinkPreviewHint => new TranslatableString(getKey(@"link_preview_hint"), @"Connects to this site to load the preview");
 
         /// <summary>
         /// "Show or hide the servers"
