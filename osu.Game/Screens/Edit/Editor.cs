@@ -103,7 +103,7 @@ namespace osu.Game.Screens.Edit
 
         protected override bool PlayExitSound => !ExitConfirmed && !switchingDifficulty;
 
-        protected bool HasUnsavedChanges
+        protected internal bool HasUnsavedChanges
         {
             get
             {
@@ -653,6 +653,9 @@ namespace osu.Game.Screens.Edit
             clock.Seek(state.Time);
             Clipboard.Content.Value = state.ClipboardContent;
             PlaybackSpeed.Value = state.PlaybackSpeed;
+
+            if (state.PendingTimestamp != null)
+                ShowTimestampInCompose(state.PendingTimestamp);
         });
 
         public void TestGameplay() => TestGameplay(null);
@@ -1728,7 +1731,7 @@ namespace osu.Game.Screens.Edit
                         break;
 
                     case EditorScreenMode.Verify:
-                        currentScreen = new VerifyScreen();
+                        currentScreen = CreateVerifyScreen();
                         break;
 
                     case EditorScreenMode.Nominators:
@@ -2383,10 +2386,58 @@ namespace osu.Game.Screens.Edit
             return new EditorMenuItem(EditorStrings.ChangeDifficulty) { Items = difficultyItems };
         }
 
-        public void SwitchToDifficulty(BeatmapInfo nextBeatmap)
+        public void SwitchToDifficulty(BeatmapInfo nextBeatmap) => switchToDifficulty(nextBeatmap, GetState(nextBeatmap.Ruleset));
+
+        private void switchToDifficulty(BeatmapInfo nextBeatmap, EditorState state)
         {
             switchingDifficulty = true;
-            loader?.ScheduleSwitchToExistingDifficulty(nextBeatmap, GetState(nextBeatmap.Ruleset));
+            loader?.ScheduleSwitchToExistingDifficulty(nextBeatmap, state);
+        }
+
+        /// <summary>
+        /// The screen shown in <see cref="EditorScreenMode.Verify"/>.
+        /// Can be replaced by platforms that ship a more complete verifier.
+        /// </summary>
+        public static Func<EditorScreen> CreateVerifyScreen { get; set; } = () => new VerifyScreen();
+
+        private ScheduledDelegate pendingComposeTimestamp;
+
+        /// <summary>
+        /// Switches to the compose screen, seeks to an editor timestamp (e.g. "00:12:345 (1,2) -") and selects the objects it refers to.
+        /// </summary>
+        /// <param name="timestamp">The editor timestamp.</param>
+        /// <param name="difficulty">The difficulty which the timestamp refers to, which is switched to first if it isn't the current one.</param>
+        public void ShowTimestampInCompose(string timestamp, [CanBeNull] BeatmapInfo difficulty = null)
+        {
+            pendingComposeTimestamp?.Cancel();
+
+            if (difficulty != null && !difficulty.Equals(editorBeatmap.BeatmapInfo))
+            {
+                var state = GetState(difficulty.Ruleset);
+                state.Mode = EditorScreenMode.Compose;
+                state.PendingTimestamp = timestamp;
+
+                switchToDifficulty(difficulty, state);
+                return;
+            }
+
+            Mode.Value = EditorScreenMode.Compose;
+            applyWhenComposerReady();
+
+            // the compose screen and its composer load asynchronously, and selecting objects requires them to be loaded.
+            void applyWhenComposerReady()
+            {
+                if (Mode.Value != EditorScreenMode.Compose)
+                    return;
+
+                if (!ReadyForUse || currentScreen is not ComposeScreen { Composer.IsLoaded: true })
+                {
+                    pendingComposeTimestamp = Scheduler.AddDelayed(applyWhenComposerReady, 50);
+                    return;
+                }
+
+                HandleTimestamp(timestamp, notifyOnError: true);
+            }
         }
 
         private void cancelExit()

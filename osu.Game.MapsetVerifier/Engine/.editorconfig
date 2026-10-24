@@ -1,0 +1,5 @@
+# Vendored Mapset Verifier engine (https://github.com/Naxesss/MapsetVerifier, GPL-3.0).
+# Kept as close to upstream as possible, so the osu! code style analyzers are skipped here.
+[*.cs]
+generated_code = true
+dotnet_analyzer_diagnostic.severity = none

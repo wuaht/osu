@@ -1,0 +1,35 @@
+﻿using osu.Game.Beatmaps;
+using osu.Game.Rulesets;
+using osu.Game.Rulesets.Difficulty;
+using osu.Game.Rulesets.Difficulty.Preprocessing;
+using osu.Game.Rulesets.Difficulty.Skills;
+using osu.Game.Rulesets.Mania.Difficulty;
+using osu.Game.Rulesets.Mods;
+using Beatmap = MapsetVerifier.Parser.Objects.Beatmap;
+
+namespace MapsetVerifier.Parser.Difficulty;
+
+/// <summary>
+/// In regular difficulty calculators, skills are not exposed publicly, which <c>SkillChartRenderer</c> depends on.<br/>
+/// Sourced from <a href="https://github.com/ppy/osu-tools/blob/ab97b64f60901952926b2121ddffb8976d7f8775/PerformanceCalculatorGUI/ExtendedManiaDifficultyCalculator.cs"><c>osu-tools</c>' approach of tackling the same problem</a>.
+/// </summary>
+public class ExtendedManiaDifficultyCalculator(
+    IRulesetInfo ruleset,
+    IWorkingBeatmap beatmap,
+    Beatmap mvBeatmap
+) : ManiaDifficultyCalculator(ruleset, beatmap)
+{
+    protected override DifficultyAttributes CreateDifficultyAttributes(
+        IBeatmap beatmap,
+        Mod[] mods,
+        Skill[] skills
+    )
+    {
+        mvBeatmap.Skills = skills;
+        return base.CreateDifficultyAttributes(beatmap, mods, mvBeatmap.Skills);
+    }
+
+    protected override IEnumerable<DifficultyHitObject> SortObjects(
+        IEnumerable<DifficultyHitObject> input
+    ) => DifficultyObjectTimingCapture.Capture(base.SortObjects(input), mvBeatmap);
+}

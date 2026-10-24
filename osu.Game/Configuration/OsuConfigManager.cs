@@ -312,6 +312,19 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopHitsoundDefaultNormalBanks, string.Empty);
             SetDefault(OsuSetting.SlopBnTrackerFrostedPanels, false);
 
+            SetDefault(OsuSetting.SlopMapsetVerifierShowMinor, false);
+            SetDefault(OsuSetting.SlopMapsetVerifierHiddenMinorChecks, string.Empty);
+            SetDefault(OsuSetting.SlopMapsetVerifierShowIssueDetails, true);
+            SetDefault(OsuSetting.SlopMapsetVerifierShowGamemodeDifficultyNames, true);
+            SetDefault(OsuSetting.SlopMapsetVerifierAutoSnapshot, true);
+            SetDefault(OsuSetting.SlopMapsetVerifierShowCheckRunDelta, true);
+            SetDefault(OsuSetting.SlopMapsetVerifierDeltaShowUnchanged, false);
+            SetDefault(OsuSetting.SlopMapsetVerifierStrainDisplayMode, MapsetVerifierStrainDisplayMode.Strain);
+            SetDefault(OsuSetting.SlopMapsetVerifierShowAdvancedAudioAnalysis, false);
+            SetDefault(OsuSetting.SlopMapsetVerifierShowCheckSpeedStats, false);
+            SetDefault(OsuSetting.SlopMapsetVerifierRecheckOnSave, true);
+            SetDefault(OsuSetting.SlopMapsetVerifierFrostedPanels, false);
+
             // defaults of McOsu's FPoSu.
             SetDefault(OsuSetting.SlopFposuMouseDpi, 400, 50, 32000);
             SetDefault(OsuSetting.SlopFposuCmPer360, 30.0, 1.0, 200.0, 0.000001);
@@ -1072,6 +1085,66 @@ namespace osu.Game.Configuration
         /// Whether the panels of the "request" screen of the beatmap editor have a frosted glass background, instead of an opaque one.
         /// </summary>
         SlopBnTrackerFrostedPanels,
+
+        /// <summary>
+        /// Whether negligible (minor) issues are included on the checks page of the mapset verifier.
+        /// </summary>
+        SlopMapsetVerifierShowMinor,
+
+        /// <summary>
+        /// The IDs of the checks whose negligible issues stay hidden even while negligible issues are shown, separated by commas.
+        /// </summary>
+        SlopMapsetVerifierHiddenMinorChecks,
+
+        /// <summary>
+        /// Whether hovering an issue of the mapset verifier shows its details and the ranking criteria it enforces.
+        /// </summary>
+        SlopMapsetVerifierShowIssueDetails,
+
+        /// <summary>
+        /// Whether the mapset verifier names difficulty levels like the game mode does (e.g. "Kantan" in osu!taiko).
+        /// </summary>
+        SlopMapsetVerifierShowGamemodeDifficultyNames,
+
+        /// <summary>
+        /// Whether the mapset verifier stores a snapshot of the beatmap set before each check run.
+        /// </summary>
+        SlopMapsetVerifierAutoSnapshot,
+
+        /// <summary>
+        /// Whether the mapset verifier shows what changed since the previous check run.
+        /// </summary>
+        SlopMapsetVerifierShowCheckRunDelta,
+
+        /// <summary>
+        /// Whether the changes since the previous check run also list the unchanged issues.
+        /// </summary>
+        SlopMapsetVerifierDeltaShowUnchanged,
+
+        /// <summary>
+        /// What the star rating chart of the mapset verifier's difficulty overview shows.
+        /// </summary>
+        SlopMapsetVerifierStrainDisplayMode,
+
+        /// <summary>
+        /// Whether the audio overview of the mapset verifier shows the frequency analysis.
+        /// </summary>
+        SlopMapsetVerifierShowAdvancedAudioAnalysis,
+
+        /// <summary>
+        /// Whether the mapset verifier shows how long each check took.
+        /// </summary>
+        SlopMapsetVerifierShowCheckSpeedStats,
+
+        /// <summary>
+        /// Whether the mapset verifier checks the beatmap set again after saving it in the editor.
+        /// </summary>
+        SlopMapsetVerifierRecheckOnSave,
+
+        /// <summary>
+        /// Whether the panels of the mapset verifier have a frosted glass background, instead of an opaque one.
+        /// </summary>
+        SlopMapsetVerifierFrostedPanels,
 
         /// <summary>
         /// Whether judgements of the highest hit result (300s) are displayed.

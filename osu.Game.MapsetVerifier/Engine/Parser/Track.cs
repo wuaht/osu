@@ -1,0 +1,17 @@
+﻿using MapsetVerifier.Parser.Statics;
+
+namespace MapsetVerifier.Parser
+{
+    public class Track
+    {
+        private readonly string message;
+
+        public Track(string message)
+        {
+            this.message = message;
+            EventStatic.OnLoadStart(this.message);
+        }
+
+        public void Complete() => EventStatic.OnLoadComplete(message);
+    }
+}

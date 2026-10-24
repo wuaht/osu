@@ -1,0 +1,140 @@
+﻿using MapsetVerifier.Checks.Utils;
+using MapsetVerifier.Framework.Objects;
+using MapsetVerifier.Framework.Objects.Attributes;
+using MapsetVerifier.Framework.Objects.Metadata;
+using MapsetVerifier.Parser.Objects;
+using MapsetVerifier.Parser.Objects.TimingLines;
+using MapsetVerifier.Parser.Statics;
+using MapsetVerifier.RankingCriteria;
+
+namespace MapsetVerifier.Checks.AllModes.Timing
+{
+    [Check]
+    public class CheckUnsnaps : BeatmapCheck
+    {
+        private const double UnsnapThresholdMs = 2;
+
+        public override CheckMetadata GetMetadata() =>
+            new BeatmapCheckMetadata
+            {
+                Category = "Timing",
+                Message = "Unsnapped hit objects.",
+                Author = "Naxess",
+
+                Documentation = new Dictionary<string, string>
+                {
+                    {
+                        "Purpose",
+                        @"
+                        Prevent hit objects from being unsnapped by more than 1 ms."
+                    },
+                    {
+                        "Reasoning",
+                        @"
+                        Since gameplay is based on audio cues it wouldn't make much sense to have certain hit windows happen earlier or later, 
+                        even if only by a few ms.
+
+                        The only reason a 1 ms leniency exists is because the editor casts decimal times to integers rather than rounds them 
+                        properly, which causes these 1 ms unsnaps occasionally when copying and pasting hit objects and timing lines. This bug 
+                        happens so frequently that basically all ranked maps have multiple 1 ms unsnaps in them.
+
+                        > At overall difficulty 10, this would result in at most 2.4% chance of a 300 becoming a 100. It would change the ratio of 300s to 100s by 1.6%. This is acceptable, and a much larger variable is introduced by the possibility of lag, input latency and time calculation accuracy.
+                        >
+                        > — peppy, 2009 in [Ctrl+V rounding error [Resolved]](https://osu.ppy.sh/community/forums/topics/17711)"
+                    },
+                },
+            };
+
+        public override Dictionary<string, IssueTemplate> GetTemplates() =>
+            new()
+            {
+                {
+                    "Problem",
+                    new IssueTemplate(
+                        Issue.Level.Problem,
+                        "{0} {1} unsnapped by {2} ms.",
+                        "timestamp -",
+                        "object",
+                        "unsnap"
+                    )
+                        .WithCause(
+                            "A hit object is snapped at least 2 ms too early or late for either of the 1/5, "
+                                + "1/7, 1/9, 1/12, or 1/16 beat snap divisors."
+                        )
+                        .WithRule(RC.General.Timing_HitObjectsSnappedWithinLess)
+                },
+                {
+                    "Minor",
+                    new IssueTemplate(
+                        Issue.Level.Minor,
+                        "{0} {1} unsnapped by {2} ms.",
+                        "timestamp -",
+                        "object",
+                        "unsnap"
+                    ).WithCause("Same as the other check, but by 1 ms or more instead.")
+                },
+            };
+
+        public override IEnumerable<Issue> GetIssues(Beatmap beatmap)
+        {
+            foreach (var hitObject in beatmap.HitObjects)
+            {
+                foreach (var edgeTime in hitObject.GetEdgeTimes())
+                {
+                    var issues = GetUnsnapIssue(hitObject.GetPartName(edgeTime), edgeTime, beatmap);
+                    foreach (var issue in issues)
+                        yield return issue;
+                }
+            }
+        }
+
+        /// <summary> Returns issues wherever the given time value is unsnapped. </summary>
+        private IEnumerable<Issue> GetUnsnapIssue(string type, double time, Beatmap beatmap)
+        {
+            if (type == "Slider tail" && IsSliderTailSnappedToUpcomingRedLine(time, beatmap))
+                yield break;
+
+            var unsnapIssue = beatmap.GetUnsnapIssue(time);
+            var unsnap = beatmap.GetPracticalUnsnap(time);
+
+            if (unsnapIssue != null)
+            {
+                yield return new Issue(
+                    GetTemplate("Problem"),
+                    beatmap,
+                    Timestamp.Get(time),
+                    type,
+                    $"{unsnap:0.###}"
+                );
+            }
+            else if (Math.Abs(unsnap) >= 1)
+            {
+                yield return new Issue(
+                    GetTemplate("Minor"),
+                    beatmap,
+                    Timestamp.Get(time),
+                    type,
+                    $"{unsnap:0.###}"
+                );
+            }
+        }
+
+        /// <summary>
+        ///     Slider tails snapped to an upcoming misaligned red line can fall fractionally before it
+        ///     due to pixel-length math while still using the next line's grid in the editor.
+        /// </summary>
+        private static bool IsSliderTailSnappedToUpcomingRedLine(double time, Beatmap beatmap)
+        {
+            var currentLine = beatmap.GetTimingLine<UninheritedLine>(time);
+            var nextLine = beatmap.GetNextTimingLine<UninheritedLine>(time);
+
+            if (currentLine == null || nextLine == null || nextLine.Offset <= time)
+                return false;
+
+            if (nextLine.Offset - time > UnsnapThresholdMs)
+                return false;
+
+            return !TimingUtils.AreDownbeatsAligned(currentLine, nextLine);
+        }
+    }
+}

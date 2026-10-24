@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup Label="Project">
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Library</OutputType>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Description>Mapset Verifier integration for the editor's verify screen.</Description>
+    <!-- The vendored Mapset Verifier engine does not document its public API. -->
+    <NoWarn>$(NoWarn);CS1573;CS1572;CS1574;CS1584;CS1580;CS1587;CS1570;CS1734;CS1711;CS1712</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup Label="Project References">
+    <ProjectReference Include="..\osu.Game\osu.Game.csproj" />
+    <ProjectReference Include="..\osu.Game.Rulesets.Osu\osu.Game.Rulesets.Osu.csproj" />
+    <ProjectReference Include="..\osu.Game.Rulesets.Catch\osu.Game.Rulesets.Catch.csproj" />
+    <ProjectReference Include="..\osu.Game.Rulesets.Mania\osu.Game.Rulesets.Mania.csproj" />
+    <ProjectReference Include="..\osu.Game.Rulesets.Taiko\osu.Game.Rulesets.Taiko.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Label="Package References">
+    <PackageReference Include="MathNet.Numerics" Version="5.0.0" />
+    <PackageReference Include="Serilog" Version="4.3.1" />
+  </ItemGroup>
+
+  <ItemGroup Label="Ranking Criteria">
+    <!-- The ranking criteria snapshot and catalogue ship inside the assembly, matching upstream Mapset Verifier. -->
+    <EmbeddedResource Include="Engine\RankingCriteria\Data\**\*.md;Engine\RankingCriteria\Data\**\*.json">
+      <LogicalName>rc/%(RecursiveDir)%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+</Project>

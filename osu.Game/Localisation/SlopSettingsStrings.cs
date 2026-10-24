@@ -1627,6 +1627,141 @@ namespace osu.Game.Localisation
         /// </summary>
         public static LocalisableString MikuTakeoverDescription => new TranslatableString(getKey(@"miku_takeover_description"), @"Miku takes over the menu logo, the menu background and the triangles intro.");
 
+        /// <summary>
+        /// "Mapset Verifier"
+        /// </summary>
+        public static LocalisableString MapsetVerifierHeader => new TranslatableString(getKey(@"mapset_verifier_header"), @"Mapset Verifier");
+
+        /// <summary>
+        /// "Show negligible issues"
+        /// </summary>
+        public static LocalisableString MapsetVerifierShowMinor => new TranslatableString(getKey(@"mapset_verifier_show_minor"), @"Show negligible issues");
+
+        /// <summary>
+        /// "Includes negligible issues on the Checks page."
+        /// </summary>
+        public static LocalisableString MapsetVerifierShowMinorDescription => new TranslatableString(getKey(@"mapset_verifier_show_minor_description"), @"Includes negligible issues on the Checks page.");
+
+        /// <summary>
+        /// "Show all negligible checks again"
+        /// </summary>
+        public static LocalisableString MapsetVerifierResetMinorFilter => new TranslatableString(getKey(@"mapset_verifier_reset_minor_filter"), @"Show all negligible checks again");
+
+        /// <summary>
+        /// "Display issue details"
+        /// </summary>
+        public static LocalisableString MapsetVerifierShowIssueDetails => new TranslatableString(getKey(@"mapset_verifier_show_issue_details"), @"Display issue details");
+
+        /// <summary>
+        /// "Shows the details of an issue and the ranking criteria it enforces when you hover it."
+        /// </summary>
+        public static LocalisableString MapsetVerifierShowIssueDetailsDescription => new TranslatableString(getKey(@"mapset_verifier_show_issue_details_description"), @"Shows the details of an issue and the ranking criteria it enforces when you hover it.");
+
+        /// <summary>
+        /// "Use difficulty names from corresponding game modes"
+        /// </summary>
+        public static LocalisableString MapsetVerifierGamemodeDifficultyNames => new TranslatableString(getKey(@"mapset_verifier_gamemode_difficulty_names"), @"Use difficulty names from corresponding game modes");
+
+        /// <summary>
+        /// "Shows mode-specific difficulty names where available."
+        /// </summary>
+        public static LocalisableString MapsetVerifierGamemodeDifficultyNamesDescription => new TranslatableString(getKey(@"mapset_verifier_gamemode_difficulty_names_description"), @"Shows mode-specific difficulty names where available.");
+
+        /// <summary>
+        /// "Automatically create a snapshot when checks are run"
+        /// </summary>
+        public static LocalisableString MapsetVerifierAutoSnapshot => new TranslatableString(getKey(@"mapset_verifier_auto_snapshot"), @"Automatically create a snapshot when checks are run");
+
+        /// <summary>
+        /// "Stores a snapshot before each check run so the Snapshots page can compare changes over time."
+        /// </summary>
+        public static LocalisableString MapsetVerifierAutoSnapshotDescription => new TranslatableString(getKey(@"mapset_verifier_auto_snapshot_description"), @"Stores a snapshot before each check run so the Snapshots page can compare changes over time.");
+
+        /// <summary>
+        /// "Show check changes since last run"
+        /// </summary>
+        public static LocalisableString MapsetVerifierCheckRunDelta => new TranslatableString(getKey(@"mapset_verifier_check_run_delta"), @"Show check changes since last run");
+
+        /// <summary>
+        /// "Shows what changed since the previous check run at the top of the Checks page."
+        /// </summary>
+        public static LocalisableString MapsetVerifierCheckRunDeltaDescription => new TranslatableString(getKey(@"mapset_verifier_check_run_delta_description"), @"Shows what changed since the previous check run at the top of the Checks page.");
+
+        /// <summary>
+        /// "Include unchanged issues"
+        /// </summary>
+        public static LocalisableString MapsetVerifierDeltaUnchanged => new TranslatableString(getKey(@"mapset_verifier_delta_unchanged"), @"Include unchanged issues");
+
+        /// <summary>
+        /// "Adds an Unchanged tab next to New, Resolved, Worsened and Improved."
+        /// </summary>
+        public static LocalisableString MapsetVerifierDeltaUnchangedDescription => new TranslatableString(getKey(@"mapset_verifier_delta_unchanged_description"), @"Adds an Unchanged tab next to New, Resolved, Worsened and Improved.");
+
+        /// <summary>
+        /// "Check again after saving"
+        /// </summary>
+        public static LocalisableString MapsetVerifierRecheckOnSave => new TranslatableString(getKey(@"mapset_verifier_recheck_on_save"), @"Check again after saving");
+
+        /// <summary>
+        /// "Runs the checks again whenever the beatmap is saved in the editor."
+        /// </summary>
+        public static LocalisableString MapsetVerifierRecheckOnSaveDescription => new TranslatableString(getKey(@"mapset_verifier_recheck_on_save_description"), @"Runs the checks again whenever the beatmap is saved in the editor.");
+
+        /// <summary>
+        /// "Star rating chart"
+        /// </summary>
+        public static LocalisableString MapsetVerifierStrainDisplay => new TranslatableString(getKey(@"mapset_verifier_strain_display"), @"Star rating chart");
+
+        /// <summary>
+        /// "Whether the star rating chart on the Difficulty tab shows the cumulative line, the difficulty strain overlay, or both, by default."
+        /// </summary>
+        public static LocalisableString MapsetVerifierStrainDisplayDescription => new TranslatableString(getKey(@"mapset_verifier_strain_display_description"), @"Whether the star rating chart on the Difficulty tab shows the cumulative line, the difficulty strain overlay, or both, by default.");
+
+        /// <summary>
+        /// "Strain"
+        /// </summary>
+        public static LocalisableString MapsetVerifierStrainOnly => new TranslatableString(getKey(@"mapset_verifier_strain_only"), @"Strain");
+
+        /// <summary>
+        /// "Star rating"
+        /// </summary>
+        public static LocalisableString MapsetVerifierStarRatingOnly => new TranslatableString(getKey(@"mapset_verifier_star_rating_only"), @"Star rating");
+
+        /// <summary>
+        /// "Both"
+        /// </summary>
+        public static LocalisableString MapsetVerifierStrainAndStarRating => new TranslatableString(getKey(@"mapset_verifier_strain_and_star_rating"), @"Both");
+
+        /// <summary>
+        /// "Show advanced audio analysis"
+        /// </summary>
+        public static LocalisableString MapsetVerifierAdvancedAudio => new TranslatableString(getKey(@"mapset_verifier_advanced_audio"), @"Show advanced audio analysis");
+
+        /// <summary>
+        /// "Displays additional technical audio information in the overview."
+        /// </summary>
+        public static LocalisableString MapsetVerifierAdvancedAudioDescription => new TranslatableString(getKey(@"mapset_verifier_advanced_audio_description"), @"Displays additional technical audio information in the overview.");
+
+        /// <summary>
+        /// "Show check speed stats"
+        /// </summary>
+        public static LocalisableString MapsetVerifierCheckSpeed => new TranslatableString(getKey(@"mapset_verifier_check_speed"), @"Show check speed stats");
+
+        /// <summary>
+        /// "Shows how long each check took after a check run."
+        /// </summary>
+        public static LocalisableString MapsetVerifierCheckSpeedDescription => new TranslatableString(getKey(@"mapset_verifier_check_speed_description"), @"Shows how long each check took after a check run.");
+
+        /// <summary>
+        /// "Frosted panels"
+        /// </summary>
+        public static LocalisableString MapsetVerifierFrostedPanels => new TranslatableString(getKey(@"mapset_verifier_frosted_panels"), @"Frosted panels");
+
+        /// <summary>
+        /// "Blurs the beatmap background behind the panels of the verify screen like frosted glass, instead of covering it."
+        /// </summary>
+        public static LocalisableString MapsetVerifierFrostedPanelsDescription => new TranslatableString(getKey(@"mapset_verifier_frosted_panels_description"), @"Blurs the beatmap background behind the panels of the verify screen like frosted glass, instead of covering it.");
+
         private static string getKey(string key) => $"{prefix}:{key}";
     }
 }

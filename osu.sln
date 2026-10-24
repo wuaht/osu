@@ -114,6 +114,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "osu.Game.Rulesets.Fposu", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "osu.Game.Rulesets.Fposu.Tests", "osu-fps\osu.Game.Rulesets.Fposu.Tests\osu.Game.Rulesets.Fposu.Tests.csproj", "{7266B977-8A56-4688-A549-359531B4AA21}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "osu.Game.MapsetVerifier", "osu.Game.MapsetVerifier\osu.Game.MapsetVerifier.csproj", "{13B6DD87-4458-4A23-BABB-57D7A8C0B8EB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -628,6 +630,18 @@ Global
 		{7266B977-8A56-4688-A549-359531B4AA21}.Release|x64.Build.0 = Release|Any CPU
 		{7266B977-8A56-4688-A549-359531B4AA21}.Release|x86.ActiveCfg = Release|Any CPU
 		{7266B977-8A56-4688-A549-359531B4AA21}.Release|x86.Build.0 = Release|Any CPU
+		{13B6DD87-4458-4A23-BABB-57D7A8C0B8EB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{13B6DD87-4458-4A23-BABB-57D7A8C0B8EB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{13B6DD87-4458-4A23-BABB-57D7A8C0B8EB}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{13B6DD87-4458-4A23-BABB-57D7A8C0B8EB}.Debug|x64.Build.0 = Debug|Any CPU
+		{13B6DD87-4458-4A23-BABB-57D7A8C0B8EB}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{13B6DD87-4458-4A23-BABB-57D7A8C0B8EB}.Debug|x86.Build.0 = Debug|Any CPU
+		{13B6DD87-4458-4A23-BABB-57D7A8C0B8EB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{13B6DD87-4458-4A23-BABB-57D7A8C0B8EB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{13B6DD87-4458-4A23-BABB-57D7A8C0B8EB}.Release|x64.ActiveCfg = Release|Any CPU
+		{13B6DD87-4458-4A23-BABB-57D7A8C0B8EB}.Release|x64.Build.0 = Release|Any CPU
+		{13B6DD87-4458-4A23-BABB-57D7A8C0B8EB}.Release|x86.ActiveCfg = Release|Any CPU
+		{13B6DD87-4458-4A23-BABB-57D7A8C0B8EB}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

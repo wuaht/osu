@@ -27,5 +27,10 @@ namespace osu.Game.Screens.Edit
         /// The playback speed selected by the user.
         /// </summary>
         public double PlaybackSpeed { get; set; } = 1;
+
+        /// <summary>
+        /// An editor timestamp (e.g. "00:12:345 (1,2) -") to seek to and select in the compose screen once the editor is ready.
+        /// </summary>
+        public string? PendingTimestamp { get; set; }
     }
 }

@@ -22,6 +22,8 @@ using osu.Game.IO;
 using osu.Game.IPC;
 using osu.Game.Performance;
 using osu.Game.Utils;
+using osu.Game.MapsetVerifier.UI;
+using osu.Game.Screens.Edit;
 
 namespace osu.Desktop
 {
@@ -40,6 +42,7 @@ namespace osu.Desktop
         public OsuGameDesktop(string[]? args = null)
             : base(args)
         {
+            Editor.CreateVerifyScreen = () => new VerifierScreen();
         }
 
         public override StableStorage? GetStorageForStableInstall()

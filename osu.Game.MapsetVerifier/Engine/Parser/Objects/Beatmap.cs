@@ -1,0 +1,1670 @@
+using System.Collections.Concurrent;
+using System.Numerics;
+using System.Text.RegularExpressions;
+using MapsetVerifier.Parser.Difficulty;
+using MapsetVerifier.Parser.Exceptions;
+using MapsetVerifier.Parser.Objects.Events;
+using MapsetVerifier.Parser.Objects.HitObjects;
+using MapsetVerifier.Parser.Objects.HitObjects.Catch;
+using MapsetVerifier.Parser.Objects.TimingLines;
+using MapsetVerifier.Parser.Settings;
+using MapsetVerifier.Parser.Statics;
+using MathNet.Numerics;
+using osu.Game.Rulesets.Difficulty;
+using osu.Game.Rulesets.Difficulty.Skills;
+
+namespace MapsetVerifier.Parser.Objects
+{
+    public partial class Beatmap
+    {
+        /// <summary> Which type of difficulty level the beatmap is considered. </summary>
+        public enum Difficulty
+        {
+            Easy,
+            Normal,
+            Hard,
+            Insane,
+            Expert,
+            Ultra,
+        }
+
+        /// <summary> Which type of game mode the beatmap is for. </summary>
+        public enum Mode
+        {
+            Standard,
+            Taiko,
+            Catch,
+            Mania,
+        }
+
+        /// <summary>
+        ///     Beat snap divisors supported by osu! and used by <see cref="GetLowestDivisor" />.
+        /// </summary>
+        public static readonly int[] SnapDivisors = [1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 16];
+
+        /// <summary>
+        ///     A list of aliases for difficulty levels. Can't be ambigious with named top diffs, so something
+        ///     like "Lunatic", "Another", or "Special" which could be either Insane or top diff is no good.
+        ///     See https://osu.ppy.sh/help/wiki/Ranking_Criteria/Difficulty_Naming for reference.
+        /// </summary>
+        private static readonly Dictionary<
+            Mode,
+            Dictionary<Difficulty, IEnumerable<string>>
+        > NameDiffPairs = new()
+        {
+            {
+                Mode.Standard,
+                new Dictionary<Difficulty, IEnumerable<string>>
+                {
+                    //                                       osu!                         Common Variations
+                    {
+                        Difficulty.Easy,
+                        new List<string> { "Beginner", "Easy", "Novice" }
+                    },
+                    {
+                        Difficulty.Normal,
+                        new List<string> { "Basic", "Normal", "Medium", "Intermediate" }
+                    },
+                    {
+                        Difficulty.Hard,
+                        new List<string> { "Advanced", "Hard" }
+                    },
+                    {
+                        Difficulty.Insane,
+                        new List<string> { "Hyper", "Insane" }
+                    },
+                    {
+                        Difficulty.Expert,
+                        new List<string> { "Expert", "Extra", "Extreme" }
+                    },
+                }
+            },
+            {
+                Mode.Taiko,
+                new Dictionary<Difficulty, IEnumerable<string>>
+                {
+                    //                                       osu!taiko/Taiko no Tatsujin
+                    {
+                        Difficulty.Easy,
+                        new List<string> { "Kantan" }
+                    },
+                    {
+                        Difficulty.Normal,
+                        new List<string> { "Futsuu" }
+                    },
+                    {
+                        Difficulty.Hard,
+                        new List<string> { "Muzukashii" }
+                    },
+                    {
+                        Difficulty.Insane,
+                        new List<string> { "Oni" }
+                    },
+                    {
+                        Difficulty.Expert,
+                        new List<string> { "Inner Oni", "Ura Oni" }
+                    },
+                    {
+                        Difficulty.Ultra,
+                        new List<string> { "Hell Oni" }
+                    },
+                }
+            },
+            {
+                Mode.Catch,
+                new Dictionary<Difficulty, IEnumerable<string>>
+                {
+                    //                                       osu!catch
+                    {
+                        Difficulty.Easy,
+                        new List<string> { "Cup" }
+                    },
+                    {
+                        Difficulty.Normal,
+                        new List<string> { "Salad" }
+                    },
+                    {
+                        Difficulty.Hard,
+                        new List<string> { "Platter" }
+                    },
+                    {
+                        Difficulty.Insane,
+                        new List<string> { "Rain" }
+                    },
+                    {
+                        Difficulty.Expert,
+                        new List<string> { "Overdose", "Deluge" }
+                    },
+                }
+            },
+            {
+                Mode.Mania,
+                new Dictionary<Difficulty, IEnumerable<string>>
+                {
+                    {
+                        Difficulty.Easy,
+                        new List<string> { "EZ", "Beginner", "Beginning", "Basic", "Easy" }
+                    },
+                    {
+                        Difficulty.Normal,
+                        new List<string> { "NM", "Normal", "Novice" }
+                    },
+                    {
+                        Difficulty.Hard,
+                        new List<string> { "HD", "Hard", "Advanced", "Hyper" }
+                    },
+                    {
+                        Difficulty.Insane,
+                        new List<string> { "MX", "SC", "Another", "Exhaust", "Insane", "Lunatic" }
+                    },
+                    {
+                        Difficulty.Expert,
+                        new List<string>
+                        {
+                            "SHD",
+                            "EX",
+                            "Black Another",
+                            "Infinite",
+                            "Gravity",
+                            "Heavenly",
+                            "Maximum",
+                            "Extra",
+                            "White Another",
+                            "Vivid",
+                            "Exceed",
+                        }
+                    },
+                }
+            },
+        };
+        private static readonly Dictionary<Mode, Dictionary<string, Difficulty>> DifficultyIndex =
+            new();
+
+        public string Code { get; }
+        public string SongPath { get; }
+        public string MapPath { get; }
+
+        /// <summary>
+        ///     When set, <see cref="GetDifficulty" /> returns this value instead of inferring from star rating and name.
+        ///     Used for difficulty interpretation override in check runs; leave clear for normal full-set analysis.
+        /// </summary>
+        public Difficulty? InterpretedDifficultyOverride { get; set; }
+
+        /// <summary>
+        ///     Set by <see cref="BeatmapSet" /> when the spread gives extra context for an otherwise ambiguous difficulty name.
+        /// </summary>
+        internal Difficulty? BeatmapSetDifficultyOverride { get; set; }
+
+        // Difficulty is expensive; defer until StarRating/Skills are needed, or until overview calls EnsureTimedAttributesCalculated.
+        private readonly object _difficultyLock = new();
+        private DifficultyAttributes? _difficultyAttributes;
+        private List<TimedDifficultyAttributes>? _timedAttributes;
+        private double _starRating;
+        private bool _attributesCalculated;
+        private bool _timedCalculated;
+
+        /// <summary>
+        ///     Set if the underlying difficulty calculator could not process this beatmap's file
+        ///     (e.g. a corrupted or empty .osu file). Star rating then falls back to 0 instead of throwing.
+        /// </summary>
+        public Exception? DifficultyCalculationError { get; private set; }
+
+        // Star Rating: calculated lazily on first access (see EnsureAttributesCalculated).
+        public double StarRating
+        {
+            get
+            {
+                EnsureAttributesCalculated();
+                return _starRating;
+            }
+        }
+
+        public DifficultyAttributes? DifficultyAttributes
+        {
+            get
+            {
+                EnsureAttributesCalculated();
+                return _difficultyAttributes;
+            }
+        }
+
+        public Skill[] Skills { get; set; } = [];
+
+        /// <summary>
+        ///     Start/end times of the <c>DifficultyHitObject</c>s the ruleset actually processed, in
+        ///     processing order. Rulesets skip and reorder objects (and merge/split them, e.g. catch),
+        ///     so this is the only reliable way to anchor a skill's per-object difficulties - which are
+        ///     index-aligned with this list, see <c>Skill.GetObjectDifficulties</c> - to a timeline.
+        /// </summary>
+        public IReadOnlyList<DifficultyObjectTiming> DifficultyObjectTimings { get; set; } = [];
+
+        // Settings
+        public GeneralSettings GeneralSettings { get; }
+        public MetadataSettings MetadataSettings { get; }
+        public DifficultySettings DifficultySettings { get; }
+        public ColourSettings ColourSettings { get; }
+
+        // Events
+        public List<Background> Backgrounds { get; }
+        public List<Video> Videos { get; }
+        public List<Break> Breaks { get; }
+        public List<Sprite> Sprites { get; }
+        public List<Sample> Samples { get; }
+        public List<Animation> Animations { get; }
+
+        // Objects
+        public List<HitObject> HitObjects { get; }
+        public List<TimingLine> TimingLines { get; }
+
+        static Beatmap()
+        {
+            foreach (var mode in NameDiffPairs)
+            {
+                var map = new Dictionary<string, Difficulty>();
+
+                foreach (var (difficulty, names) in mode.Value)
+                {
+                    foreach (var name in names)
+                    {
+                        var key = GetRelevantPartOfDifficultyName(name);
+                        map[key] = difficulty;
+                    }
+                }
+
+                DifficultyIndex[mode.Key] = map;
+            }
+        }
+
+        public Beatmap(string code, string songPath, string mapPath)
+        {
+            Code = code;
+            SongPath = songPath;
+            MapPath = mapPath;
+
+            var lines = code.Split(["\n"], StringSplitOptions.None);
+
+            GeneralSettings = ParserStatic.GetSettings(
+                lines,
+                "General",
+                sectionLines => new GeneralSettings(sectionLines)
+            );
+            MetadataSettings = ParserStatic.GetSettings(
+                lines,
+                "Metadata",
+                sectionLines => new MetadataSettings(sectionLines)
+            );
+            DifficultySettings = ParserStatic.GetSettings(
+                lines,
+                "Difficulty",
+                sectionLines => new DifficultySettings(sectionLines)
+            );
+            ColourSettings = ParserStatic.GetSettings(
+                lines,
+                "Colours",
+                sectionLines => new ColourSettings(sectionLines)
+            );
+
+            // event type 3 seems to be "background colour transformation" https://i.imgur.com/Tqlz3s5.png
+
+            Backgrounds = GetEvents(lines, ["Background", "0"], args => new Background(args));
+            Videos = GetEvents(lines, ["Video", "1"], args => new Video(args));
+            Breaks = GetEvents(lines, ["Break", "2"], args => new Break(args));
+            Sprites = GetEvents(lines, ["Sprite", "4"], args => new Sprite(args));
+            Samples = GetEvents(lines, ["Sample", "5"], args => new Sample(args));
+            Animations = GetEvents(lines, ["Animation", "6"], args => new Animation(args));
+
+            TimingLines = GetTimingLines(lines);
+            HitObjects = GetHitObjects(lines);
+
+            if (GeneralSettings.mode == Mode.Standard)
+                // Stacking is standard-only.
+                ApplyStacking();
+
+            // Parse-only ctor: difficulty calc runs lazily (see Ensure* methods below).
+        }
+
+        /// <summary>
+        ///     Runs the standard difficulty calculation if it has not already been performed
+        ///     (including by <see cref="EnsureTimedAttributesCalculated" />).
+        /// </summary>
+        private void EnsureAttributesCalculated()
+        {
+            lock (_difficultyLock)
+            {
+                if (_attributesCalculated)
+                    return;
+
+                try
+                {
+                    var attributes = new LocalDifficultyCalculator().CalculateAttributes(this);
+                    _difficultyAttributes = attributes;
+                    _starRating = attributes.StarRating;
+                }
+                catch (Exception exception)
+                {
+                    DifficultyCalculationError = exception;
+                    _difficultyAttributes = null;
+                    _starRating = 0;
+                }
+
+                _attributesCalculated = true;
+            }
+        }
+
+        /// <summary>
+        ///     Runs the timed difficulty calculation once and caches the result for overview charts.
+        ///     Also populates <see cref="Skills" /> and final star rating without a separate attributes pass.
+        /// </summary>
+        public IReadOnlyList<TimedDifficultyAttributes> EnsureTimedAttributesCalculated()
+        {
+            lock (_difficultyLock)
+            {
+                if (_timedCalculated)
+                    return _timedAttributes!;
+
+                try
+                {
+                    _timedAttributes = new LocalDifficultyCalculator().CalculateTimedAttributes(
+                        this
+                    );
+
+                    // Timed calc already produces final attributes/skills; skip a separate Calculate() pass.
+                    if (_timedAttributes.Count > 0)
+                    {
+                        _difficultyAttributes = _timedAttributes[^1].Attributes;
+                        _starRating = _difficultyAttributes.StarRating;
+                        _attributesCalculated = true;
+                    }
+                }
+                catch (Exception exception)
+                {
+                    DifficultyCalculationError = exception;
+                    _timedAttributes = [];
+                    _difficultyAttributes = null;
+                    _starRating = 0;
+                    _attributesCalculated = true;
+                }
+
+                _timedCalculated = true;
+
+                return _timedAttributes;
+            }
+        }
+
+        public static void ClearCache()
+        {
+            ThreadSafeCacheHelper<TimingLine>.cache.Clear();
+            ThreadSafeCacheHelper<InheritedLine>.cache.Clear();
+            ThreadSafeCacheHelper<UninheritedLine>.cache.Clear();
+            ThreadSafeCacheHelper<HitObject>.cache.Clear();
+            ThreadSafeCacheHelper<Circle>.cache.Clear();
+            ThreadSafeCacheHelper<Slider>.cache.Clear();
+            ThreadSafeCacheHelper<Spinner>.cache.Clear();
+            ThreadSafeCacheHelper<HoldNote>.cache.Clear();
+
+            PrefixMaxEndTimeCacheHelper<HitObject>.cache.Clear();
+            PrefixMaxEndTimeCacheHelper<Circle>.cache.Clear();
+            PrefixMaxEndTimeCacheHelper<Slider>.cache.Clear();
+            PrefixMaxEndTimeCacheHelper<Spinner>.cache.Clear();
+            PrefixMaxEndTimeCacheHelper<HoldNote>.cache.Clear();
+        }
+
+        /// <summary>
+        ///     Drops cached timing/hit-object lists for beatmaps under <paramref name="songPath" /> so reloads see fresh data
+        ///     without evicting other sets (e.g. parallel tests).
+        /// </summary>
+        public static void ClearCacheForSongPath(string songPath)
+        {
+            var normalizedSongPath = Path.GetFullPath(songPath);
+            if (!normalizedSongPath.EndsWith(Path.DirectorySeparatorChar))
+                normalizedSongPath += Path.DirectorySeparatorChar;
+
+            static bool IsUnderSongPath(string cacheKey, string normalizedSongPathPrefix) =>
+                cacheKey.StartsWith(normalizedSongPathPrefix, StringComparison.OrdinalIgnoreCase);
+
+            ClearCacheEntriesWhere<TimingLine>(normalizedSongPath, IsUnderSongPath);
+            ClearCacheEntriesWhere<InheritedLine>(normalizedSongPath, IsUnderSongPath);
+            ClearCacheEntriesWhere<UninheritedLine>(normalizedSongPath, IsUnderSongPath);
+            ClearCacheEntriesWhere<HitObject>(normalizedSongPath, IsUnderSongPath);
+            ClearCacheEntriesWhere<Circle>(normalizedSongPath, IsUnderSongPath);
+            ClearCacheEntriesWhere<Slider>(normalizedSongPath, IsUnderSongPath);
+            ClearCacheEntriesWhere<Spinner>(normalizedSongPath, IsUnderSongPath);
+            ClearCacheEntriesWhere<HoldNote>(normalizedSongPath, IsUnderSongPath);
+
+            ClearPrefixMaxEndTimeCacheEntriesWhere<HitObject>(normalizedSongPath, IsUnderSongPath);
+            ClearPrefixMaxEndTimeCacheEntriesWhere<Circle>(normalizedSongPath, IsUnderSongPath);
+            ClearPrefixMaxEndTimeCacheEntriesWhere<Slider>(normalizedSongPath, IsUnderSongPath);
+            ClearPrefixMaxEndTimeCacheEntriesWhere<Spinner>(normalizedSongPath, IsUnderSongPath);
+            ClearPrefixMaxEndTimeCacheEntriesWhere<HoldNote>(normalizedSongPath, IsUnderSongPath);
+        }
+
+        private static void ClearCacheEntriesWhere<T>(
+            string normalizedSongPathPrefix,
+            Func<string, string, bool> isUnderSongPath
+        )
+        {
+            foreach (var key in ThreadSafeCacheHelper<T>.cache.Keys)
+            {
+                if (isUnderSongPath(key.Item1, normalizedSongPathPrefix))
+                    ThreadSafeCacheHelper<T>.cache.TryRemove(key, out _);
+            }
+        }
+
+        private static void ClearPrefixMaxEndTimeCacheEntriesWhere<T>(
+            string normalizedSongPathPrefix,
+            Func<string, string, bool> isUnderSongPath
+        )
+        {
+            foreach (var key in PrefixMaxEndTimeCacheHelper<T>.cache.Keys)
+            {
+                if (isUnderSongPath(key.Item1, normalizedSongPathPrefix))
+                    PrefixMaxEndTimeCacheHelper<T>.cache.TryRemove(key, out _);
+            }
+        }
+
+        private string GetCacheKey() => Path.GetFullPath(Path.Combine(SongPath, MapPath));
+
+        private List<T> GetOrAdd<T>(Type t, Func<List<T>> func)
+        {
+            (string, Type) key = (GetCacheKey(), t);
+
+            return ThreadSafeCacheHelper<T>.cache.GetOrAdd(key, _ => func());
+        }
+
+        /*
+         *  Stacking Methods
+         */
+
+        /// <summary> Applies stacking for objects in the beatmap, updating the stack index and position values. </summary>
+        private void ApplyStacking()
+        {
+            bool wasChanged;
+
+            do
+            {
+                wasChanged = false;
+
+                // Only hit objects that can be stacked can cause other objects to be stacked.
+                var stackableHitObjects = HitObjects.OfType<Stackable>().ToList();
+
+                for (var i = 0; i < stackableHitObjects.Count - 1; ++i)
+                for (var j = i + 1; j < stackableHitObjects.Count; ++j)
+                {
+                    var hitObject = stackableHitObjects[i];
+                    var otherHitObject = stackableHitObjects[j];
+
+                    if (!MeetsStackTime(hitObject, otherHitObject))
+                        break;
+
+                    if (hitObject is Circle || otherHitObject is Circle)
+                    {
+                        if (ShouldStack(hitObject, otherHitObject))
+                        {
+                            if (otherHitObject is Slider || otherHitObject.isOnSlider)
+                                hitObject.isOnSlider = true;
+
+                            // Sliders are never less than 0 stack index.
+                            // Circles go below 0 when stacked under slider tails.
+                            if (hitObject is { stackIndex: < 0, isOnSlider: false })
+                            {
+                                // Objects stacked under slider tails will continue to stack downwards.
+                                otherHitObject.stackIndex = hitObject.stackIndex - 1;
+                                wasChanged = true;
+
+                                break;
+                            }
+
+                            hitObject.stackIndex = otherHitObject.stackIndex + 1;
+                            wasChanged = true;
+
+                            break;
+                        }
+
+                        if (IsStacked(hitObject, otherHitObject))
+                            break;
+                    }
+
+                    if (hitObject is not Slider slider)
+                        continue;
+
+                    if (ShouldStackTail(slider, otherHitObject))
+                    {
+                        // Slider tail on circle means the circle moves down,
+                        // whereas slider tail on slider head means the first slider moves up.
+                        // Only sliders later in time can move sliders earlier in time.
+                        if (otherHitObject is Slider || otherHitObject.isOnSlider)
+                        {
+                            slider.isOnSlider = true;
+                            slider.stackIndex = otherHitObject.stackIndex + 1;
+                        }
+                        else
+                        {
+                            otherHitObject.stackIndex = slider.stackIndex - 1;
+                        }
+
+                        wasChanged = true;
+
+                        break;
+                    }
+
+                    if (IsStackedTail(slider, otherHitObject))
+                        break;
+                }
+            } while (wasChanged);
+        }
+
+        /// <summary> Returns whether two stackable objects could be stacked. </summary>
+        private bool CanStack(Stackable stackable, Stackable otherStackable)
+        {
+            var isNearInTime = MeetsStackTime(stackable, otherStackable);
+            var isNearInSpace = MeetsStackDistance(stackable, otherStackable);
+
+            return isNearInTime && isNearInSpace;
+        }
+
+        /// <summary> Returns whether two stackable objects are currently stacked. </summary>
+        private bool IsStacked(Stackable stackable, Stackable otherStackable)
+        {
+            var isAlreadyStacked = stackable.stackIndex == otherStackable.stackIndex + 1;
+
+            return CanStack(stackable, otherStackable) && isAlreadyStacked;
+        }
+
+        /// <summary> Returns whether two stackable objects should be stacked, but currently are not. </summary>
+        private bool ShouldStack(Stackable stackable, Stackable otherStackable) =>
+            CanStack(stackable, otherStackable) && !IsStacked(stackable, otherStackable);
+
+        /// <summary>
+        ///     Returns whether a stackable following a slider could be stacked under the tail
+        ///     (or over in case of slider and slider).
+        /// </summary>
+        private bool CanStackTail(Slider slider, Stackable stackable)
+        {
+            double distanceSq = Vector2.DistanceSquared(
+                stackable.UnstackedPosition,
+                slider.EdgeAmount % 2 == 0 ? slider.UnstackedPosition : slider.UnstackedEndPosition
+            );
+
+            var isNearInTime = MeetsStackTime(slider, stackable);
+            var isNearInSpace = distanceSq < 3 * 3;
+
+            return isNearInTime && isNearInSpace && slider.time < stackable.time;
+        }
+
+        /// <summary>
+        ///     Returns whether a stackable following a slider is stacked under the tail
+        ///     (or over in case of slider and slider).
+        /// </summary>
+        private bool IsStackedTail(Slider slider, Stackable stackable)
+        {
+            var isAlreadyStacked = slider.stackIndex == stackable.stackIndex + 1;
+
+            return CanStackTail(slider, stackable) && isAlreadyStacked;
+        }
+
+        /// <summary>
+        ///     Returns whether a stackable following a slider should be stacked under the slider tail
+        ///     (or slider over the head in case of slider and slider), but currently is not.
+        /// </summary>
+        private bool ShouldStackTail(Slider slider, Stackable stackable) =>
+            CanStackTail(slider, stackable) && !IsStackedTail(slider, stackable);
+
+        /// <summary>
+        ///     Returns whether two stackable objects are close enough in time to be stacked. Measures from start to start
+        ///     time.
+        /// </summary>
+        private bool MeetsStackTime(Stackable stackable, Stackable otherStackable) =>
+            otherStackable.time - stackable.time <= StackTimeThreshold();
+
+        /// <summary> Returns whether two stackable objects are close enough in space to be stacked. Measures from head to head. </summary>
+        private static bool MeetsStackDistance(Stackable stackable, Stackable otherStackable) =>
+            Vector2.DistanceSquared(stackable.UnstackedPosition, otherStackable.UnstackedPosition)
+            < 3 * 3;
+
+        /// <summary> Returns how far apart in time two objects can be and still be able to stack. </summary>
+        private double StackTimeThreshold() =>
+            DifficultySettings.GetFadeInTime() * GeneralSettings.stackLeniency * 0.1;
+
+        /*
+         *  Helper Methods
+         */
+
+        /// <summary>
+        ///     Returns the element in the sorted list where the given time is greater
+        ///     than the element time, but less than the next element time (e.g. the line in effect
+        ///     at some point in time, if we give a list of timing lines).
+        ///     <br></br><br></br>
+        ///     Since the list is sorted, we can use the Binary Search algorithm here to get
+        ///     O(logn) time complexity, instead of O(n), which we would get from linear searching.
+        /// </summary>
+        private static int BinaryTimeSearch<T>(
+            IReadOnlyList<T> sortedList,
+            Func<T, double> timeSelector,
+            double targetTime,
+            int start = 0,
+            int end = int.MaxValue
+        )
+        {
+            while (true)
+            {
+                if (start < 0)
+                    // Given time is before the list starts, so there is no current element.
+                    return -1;
+
+                if (end > sortedList.Count - 1)
+                    end = sortedList.Count - 1;
+
+                if (end < 0)
+                    end = 0;
+
+                if (start == end)
+                    // Given time is after the list ends, so the last element in the list must be the current.
+                    return end;
+
+                var i = start + (end - start) / 2;
+
+                var cur = sortedList[i];
+                var next = sortedList[i + 1];
+
+                if (targetTime >= timeSelector(cur) && targetTime < timeSelector(next))
+                    return i;
+
+                if (targetTime >= timeSelector(next))
+                    // Element is too far back, move forward.
+                    start = i + 1;
+                else
+                    // Element is too far forward, move back.
+                    end = i - 1;
+            }
+        }
+
+        /// <summary>
+        ///     Returns the timing line currently in effect at the given time, if any, otherwise the first, O(logn).
+        ///     Optionally with a 5 ms backward leniency for hit sounding, or 2 ms for slider ticks.
+        /// </summary>
+        public TimingLine? GetTimingLine(
+            double time,
+            bool hitSoundLeniency = false,
+            bool isLeniencyForSliderTick = false
+        ) => GetTimingLine<TimingLine>(time, hitSoundLeniency, isLeniencyForSliderTick);
+
+        /// <summary> Same as <see cref="GetTimingLine" /> except only considers objects of a given type. </summary>
+        public T? GetTimingLine<T>(
+            double time,
+            bool hitSoundLeniency = false,
+            bool isLeniencyForSliderTick = false
+        )
+            where T : TimingLine
+        {
+            // Cache the results per generic type; timing line and hit object lists are immutable,
+            // meaning we always expect the same result from the same input.
+            var list = GetOrAdd(typeof(T), () => TimingLines.OfType<T>().ToList());
+
+            if (list.Count == 0)
+                return null;
+
+            var index = BinaryTimeSearch(
+                list,
+                line =>
+                    line.Offset
+                    - (
+                        hitSoundLeniency
+                            ? isLeniencyForSliderTick
+                                ? 2
+                                : 5
+                            : 0
+                    ),
+                time
+            );
+
+            if (index < 0)
+                // Before any timing line starts, so return first line.
+                return list[0];
+
+            return list[index];
+        }
+
+        /// <summary> Returns the next timing line, if any, otherwise null, O(logn). </summary>
+        public TimingLine? GetNextTimingLine(double time) => GetNextTimingLine<TimingLine>(time);
+
+        /// <summary> Same as <see cref="GetNextTimingLine" /> except only considers objects of a given type. </summary>
+        public T? GetNextTimingLine<T>(double time)
+            where T : TimingLine
+        {
+            var list = GetOrAdd(typeof(T), () => TimingLines.OfType<T>().ToList());
+
+            if (list.Count == 0)
+                return null;
+
+            var index = BinaryTimeSearch(list, line => line.Offset, time);
+
+            if (index < 0)
+                // Before any timing line starts, so return first line.
+                return list[0];
+
+            if (index + 1 >= list.Count)
+                // After last timing line, so there's no next.
+                return null;
+
+            return list[index + 1];
+        }
+
+        /// <summary> Returns the current or previous hit object if any, otherwise the first, O(logn). </summary>
+        public HitObject? GetHitObject(double time) => GetHitObject<HitObject>(time);
+
+        /// <summary> Same as <see cref="GetHitObject" /> except only considers objects of a given type. </summary>
+        public T? GetHitObject<T>(double time)
+            where T : HitObject
+        {
+            var list = GetOrAdd(typeof(T), () => HitObjects.OfType<T>().ToList());
+
+            if (list.Count == 0)
+                return null;
+
+            var index = BinaryTimeSearch(list, obj => obj.time, time);
+
+            if (index < 0)
+                // Before first hit object, so return first one.
+                return list[0];
+
+            return list[index];
+        }
+
+        /// <summary> Returns the previous hit object if any, otherwise null, O(logn). </summary>
+        public HitObject? GetPrevHitObject(double time) => GetPrevHitObject<HitObject>(time);
+
+        /// <summary> Same as <see cref="GetPrevHitObject" /> except only considers objects of a given type. </summary>
+        public T? GetPrevHitObject<T>(double time)
+            where T : HitObject
+        {
+            var list = GetOrAdd(typeof(T), () => HitObjects.OfType<T>().ToList());
+
+            if (list.Count == 0)
+                return null;
+
+            // Get the index of object starting in front of the specified time.
+            var index = BinaryTimeSearch(list, obj => obj.time, time);
+
+            if (list[index].GetEndTime() < time)
+                // Object end doesn't overlap specified time, so we can return it.
+                return list[index];
+
+            if (index - 1 < 0)
+                // Object end is overlapping given time, and there is no object before that. So there is no prev.
+                return null;
+
+            return list[index - 1];
+        }
+
+        /// <summary> Returns the next hit object after the current, if any, otherwise null, O(logn). </summary>
+        public HitObject? GetNextHitObject(double time) => GetNextHitObject<HitObject>(time);
+
+        /// <summary> Same as <see cref="GetNextHitObject" /> except only considers objects of a given type. </summary>
+        public T? GetNextHitObject<T>(double time)
+            where T : HitObject
+        {
+            var list = GetOrAdd(typeof(T), () => HitObjects.OfType<T>().ToList());
+
+            if (list.Count == 0)
+                return null;
+
+            var index = BinaryTimeSearch(list, obj => obj.time, time);
+
+            if (index < 0)
+                // Before first hit object, so return first one.
+                return list[0];
+
+            if (index + 1 >= list.Count)
+                // After last hit object, so there is no next.
+                return null;
+
+            return list[index + 1];
+        }
+
+        /// <summary>
+        ///     Returns whether any object of type T starts before <paramref name="end" /> and ends at or after
+        ///     <paramref name="start" />, i.e. whether its duration overlaps the given time range at any point,
+        ///     O(logn).
+        /// </summary>
+        public bool HasHitObjectOverlapping<T>(double start, double end)
+            where T : HitObject
+        {
+            var list = GetOrAdd(typeof(T), () => HitObjects.OfType<T>().ToList());
+
+            if (list.Count == 0)
+                return false;
+
+            var prefixMaxEndTime = GetOrAddPrefixMaxEndTime(typeof(T), list);
+
+            // Find the last object starting before `end` (BinaryTimeSearch allows equality, so back up
+            // past any objects starting exactly at `end`, since those shouldn't count).
+            var index = BinaryTimeSearch(list, obj => obj.time, end);
+
+            while (index >= 0 && list[index].time >= end)
+                --index;
+
+            if (index < 0)
+                return false;
+
+            // Since prefixMaxEndTime is a running maximum, this tells us whether any object up to and
+            // including `index` ends at or after `start`.
+            return prefixMaxEndTime[index] >= start;
+        }
+
+        private List<double> GetOrAddPrefixMaxEndTime<T>(Type t, List<T> list)
+            where T : HitObject
+        {
+            (string, Type) key = (GetCacheKey(), t);
+
+            return PrefixMaxEndTimeCacheHelper<T>.cache.GetOrAdd(
+                key,
+                _ =>
+                {
+                    var prefixMaxEndTime = new List<double>(list.Count);
+                    var maxEndTime = double.MinValue;
+
+                    foreach (var hitObject in list)
+                    {
+                        maxEndTime = Math.Max(maxEndTime, hitObject.GetEndTime());
+                        prefixMaxEndTime.Add(maxEndTime);
+                    }
+
+                    return prefixMaxEndTime;
+                }
+            );
+        }
+
+        /// <summary> Returns the unsnap in ms of notes unsnapped by 2 ms or more, otherwise null. </summary>
+        public double? GetUnsnapIssue(double time)
+        {
+            var thresholdUnrankable = 2;
+
+            var unsnap = GetPracticalUnsnap(time);
+
+            if (Math.Abs(unsnap) >= thresholdUnrankable)
+                return unsnap;
+
+            return null;
+        }
+
+        /// <summary> Returns the current combo colour number, starts at 0. </summary>
+        public int GetComboColourIndex(double time)
+        {
+            var combo = 0;
+
+            foreach (var hitObject in HitObjects)
+            {
+                if (hitObject.time > time)
+                    break;
+
+                // ignore spinners
+                if (!hitObject.HasType(HitObject.Types.Spinner))
+                {
+                    var reverses = 0;
+
+                    // has new combo
+                    if (hitObject.HasType(HitObject.Types.NewCombo))
+                        reverses += 1;
+
+                    // accounts for the combo colour skips
+                    for (var bit = 0x10; bit < 0x80; bit <<= 1)
+                        if (((int)hitObject.type & bit) > 0)
+                            reverses += (int)Math.Floor(bit / 16.0f);
+
+                    // counts up and wraps around
+                    for (var l = 0; l < reverses; l++)
+                    {
+                        combo += 1;
+
+                        if (combo >= ColourSettings.combos.Count)
+                            combo = 0;
+                    }
+                }
+            }
+
+            return combo;
+        }
+
+        /// <summary>
+        ///     Same as <see cref="GetComboColourIndex" />, except accounts for a bug which makes the last registered colour in
+        ///     the code the first number in the editor. Basically use for display purposes.
+        /// </summary>
+        public int GetDisplayedComboColourIndex(double time) =>
+            AsDisplayedComboColourIndex(GetComboColourIndex(time));
+
+        /// <summary>
+        ///     Accounts for a bug which makes the last registered colour in
+        ///     the code the first number in the editor. Basically use for display purposes.
+        /// </summary>
+        public int AsDisplayedComboColourIndex(int zeroBasedIndex) =>
+            zeroBasedIndex == 0 ? ColourSettings.combos.Count : zeroBasedIndex;
+
+        /// <summary> Returns whether a difficulty-specific storyboard is present, does not care about .osb files. </summary>
+        public bool HasDifficultySpecificStoryboard()
+        {
+            if (Sprites.Count > 0 || Animations.Count > 0)
+                return true;
+
+            return false;
+        }
+
+        /// <summary>
+        /// Returns the interpreted difficulty level based on difficulty name or fallback on star rating
+        /// </summary>
+        public Difficulty GetDifficulty()
+        {
+            // Prioritize the interpreted difficulty override if it exists
+            if (InterpretedDifficultyOverride is { } overridden)
+                return overridden;
+
+            if (BeatmapSetDifficultyOverride is { } beatmapSetOverride)
+                return beatmapSetOverride;
+
+            var difficultyFromName = GetDifficultyFromName();
+
+            // We can't determine the difficulty by name so instead use star rating
+            if (difficultyFromName == null)
+            {
+                return GetDifficultyFromStarRating();
+            }
+
+            var interpretedFromName = (Difficulty)difficultyFromName;
+            // Broad osu!taiko "Oni" labels map to Insane by name, but trust SR when it clearly maps to Expert or Ultra.
+            if (GeneralSettings.mode == Mode.Taiko && interpretedFromName == Difficulty.Insane)
+            {
+                var difficultyFromStarRating = GetDifficultyFromStarRating();
+                if (difficultyFromStarRating >= Difficulty.Expert)
+                {
+                    return difficultyFromStarRating;
+                }
+            }
+
+            return interpretedFromName;
+        }
+
+        private Difficulty GetDifficultyFromStarRating()
+        {
+            return StarRating switch
+            {
+                < 2.0f => Difficulty.Easy,
+                < 2.7f => Difficulty.Normal,
+                < 4.0f => Difficulty.Hard,
+                < 5.3f => Difficulty.Insane,
+                < 6.5f => Difficulty.Expert,
+                _ => Difficulty.Ultra,
+            };
+        }
+
+        private static string GetRelevantPartOfDifficultyName(string input)
+        {
+            input = input.ToLowerInvariant();
+
+            // Remove indication of ownership
+            input = OwnerPrefixRegex().Replace(input, "");
+            input = CollabRegex().Replace(input, "");
+
+            input = SpecialCharactersRegex().Replace(input, " ");
+            input = WhiteSpaceCleanupRegex().Replace(input, " ").Trim();
+
+            return input;
+        }
+
+        public Difficulty? GetDifficultyFromName()
+        {
+            var name = GetRelevantPartOfDifficultyName(MetadataSettings.version);
+
+            var map = DifficultyIndex[GeneralSettings.mode];
+
+            // Only do direct matching to avoid false positives
+            if (map.TryGetValue(name, out var diff))
+            {
+                return diff;
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        ///     Returns the name of the difficulty in a gramatically correct way, for example "an Easy" and "a Normal".
+        ///     Mostly useful for adding in the middle of sentences.
+        /// </summary>
+        public string GetDifficultyName(Difficulty? difficulty = null)
+        {
+            switch (difficulty ?? GetDifficulty())
+            {
+                case Difficulty.Easy:
+                    return "an Easy";
+                case Difficulty.Normal:
+                    return "a Normal";
+                case Difficulty.Hard:
+                    return "a Hard";
+                case Difficulty.Insane:
+                    return "an Insane";
+                case Difficulty.Expert:
+                    return "an Expert";
+                default:
+                    return "an Ultra";
+            }
+        }
+
+        /// <summary>
+        ///     Returns the canonical difficulty tier name for this beatmap's game mode, for example
+        ///     "Kantan" for a Taiko Easy or "Platter" for a Catch Hard, falling back to the mode-agnostic
+        ///     name (e.g. "Easy") for modes without their own tier names.
+        /// </summary>
+        public string GetModeDifficultyName(Difficulty? difficulty = null)
+        {
+            var diff = difficulty ?? GetDifficulty();
+
+            return GeneralSettings.mode switch
+            {
+                Mode.Taiko => diff switch
+                {
+                    Difficulty.Easy => "Kantan",
+                    Difficulty.Normal => "Futsuu",
+                    Difficulty.Hard => "Muzukashii",
+                    Difficulty.Insane => "Oni",
+                    _ => "Inner Oni",
+                },
+                Mode.Catch => diff switch
+                {
+                    Difficulty.Easy => "Cup",
+                    Difficulty.Normal => "Salad",
+                    Difficulty.Hard => "Platter",
+                    Difficulty.Insane => "Rain",
+                    _ => "Overdose",
+                },
+                _ => diff switch
+                {
+                    Difficulty.Easy => "Easy",
+                    Difficulty.Normal => "Normal",
+                    Difficulty.Hard => "Hard",
+                    Difficulty.Insane => "Insane",
+                    _ => "Expert",
+                },
+            };
+        }
+
+        /// <summary> Returns the complete drain time of the beatmap, accounting for breaks. </summary>
+        public double GetDrainTime(Mode gamemode)
+        {
+            // No need to do anything if there are no hit objects.
+            if (HitObjects.Count <= 0)
+            {
+                return 0;
+            }
+
+            var startTime = HitObjects.First().time;
+            double endTime = 0;
+            if (gamemode == Mode.Mania)
+            {
+                // Mania is special because you can have multiple notes at the same time
+                // If the last note is a normal object, so other notes don't get taken into account
+                // This will be an issue if one of those notes is a long note with a release that goes beyond the last note's time
+                foreach (var hitObject in HitObjects)
+                    endTime = endTime < hitObject.GetEndTime() ? hitObject.GetEndTime() : endTime;
+            }
+            else
+            {
+                endTime = HitObjects.Last().GetEndTime();
+            }
+
+            // remove breaks
+            double breakReduction = 0;
+
+            foreach (var @break in Breaks)
+                breakReduction += @break.GetDuration(this);
+
+            return endTime - startTime - breakReduction;
+        }
+
+        /// <summary>
+        ///     Returns the play time of the beatmap, starting from the first object and ending at the end of the last
+        ///     object.
+        /// </summary>
+        public double GetPlayTime()
+        {
+            if (HitObjects.Count > 0)
+            {
+                var startTime = HitObjects.First().time;
+                var endTime = HitObjects.Last().GetEndTime();
+
+                return endTime - startTime;
+            }
+
+            return 0;
+        }
+
+        /// <summary>
+        ///     Returns the beat number from offset 0 at which the countdown would start, accounting for
+        ///     countdown offset and speed. No countdown if less than 0.
+        /// </summary>
+        public double GetCountdownStartBeat()
+        {
+            var firstObject = GetHitObject(0);
+
+            // If there are no objects, this does not apply.
+            if (firstObject == null)
+                return 0;
+
+            // always 6 beats before the first, but the first beat can be cut by having the first beat 5 ms after 0.
+            var line = GetTimingLine<UninheritedLine>(0);
+
+            if (line == null)
+            {
+                return 0;
+            }
+
+            var firstBeatTime = line.Offset;
+
+            while (firstBeatTime - line.msPerBeat > 0)
+                firstBeatTime -= line.msPerBeat;
+
+            var firstObjectTime = firstObject.time;
+            var firstObjectBeat = Timestamp.Round(
+                (firstObjectTime - firstBeatTime) / line.msPerBeat
+            );
+
+            // Apparently double does not result in the countdown needing half as much time, but rather closer to 0.45 times as much.
+            var countdownMultiplier =
+                GeneralSettings.countdown == GeneralSettings.Countdown.None ? 1
+                : GeneralSettings.countdown == GeneralSettings.Countdown.Half ? 2
+                : 0.45;
+
+            return firstObjectBeat
+                - ((firstBeatTime > 5 ? 5 : 6) + GeneralSettings.countdownBeatOffset)
+                    * countdownMultiplier;
+        }
+
+        /// <summary>
+        ///     Returns how many ms into a beat the given time is. When <paramref name="line" /> is omitted, uses the
+        ///     uninherited line active at <paramref name="time" />.
+        /// </summary>
+        public double GetOffsetIntoBeat(double time, UninheritedLine? line = null)
+        {
+            // Only assigns if line is not already provided
+            line ??= GetTimingLine<UninheritedLine>(time);
+            if (line == null)
+            {
+                throw new Exception($"No uninherited line found at {time}.");
+            }
+
+            // gets how many miliseconds into a beat we are
+            var msOffset = time - line.Offset;
+            var division = msOffset / line.msPerBeat;
+            var fraction = division - (float)Math.Floor(division);
+            var beatOffset = fraction * line.msPerBeat;
+
+            return beatOffset;
+        }
+
+        /// <summary>
+        ///     Returns the lowest possible beat snap divisor to get to the given time with less than 2 ms of unsnap, 0 if
+        ///     unsnapped.
+        /// </summary>
+        public int GetLowestDivisor(double time)
+        {
+            var line = GetTimingLine<UninheritedLine>(time);
+
+            double GetAbsoluteUnsnap(int divisor) =>
+                Math.Abs(GetPracticalUnsnap(time, divisor, line));
+
+            var minUnsnap = SnapDivisors.Min(GetAbsoluteUnsnap);
+
+            if (minUnsnap > 2)
+                return 0;
+
+            return SnapDivisors.First(divisor => GetAbsoluteUnsnap(divisor).AlmostEqual(minUnsnap));
+        }
+
+        /// <summary> Returns the unsnap ignoring all of the game's rounding and other approximations. Can be negative. </summary>
+        public double GetTheoreticalUnsnap(double time)
+        {
+            var line = GetTimingLine<UninheritedLine>(time);
+
+            double[] theoreticalUnsnaps =
+            [
+                GetTheoreticalUnsnap(time, 16, line),
+                GetTheoreticalUnsnap(time, 12, line),
+                GetTheoreticalUnsnap(time, 9, line),
+                GetTheoreticalUnsnap(time, 7, line),
+                GetTheoreticalUnsnap(time, 5, line),
+            ];
+
+            // Assume the closest possible snapping & retain signed values.
+            var minUnsnap = theoreticalUnsnaps.Min(Math.Abs);
+
+            return theoreticalUnsnaps.First(unsnap => Math.Abs(unsnap).AlmostEqual(minUnsnap));
+        }
+
+        /// <summary>
+        ///     Returns the unsnap, from the given snap divisor, ignoring all of the game's rounding and other approximations.
+        ///     Optionally supply the uninherited line, instead of the method looking this up itself. The value returned is in
+        ///     terms of
+        ///     how much the object needs to be moved forwards in time to be snapped.
+        /// </summary>
+        public double GetTheoreticalUnsnap(double time, int divisor, UninheritedLine? line = null)
+        {
+            line ??= GetTimingLine<UninheritedLine>(time);
+            if (line == null)
+            {
+                throw new Exception($"No uninherited line found at {time}.");
+            }
+
+            var beatOffset = GetOffsetIntoBeat(time, line);
+            var currentFraction = beatOffset / line.msPerBeat;
+
+            var desiredFraction = Math.Round(currentFraction * divisor) / divisor;
+            var differenceFraction = currentFraction - desiredFraction;
+            var theoreticalUnsnap = differenceFraction * line.msPerBeat;
+
+            return theoreticalUnsnap;
+        }
+
+        /// <summary>
+        ///     Returns the unsnap accounting for the way the game rounds, relative to the supplied uninherited line.
+        /// </summary>
+        public double GetPracticalUnsnap(double time, UninheritedLine line)
+        {
+            double[] practicalUnsnaps =
+            [
+                GetPracticalUnsnap(time, 16, line),
+                GetPracticalUnsnap(time, 12, line),
+                GetPracticalUnsnap(time, 9, line),
+                GetPracticalUnsnap(time, 7, line),
+                GetPracticalUnsnap(time, 5, line),
+            ];
+
+            if (practicalUnsnaps.Any(double.IsNaN))
+            {
+                throw new InvalidBeatmapDataException(
+                    $"Beatmap contains NaN timing values at time {time}. This indicates corrupted or intentionally invalid timing data."
+                );
+            }
+
+            var minUnsnap = practicalUnsnaps.Min(Math.Abs);
+
+            return practicalUnsnaps.First(unsnap => Math.Abs(unsnap).AlmostEqual(minUnsnap));
+        }
+
+        /// <summary>
+        ///     Returns the unsnap accounting for the way the game rounds (or more accurately doesn't round) snapping.
+        ///     <para />
+        ///     The value returned is in terms of how much the object needs to be moved forwards in time to be snapped.
+        /// </summary>
+        public double GetPracticalUnsnap(double time)
+        {
+            var line = GetTimingLine<UninheritedLine>(time);
+
+            // We cannot simply round the closest theoretical snap, because while e.g.
+            // abs(1.23) < abs(-1.70),
+            // 35601 - (int)(35601 - 1.23) > 35601 - (int)(35601 - (-1.70)).
+            // (Giving unsnaps of 2 ms and 1 ms respectively).
+            double[] practicalUnsnaps =
+            [
+                GetPracticalUnsnap(time, 16, line),
+                GetPracticalUnsnap(time, 12, line),
+                GetPracticalUnsnap(time, 9, line),
+                GetPracticalUnsnap(time, 7, line),
+                GetPracticalUnsnap(time, 5, line),
+            ];
+
+            // Check for NaN values - this indicates invalid beatmap data
+            // This can happen when tools like Sliderator are used
+            if (practicalUnsnaps.Any(double.IsNaN))
+            {
+                throw new InvalidBeatmapDataException(
+                    $"Beatmap contains NaN timing values at time {time}. This indicates corrupted or intentionally invalid timing data."
+                );
+            }
+
+            // Assume the closest possible snapping & retain signed values.
+            var minUnsnap = practicalUnsnaps.Min(Math.Abs);
+
+            return practicalUnsnaps.First(unsnap => Math.Abs(unsnap).AlmostEqual(minUnsnap));
+        }
+
+        /// <summary>
+        ///     Returns where the given time would sit were it snapped to the given divisor, relative to the given
+        ///     uninherited line.
+        ///     <para />
+        ///     Derived from the beat grid rather than as <c>time - theoreticalUnsnap</c>. The two are the same number
+        ///     mathematically, but that subtraction cancels away every significant digit, so a time we computed
+        ///     ourselves (slider edges above all, which carry noise from the float pixel length) lands a fraction of a
+        ///     nanosecond off the grid point instead of on it. Truncating that turns a perfectly snapped edge into a
+        ///     full 1 ms unsnap.
+        /// </summary>
+        private double GetSnappedTime(double time, int divisor, UninheritedLine line)
+        {
+            // Derived exactly as in GetTheoreticalUnsnap, so both agree on which grid point is the closest one.
+            var beatOffset = GetOffsetIntoBeat(time, line);
+            var currentFraction = beatOffset / line.msPerBeat;
+
+            var beat = (float)Math.Floor((time - line.Offset) / line.msPerBeat);
+
+            // Counting whole divisions from the line and dividing once at the very end leaves the grid point exact
+            // for every timing where it can be exact, instead of rounding once per term and landing beside it.
+            var divisions = beat * divisor + Math.Round(currentFraction * divisor);
+
+            return line.Offset + divisions * line.msPerBeat / divisor;
+        }
+
+        /// <summary>
+        ///     Same as <see cref="GetTheoreticalUnsnap(double, int, UninheritedLine)" />, except accounts for the way
+        ///     the game rounds ms times.
+        /// </summary>
+        public double GetPracticalUnsnap(double time, int divisor, UninheritedLine? line = null)
+        {
+            line ??= GetTimingLine<UninheritedLine>(time);
+            if (line == null)
+            {
+                throw new Exception($"No uninherited line found at {time}.");
+            }
+
+            // The game truncates ms times rather than rounding them, which is exactly why 1 ms unsnaps are so
+            // common in ranked maps, so we truncate too.
+            return time - Timestamp.Round(GetSnappedTime(time, divisor, line));
+        }
+
+        /// <summary> Returns the combo number (the number you see on the notes), of a given hit object. </summary>
+        public int GetCombo(HitObject hitObject)
+        {
+            var combo = 1;
+
+            // Adds a combo number for each object before this that isn't a new combo.
+            var firstHitObject = HitObjects[0];
+
+            while (true)
+            {
+                var prevHitObject = hitObject.Prev();
+
+                // We reached the start of the beatmap
+                if (prevHitObject == null)
+                    break;
+
+                // The first object in the beatmap is always a new combo.
+                // Spinners and their following objects are also always new comboed.
+                if (
+                    hitObject.type.HasFlag(HitObject.Types.NewCombo)
+                    || hitObject is Spinner
+                    || prevHitObject is Spinner
+                    || hitObject == firstHitObject
+                )
+                    break;
+
+                hitObject = prevHitObject;
+
+                ++combo;
+            }
+
+            return combo;
+        }
+
+        /// <summary> Returns the hit object count divided by the drain time. </summary>
+        public double GetObjectDensity() => HitObjects.Count / GetDrainTime(GeneralSettings.mode);
+
+        /// <summary> Returns the full audio file path the beatmap uses if any such file exists, otherwise null. </summary>
+        public string? GetAudioFilePath()
+        {
+            // read the mp3 file tags, if an audio file is specified
+            var audioFileName = GeneralSettings.audioFileName;
+            var mp3Path = SongPath + Path.DirectorySeparatorChar + audioFileName;
+
+            if (audioFileName.Length > 0 && File.Exists(mp3Path))
+                return mp3Path;
+
+            // no audio file
+            return null;
+        }
+
+        /// <summary> Returns the full file path of the first configured background that exists, otherwise null. </summary>
+        public string? GetBackgroundFilePath()
+        {
+            foreach (var background in Backgrounds)
+            {
+                var filePath = ResolveReferencedFilePath(background.path, background.strippedPath);
+                if (filePath != null)
+                    return filePath;
+            }
+
+            return null;
+        }
+
+        private string? ResolveReferencedFilePath(string? parsedPath, string? strippedPath)
+        {
+            if (string.IsNullOrWhiteSpace(SongPath))
+                return null;
+
+            if (!string.IsNullOrWhiteSpace(parsedPath))
+            {
+                var directPath = Path.Combine(
+                    SongPath,
+                    parsedPath
+                        .Replace('/', Path.DirectorySeparatorChar)
+                        .Replace('\\', Path.DirectorySeparatorChar)
+                );
+                if (File.Exists(directPath))
+                    return directPath;
+            }
+
+            if (string.IsNullOrWhiteSpace(strippedPath))
+                return null;
+
+            return Directory
+                .EnumerateFiles(SongPath, "*.*", SearchOption.AllDirectories)
+                .LastOrDefault(filePath =>
+                    PathStatic.ParsePath(PathStatic.RelativePath(filePath, SongPath), true)
+                    == strippedPath
+                );
+        }
+
+        /// <summary> Returns the expected file name of the .osu based on the beatmap's metadata. </summary>
+        public string GetOsuFileName()
+        {
+            var songArtist = MetadataSettings.GetFileNameFiltered(MetadataSettings.artist);
+            var songTitle = MetadataSettings.GetFileNameFiltered(MetadataSettings.title);
+            var songCreator = MetadataSettings.GetFileNameFiltered(MetadataSettings.creator);
+            var version = MetadataSettings.GetFileNameFiltered(MetadataSettings.version);
+
+            return $"{songArtist} - {songTitle} ({songCreator}) [{version}].osu";
+        }
+
+        /*
+         *  Parser Methods
+         */
+
+        private List<T> GetEvents<T>(string[] lines, List<string> types, Func<string[], T> func)
+        {
+            // find all lines starting with any of types in the event section
+            var foundTypes = new List<T>();
+
+            ParserStatic.ApplySettings(
+                lines,
+                "Events",
+                sectionLines =>
+                {
+                    foreach (var line in sectionLines)
+                        if (types.Any(type => line.StartsWith(type + ",")))
+                            foundTypes.Add(func(line.Split(',')));
+                }
+            );
+
+            return foundTypes;
+        }
+
+        private List<TimingLine> GetTimingLines(string[] lines)
+        {
+            // Find the [TimingPoints] section and parse each timing line.
+            var timingLines = ParserStatic
+                .ParseSection(
+                    lines,
+                    "TimingPoints",
+                    line =>
+                    {
+                        var args = line.Split(',');
+
+                        return TimingLine.IsUninherited(args)
+                            ? new UninheritedLine(args, this)
+                            : (TimingLine)new InheritedLine(args, this);
+                    }
+                )
+                .OrderBy(line => line.Offset)
+                .ThenBy(line => line is InheritedLine)
+                .ToList();
+
+            // Initialize internal indicies for O(1) next/prev access.
+            for (var i = 0; i < timingLines.Count; ++i)
+                timingLines[i].SetTimingLineIndex(i);
+
+            return timingLines;
+        }
+
+        /// <summary>
+        ///     Returns a list of timing lines where SV (slider velocity) changes occur.
+        /// </summary>
+        public List<TimingLine> GetSvChanges()
+        {
+            var svChanges = new List<TimingLine>();
+
+            for (var i = 0; i < TimingLines.Count - 1; i++)
+            {
+                var firstLine = TimingLines[i];
+                var secondLine = TimingLines[i + 1];
+
+                if (
+                    !firstLine.SvMult.AlmostEqual(secondLine.SvMult)
+                    && !firstLine.Offset.AlmostEqual(secondLine.Offset)
+                )
+                {
+                    svChanges.Add(secondLine);
+                }
+            }
+
+            return svChanges;
+        }
+
+        /// <summary>
+        ///     Returns a list of timing lines where sample volume changes occur.
+        /// </summary>
+        public List<TimingLine> GetVolumeChanges()
+        {
+            var volumeChanges = new List<TimingLine>();
+
+            for (var i = 0; i < TimingLines.Count - 1; i++)
+            {
+                var firstLine = TimingLines[i];
+                var secondLine = TimingLines[i + 1];
+
+                if (
+                    !firstLine.Volume.AlmostEqual(secondLine.Volume)
+                    && !firstLine.Offset.AlmostEqual(secondLine.Offset)
+                )
+                {
+                    volumeChanges.Add(secondLine);
+                }
+            }
+
+            return volumeChanges;
+        }
+
+        /// <summary>
+        ///     Returns a list of timing lines where kiai state changes occur.
+        /// </summary>
+        public List<TimingLine> GetKiaiToggles()
+        {
+            var kiaiToggles = new List<TimingLine>();
+
+            TimingLine? previousTimingLine = null;
+
+            foreach (var line in TimingLines)
+            {
+                if (
+                    (previousTimingLine == null && line.Kiai)
+                    || (previousTimingLine != null && previousTimingLine.Kiai != line.Kiai)
+                )
+                {
+                    kiaiToggles.Add(line);
+                }
+                previousTimingLine = line;
+            }
+            return kiaiToggles;
+        }
+
+        private List<HitObject> GetHitObjects(string[] lines)
+        {
+            // find the [HitObjects] section and parse each hitobject until empty line or end of file
+            var hitObjects = ParserStatic
+                .ParseSection(
+                    lines,
+                    "HitObjects",
+                    line =>
+                    {
+                        var args = line.Split(',');
+
+                        return GeneralSettings.mode switch
+                        {
+                            Mode.Catch => HitObject.HasType(args, HitObject.Types.Circle)
+                                ? new Fruit(args, this)
+                            : HitObject.HasType(args, HitObject.Types.Slider)
+                                ? new JuiceStream(args, this)
+                            : new Bananas(args, this),
+                            _ => HitObject.HasType(args, HitObject.Types.Circle)
+                                ? new Circle(args, this)
+                            : HitObject.HasType(args, HitObject.Types.Slider)
+                                ? new Slider(args, this)
+                            : HitObject.HasType(args, HitObject.Types.ManiaHoldNote)
+                                ? new HoldNote(args, this)
+                            : (HitObject)new Spinner(args, this),
+                        };
+                    }
+                )
+                .OrderBy(hitObject => hitObject.time)
+                .ToList();
+
+            // Catch uses specific game mechanics which are based on distance between objects which are not reflected in the osu file itself
+            if (GeneralSettings.mode == Mode.Catch)
+            {
+                var catchHitObjects = hitObjects.Cast<ICatchHitObject>().ToList();
+                HitObjectDistanceCalculator.CalculateDistances(catchHitObjects, this);
+            }
+
+            // Initialize internal indicies for O(1) next/prev access.
+            for (var i = 0; i < hitObjects.Count; ++i)
+                hitObjects[i].SetHitObjectIndex(i);
+
+            return hitObjects;
+        }
+
+        /// <summary> Returns the beatmap as a string in the format "[Insane]", if the difficulty is called "Insane", for example. </summary>
+        public override string ToString() => "[" + MetadataSettings.version + "]";
+
+        /*
+         *  Optimization Methods
+         */
+
+        private static class ThreadSafeCacheHelper<T>
+        {
+            // Works under the assumption that hit objects and timing lines are immutable per beatmap id, which is the case.
+            internal static readonly ConcurrentDictionary<(string, Type), List<T>> cache = new();
+        }
+
+        private static class PrefixMaxEndTimeCacheHelper<T>
+        {
+            // Works under the assumption that hit objects are immutable per beatmap id, which is the case.
+            internal static readonly ConcurrentDictionary<(string, Type), List<double>> cache =
+                new();
+        }
+
+        [GeneratedRegex(@"^\s*\w+'s\s+")]
+        private static partial Regex OwnerPrefixRegex();
+
+        [GeneratedRegex(@"\bcollab\b")]
+        private static partial Regex CollabRegex();
+
+        [GeneratedRegex(@"[^a-z0-9\s]")]
+        private static partial Regex SpecialCharactersRegex();
+
+        [GeneratedRegex(@"\s+")]
+        private static partial Regex WhiteSpaceCleanupRegex();
+    }
+}

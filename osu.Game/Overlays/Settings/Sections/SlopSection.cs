@@ -34,6 +34,7 @@ namespace osu.Game.Overlays.Settings.Sections
                 new AnimationSettings(),
                 new UserInterfaceSettings(),
                 new EditorSettings(),
+                new MapsetVerifierSettings(),
                 new OfflineProfileSettings(),
                 new OnlineSettings(),
             };
