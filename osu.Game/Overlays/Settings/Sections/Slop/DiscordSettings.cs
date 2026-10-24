@@ -40,12 +40,6 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                     HintText = SlopSettingsStrings.DiscordModeDescription,
                     Current = config.GetBindable<DiscordClientMode>(OsuSetting.SlopDiscordMode),
                 }),
-                new SettingsItemV2(new FormTextBox
-                {
-                    Caption = SlopSettingsStrings.DiscordApplicationId,
-                    HintText = SlopSettingsStrings.DiscordApplicationIdDescription,
-                    Current = config.GetBindable<string>(OsuSetting.SlopDiscordApplicationId),
-                }),
                 new SettingsItemV2(new FormCheckBox
                 {
                     Caption = SlopSettingsStrings.DiscordFrosted,

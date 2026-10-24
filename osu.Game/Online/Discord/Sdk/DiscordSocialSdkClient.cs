@@ -26,21 +26,23 @@ namespace osu.Game.Online.Discord.Sdk
         /// </summary>
         public const string LIBRARY_DIRECTORY = @"discord";
 
+        /// <summary>
+        /// The ID of the Discord application the client logs in with.
+        /// </summary>
+        public const ulong APPLICATION_ID = 1563600725500764220;
+
         public override bool SupportsGuilds => false;
 
         public override bool SupportsHistory => false;
 
-        private Bindable<string> applicationIdSetting = null!;
         private Bindable<string> refreshToken = null!;
 
         private nint* client;
-        private ulong applicationId;
         private bool libraryLoaded;
 
         [BackgroundDependencyLoader]
         private void load(OsuConfigManager config, Storage storage)
         {
-            applicationIdSetting = config.GetBindable<string>(OsuSetting.SlopDiscordApplicationId);
             refreshToken = config.GetBindable<string>(OsuSetting.SlopDiscordRefreshToken);
 
             var libraryStorage = storage.GetStorageForDirectory(LIBRARY_DIRECTORY);
@@ -49,7 +51,7 @@ namespace osu.Game.Online.Discord.Sdk
             if (!TryLoad(new[] { libraryDirectory, AppContext.BaseDirectory }))
             {
                 State.Value = DiscordConnectionState.NotConfigured;
-                Error.Value = $@"The Discord Social SDK library ({LIBRARY_NAME}) was not found. Download the Social SDK from the Discord Developer Portal and copy the library into ""{libraryDirectory}"".";
+                Error.Value = $@"The Discord Social SDK library ({LIBRARY_NAME}) was not found. It is shipped with the game, but can also be copied into ""{libraryDirectory}"".";
                 return;
             }
 
@@ -60,7 +62,7 @@ namespace osu.Game.Online.Discord.Sdk
         {
             base.LoadComplete();
 
-            applicationIdSetting.BindValueChanged(_ => recreateClient(), true);
+            recreateClient();
         }
 
         private void recreateClient()
@@ -71,18 +73,11 @@ namespace osu.Game.Online.Discord.Sdk
 
             destroyClient();
 
-            if (!ulong.TryParse(applicationIdSetting.Value.Trim(), out applicationId) || applicationId == 0)
-            {
-                State.Value = DiscordConnectionState.NotConfigured;
-                Error.Value = @"Enter the application ID of your Discord application in the settings to log in.";
-                return;
-            }
-
             Error.Value = null;
             client = (nint*)NativeMemory.AllocZeroed((nuint)sizeof(nint));
 
             ClientInit(client);
-            ClientSetApplicationId(client, applicationId);
+            ClientSetApplicationId(client, APPLICATION_ID);
 
             void* self = (void*)GCHandle.ToIntPtr(GCHandle.Alloc(this));
             ClientSetStatusChangedCallback(client, (void*)(delegate* unmanaged[Cdecl]<int, int, int, void*, void>)&onStatusChanged, freeHandlePointer, self);
@@ -100,7 +95,7 @@ namespace osu.Game.Online.Discord.Sdk
             {
                 State.Value = DiscordConnectionState.Connecting;
                 using var token = new NativeString(refreshToken.Value);
-                ClientRefreshToken(client, applicationId, token.Value, (void*)(delegate* unmanaged[Cdecl]<nint*, DiscordString, DiscordString, int, int, DiscordString, void*, void>)&onTokenExchanged,
+                ClientRefreshToken(client, APPLICATION_ID, token.Value, (void*)(delegate* unmanaged[Cdecl]<nint*, DiscordString, DiscordString, int, int, DiscordString, void*, void>)&onTokenExchanged,
                     freeHandlePointer, allocate(new TokenRequest(this, true)));
             }
             else
@@ -137,7 +132,7 @@ namespace osu.Game.Online.Discord.Sdk
             string scopes = TakeString(scopesString);
 
             AuthorizationArgsInit(&args);
-            AuthorizationArgsSetClientId(&args, applicationId);
+            AuthorizationArgsSetClientId(&args, APPLICATION_ID);
 
             using (var scopesValue = new NativeString(scopes))
                 AuthorizationArgsSetScopes(&args, scopesValue.Value);
@@ -479,7 +474,7 @@ namespace osu.Game.Online.Discord.Sdk
                 using var verifierString = new NativeString(request!.CodeVerifier);
                 using var redirectString = new NativeString(redirectValue);
 
-                ClientGetToken(self.client, self.applicationId, codeString.Value, verifierString.Value, redirectString.Value,
+                ClientGetToken(self.client, APPLICATION_ID, codeString.Value, verifierString.Value, redirectString.Value,
                     (void*)(delegate* unmanaged[Cdecl]<nint*, DiscordString, DiscordString, int, int, DiscordString, void*, void>)&onTokenExchanged,
                     freeHandlePointer, allocate(new TokenRequest(self, false)));
             }

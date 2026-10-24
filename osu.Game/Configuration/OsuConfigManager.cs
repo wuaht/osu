@@ -460,7 +460,6 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopAutoPlusTagColours, AutoPlusTagColourSource.MapColours);
             SetDefault(OsuSetting.SlopAllowOverlaysDuringGameplay, true);
             SetDefault(OsuSetting.SlopDiscordMode, DiscordClientMode.Official);
-            SetDefault(OsuSetting.SlopDiscordApplicationId, string.Empty);
             SetDefault(OsuSetting.SlopDiscordRefreshToken, string.Empty);
             SetDefault(OsuSetting.SlopDiscordUserToken, string.Empty);
             SetDefault(OsuSetting.SlopDiscordFrosted, false);
@@ -1676,11 +1675,6 @@ namespace osu.Game.Configuration
         /// Which backend the Discord overlay uses.
         /// </summary>
         SlopDiscordMode,
-
-        /// <summary>
-        /// The Discord application ID used for the official Social SDK login.
-        /// </summary>
-        SlopDiscordApplicationId,
 
         /// <summary>
         /// The OAuth refresh token of the official Social SDK login.

@@ -1788,16 +1788,6 @@ namespace osu.Game.Localisation
         public static LocalisableString DiscordModeDescription => new TranslatableString(getKey(@"discord_mode_description"), @"The official SDK only provides direct messages with friends. The full client also shows your servers, but logs in with your user account, which is against the Discord Terms of Service and can get your account banned.");
 
         /// <summary>
-        /// "Discord application ID"
-        /// </summary>
-        public static LocalisableString DiscordApplicationId => new TranslatableString(getKey(@"discord_application_id"), @"Discord application ID");
-
-        /// <summary>
-        /// "The ID of your own Discord application with the Social SDK enabled. Only used by the official SDK."
-        /// </summary>
-        public static LocalisableString DiscordApplicationIdDescription => new TranslatableString(getKey(@"discord_application_id_description"), @"The ID of your own Discord application with the Social SDK enabled. Only used by the official SDK.");
-
-        /// <summary>
         /// "Frosted Discord background"
         /// </summary>
         public static LocalisableString DiscordFrosted => new TranslatableString(getKey(@"discord_frosted"), @"Frosted Discord background");
