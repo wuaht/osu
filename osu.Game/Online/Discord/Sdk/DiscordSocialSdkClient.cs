@@ -35,6 +35,7 @@ namespace osu.Game.Online.Discord.Sdk
 
         private nint* client;
         private ulong applicationId;
+        private bool libraryLoaded;
 
         [BackgroundDependencyLoader]
         private void load(OsuConfigManager config, Storage storage)
@@ -51,20 +52,23 @@ namespace osu.Game.Online.Discord.Sdk
                 Error.Value = $@"The Discord Social SDK library ({LIBRARY_NAME}) was not found. Download the Social SDK from the Discord Developer Portal and copy the library into ""{libraryDirectory}"".";
                 return;
             }
+
+            libraryLoaded = true;
         }
 
         protected override void LoadComplete()
         {
             base.LoadComplete();
 
-            if (!IsLoaded)
-                return;
-
             applicationIdSetting.BindValueChanged(_ => recreateClient(), true);
         }
 
         private void recreateClient()
         {
+            // Without the library, none of the native functions can be called (and the error about the missing library has to stay visible).
+            if (!libraryLoaded)
+                return;
+
             destroyClient();
 
             if (!ulong.TryParse(applicationIdSetting.Value.Trim(), out applicationId) || applicationId == 0)
