@@ -110,6 +110,55 @@ namespace osu.Game.Online.Discord
         public string Permissions { get; set; } = "0";
     }
 
+    public class DiscordMessageReference
+    {
+        [JsonProperty("channel_id")]
+        public ulong? ChannelId { get; set; }
+
+        [JsonProperty("message_id")]
+        public ulong? MessageId { get; set; }
+    }
+
+    public class DiscordThreadMetadata
+    {
+        [JsonProperty("archived")]
+        public bool Archived { get; set; }
+
+        [JsonProperty("locked")]
+        public bool Locked { get; set; }
+    }
+
+    public class DiscordThreadMember
+    {
+        [JsonProperty("join_timestamp")]
+        public DateTimeOffset? JoinTimestamp { get; set; }
+    }
+
+    public class DiscordForumTag
+    {
+        [JsonProperty("id")]
+        public ulong Id { get; set; }
+
+        [JsonProperty("name")]
+        public string Name { get; set; } = string.Empty;
+
+        [JsonProperty("emoji_name")]
+        public string? EmojiName { get; set; }
+    }
+
+    /// <summary>
+    /// The posts of a forum, as found by <see cref="DiscordClient.SearchThreads"/>.
+    /// </summary>
+    public class DiscordThreadSearchResult
+    {
+        public List<DiscordChannel> Threads { get; init; } = new List<DiscordChannel>();
+
+        /// <summary>
+        /// The first message of each post, by the ID of the post.
+        /// </summary>
+        public Dictionary<ulong, DiscordMessage> FirstMessages { get; init; } = new Dictionary<ulong, DiscordMessage>();
+    }
+
     public class DiscordPermissionOverwrite
     {
         [JsonProperty("id")]
@@ -167,16 +216,67 @@ namespace osu.Game.Online.Discord
         public List<DiscordPermissionOverwrite> PermissionOverwrites { get; set; } = new List<DiscordPermissionOverwrite>();
 
         /// <summary>
+        /// The user who created a thread.
+        /// </summary>
+        [JsonProperty("owner_id")]
+        public ulong? OwnerId { get; set; }
+
+        /// <summary>
+        /// The number of messages in a thread, without its first message.
+        /// </summary>
+        [JsonProperty("message_count")]
+        public int? MessageCount { get; set; }
+
+        [JsonProperty("thread_metadata")]
+        public DiscordThreadMetadata? ThreadMetadata { get; set; }
+
+        /// <summary>
+        /// The membership of the local user in a thread, if they joined it.
+        /// </summary>
+        [JsonProperty("member")]
+        public DiscordThreadMember? Member { get; set; }
+
+        /// <summary>
+        /// The tags which can be applied to the posts of a forum.
+        /// </summary>
+        [JsonProperty("available_tags")]
+        public List<DiscordForumTag> AvailableTags { get; set; } = new List<DiscordForumTag>();
+
+        /// <summary>
+        /// The tags of a forum post.
+        /// </summary>
+        [JsonProperty("applied_tags")]
+        public List<ulong> AppliedTags { get; set; } = new List<ulong>();
+
+        /// <summary>
         /// Whether this channel is a conversation outside of a guild (a direct message or a group).
         /// </summary>
         [JsonIgnore]
         public bool IsPrivate => Type == DiscordChannelType.DirectMessage || Type == DiscordChannelType.GroupDirectMessage;
 
         /// <summary>
+        /// Whether this channel is a thread of a text channel or a post of a forum.
+        /// </summary>
+        [JsonIgnore]
+        public bool IsThread => Type == DiscordChannelType.AnnouncementThread || Type == DiscordChannelType.PublicThread || Type == DiscordChannelType.PrivateThread;
+
+        /// <summary>
+        /// Whether this channel is a forum, which consists of posts instead of messages.
+        /// </summary>
+        [JsonIgnore]
+        public bool IsForum => Type == DiscordChannelType.GuildForum || Type == DiscordChannelType.GuildMedia;
+
+        /// <summary>
+        /// Whether this thread is archived, which hides it from the channel list.
+        /// </summary>
+        [JsonIgnore]
+        public bool IsArchived => ThreadMetadata?.Archived == true;
+
+        /// <summary>
         /// Whether messages can be read and written in this channel as a list of messages.
         /// </summary>
         [JsonIgnore]
-        public bool IsTextBased => IsPrivate || Type == DiscordChannelType.GuildText || Type == DiscordChannelType.GuildAnnouncement || Type == DiscordChannelType.GuildVoice
+        public bool IsTextBased => IsPrivate || IsThread || Type == DiscordChannelType.GuildText || Type == DiscordChannelType.GuildAnnouncement || Type == DiscordChannelType.GuildVoice
                                    || Type == DiscordChannelType.GuildStageVoice;
 
         [JsonIgnore]
@@ -214,6 +314,12 @@ namespace osu.Game.Online.Discord
 
         [JsonProperty("channels")]
         public List<DiscordChannel> Channels { get; set; } = new List<DiscordChannel>();
+
+        /// <summary>
+        /// The known threads of the guild, which are not part of <see cref="Channels"/>.
+        /// </summary>
+        [JsonProperty("threads")]
+        public List<DiscordChannel> Threads { get; set; } = new List<DiscordChannel>();
 
         [JsonProperty("roles")]
         public List<DiscordRole> Roles { get; set; } = new List<DiscordRole>();
@@ -464,6 +570,27 @@ namespace osu.Game.Online.Discord
 
         [JsonProperty("referenced_message")]
         public DiscordMessage? ReferencedMessage { get; set; }
+
+        [JsonProperty("message_reference")]
+        public DiscordMessageReference? MessageReference { get; set; }
+
+        /// <summary>
+        /// The thread which was started from this message.
+        /// </summary>
+        [JsonProperty("thread")]
+        public DiscordChannel? Thread { get; set; }
+
+        /// <summary>
+        /// Whether this is the notice that a thread was started, which links to the thread.
+        /// </summary>
+        [JsonIgnore]
+        public bool IsThreadCreated => Type == 18;
+
+        /// <summary>
+        /// Whether this is the first message of a thread, which shows the message of the channel the thread was started from.
+        /// </summary>
+        [JsonIgnore]
+        public bool IsThreadStarter => Type == 21;
 
         /// <summary>
         /// The nonce of a message sent by this client, used to replace the pending local echo once the message arrives.

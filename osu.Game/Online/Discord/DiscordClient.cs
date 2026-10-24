@@ -153,6 +153,12 @@ namespace osu.Game.Online.Discord
         /// </summary>
         public abstract Task<DiscordMessage> SendMessage(DiscordChannel channel, string content, string nonce);
 
+        /// <summary>
+        /// Fetches the recent posts of a forum, including archived ones. Clients which can't search return no posts,
+        /// in which case only the known <see cref="DiscordGuild.Threads"/> are shown.
+        /// </summary>
+        public virtual Task<DiscordThreadSearchResult> SearchThreads(DiscordChannel forum) => Task.FromResult(new DiscordThreadSearchResult());
+
         public DiscordUser? GetUser(ulong id) => Users.GetValueOrDefault(id);
 
         public DiscordChannel? GetChannel(ulong id)
@@ -169,6 +175,12 @@ namespace osu.Game.Online.Discord
                 {
                     if (channel.Id == id)
                         return channel;
+                }
+
+                foreach (var thread in guild.Threads)
+                {
+                    if (thread.Id == id)
+                        return thread;
                 }
             }
 

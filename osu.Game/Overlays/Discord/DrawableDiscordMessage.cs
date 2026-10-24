@@ -102,7 +102,16 @@ namespace osu.Game.Overlays.Discord
                 Spacing = new Vector2(0, 4),
             };
 
-            if (shouldShowContent())
+            if (Message.IsThreadCreated)
+            {
+                body.Add(new OsuSpriteText
+                {
+                    Text = SlopDiscordStrings.StartedThread,
+                    Font = DiscordStyle.UiFont(15),
+                    Colour = colourProvider.Content2,
+                });
+            }
+            else if (shouldShowContent())
             {
                 body.Add(new DrawableDiscordMarkdown(Message.Content, context, Message.EditedTimestamp != null)
                 {
@@ -141,6 +150,9 @@ namespace osu.Game.Overlays.Discord
                     ShowPlaceholder = false,
                 });
             }
+
+            if (getThread() is DiscordChannel thread)
+                body.Add(new ThreadChip(thread, context.OpenChannel));
 
             if (Message.Failed)
             {
@@ -273,6 +285,39 @@ namespace osu.Game.Overlays.Discord
         /// <summary>
         /// The content is hidden if it is only the link of a media embed, like Discord does with GIFs.
         /// </summary>
+        /// <summary>
+        /// The thread which was started from this message, or which this message announces.
+        /// </summary>
+        private DiscordChannel? getThread()
+        {
+            if (Message.Thread is DiscordChannel thread)
+            {
+                // The client may know a more recent version of the thread, with its current message count.
+                var known = client.GetChannel(thread.Id);
+
+                if (known != null)
+                    return known;
+
+                thread.GuildId ??= Message.GuildId;
+                thread.ParentId ??= Message.ChannelId;
+                return thread;
+            }
+
+            if (Message.IsThreadCreated && Message.MessageReference?.ChannelId is ulong threadId)
+            {
+                return client.GetChannel(threadId) ?? new DiscordChannel
+                {
+                    Id = threadId,
+                    Name = Message.Content,
+                    Type = DiscordChannelType.PublicThread,
+                    GuildId = Message.GuildId,
+                    ParentId = Message.ChannelId,
+                };
+            }
+
+            return null;
+        }
+
         private bool shouldShowContent()
         {
             if (string.IsNullOrWhiteSpace(Message.Content))
@@ -651,6 +696,94 @@ namespace osu.Game.Overlays.Discord
         /// Loads the preview of a link when clicked.
         /// Previews aren't loaded automatically, as that would reveal the IP address of the user to any site which is linked.
         /// </summary>
+        /// <summary>
+        /// Links to the thread of a message, like in Discord.
+        /// </summary>
+        private partial class ThreadChip : OsuClickableContainer
+        {
+            private readonly DiscordChannel thread;
+
+            private Box hoverBackground = null!;
+
+            public ThreadChip(DiscordChannel thread, Action<DiscordChannel>? openChannel)
+            {
+                this.thread = thread;
+
+                Size = new Vector2(400, 56);
+                Masking = true;
+                CornerRadius = 6;
+
+                if (openChannel != null)
+                    Action = () => openChannel(thread);
+            }
+
+            [BackgroundDependencyLoader]
+            private void load(OverlayColourProvider colourProvider)
+            {
+                Children = new Drawable[]
+                {
+                    new Box
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Colour = colourProvider.Background5,
+                        Alpha = 0.8f,
+                    },
+                    hoverBackground = new Box
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Colour = Color4.White,
+                        Alpha = 0,
+                    },
+                    new SpriteIcon
+                    {
+                        Anchor = Anchor.CentreLeft,
+                        Origin = Anchor.CentreLeft,
+                        X = 14,
+                        Icon = FontAwesome.Solid.CommentDots,
+                        Size = new Vector2(22),
+                        Colour = colourProvider.Content2,
+                    },
+                    new FillFlowContainer
+                    {
+                        Anchor = Anchor.CentreLeft,
+                        Origin = Anchor.CentreLeft,
+                        RelativeSizeAxes = Axes.X,
+                        AutoSizeAxes = Axes.Y,
+                        Direction = FillDirection.Vertical,
+                        Padding = new MarginPadding { Left = 50, Right = 12 },
+                        Children = new Drawable[]
+                        {
+                            new TruncatingSpriteText
+                            {
+                                RelativeSizeAxes = Axes.X,
+                                Text = thread.DisplayName,
+                                Font = DiscordStyle.UiFont(15, FontWeight.SemiBold),
+                                Colour = colourProvider.Content1,
+                            },
+                            new OsuSpriteText
+                            {
+                                Text = thread.MessageCount is int count ? SlopDiscordStrings.ThreadMessages(count) : SlopDiscordStrings.OpenThread,
+                                Font = DiscordStyle.UiFont(12),
+                                Colour = colourProvider.Content2,
+                            },
+                        },
+                    },
+                };
+            }
+
+            protected override bool OnHover(HoverEvent e)
+            {
+                hoverBackground.FadeTo(0.04f, 100);
+                return base.OnHover(e);
+            }
+
+            protected override void OnHoverLost(HoverLostEvent e)
+            {
+                hoverBackground.FadeTo(0, 100);
+                base.OnHoverLost(e);
+            }
+        }
+
         private partial class LinkPreviewButton : OsuClickableContainer
         {
             private readonly string url;

@@ -312,6 +312,36 @@ namespace osu.Game.Localisation
         /// </summary>
         public static LocalisableString ToggleChannels => new TranslatableString(getKey(@"toggle_channels"), @"Show or hide the channels");
 
+        /// <summary>
+        /// "started a thread"
+        /// </summary>
+        public static LocalisableString StartedThread => new TranslatableString(getKey(@"started_thread"), @"started a thread");
+
+        /// <summary>
+        /// "{0} messages"
+        /// </summary>
+        public static LocalisableString ThreadMessages(int count) => new TranslatableString(getKey(@"thread_messages"), @"{0} messages", count);
+
+        /// <summary>
+        /// "Open thread"
+        /// </summary>
+        public static LocalisableString OpenThread => new TranslatableString(getKey(@"open_thread"), @"Open thread");
+
+        /// <summary>
+        /// "Archived"
+        /// </summary>
+        public static LocalisableString ArchivedThread => new TranslatableString(getKey(@"archived_thread"), @"Archived");
+
+        /// <summary>
+        /// "There are no posts in this forum yet."
+        /// </summary>
+        public static LocalisableString ForumEmpty => new TranslatableString(getKey(@"forum_empty"), @"There are no posts in this forum yet.");
+
+        /// <summary>
+        /// "Posts could not be loaded: {0}"
+        /// </summary>
+        public static LocalisableString ForumLoadFailed(string error) => new TranslatableString(getKey(@"forum_load_failed"), @"Posts could not be loaded: {0}", error);
+
         private static string getKey(string key) => $@"{prefix}:{key}";
     }
 }

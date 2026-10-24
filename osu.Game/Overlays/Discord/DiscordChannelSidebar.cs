@@ -83,9 +83,8 @@ namespace osu.Game.Overlays.Discord
                 yield return (category, sortChannels(shown.Where(c => c.ParentId == category.Id && c.Type != DiscordChannelType.GuildCategory)));
         }
 
-        // Threads are not shown in the channel list.
-        private static bool isShown(DiscordChannel channel) =>
-            channel.Type != DiscordChannelType.AnnouncementThread && channel.Type != DiscordChannelType.PublicThread && channel.Type != DiscordChannelType.PrivateThread;
+        // Threads are shown below their channel instead.
+        private static bool isShown(DiscordChannel channel) => !channel.IsThread;
 
         private static bool isVoice(DiscordChannel channel) => channel.Type == DiscordChannelType.GuildVoice || channel.Type == DiscordChannelType.GuildStageVoice;
 
@@ -170,9 +169,10 @@ namespace osu.Game.Overlays.Discord
             base.LoadComplete();
 
             guild.BindValueChanged(_ => Scheduler.AddOnce(updateChannels), true);
-            channel.BindValueChanged(_ =>
+            channel.BindValueChanged(c =>
             {
-                if (guild.Value == null)
+                // The open thread is always listed, even if the local user didn't join it.
+                if (guild.Value == null || c.OldValue?.IsThread == true || c.NewValue?.IsThread == true)
                     Scheduler.AddOnce(updateChannels);
             });
             privateChannels.BindCollectionChanged((_, _) =>
@@ -250,13 +250,42 @@ namespace osu.Game.Overlays.Discord
 
                 foreach (var c in channels)
                 {
-                    // A collapsed category still shows the selected channel.
-                    if (collapsed && channel.Value?.Id != c.Id)
-                        continue;
+                    var threads = getShownThreads(guild.Value, c);
+
+                    // A collapsed category still shows the selected channel or thread.
+                    if (collapsed)
+                    {
+                        threads = threads.Where(t => t.Id == channel.Value?.Id).ToList();
+
+                        if (channel.Value?.Id != c.Id && threads.Count == 0)
+                            continue;
+                    }
 
                     channelFlow.Add(new GuildChannelRow(c));
+
+                    if (threads.Count > 0)
+                        channelFlow.Add(new ThreadList(threads));
                 }
             }
+        }
+
+        /// <summary>
+        /// Returns the threads which are listed below a channel. Like in Discord, these are the active threads the local user joined, and the open thread.
+        /// </summary>
+        private List<DiscordChannel> getShownThreads(DiscordGuild guild, DiscordChannel parent)
+        {
+            ulong localUserId = client.LocalUser.Value?.Id ?? 0;
+            var open = channel.Value;
+
+            var threads = guild.Threads
+                            .Where(t => t.ParentId == parent.Id && (t.Id == open?.Id || (!t.IsArchived && (t.Member != null || t.OwnerId == localUserId))))
+                            .ToList();
+
+            // A thread opened from a forum or a message may not be known to the guild.
+            if (open?.IsThread == true && open.ParentId == parent.Id && threads.All(t => t.Id != open.Id))
+                threads.Add(open);
+
+            return threads.OrderBy(t => t.Id).ToList();
         }
 
         /// <summary>
@@ -487,7 +516,7 @@ namespace osu.Game.Overlays.Discord
         {
             protected readonly DiscordChannel Channel;
 
-            protected override bool Selectable => Channel.IsTextBased;
+            protected override bool Selectable => Channel.IsTextBased || Channel.IsForum;
 
             protected ChannelRow(DiscordChannel channel, float height)
                 : base(height)
@@ -578,6 +607,114 @@ namespace osu.Game.Overlays.Discord
                         Font = DiscordStyle.UiFont(15, FontWeight.Medium),
                     },
                 },
+            };
+        }
+
+        /// <summary>
+        /// The threads of a channel, connected to it by a spine like in Discord.
+        /// </summary>
+        private partial class ThreadList : CompositeDrawable
+        {
+            private const float row_height = 28;
+            private const float row_spacing = 2;
+
+            /// <summary>
+            /// The spine starts below the icon of the channel, which is centred at this position.
+            /// </summary>
+            private const float spine_x = 14;
+
+            private const float spine_thickness = 2;
+            private const float corner_size = 8;
+            private const float indent = 26;
+
+            private readonly IReadOnlyList<DiscordChannel> threads;
+
+            public ThreadList(IReadOnlyList<DiscordChannel> threads)
+            {
+                this.threads = threads;
+
+                RelativeSizeAxes = Axes.X;
+                AutoSizeAxes = Axes.Y;
+            }
+
+            [BackgroundDependencyLoader]
+            private void load(OverlayColourProvider colourProvider)
+            {
+                var rows = new FillFlowContainer
+                {
+                    RelativeSizeAxes = Axes.X,
+                    AutoSizeAxes = Axes.Y,
+                    Direction = FillDirection.Vertical,
+                    Spacing = new Vector2(0, row_spacing),
+                    Padding = new MarginPadding { Left = indent },
+                };
+
+                float lastCentre = (threads.Count - 1) * (row_height + row_spacing) + row_height / 2;
+
+                // The spine reaches up into the row of the channel, to just below its icon.
+                const float spine_top = -8;
+
+                AddInternal(new Box
+                {
+                    X = spine_x,
+                    Y = spine_top,
+                    Size = new Vector2(spine_thickness, lastCentre - corner_size - spine_top + 1),
+                    Colour = colourProvider.Background2,
+                    BypassAutoSizeAxes = Axes.Both,
+                });
+
+                for (int i = 0; i < threads.Count; i++)
+                {
+                    float centre = i * (row_height + row_spacing) + row_height / 2;
+
+                    rows.Add(new ThreadRow(threads[i], row_height));
+
+                    // A branch with a rounded corner, of which only the left and bottom border are visible.
+                    AddInternal(new Container
+                    {
+                        X = spine_x,
+                        Y = centre - corner_size,
+                        Size = new Vector2(indent - spine_x, corner_size + spine_thickness / 2),
+                        Masking = true,
+                        BypassAutoSizeAxes = Axes.Both,
+                        Child = new Container
+                        {
+                            Anchor = Anchor.BottomLeft,
+                            Origin = Anchor.BottomLeft,
+                            RelativeSizeAxes = Axes.Both,
+                            Size = new Vector2(2),
+                            Masking = true,
+                            CornerRadius = 6,
+                            BorderThickness = spine_thickness,
+                            BorderColour = colourProvider.Background2,
+                            Child = new Box
+                            {
+                                RelativeSizeAxes = Axes.Both,
+                                Alpha = 0,
+                                AlwaysPresent = true,
+                            },
+                        },
+                    });
+                }
+
+                AddInternal(rows);
+            }
+        }
+
+        private partial class ThreadRow : ChannelRow
+        {
+            public ThreadRow(DiscordChannel channel, float height)
+                : base(channel, height)
+            {
+            }
+
+            protected override Drawable CreateContent() => new TruncatingSpriteText
+            {
+                Anchor = Anchor.CentreLeft,
+                Origin = Anchor.CentreLeft,
+                RelativeSizeAxes = Axes.X,
+                Text = Channel.DisplayName,
+                Font = DiscordStyle.UiFont(14, FontWeight.Medium),
             };
         }
 
@@ -741,6 +878,11 @@ namespace osu.Game.Overlays.Discord
                 case DiscordChannelType.GuildForum:
                 case DiscordChannelType.GuildMedia:
                     return FontAwesome.Solid.Comments;
+
+                case DiscordChannelType.AnnouncementThread:
+                case DiscordChannelType.PublicThread:
+                case DiscordChannelType.PrivateThread:
+                    return FontAwesome.Solid.CommentDots;
 
                 case DiscordChannelType.DirectMessage:
                     return FontAwesome.Solid.At;

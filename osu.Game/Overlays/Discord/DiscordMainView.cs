@@ -193,7 +193,7 @@ namespace osu.Game.Overlays.Discord
                 if (g.NewValue != null)
                 {
                     ulong? last = navigation.GetLastChannel(g.NewValue);
-                    channel = g.NewValue.Channels.FirstOrDefault(c => c.Id == last) ?? DiscordChannelSidebar.GetOrderedChannels(g.NewValue).FirstOrDefault(c => c.IsTextBased);
+                    channel = g.NewValue.Channels.FirstOrDefault(c => c.Id == last) ?? g.NewValue.Threads.FirstOrDefault(c => c.Id == last) ?? DiscordChannelSidebar.GetOrderedChannels(g.NewValue).FirstOrDefault(c => c.IsTextBased);
                 }
 
                 if (navigation.Channel.Value?.GuildId != g.NewValue?.Id || navigation.Channel.Value == null || navigation.Channel.Value.IsPrivate != (g.NewValue == null))

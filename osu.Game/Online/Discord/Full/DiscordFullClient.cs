@@ -289,6 +289,42 @@ namespace osu.Game.Online.Discord.Full
             return response.ToObject<DiscordMessage>() ?? throw new DiscordRequestException(@"Discord returned an invalid message.");
         }
 
+        public override async Task<DiscordThreadSearchResult> SearchThreads(DiscordChannel forum)
+        {
+            var response = await request(HttpMethod.Get, $@"channels/{forum.Id}/threads/search?archived=true&sort_by=last_message_time&sort_order=desc&limit=25&offset=0", null)
+                .ConfigureAwait(false);
+
+            // While Discord is still indexing the forum, the response doesn't contain any posts.
+            if (response is not JObject obj)
+                return new DiscordThreadSearchResult();
+
+            var threads = obj[@"threads"]?.ToObject<List<DiscordChannel>>() ?? new List<DiscordChannel>();
+            var firstMessages = obj[@"first_messages"]?.ToObject<List<DiscordMessage>>() ?? new List<DiscordMessage>();
+
+            // The search lists the memberships of the local user separately from the posts.
+            var joined = (obj[@"members"] as JArray)?.Select(m => m.Value<ulong?>(@"id")).OfType<ulong>().ToHashSet() ?? new HashSet<ulong>();
+
+            foreach (var thread in threads)
+            {
+                thread.GuildId ??= forum.GuildId;
+
+                if (joined.Contains(thread.Id))
+                    thread.Member ??= new DiscordThreadMember();
+            }
+
+            Schedule(() =>
+            {
+                foreach (var message in firstMessages)
+                    StoreUser(message.Author);
+            });
+
+            return new DiscordThreadSearchResult
+            {
+                Threads = threads,
+                FirstMessages = firstMessages.GroupBy(m => m.ChannelId).ToDictionary(g => g.Key, g => g.First()),
+            };
+        }
+
         private async Task<JToken> request(HttpMethod method, string path, JToken? body)
         {
             string token = userToken.Value;
@@ -620,7 +656,7 @@ namespace osu.Game.Online.Discord.Full
                         {
                             [@"typing"] = true,
                             [@"activities"] = false,
-                            [@"threads"] = false,
+                            [@"threads"] = true,
                         },
                     },
                 },
@@ -777,6 +813,61 @@ namespace osu.Game.Online.Discord.Full
                     Schedule(() => removeChannel(deletedChannelId, deletedChannelGuildId));
                     break;
 
+                case @"THREAD_CREATE":
+                case @"THREAD_UPDATE":
+                    var thread = obj.ToObject<DiscordChannel>();
+
+                    if (thread != null)
+                        Schedule(() => addOrUpdateThreads(thread.GuildId, new[] { thread }));
+                    break;
+
+                case @"THREAD_DELETE":
+                    ulong deletedThreadId = obj.Value<ulong>(@"id");
+                    ulong? deletedThreadGuildId = obj.Value<ulong?>(@"guild_id");
+
+                    Schedule(() => removeThread(deletedThreadId, deletedThreadGuildId));
+                    break;
+
+                case @"THREAD_LIST_SYNC":
+                    ulong syncedGuildId = obj.Value<ulong>(@"guild_id");
+                    var syncedThreads = obj[@"threads"]?.ToObject<List<DiscordChannel>>() ?? new List<DiscordChannel>();
+                    var syncedParents = obj[@"channel_ids"]?.ToObject<List<ulong>>();
+                    var syncedMembers = (obj[@"members"] as JArray)?.Select(m => m.Value<ulong?>(@"id")).OfType<ulong>().ToHashSet() ?? new HashSet<ulong>();
+
+                    foreach (var t in syncedThreads)
+                    {
+                        if (syncedMembers.Contains(t.Id))
+                            t.Member ??= new DiscordThreadMember();
+                    }
+
+                    Schedule(() => syncThreads(syncedGuildId, syncedParents, syncedThreads));
+                    break;
+
+                case @"THREAD_MEMBER_UPDATE":
+                    // Only sent for the local user, when they join a thread.
+                    ulong joinedThreadId = obj.Value<ulong>(@"id");
+                    ulong? joinedThreadGuildId = obj.Value<ulong?>(@"guild_id");
+
+                    Schedule(() => setThreadMember(joinedThreadId, joinedThreadGuildId, true));
+                    break;
+
+                case @"THREAD_MEMBERS_UPDATE":
+                    ulong membersThreadId = obj.Value<ulong>(@"id");
+                    ulong? membersGuildId = obj.Value<ulong?>(@"guild_id");
+                    var addedMembers = (obj[@"added_members"] as JArray)?.Select(m => m.Value<ulong?>(@"user_id")).OfType<ulong>().ToList() ?? new List<ulong>();
+                    var removedMembers = obj[@"removed_member_ids"]?.ToObject<List<ulong>>() ?? new List<ulong>();
+
+                    Schedule(() =>
+                    {
+                        ulong localUserId = LocalUser.Value?.Id ?? 0;
+
+                        if (addedMembers.Contains(localUserId))
+                            setThreadMember(membersThreadId, membersGuildId, true);
+                        else if (removedMembers.Contains(localUserId))
+                            setThreadMember(membersThreadId, membersGuildId, false);
+                    });
+                    break;
+
                 case @"MESSAGE_CREATE":
                     var message = obj.ToObject<DiscordMessage>();
 
@@ -894,6 +985,9 @@ namespace osu.Game.Online.Discord.Full
 
             foreach (var channel in channels)
                 channel.GuildId = guild.Id;
+
+            foreach (var thread in guild.Threads)
+                thread.GuildId = guild.Id;
 
             guild.Channels = new List<DiscordChannel>();
 
@@ -1032,6 +1126,64 @@ namespace osu.Game.Online.Discord.Full
                 refreshGuildChannels(guild);
         }
 
+        private void addOrUpdateThreads(ulong? guildId, IEnumerable<DiscordChannel> threads)
+        {
+            if (guildId is not ulong id || GetGuild(id) is not DiscordGuild guild)
+                return;
+
+            foreach (var thread in threads)
+            {
+                var existing = guild.Threads.FirstOrDefault(t => t.Id == thread.Id);
+
+                thread.GuildId = id;
+
+                // Updates of a thread don't include the membership of the local user.
+                thread.Member ??= existing?.Member;
+
+                if (existing != null)
+                    guild.Threads[guild.Threads.IndexOf(existing)] = thread;
+                else
+                    guild.Threads.Add(thread);
+            }
+
+            TriggerGuildChannelsChanged(guild);
+        }
+
+        private void syncThreads(ulong guildId, List<ulong>? parentIds, List<DiscordChannel> threads)
+        {
+            if (GetGuild(guildId) is not DiscordGuild guild)
+                return;
+
+            // The synced threads are all active threads of the given channels (or the whole guild), so other active threads of them were archived.
+            var ids = threads.Select(t => t.Id).ToHashSet();
+            guild.Threads.RemoveAll(t => !ids.Contains(t.Id) && !t.IsArchived && (parentIds == null || (t.ParentId is ulong parent && parentIds.Contains(parent))));
+
+            addOrUpdateThreads(guildId, threads);
+        }
+
+        private void removeThread(ulong threadId, ulong? guildId)
+        {
+            if (guildId is not ulong id || GetGuild(id) is not DiscordGuild guild)
+                return;
+
+            if (guild.Threads.RemoveAll(t => t.Id == threadId) > 0)
+                TriggerGuildChannelsChanged(guild);
+        }
+
+        private void setThreadMember(ulong threadId, ulong? guildId, bool joined)
+        {
+            if (guildId is not ulong id || GetGuild(id) is not DiscordGuild guild)
+                return;
+
+            var thread = guild.Threads.FirstOrDefault(t => t.Id == threadId);
+
+            if (thread == null || (thread.Member != null) == joined)
+                return;
+
+            thread.Member = joined ? new DiscordThreadMember() : null;
+            TriggerGuildChannelsChanged(guild);
+        }
+
         private void refreshGuildChannels(DiscordGuild guild)
         {
             if (!allGuildChannels.TryGetValue(guild.Id, out var channels))
@@ -1069,7 +1221,7 @@ namespace osu.Game.Online.Discord.Full
         {
             ulong userId = LocalUser.Value?.Id ?? 0;
 
-            var visible = channels.Where(c => c.Type != DiscordChannelType.GuildCategory && c.IsTextBased && canView(guild, c, userId)).ToList();
+            var visible = channels.Where(c => c.Type != DiscordChannelType.GuildCategory && (c.IsTextBased || c.IsForum) && canView(guild, c, userId)).ToList();
             var categories = channels.Where(c => c.Type == DiscordChannelType.GuildCategory && visible.Any(v => v.ParentId == c.Id));
 
             return visible.Concat(categories).ToList();

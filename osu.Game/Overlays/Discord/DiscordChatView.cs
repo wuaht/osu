@@ -44,6 +44,11 @@ namespace osu.Game.Overlays.Discord
         private Container content = null!;
         private ChannelChat? currentChat;
 
+        /// <summary>
+        /// The channel which is shown, either as a <see cref="ChannelChat"/> or as a <see cref="DiscordForumView"/>.
+        /// </summary>
+        private ulong? shownChannelId;
+
         public DiscordChatView()
         {
             RelativeSizeAxes = Axes.Both;
@@ -66,11 +71,12 @@ namespace osu.Game.Overlays.Discord
 
             channel.BindValueChanged(c =>
             {
-                if (c.NewValue?.Id == currentChat?.Channel.Id && c.NewValue != null)
+                if (c.NewValue != null && c.NewValue.Id == shownChannelId)
                     return;
 
                 content.Clear();
                 currentChat = null;
+                shownChannelId = c.NewValue?.Id;
 
                 if (c.NewValue == null)
                 {
@@ -105,7 +111,10 @@ namespace osu.Game.Overlays.Discord
                     return;
                 }
 
-                content.Add(currentChat = new ChannelChat(c.NewValue));
+                if (c.NewValue.IsForum)
+                    content.Add(new DiscordForumView(c.NewValue));
+                else
+                    content.Add(currentChat = new ChannelChat(c.NewValue));
             }, true);
         }
 
@@ -167,7 +176,7 @@ namespace osu.Game.Overlays.Discord
                     },
                     Content = new[]
                     {
-                        new Drawable[] { createHeader() },
+                        new Drawable[] { new DiscordChannelHeader(Channel) },
                         new Drawable[]
                         {
                             scroll = new ChannelScrollContainer
@@ -226,91 +235,6 @@ namespace osu.Game.Overlays.Discord
                 };
 
                 textBox.OnCommit += (_, _) => sendMessage();
-            }
-
-            private Drawable createHeader()
-            {
-                var flow = new FillFlowContainer
-                {
-                    Anchor = Anchor.CentreLeft,
-                    Origin = Anchor.CentreLeft,
-                    RelativeSizeAxes = Axes.X,
-                    AutoSizeAxes = Axes.Y,
-                    Direction = FillDirection.Horizontal,
-                    Spacing = new Vector2(8, 0),
-                    Padding = new MarginPadding { Horizontal = 16 },
-                };
-
-                if (Channel.Type == DiscordChannelType.DirectMessage && Channel.Recipients.FirstOrDefault() is DiscordUser recipient)
-                {
-                    flow.Add(new DiscordAvatar(recipient.GetAvatarUrl(), 24)
-                    {
-                        Anchor = Anchor.CentreLeft,
-                        Origin = Anchor.CentreLeft,
-                    });
-                }
-                else
-                {
-                    flow.Add(new SpriteIcon
-                    {
-                        Anchor = Anchor.CentreLeft,
-                        Origin = Anchor.CentreLeft,
-                        Icon = DiscordChannelSidebar.GetIcon(Channel),
-                        Size = new Vector2(18),
-                        Colour = colourProvider.Content2,
-                    });
-                }
-
-                flow.Add(new OsuSpriteText
-                {
-                    Anchor = Anchor.CentreLeft,
-                    Origin = Anchor.CentreLeft,
-                    Text = Channel.DisplayName,
-                    Font = DiscordStyle.UiFont(16, FontWeight.Bold),
-                    Colour = colourProvider.Content1,
-                });
-
-                if (!string.IsNullOrWhiteSpace(Channel.Topic))
-                {
-                    flow.Add(new Box
-                    {
-                        Anchor = Anchor.CentreLeft,
-                        Origin = Anchor.CentreLeft,
-                        Size = new Vector2(1, 20),
-                        Colour = colourProvider.Background2,
-                        Margin = new MarginPadding { Horizontal = 4 },
-                    });
-
-                    flow.Add(new TruncatingSpriteText
-                    {
-                        Anchor = Anchor.CentreLeft,
-                        Origin = Anchor.CentreLeft,
-                        // The topic takes the remaining space, which is not known to the flow.
-                        MaxWidth = 600,
-                        Text = Channel.Topic.ReplaceLineEndings(@" "),
-                        Font = DiscordStyle.UiFont(14),
-                        Colour = colourProvider.Content2,
-                    });
-                }
-
-                return new Container
-                {
-                    RelativeSizeAxes = Axes.Both,
-                    Masking = true,
-                    Children = new Drawable[]
-                    {
-                        flow,
-                        new Box
-                        {
-                            Anchor = Anchor.BottomLeft,
-                            Origin = Anchor.BottomLeft,
-                            RelativeSizeAxes = Axes.X,
-                            Height = 1,
-                            Colour = Color4.Black,
-                            Alpha = 0.4f,
-                        },
-                    },
-                };
             }
 
             protected override void LoadComplete()
@@ -414,7 +338,25 @@ namespace osu.Game.Overlays.Discord
                 }
             }
 
-            private DrawableDiscordMessage createDrawable(DiscordMessage message) => new DrawableDiscordMessage(message, markdownContext);
+            private DrawableDiscordMessage createDrawable(DiscordMessage message) => new DrawableDiscordMessage(getShownMessage(message), markdownContext);
+
+            /// <summary>
+            /// The first message of a thread refers to the message it was started from, which is shown in its place like in Discord.
+            /// </summary>
+            private static DiscordMessage getShownMessage(DiscordMessage message)
+            {
+                if (!message.IsThreadStarter || message.ReferencedMessage is not DiscordMessage starter)
+                    return message;
+
+                starter.Id = message.Id;
+                starter.ChannelId = message.ChannelId;
+                starter.GuildId ??= message.GuildId;
+
+                // The thread of the message is the one which is open already.
+                starter.Thread = null;
+
+                return starter;
+            }
 
             /// <summary>
             /// The messages in the order they are shown, which differs from the order of the children once a message was replaced.
