@@ -158,6 +158,26 @@ namespace osu.Game.Localisation
         public static LocalisableString OpenInBrowser => new TranslatableString(getKey(@"open_in_browser"), @"Open in browser");
 
         /// <summary>
+        /// "Play"
+        /// </summary>
+        public static LocalisableString PlayVideo => new TranslatableString(getKey(@"play_video"), @"Play");
+
+        /// <summary>
+        /// "Pause"
+        /// </summary>
+        public static LocalisableString PauseVideo => new TranslatableString(getKey(@"pause_video"), @"Pause");
+
+        /// <summary>
+        /// "Mute"
+        /// </summary>
+        public static LocalisableString MuteVideo => new TranslatableString(getKey(@"mute_video"), @"Mute");
+
+        /// <summary>
+        /// "Unmute"
+        /// </summary>
+        public static LocalisableString UnmuteVideo => new TranslatableString(getKey(@"unmute_video"), @"Unmute");
+
+        /// <summary>
         /// "Official SDK"
         /// </summary>
         public static LocalisableString ModeOfficialSdk => new TranslatableString(getKey(@"mode_official_sdk"), @"Official SDK");

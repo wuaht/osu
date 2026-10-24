@@ -9,8 +9,13 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using osu.Framework.Allocation;
+using osu.Framework.Audio;
+using osu.Framework.Audio.Track;
+using osu.Framework.Bindables;
 using osu.Framework.Extensions;
+using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
+using osu.Framework.Graphics.Colour;
 using osu.Framework.Graphics.Animations;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Rendering;
@@ -22,7 +27,9 @@ using osu.Framework.Input.Events;
 using osu.Framework.IO.Stores;
 using osu.Framework.Logging;
 using osu.Framework.Platform;
+using osu.Game.Graphics;
 using osu.Game.Graphics.Containers;
+using osu.Game.Graphics.Sprites;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Localisation;
 using osu.Game.Online.Discord;
@@ -57,7 +64,8 @@ namespace osu.Game.Overlays.Discord
 
         private static HttpClient createHttpClient()
         {
-            var client = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+            // Long enough for videos, which are downloaded completely before they play.
+            var client = new HttpClient { Timeout = TimeSpan.FromMinutes(2) };
             client.DefaultRequestHeaders.UserAgent.ParseAdd(DiscordFullClient.USER_AGENT);
             return client;
         }
@@ -470,24 +478,51 @@ namespace osu.Game.Overlays.Discord
     }
 
     /// <summary>
-    /// A video of a message, which shows a thumbnail until it is clicked and then plays inline.
+    /// A video of a message, which shows a thumbnail until it is clicked and then plays inline with its sound and playback controls.
     /// </summary>
     public partial class DiscordMediaVideo : CompositeDrawable
     {
+        private const float controls_height = 32;
+
         private readonly string videoUrl;
         private readonly bool autoPlay;
 
         private readonly CancellationTokenSource cancellation = new CancellationTokenSource();
 
+        private readonly BindableDouble muteAdjustment = new BindableDouble(1);
+
         private Container thumbnail = null!;
         private LoadingSpinner spinner = null!;
+        private VideoControls controls = null!;
+
+        private Video? video;
+        private ITrackStore? trackStore;
+        private Track? track;
+
+        /// <summary>
+        /// Whether the playback position is taken from the sound of the video, which only exists once it was decoded.
+        /// </summary>
+        private bool audioAttached;
 
         private bool started;
+        private bool playing;
+        private bool controlsShown;
+
+        private IBindable<Visibility>? overlayState;
+
+        [Resolved]
+        private AudioManager audio { get; set; } = null!;
+
+        [Resolved]
+        private GameHost host { get; set; } = null!;
+
+        [Resolved]
+        private DiscordOverlay? overlay { get; set; }
 
         /// <param name="videoUrl">The URL of the video.</param>
         /// <param name="thumbnailUrl">The URL of an image shown until the video is started.</param>
         /// <param name="size">The displayed size.</param>
-        /// <param name="autoPlay">Whether the video starts by itself and loops without sound, like a GIF.</param>
+        /// <param name="autoPlay">Whether the video starts by itself and loops without sound or controls, like a GIF.</param>
         public DiscordMediaVideo(string videoUrl, string? thumbnailUrl, Vector2 size, bool autoPlay)
         {
             this.videoUrl = videoUrl;
@@ -548,6 +583,18 @@ namespace osu.Game.Overlays.Discord
                     Origin = Anchor.Centre,
                     Size = new Vector2(32),
                 },
+                controls = new VideoControls
+                {
+                    Anchor = Anchor.BottomLeft,
+                    Origin = Anchor.BottomLeft,
+                    RelativeSizeAxes = Axes.X,
+                    Height = controls_height,
+                    Alpha = 0,
+                    TogglePlayback = togglePlayback,
+                    ToggleMute = () => muteAdjustment.Value = muteAdjustment.Value > 0 ? 0 : 1,
+                    OpenInBrowser = () => host.OpenUrlExternally(videoUrl),
+                    SeekTo = fraction => seekTo(fraction * duration),
+                },
             };
         }
 
@@ -555,17 +602,120 @@ namespace osu.Game.Overlays.Discord
         {
             base.LoadComplete();
 
+            if (overlay != null)
+            {
+                overlayState = overlay.State.GetBoundCopy();
+
+                // Drawables of a hidden overlay stop updating, but the sound would keep playing.
+                overlayState.BindValueChanged(s =>
+                {
+                    if (s.NewValue == Visibility.Hidden)
+                        pause();
+                });
+            }
+
             if (autoPlay)
                 start();
         }
 
+        private double duration => audioAttached ? track!.Length : video?.Duration ?? 0;
+
+        private double position => audioAttached ? track!.CurrentTime : video?.PlaybackPosition ?? 0;
+
+        protected override void Update()
+        {
+            base.Update();
+
+            if (video == null)
+                return;
+
+            if (!audioAttached && track?.IsLoaded == true)
+            {
+                // The sound is decoded separately and may only become available after the video started, so it continues from where the video is.
+                audioAttached = true;
+                track.Seek(video.PlaybackPosition);
+
+                if (playing)
+                    track.Start();
+            }
+
+            if (audioAttached)
+            {
+                video.IsPlaying = false;
+                video.PlaybackPosition = track!.CurrentTime;
+            }
+            else
+            {
+                video.IsPlaying = playing;
+
+                if (playing && !video.Loop && video.Duration > 0 && video.PlaybackPosition >= video.Duration)
+                    playing = false;
+            }
+
+            bool showControls = !autoPlay && (IsHovered || !playing);
+
+            if (showControls != controlsShown)
+            {
+                controlsShown = showControls;
+                controls.FadeTo(showControls ? 1 : 0, 200, Easing.OutQuint);
+            }
+
+            controls.UpdateState(position, duration, playing, audioAttached, muteAdjustment.Value == 0);
+        }
+
         protected override bool OnClick(ClickEvent e)
         {
-            if (started)
+            if (autoPlay)
                 return false;
 
-            start();
+            if (!started)
+                start();
+            else
+                togglePlayback();
+
             return true;
+        }
+
+        private void togglePlayback()
+        {
+            if (playing)
+                pause();
+            else
+                play();
+        }
+
+        private void play()
+        {
+            if (video == null)
+                return;
+
+            // Restart a video which played until its end.
+            if (duration > 0 && position >= duration - 1)
+                seekTo(0);
+
+            playing = true;
+
+            if (audioAttached)
+                track!.Start();
+        }
+
+        private void pause()
+        {
+            playing = false;
+            track?.Stop();
+        }
+
+        private void seekTo(double time)
+        {
+            if (video == null)
+                return;
+
+            time = Math.Clamp(time, 0, Math.Max(0, duration));
+
+            if (audioAttached)
+                track!.Seek(time);
+
+            video.PlaybackPosition = time;
         }
 
         private void start()
@@ -579,23 +729,7 @@ namespace osu.Game.Overlays.Discord
                 {
                     byte[] data = await DiscordMedia.Download(videoUrl, cancellation.Token).ConfigureAwait(false);
 
-                    Schedule(() =>
-                    {
-                        var video = new Video(new MemoryStream(data), false)
-                        {
-                            RelativeSizeAxes = Axes.Both,
-                            FillMode = FillMode.Fit,
-                            Anchor = Anchor.Centre,
-                            Origin = Anchor.Centre,
-                            Loop = true,
-                            Alpha = 0,
-                        };
-
-                        AddInternal(video);
-                        video.FadeIn(200, Easing.OutQuint);
-                        thumbnail.FadeOut(200);
-                        spinner.Hide();
-                    });
+                    Schedule(() => load(data));
                 }
                 catch (Exception e)
                 {
@@ -613,10 +747,274 @@ namespace osu.Game.Overlays.Discord
             });
         }
 
+        private void load(byte[] data)
+        {
+            // The video starts from the moment it is loaded, rather than from the time the game started.
+            var loaded = new Video(new MemoryStream(data))
+            {
+                RelativeSizeAxes = Axes.Both,
+                FillMode = FillMode.Fit,
+                Anchor = Anchor.Centre,
+                Origin = Anchor.Centre,
+                Loop = autoPlay,
+                Alpha = 0,
+            };
+
+            LoadComponentAsync(loaded, v =>
+            {
+                video = v;
+                playing = true;
+
+                AddInternal(v);
+                ChangeInternalChildDepth(controls, float.MinValue);
+
+                v.FadeIn(200, Easing.OutQuint);
+                thumbnail.FadeOut(200);
+                spinner.Hide();
+
+                if (autoPlay)
+                    return;
+
+                // The sound is played by the audio engine, which fails to load it if the video has no sound.
+                trackStore = audio.GetTrackStore(new VideoSoundStore(data));
+                track = trackStore.Get(@"sound");
+
+                if (track != null)
+                {
+                    track.AddAdjustment(AdjustableProperty.Volume, muteAdjustment);
+                    track.Completed += () => Schedule(() => playing = false);
+                }
+            }, cancellation.Token);
+        }
+
         protected override void Dispose(bool isDisposing)
         {
             cancellation.Cancel();
+
+            track?.Stop();
+            track?.Dispose();
+            trackStore?.Dispose();
+
             base.Dispose(isDisposing);
+        }
+
+        /// <summary>
+        /// Provides the downloaded video to the audio engine to play its sound.
+        /// </summary>
+        private class VideoSoundStore : IResourceStore<byte[]>
+        {
+            private readonly byte[] data;
+
+            public VideoSoundStore(byte[] data)
+            {
+                this.data = data;
+            }
+
+            public byte[] Get(string name) => data;
+
+            public Task<byte[]> GetAsync(string name, CancellationToken cancellationToken = default) => Task.FromResult(data);
+
+            public Stream GetStream(string name) => new MemoryStream(data, false);
+
+            public IEnumerable<string> GetAvailableResources() => Array.Empty<string>();
+
+            public void Dispose()
+            {
+            }
+        }
+
+        private partial class VideoControls : CompositeDrawable
+        {
+            public Action? TogglePlayback;
+            public Action? ToggleMute;
+            public Action? OpenInBrowser;
+            public Action<double>? SeekTo;
+
+            private readonly ControlButton playButton;
+            private readonly ControlButton muteButton;
+            private readonly OsuSpriteText timeText;
+            private readonly SeekBar seekBar;
+
+            public VideoControls()
+            {
+                InternalChildren = new Drawable[]
+                {
+                    new Box
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Colour = ColourInfo.GradientVertical(Color4.Black.Opacity(0), Color4.Black.Opacity(0.7f)),
+                    },
+                    new GridContainer
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Padding = new MarginPadding { Horizontal = 4 },
+                        ColumnDimensions = new[]
+                        {
+                            new Dimension(GridSizeMode.AutoSize),
+                            new Dimension(GridSizeMode.AutoSize),
+                            new Dimension(),
+                            new Dimension(GridSizeMode.AutoSize),
+                            new Dimension(GridSizeMode.AutoSize),
+                        },
+                        Content = new[]
+                        {
+                            new Drawable[]
+                            {
+                                playButton = new ControlButton(FontAwesome.Solid.Play, () => TogglePlayback?.Invoke()),
+                                timeText = new OsuSpriteText
+                                {
+                                    Anchor = Anchor.CentreLeft,
+                                    Origin = Anchor.CentreLeft,
+                                    Font = OsuFont.Default.With(size: 12, fixedWidth: true),
+                                    Margin = new MarginPadding { Horizontal = 4 },
+                                },
+                                seekBar = new SeekBar
+                                {
+                                    Anchor = Anchor.CentreLeft,
+                                    Origin = Anchor.CentreLeft,
+                                    RelativeSizeAxes = Axes.X,
+                                    Height = 16,
+                                    Padding = new MarginPadding { Horizontal = 6 },
+                                    SeekTo = f => SeekTo?.Invoke(f),
+                                },
+                                muteButton = new ControlButton(FontAwesome.Solid.VolumeUp, () => ToggleMute?.Invoke()),
+                                new ControlButton(FontAwesome.Solid.ExternalLinkAlt, () => OpenInBrowser?.Invoke())
+                                {
+                                    TooltipText = SlopDiscordStrings.OpenInBrowser,
+                                },
+                            },
+                        },
+                    },
+                };
+            }
+
+            public void UpdateState(double position, double duration, bool playing, bool hasSound, bool muted)
+            {
+                playButton.Icon = playing ? FontAwesome.Solid.Pause : FontAwesome.Solid.Play;
+                playButton.TooltipText = playing ? SlopDiscordStrings.PauseVideo : SlopDiscordStrings.PlayVideo;
+
+                muteButton.Alpha = hasSound ? 1 : 0;
+                muteButton.Icon = muted ? FontAwesome.Solid.VolumeMute : FontAwesome.Solid.VolumeUp;
+                muteButton.TooltipText = muted ? SlopDiscordStrings.UnmuteVideo : SlopDiscordStrings.MuteVideo;
+
+                timeText.Text = $@"{format(position)} / {format(duration)}";
+                seekBar.Progress = duration > 0 ? (float)Math.Clamp(position / duration, 0, 1) : 0;
+            }
+
+            private static string format(double time)
+            {
+                var span = TimeSpan.FromMilliseconds(Math.Max(0, time));
+                return $@"{(int)span.TotalMinutes}:{span.Seconds:00}";
+            }
+
+            private partial class ControlButton : OsuClickableContainer
+            {
+                private readonly SpriteIcon icon;
+
+                public IconUsage Icon
+                {
+                    set => icon.Icon = value;
+                }
+
+                public ControlButton(IconUsage icon, Action action)
+                {
+                    Anchor = Anchor.CentreLeft;
+                    Origin = Anchor.CentreLeft;
+                    Size = new Vector2(24);
+                    Action = action;
+
+                    Child = this.icon = new SpriteIcon
+                    {
+                        Anchor = Anchor.Centre,
+                        Origin = Anchor.Centre,
+                        Icon = icon,
+                        Size = new Vector2(12),
+                        Shadow = true,
+                    };
+                }
+
+                protected override bool OnHover(HoverEvent e)
+                {
+                    icon.ScaleTo(1.2f, 200, Easing.OutQuint);
+                    return base.OnHover(e);
+                }
+
+                protected override void OnHoverLost(HoverLostEvent e)
+                {
+                    icon.ScaleTo(1, 200, Easing.OutQuint);
+                    base.OnHoverLost(e);
+                }
+            }
+
+            private partial class SeekBar : Container
+            {
+                public Action<double>? SeekTo;
+
+                private readonly Container bar;
+                private readonly Box fill;
+
+                public float Progress
+                {
+                    set => fill.Width = value;
+                }
+
+                public SeekBar()
+                {
+                    Child = bar = new CircularContainer
+                    {
+                        Anchor = Anchor.CentreLeft,
+                        Origin = Anchor.CentreLeft,
+                        RelativeSizeAxes = Axes.X,
+                        Height = 4,
+                        Masking = true,
+                        Children = new Drawable[]
+                        {
+                            new Box
+                            {
+                                RelativeSizeAxes = Axes.Both,
+                                Colour = Color4.White,
+                                Alpha = 0.3f,
+                            },
+                            fill = new Box
+                            {
+                                RelativeSizeAxes = Axes.Both,
+                                Colour = Color4.White,
+                                Width = 0,
+                            },
+                        },
+                    };
+                }
+
+                protected override bool OnHover(HoverEvent e)
+                {
+                    bar.ResizeHeightTo(6, 200, Easing.OutQuint);
+                    return base.OnHover(e);
+                }
+
+                protected override void OnHoverLost(HoverLostEvent e)
+                {
+                    bar.ResizeHeightTo(4, 200, Easing.OutQuint);
+                    base.OnHoverLost(e);
+                }
+
+                protected override bool OnMouseDown(MouseDownEvent e)
+                {
+                    seek(e.ScreenSpaceMousePosition);
+                    return true;
+                }
+
+                protected override bool OnClick(ClickEvent e) => true;
+
+                protected override bool OnDragStart(DragStartEvent e) => true;
+
+                protected override void OnDrag(DragEvent e) => seek(e.ScreenSpaceMousePosition);
+
+                private void seek(Vector2 screenSpacePosition)
+                {
+                    float x = bar.ToLocalSpace(screenSpacePosition).X;
+                    SeekTo?.Invoke(Math.Clamp(x / bar.DrawWidth, 0, 1));
+                }
+            }
         }
     }
 }
