@@ -172,9 +172,14 @@ namespace osu.Game.MapsetVerifier.UI.Overview
     public partial class DifficultyTable : CompositeDrawable
     {
         public const float LABEL_WIDTH = 170;
-        public const float MIN_COLUMN_WIDTH = 60;
+        public const float MIN_COLUMN_WIDTH = 120;
         public const float MAX_COLUMN_WIDTH = 300;
         public const float ROW_HEIGHT = 26;
+
+        /// <summary>
+        /// The height of the difficulty names above the rows, including the space below them.
+        /// </summary>
+        private const float HEADER_HEIGHT = 30 + 4;
 
         private readonly IReadOnlyList<(string Name, double? StarRating)> difficulties;
         private readonly List<Row> rows = new List<Row>();
@@ -215,6 +220,22 @@ namespace osu.Game.MapsetVerifier.UI.Overview
         [BackgroundDependencyLoader]
         private void load()
         {
+            var backgrounds = new FillFlowContainer
+            {
+                RelativeSizeAxes = Axes.X,
+                AutoSizeAxes = Axes.Y,
+                Direction = FillDirection.Vertical,
+                Padding = new MarginPadding { Top = HEADER_HEIGHT },
+            };
+
+            var labels = new FillFlowContainer
+            {
+                Width = LABEL_WIDTH,
+                AutoSizeAxes = Axes.Y,
+                Direction = FillDirection.Vertical,
+                Padding = new MarginPadding { Top = HEADER_HEIGHT },
+            };
+
             var flow = new FillFlowContainer
             {
                 AutoSizeAxes = Axes.Both,
@@ -226,7 +247,6 @@ namespace osu.Game.MapsetVerifier.UI.Overview
                 AutoSizeAxes = Axes.Both,
                 Direction = FillDirection.Horizontal,
                 Margin = new MarginPadding { Bottom = 4 },
-                Child = Empty().With(d => d.Width = LABEL_WIDTH),
             };
 
             foreach (var (name, starRating) in difficulties)
@@ -259,10 +279,33 @@ namespace osu.Game.MapsetVerifier.UI.Overview
             flow.Add(header);
 
             for (int i = 0; i < rows.Count; i++)
-                flow.Add(createRow(rows[i], i % 2 == 0));
+            {
+                bool inconsistent = rows[i].HighlightInconsistency && rows[i].Values.Distinct().Count() > 1;
 
-            // not scrollable, as that gets in the way of scrolling the overview vertically. columns shrink to fit and truncate instead.
-            InternalChild = flow;
+                backgrounds.Add(createRowBackground(inconsistent, i % 2 == 0));
+                labels.Add(createLabel(rows[i], inconsistent));
+                flow.Add(createValues(rows[i]));
+            }
+
+            // the labels stay in place, so that the fields can still be told apart when scrolling through many difficulties.
+            InternalChildren = new Drawable[]
+            {
+                backgrounds,
+                labels,
+                new Container
+                {
+                    RelativeSizeAxes = Axes.X,
+                    AutoSizeAxes = Axes.Y,
+                    Padding = new MarginPadding { Left = LABEL_WIDTH },
+                    Child = new HorizontalScrollContainer
+                    {
+                        RelativeSizeAxes = Axes.X,
+                        Height = HEADER_HEIGHT + rows.Count * ROW_HEIGHT + 8,
+                        ScrollbarOverlapsContent = false,
+                        Child = flow,
+                    },
+                },
+            };
         }
 
         protected override void Update()
@@ -293,50 +336,60 @@ namespace osu.Game.MapsetVerifier.UI.Overview
             return cell;
         }
 
-        private Drawable createRow(Row row, bool even)
+        private Drawable createRowBackground(bool inconsistent, bool even) => new Container
         {
-            bool inconsistent = row.HighlightInconsistency && row.Values.Distinct().Count() > 1;
+            RelativeSizeAxes = Axes.X,
+            Height = ROW_HEIGHT,
+            Masking = true,
+            CornerRadius = 4,
+            Child = new Box
+            {
+                RelativeSizeAxes = Axes.Both,
+                Colour = inconsistent ? VerifierDisplay.WARNING : colourProvider.Background3,
+                Alpha = inconsistent ? 0.08f : even ? 0.6f : 0,
+            },
+        };
 
+        private Drawable createLabel(Row row, bool inconsistent) => new Container
+        {
+            Width = LABEL_WIDTH,
+            Height = ROW_HEIGHT,
+            Padding = new MarginPadding { Horizontal = 8 },
+            Child = new FillFlowContainer
+            {
+                Anchor = Anchor.CentreLeft,
+                Origin = Anchor.CentreLeft,
+                AutoSizeAxes = Axes.Both,
+                Direction = FillDirection.Horizontal,
+                Spacing = new Vector2(5, 0),
+                Children = new Drawable[]
+                {
+                    new OsuSpriteText
+                    {
+                        Anchor = Anchor.CentreLeft,
+                        Origin = Anchor.CentreLeft,
+                        Text = row.Label,
+                        Font = OsuFont.Default.With(size: 12, weight: FontWeight.Bold),
+                        Colour = inconsistent ? VerifierDisplay.WARNING : colourProvider.Content2,
+                    },
+                    new TooltipIcon(FontAwesome.Solid.ExclamationTriangle, VerifierStrings.Inconsistent)
+                    {
+                        Anchor = Anchor.CentreLeft,
+                        Origin = Anchor.CentreLeft,
+                        Size = new Vector2(10),
+                        Colour = VerifierDisplay.WARNING,
+                        Alpha = inconsistent ? 1 : 0,
+                    },
+                }
+            },
+        };
+
+        private Drawable createValues(Row row)
+        {
             var cells = new FillFlowContainer
             {
                 AutoSizeAxes = Axes.Both,
                 Direction = FillDirection.Horizontal,
-                Child = new Container
-                {
-                    Width = LABEL_WIDTH,
-                    Height = ROW_HEIGHT,
-                    Padding = new MarginPadding { Horizontal = 8 },
-                    Children = new Drawable[]
-                    {
-                        new FillFlowContainer
-                        {
-                            Anchor = Anchor.CentreLeft,
-                            Origin = Anchor.CentreLeft,
-                            AutoSizeAxes = Axes.Both,
-                            Direction = FillDirection.Horizontal,
-                            Spacing = new Vector2(5, 0),
-                            Children = new Drawable[]
-                            {
-                                new OsuSpriteText
-                                {
-                                    Anchor = Anchor.CentreLeft,
-                                    Origin = Anchor.CentreLeft,
-                                    Text = row.Label,
-                                    Font = OsuFont.Default.With(size: 12, weight: FontWeight.Bold),
-                                    Colour = inconsistent ? VerifierDisplay.WARNING : colourProvider.Content2,
-                                },
-                                new TooltipIcon(FontAwesome.Solid.ExclamationTriangle, VerifierStrings.Inconsistent)
-                                {
-                                    Anchor = Anchor.CentreLeft,
-                                    Origin = Anchor.CentreLeft,
-                                    Size = new Vector2(10),
-                                    Colour = VerifierDisplay.WARNING,
-                                    Alpha = inconsistent ? 1 : 0,
-                                },
-                            }
-                        },
-                    }
-                },
             };
 
             foreach (string? value in row.Values)
@@ -352,25 +405,29 @@ namespace osu.Game.MapsetVerifier.UI.Overview
                     }));
             }
 
-            return new Container
-            {
-                AutoSizeAxes = Axes.Both,
-                Masking = true,
-                CornerRadius = 4,
-                Children = new Drawable[]
-                {
-                    new Box
-                    {
-                        RelativeSizeAxes = Axes.Both,
-                        Colour = inconsistent ? VerifierDisplay.WARNING : colourProvider.Background3,
-                        Alpha = inconsistent ? 0.08f : even ? 0.6f : 0,
-                    },
-                    cells,
-                }
-            };
+            return cells;
         }
 
         private record Row(LocalisableString Label, IReadOnlyList<string?> Values, bool HighlightInconsistency);
+
+        /// <summary>
+        /// Scrolls the columns which don't fit, but leaves plain vertical scrolling to the overview, so that it isn't blocked by the tables.
+        /// </summary>
+        private partial class HorizontalScrollContainer : OsuScrollContainer
+        {
+            public HorizontalScrollContainer()
+                : base(Direction.Horizontal)
+            {
+            }
+
+            protected override bool OnScroll(ScrollEvent e)
+            {
+                if (e.ScrollDelta.X == 0 && !e.ShiftPressed)
+                    return false;
+
+                return base.OnScroll(e);
+            }
+        }
     }
 
     public partial class TooltipIcon : SpriteIcon, IHasTooltip

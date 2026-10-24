@@ -4,6 +4,7 @@
 using System.Text;
 using System.Text.RegularExpressions;
 using Markdig.Syntax;
+using Markdig.Syntax.Inlines;
 using MapsetVerifier.RankingCriteria.Model;
 using MapsetVerifier.Server.Model;
 using MapsetVerifier.Server.Service;
@@ -15,7 +16,10 @@ using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Containers.Markdown;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
+using osu.Framework.Graphics.Textures;
+using osu.Framework.IO.Stores;
 using osu.Framework.Logging;
+using osu.Framework.Platform;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.Containers.Markdown;
@@ -99,7 +103,7 @@ namespace osu.Game.MapsetVerifier.UI
 
         private void show(ApiDocumentationCheckDetails details)
         {
-            content.Add(new VerifierMarkdown(details.Description));
+            content.Add(new VerifierMarkdown(details.Description, notesForBlockquotes: true));
 
             if (!showOutcomes || details.Outcomes.Count == 0)
                 return;
@@ -381,18 +385,27 @@ namespace osu.Game.MapsetVerifier.UI
     }
 
     /// <summary>
-    /// Markdown from Mapset Verifier, which may contain images and HTML that can't be shown.
+    /// Markdown from Mapset Verifier, which is shown the way the app of Mapset Verifier shows it.
     /// </summary>
     public partial class VerifierMarkdown : OsuMarkdownContainer
     {
-        private static readonly Regex image_regex = new Regex(@"!\[[^\]]*\]\(\s*[^\s)]+(?:\s+""(?<title>[^""]*)"")?\s*\)", RegexOptions.Compiled);
+        // titles can contain unescaped quotes, so they go up to the last quote of the line.
+        private static readonly Regex image_regex = new Regex(@"!\[(?<alt>[^\]]*)\]\(\s*(?<url>[^\s)]+)(?:\s+""(?<title>.*)"")?\s*\)", RegexOptions.Compiled);
         private static readonly Regex html_regex = new Regex(@"<\/?[a-zA-Z][^>]*>", RegexOptions.Compiled);
         private static readonly Regex emphasis_regex = new Regex(@"(\*\*|__|\*|_|`)(?<text>[^*_`]+?)\1", RegexOptions.Compiled);
         private static readonly Regex block_start_regex = new Regex(@"^([-*+>#|]|\d+[.)])", RegexOptions.Compiled);
+
+        private static readonly Regex thematic_break_regex = new Regex(@"^([-*_])(\s*\1){2,}$", RegexOptions.Compiled);
         private static readonly Regex link_regex = new Regex(@"\[(?<text>[^\]]+)\]\([^)]+\)", RegexOptions.Compiled);
 
-        public VerifierMarkdown(string markdown)
+        private readonly bool notesForBlockquotes;
+
+        /// <param name="markdown">The markdown to show.</param>
+        /// <param name="notesForBlockquotes">Whether to show blockquotes as notes, as is done for the descriptions of checks.</param>
+        public VerifierMarkdown(string markdown, bool notesForBlockquotes = false)
         {
+            this.notesForBlockquotes = notesForBlockquotes;
+
             RelativeSizeAxes = Axes.X;
             AutoSizeAxes = Axes.Y;
             DocumentMargin = new MarginPadding();
@@ -403,6 +416,39 @@ namespace osu.Game.MapsetVerifier.UI
         public override OsuMarkdownTextFlowContainer CreateTextFlow() => base.CreateTextFlow().With(f => f.Colour = Color4.White.Opacity(0.9f));
 
         protected override MarkdownHeading CreateHeading(HeadingBlock headingBlock) => new VerifierMarkdownHeading(headingBlock);
+
+        protected override void AddMarkdownComponent(IMarkdownObject markdownObject, FillFlowContainer container, int level)
+        {
+            switch (markdownObject)
+            {
+                case ParagraphBlock paragraphBlock when getFigureImage(paragraphBlock) is LinkInline image:
+                    container.Add(new VerifierFigure(image));
+                    return;
+
+                case QuoteBlock quoteBlock when notesForBlockquotes:
+                    var note = new VerifierNote();
+                    container.Add(note);
+
+                    foreach (var block in quoteBlock)
+                        AddMarkdownComponent(block, note.Content, level);
+
+                    return;
+            }
+
+            base.AddMarkdownComponent(markdownObject, container, level);
+        }
+
+        /// <summary>
+        /// The image of a paragraph which consists of only an image, which is shown as a figure.
+        /// </summary>
+        private static LinkInline? getFigureImage(ParagraphBlock paragraphBlock)
+        {
+            var inlines = paragraphBlock.Inline?
+                                        .Where(i => i is not LineBreakInline && !(i is LiteralInline literal && literal.Content.IsEmptyOrWhitespace()))
+                                        .ToList();
+
+            return inlines?.Count == 1 && inlines[0] is LinkInline { IsImage: true } image ? image : null;
+        }
 
         /// <summary>
         /// A heading which stays below the title of the check it documents.
@@ -419,14 +465,165 @@ namespace osu.Game.MapsetVerifier.UI
         }
 
         /// <summary>
-        /// Replaces images (which are part of the website of Mapset Verifier) with their captions, and removes HTML.
+        /// An image of the documentation, centred and with its title as caption below it.
+        /// </summary>
+        private partial class VerifierFigure : CompositeDrawable
+        {
+            private const float max_relative_width = 0.75f;
+            private const float max_height = 500;
+
+            private static TextureStore? textures;
+
+            private readonly LinkInline image;
+
+            private Container imageContainer = null!;
+            private Sprite sprite = null!;
+
+            public VerifierFigure(LinkInline image)
+            {
+                this.image = image;
+
+                RelativeSizeAxes = Axes.X;
+                AutoSizeAxes = Axes.Y;
+                Padding = new MarginPadding { Vertical = 8 };
+            }
+
+            [BackgroundDependencyLoader]
+            private void load(GameHost host)
+            {
+                // the images are part of the app of Mapset Verifier, so they are shipped with this assembly.
+                textures ??= new TextureStore(host.Renderer, host.CreateTextureLoaderStore(
+                    new NamespacedResourceStore<byte[]>(new DllResourceStore(typeof(VerifierFigure).Assembly), @"Resources/Checks")));
+
+                InternalChild = new FillFlowContainer
+                {
+                    Anchor = Anchor.TopCentre,
+                    Origin = Anchor.TopCentre,
+                    RelativeSizeAxes = Axes.X,
+                    AutoSizeAxes = Axes.Y,
+                    Width = max_relative_width,
+                    Direction = FillDirection.Vertical,
+                    Spacing = new Vector2(0, 8),
+                    Children = new Drawable[]
+                    {
+                        imageContainer = new Container
+                        {
+                            Anchor = Anchor.TopCentre,
+                            Origin = Anchor.TopCentre,
+                            Masking = true,
+                            CornerRadius = 4,
+                            Child = sprite = new Sprite
+                            {
+                                RelativeSizeAxes = Axes.Both,
+                                Texture = textures.Get(Path.GetFileName(image.Url)),
+                            },
+                        },
+                        new OsuTextFlowContainer(s => s.Font = OsuFont.Default.With(size: 13))
+                        {
+                            Anchor = Anchor.TopCentre,
+                            Origin = Anchor.TopCentre,
+                            RelativeSizeAxes = Axes.X,
+                            AutoSizeAxes = Axes.Y,
+                            TextAnchor = Anchor.TopCentre,
+                            Colour = Color4.White.Opacity(0.6f),
+                            Text = image.Title ?? string.Empty,
+                            Alpha = string.IsNullOrEmpty(image.Title) ? 0 : 1,
+                        },
+                    }
+                };
+            }
+
+            protected override void Update()
+            {
+                base.Update();
+
+                if (sprite.Texture == null)
+                {
+                    imageContainer.Hide();
+                    return;
+                }
+
+                // fits the image into the available space, without scaling it up.
+                var size = new Vector2(sprite.Texture.DisplayWidth, sprite.Texture.DisplayHeight);
+                float scale = Math.Min(1, Math.Min(DrawWidth * max_relative_width / size.X, max_height / size.Y));
+
+                imageContainer.Size = size * scale;
+            }
+        }
+
+        /// <summary>
+        /// A blockquote which is shown as a note.
+        /// </summary>
+        private partial class VerifierNote : CompositeDrawable
+        {
+            public FillFlowContainer Content { get; }
+
+            public VerifierNote()
+            {
+                RelativeSizeAxes = Axes.X;
+                AutoSizeAxes = Axes.Y;
+                Masking = true;
+                CornerRadius = 8;
+                BorderThickness = 1;
+                BorderColour = VerifierDisplay.NOTE.Opacity(0.6f);
+
+                InternalChildren = new Drawable[]
+                {
+                    new Box
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Colour = VerifierDisplay.NOTE,
+                        Alpha = 0.1f,
+                    },
+                    new SpriteIcon
+                    {
+                        Margin = new MarginPadding { Left = 14, Top = 13 },
+                        Icon = FontAwesome.Solid.InfoCircle,
+                        Colour = VerifierDisplay.NOTE,
+                        Size = new Vector2(16),
+                    },
+                    new FillFlowContainer
+                    {
+                        RelativeSizeAxes = Axes.X,
+                        AutoSizeAxes = Axes.Y,
+                        Direction = FillDirection.Vertical,
+                        Spacing = new Vector2(0, 4),
+                        Padding = new MarginPadding { Left = 42, Right = 14, Vertical = 12 },
+                        Children = new Drawable[]
+                        {
+                            new OsuSpriteText
+                            {
+                                Text = VerifierStrings.Note,
+                                Font = OsuFont.Default.With(size: 14, weight: FontWeight.Bold),
+                                Colour = VerifierDisplay.NOTE,
+                            },
+                            Content = new FillFlowContainer
+                            {
+                                RelativeSizeAxes = Axes.X,
+                                AutoSizeAxes = Axes.Y,
+                                Direction = FillDirection.Vertical,
+                                Spacing = new Vector2(0, 8),
+                            },
+                        }
+                    },
+                };
+            }
+        }
+
+        /// <summary>
+        /// Puts images into paragraphs of their own, so that they are shown as figures, and removes HTML.
         /// </summary>
         public static string Clean(string markdown)
         {
             string text = image_regex.Replace(markdown, m =>
             {
                 string title = m.Groups["title"].Value;
-                return string.IsNullOrWhiteSpace(title) ? string.Empty : $"*{title}*";
+                string image = $"![{m.Groups["alt"].Value}]({m.Groups["url"].Value}";
+
+                if (!string.IsNullOrEmpty(title))
+                    image += $" \"{title.Replace(@"\", @"\\").Replace("\"", "\\\"")}\"";
+
+                return $"\n\n{image})\n\n";
             });
 
             text = joinWrappedLines(text);
@@ -465,6 +662,14 @@ namespace osu.Game.MapsetVerifier.UI
                     continue;
                 }
 
+                // thematic breaks separate the blocks around them, rather than underlining a heading.
+                if (thematic_break_regex.IsMatch(line))
+                {
+                    result.Append("\n\n").Append(line).Append('\n');
+                    inParagraph = false;
+                    continue;
+                }
+
                 if (inParagraph && !block_start_regex.IsMatch(line))
                     result.Append(' ').Append(line);
                 else
@@ -482,7 +687,7 @@ namespace osu.Game.MapsetVerifier.UI
         /// </summary>
         public static string StripFormatting(string markdown)
         {
-            string text = Clean(markdown);
+            string text = Clean(image_regex.Replace(markdown, m => m.Groups["title"].Value));
             text = link_regex.Replace(text, m => m.Groups["text"].Value);
             return emphasis_regex.Replace(text, m => m.Groups["text"].Value);
         }

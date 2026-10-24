@@ -52,6 +52,7 @@ namespace osu.Game.MapsetVerifier.UI
         public static readonly Color4 CHANGED = Color4Extensions.FromHex(@"fcc419");
 
         public static readonly Color4 TIMESTAMP = Color4Extensions.FromHex(@"74c0fc");
+        public static readonly Color4 NOTE = Color4Extensions.FromHex(@"4dabf7");
         public static readonly Color4 SNAPSHOT_CHANGES = Color4Extensions.FromHex(@"4dabf7");
 
         public static Color4 GetColour(Issue.Level level)

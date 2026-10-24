@@ -1174,6 +1174,11 @@ namespace osu.Game.MapsetVerifier.UI
         /// </summary>
         public static LocalisableString NextDifficulty => new TranslatableString(getKey(@"next_difficulty"), @"Next difficulty (])");
 
+        /// <summary>
+        /// "Note"
+        /// </summary>
+        public static LocalisableString Note => new TranslatableString(getKey(@"note"), @"Note");
+
         private static string getKey(string key) => $@"{prefix}:{key}";
     }
 }
