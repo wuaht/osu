@@ -9,6 +9,7 @@ using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
+using osu.Framework.Extensions;
 using osu.Framework.Logging;
 using osu.Framework.Platform;
 using osu.Game.Configuration;
@@ -351,7 +352,7 @@ namespace osu.Game.Online.Discord.Sdk
 
                 ulong timestamp = MessageSentTimestamp(message);
 
-                return new DiscordMessage
+                var result = new DiscordMessage
                 {
                     Id = MessageId(message),
                     ChannelId = authorId == LocalUser.Value?.Id ? recipientId : authorId,
@@ -361,12 +362,89 @@ namespace osu.Game.Online.Discord.Sdk
                     Timestamp = timestamp < 100_000_000_000
                         ? DateTimeOffset.FromUnixTimeSeconds((long)timestamp)
                         : DateTimeOffset.FromUnixTimeMilliseconds((long)timestamp),
+                    UnsupportedContent = takeUnsupportedContent(message),
                 };
+
+                var links = DiscordLinkPreviews.GetLinks(result.Content);
+
+                // The embeds of links are created on the client instead, so they don't need to be mentioned.
+                if (result.UnsupportedContent?.Type == DiscordUnsupportedContentType.Embed && links.Count > 0)
+                    result.UnsupportedContent = null;
+
+                loadLinkPreviews(result, links);
+
+                return result;
             }
             finally
             {
                 MessageDrop(message);
             }
+        }
+
+        /// <summary>
+        /// Reads the description of the content which the SDK doesn't provide, like attachments.
+        /// </summary>
+        private static DiscordUnsupportedContent? takeUnsupportedContent(nint* message)
+        {
+            nint content = 0;
+
+            if (MessageAdditionalContent(message, &content) == 0)
+                return null;
+
+            try
+            {
+                DiscordString title = default;
+                AdditionalContentTitle(&content, &title);
+
+                var type = AdditionalContentGetType(&content);
+
+                return new DiscordUnsupportedContent
+                {
+                    Type = Enum.IsDefined(type) ? (DiscordUnsupportedContentType)type : DiscordUnsupportedContentType.Other,
+                    Title = title.Ptr != null ? TakeString(title) : null,
+                    Count = AdditionalContentCount(&content),
+                };
+            }
+            finally
+            {
+                AdditionalContentDrop(&content);
+            }
+        }
+
+        /// <summary>
+        /// The SDK doesn't provide the embeds of links, so they are created on the client.
+        /// </summary>
+        private void loadLinkPreviews(DiscordMessage message, IReadOnlyList<string> links)
+        {
+            if (links.Count == 0)
+                return;
+
+            var previews = links.Select(DiscordLinkPreviews.Resolve).ToArray();
+
+            List<DiscordEmbed> getEmbeds() => previews.Select(p => p.GetResultSafely()).OfType<DiscordEmbed>().ToList();
+
+            // Previews of links which were seen before are already known.
+            if (previews.All(p => p.IsCompleted))
+            {
+                message.Embeds = getEmbeds();
+                return;
+            }
+
+            Task.WhenAll(previews).ContinueWith(_ => Schedule(() =>
+            {
+                var embeds = getEmbeds();
+
+                if (embeds.Count == 0)
+                    return;
+
+                TriggerMessageUpdated(new DiscordMessage
+                {
+                    Id = message.Id,
+                    ChannelId = message.ChannelId,
+                    Embeds = embeds,
+                    IsPartial = true,
+                });
+            }));
         }
 
         private void handleTokenExchanged(TokenRequest request, string? error, string accessToken, string newRefreshToken)

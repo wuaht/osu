@@ -218,6 +218,51 @@ namespace osu.Game.Localisation
         public static LocalisableString AttachmentNotification(string author) => new TranslatableString(getKey(@"attachment_notification"), @"{0} sent an attachment", author);
 
         /// <summary>
+        /// "Attachment"
+        /// </summary>
+        public static LocalisableString UnsupportedAttachment => new TranslatableString(getKey(@"unsupported_attachment"), @"Attachment");
+
+        /// <summary>
+        /// "{0} attachments"
+        /// </summary>
+        public static LocalisableString UnsupportedAttachments(int count) => new TranslatableString(getKey(@"unsupported_attachments"), @"{0} attachments", count);
+
+        /// <summary>
+        /// "Poll"
+        /// </summary>
+        public static LocalisableString UnsupportedPoll => new TranslatableString(getKey(@"unsupported_poll"), @"Poll");
+
+        /// <summary>
+        /// "Voice message"
+        /// </summary>
+        public static LocalisableString UnsupportedVoiceMessage => new TranslatableString(getKey(@"unsupported_voice_message"), @"Voice message");
+
+        /// <summary>
+        /// "Thread"
+        /// </summary>
+        public static LocalisableString UnsupportedThread => new TranslatableString(getKey(@"unsupported_thread"), @"Thread");
+
+        /// <summary>
+        /// "Embed"
+        /// </summary>
+        public static LocalisableString UnsupportedEmbed => new TranslatableString(getKey(@"unsupported_embed"), @"Embed");
+
+        /// <summary>
+        /// "Sticker"
+        /// </summary>
+        public static LocalisableString UnsupportedSticker => new TranslatableString(getKey(@"unsupported_sticker"), @"Sticker");
+
+        /// <summary>
+        /// "Unsupported content"
+        /// </summary>
+        public static LocalisableString UnsupportedOther => new TranslatableString(getKey(@"unsupported_other"), @"Unsupported content");
+
+        /// <summary>
+        /// "Can only be viewed in Discord"
+        /// </summary>
+        public static LocalisableString UnsupportedContentHint => new TranslatableString(getKey(@"unsupported_content_hint"), @"Can only be viewed in Discord");
+
+        /// <summary>
         /// "Show or hide the servers"
         /// </summary>
         public static LocalisableString ToggleServers => new TranslatableString(getKey(@"toggle_servers"), @"Show or hide the servers");

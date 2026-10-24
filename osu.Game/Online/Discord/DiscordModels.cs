@@ -390,6 +390,32 @@ namespace osu.Game.Online.Discord
         };
     }
 
+    /// <summary>
+    /// The kind of content which the Social SDK only describes instead of providing it.
+    /// </summary>
+    public enum DiscordUnsupportedContentType
+    {
+        Other,
+        Attachment,
+        Poll,
+        VoiceMessage,
+        Thread,
+        Embed,
+        Sticker,
+    }
+
+    /// <summary>
+    /// Content of a message which can only be viewed in Discord itself.
+    /// </summary>
+    public class DiscordUnsupportedContent
+    {
+        public DiscordUnsupportedContentType Type { get; set; }
+
+        public string? Title { get; set; }
+
+        public int Count { get; set; }
+    }
+
     public class DiscordMessage
     {
         [JsonProperty("id")]
@@ -457,6 +483,12 @@ namespace osu.Game.Online.Discord
         /// </summary>
         [JsonIgnore]
         public bool IsPartial { get; set; }
+
+        /// <summary>
+        /// Content of the message which can't be shown, because the Social SDK doesn't provide it (like attachments).
+        /// </summary>
+        [JsonIgnore]
+        public DiscordUnsupportedContent? UnsupportedContent { get; set; }
 
         /// <summary>
         /// Whether this is a reply (type 19) to another message.

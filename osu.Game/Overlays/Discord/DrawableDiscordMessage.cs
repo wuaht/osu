@@ -113,6 +113,9 @@ namespace osu.Game.Overlays.Discord
             foreach (var attachment in Message.Attachments)
                 body.Add(createAttachment(attachment));
 
+            if (Message.UnsupportedContent != null)
+                body.Add(new UnsupportedContentChip(Message.UnsupportedContent));
+
             foreach (var embed in Message.Embeds)
             {
                 var drawable = createEmbed(embed);
@@ -617,6 +620,128 @@ namespace osu.Game.Overlays.Discord
                     return $@"{bytes / 1024.0:0.##} KB";
 
                 return $@"{bytes / 1024.0 / 1024.0:0.##} MB";
+            }
+        }
+
+        /// <summary>
+        /// Shows that a message contains something which can only be viewed in Discord, because the Social SDK only describes it.
+        /// </summary>
+        private partial class UnsupportedContentChip : CompositeDrawable
+        {
+            private readonly DiscordUnsupportedContent content;
+
+            public UnsupportedContentChip(DiscordUnsupportedContent content)
+            {
+                this.content = content;
+
+                Size = new Vector2(400, 56);
+                Masking = true;
+                CornerRadius = 6;
+            }
+
+            [BackgroundDependencyLoader]
+            private void load(OverlayColourProvider colourProvider)
+            {
+                InternalChildren = new Drawable[]
+                {
+                    new Box
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Colour = colourProvider.Background5,
+                        Alpha = 0.8f,
+                    },
+                    new SpriteIcon
+                    {
+                        Anchor = Anchor.CentreLeft,
+                        Origin = Anchor.CentreLeft,
+                        X = 14,
+                        Icon = getIcon(),
+                        Size = new Vector2(24),
+                        Colour = colourProvider.Content2,
+                    },
+                    new FillFlowContainer
+                    {
+                        Anchor = Anchor.CentreLeft,
+                        Origin = Anchor.CentreLeft,
+                        RelativeSizeAxes = Axes.X,
+                        AutoSizeAxes = Axes.Y,
+                        Direction = FillDirection.Vertical,
+                        Padding = new MarginPadding { Left = 50, Right = 12 },
+                        Children = new Drawable[]
+                        {
+                            new TruncatingSpriteText
+                            {
+                                RelativeSizeAxes = Axes.X,
+                                Text = getTitle(),
+                                Font = DiscordStyle.UiFont(15, FontWeight.SemiBold),
+                                Colour = colourProvider.Content1,
+                            },
+                            new OsuSpriteText
+                            {
+                                Text = SlopDiscordStrings.UnsupportedContentHint,
+                                Font = DiscordStyle.UiFont(12),
+                                Colour = colourProvider.Content2,
+                            },
+                        },
+                    },
+                };
+            }
+
+            private LocalisableString getTitle()
+            {
+                if (!string.IsNullOrWhiteSpace(content.Title))
+                    return content.Title;
+
+                switch (content.Type)
+                {
+                    case DiscordUnsupportedContentType.Attachment:
+                        return content.Count > 1 ? SlopDiscordStrings.UnsupportedAttachments(content.Count) : SlopDiscordStrings.UnsupportedAttachment;
+
+                    case DiscordUnsupportedContentType.Poll:
+                        return SlopDiscordStrings.UnsupportedPoll;
+
+                    case DiscordUnsupportedContentType.VoiceMessage:
+                        return SlopDiscordStrings.UnsupportedVoiceMessage;
+
+                    case DiscordUnsupportedContentType.Thread:
+                        return SlopDiscordStrings.UnsupportedThread;
+
+                    case DiscordUnsupportedContentType.Embed:
+                        return SlopDiscordStrings.UnsupportedEmbed;
+
+                    case DiscordUnsupportedContentType.Sticker:
+                        return SlopDiscordStrings.UnsupportedSticker;
+
+                    default:
+                        return SlopDiscordStrings.UnsupportedOther;
+                }
+            }
+
+            private IconUsage getIcon()
+            {
+                switch (content.Type)
+                {
+                    case DiscordUnsupportedContentType.Attachment:
+                        return FontAwesome.Solid.Paperclip;
+
+                    case DiscordUnsupportedContentType.Poll:
+                        return FontAwesome.Solid.PollH;
+
+                    case DiscordUnsupportedContentType.VoiceMessage:
+                        return FontAwesome.Solid.Microphone;
+
+                    case DiscordUnsupportedContentType.Thread:
+                        return FontAwesome.Solid.CommentDots;
+
+                    case DiscordUnsupportedContentType.Embed:
+                        return FontAwesome.Solid.Link;
+
+                    case DiscordUnsupportedContentType.Sticker:
+                        return FontAwesome.Solid.StickyNote;
+
+                    default:
+                        return FontAwesome.Solid.QuestionCircle;
+                }
             }
         }
 

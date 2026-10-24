@@ -63,6 +63,17 @@ namespace osu.Game.Online.Discord.Sdk
             Jpeg = 3,
         }
 
+        public enum AdditionalContentType
+        {
+            Other = 0,
+            Attachment = 1,
+            Poll = 2,
+            VoiceMessage = 3,
+            Thread = 4,
+            Embed = 5,
+            Sticker = 6,
+        }
+
         public const int TOKEN_TYPE_BEARER = 1;
         public const int RELATIONSHIP_FRIEND = 1;
 
@@ -129,6 +140,13 @@ namespace osu.Game.Online.Discord.Sdk
         public static delegate* unmanaged[Cdecl]<nint*, ulong> MessageSentTimestamp;
         public static delegate* unmanaged[Cdecl]<nint*, DiscordString*, void> MessageContent;
         public static delegate* unmanaged[Cdecl]<nint*, nint*, byte> MessageAuthor;
+        public static delegate* unmanaged[Cdecl]<nint*, nint*, byte> MessageAdditionalContent;
+
+        // Additional content
+        public static delegate* unmanaged[Cdecl]<nint*, void> AdditionalContentDrop;
+        public static delegate* unmanaged[Cdecl]<nint*, AdditionalContentType> AdditionalContentGetType;
+        public static delegate* unmanaged[Cdecl]<nint*, DiscordString*, byte> AdditionalContentTitle;
+        public static delegate* unmanaged[Cdecl]<nint*, byte> AdditionalContentCount;
 
         // Global
         public static delegate* unmanaged[Cdecl]<void*, void> Free;
@@ -235,6 +253,12 @@ namespace osu.Game.Online.Discord.Sdk
             MessageSentTimestamp = (delegate* unmanaged[Cdecl]<nint*, ulong>)get(@"Discord_MessageHandle_SentTimestamp");
             MessageContent = (delegate* unmanaged[Cdecl]<nint*, DiscordString*, void>)get(@"Discord_MessageHandle_Content");
             MessageAuthor = (delegate* unmanaged[Cdecl]<nint*, nint*, byte>)get(@"Discord_MessageHandle_Author");
+            MessageAdditionalContent = (delegate* unmanaged[Cdecl]<nint*, nint*, byte>)get(@"Discord_MessageHandle_AdditionalContent");
+
+            AdditionalContentDrop = (delegate* unmanaged[Cdecl]<nint*, void>)get(@"Discord_AdditionalContent_Drop");
+            AdditionalContentGetType = (delegate* unmanaged[Cdecl]<nint*, AdditionalContentType>)get(@"Discord_AdditionalContent_Type");
+            AdditionalContentTitle = (delegate* unmanaged[Cdecl]<nint*, DiscordString*, byte>)get(@"Discord_AdditionalContent_Title");
+            AdditionalContentCount = (delegate* unmanaged[Cdecl]<nint*, byte>)get(@"Discord_AdditionalContent_Count");
 
             Free = (delegate* unmanaged[Cdecl]<void*, void>)get(@"Discord_Free");
             RunCallbacks = (delegate* unmanaged[Cdecl]<void>)get(@"Discord_RunCallbacks");
