@@ -191,6 +191,16 @@ namespace osu.Game.MapsetVerifier.UI.Overview
 
         private float columnWidth = MIN_COLUMN_WIDTH;
 
+        private FillFlowContainer backgrounds = null!;
+        private FillFlowContainer labels = null!;
+        private FillFlowContainer flow = null!;
+        private HorizontalScrollContainer scroll = null!;
+
+        /// <summary>
+        /// The space above the table which is taken by the scrollbar, if the columns don't fit.
+        /// </summary>
+        private float scrollbarSpace = -1;
+
         [Resolved]
         private OverlayColourProvider colourProvider { get; set; } = null!;
 
@@ -220,23 +230,21 @@ namespace osu.Game.MapsetVerifier.UI.Overview
         [BackgroundDependencyLoader]
         private void load()
         {
-            var backgrounds = new FillFlowContainer
+            backgrounds = new FillFlowContainer
             {
                 RelativeSizeAxes = Axes.X,
                 AutoSizeAxes = Axes.Y,
                 Direction = FillDirection.Vertical,
-                Padding = new MarginPadding { Top = HEADER_HEIGHT },
             };
 
-            var labels = new FillFlowContainer
+            labels = new FillFlowContainer
             {
                 Width = LABEL_WIDTH,
                 AutoSizeAxes = Axes.Y,
                 Direction = FillDirection.Vertical,
-                Padding = new MarginPadding { Top = HEADER_HEIGHT },
             };
 
-            var flow = new FillFlowContainer
+            flow = new FillFlowContainer
             {
                 AutoSizeAxes = Axes.Both,
                 Direction = FillDirection.Vertical,
@@ -297,10 +305,11 @@ namespace osu.Game.MapsetVerifier.UI.Overview
                     RelativeSizeAxes = Axes.X,
                     AutoSizeAxes = Axes.Y,
                     Padding = new MarginPadding { Left = LABEL_WIDTH },
-                    Child = new HorizontalScrollContainer
+                    // the scrollbar is above the difficulty names, so that it can be reached without scrolling to the end of long tables.
+                    Child = scroll = new HorizontalScrollContainer
                     {
                         RelativeSizeAxes = Axes.X,
-                        Height = HEADER_HEIGHT + rows.Count * ROW_HEIGHT + 8,
+                        ScrollbarAnchor = Anchor.TopLeft,
                         ScrollbarOverlapsContent = false,
                         Child = flow,
                     },
@@ -311,6 +320,16 @@ namespace osu.Game.MapsetVerifier.UI.Overview
         protected override void Update()
         {
             base.Update();
+
+            float space = flow.DrawWidth > scroll.DrawWidth + 1 ? scroll.ScrollbarSpace : 0;
+
+            if (space != scrollbarSpace)
+            {
+                scrollbarSpace = space;
+
+                backgrounds.Padding = labels.Padding = new MarginPadding { Top = space + HEADER_HEIGHT };
+                scroll.Height = space + HEADER_HEIGHT + rows.Count * ROW_HEIGHT;
+            }
 
             float width = Math.Clamp((DrawWidth - LABEL_WIDTH) / Math.Max(1, difficulties.Count), MIN_COLUMN_WIDTH, MAX_COLUMN_WIDTH);
 
@@ -419,6 +438,8 @@ namespace osu.Game.MapsetVerifier.UI.Overview
                 : base(Direction.Horizontal)
             {
             }
+
+            public float ScrollbarSpace => Scrollbar.Height + Scrollbar.Margin.Top;
 
             protected override bool OnScroll(ScrollEvent e)
             {
