@@ -5,8 +5,10 @@ using System.Security.Cryptography;
 using System.Text;
 using osu.Framework.Platform;
 using osu.Game.Beatmaps.Formats;
+using osu.Game.Configuration;
 using osu.Game.Extensions;
 using osu.Game.Screens.Edit;
+using osu.Game.Screens.Edit.Hitsounding;
 
 namespace osu.Game.MapsetVerifier
 {
@@ -49,13 +51,17 @@ namespace osu.Game.MapsetVerifier
         /// Whether the difficulty has unsaved changes. Without any, the saved file is used as is,
         /// such that the hash stays the same when switching between difficulties and the checks don't run again.
         /// </param>
-        public static SetMaterializer Capture(EditorBeatmap editorBeatmap, bool hasUnsavedChanges)
+        /// <param name="config">The config, which may mark difficulties as hitsound difficulties (see <see cref="HitsoundPreferences.IsHitsoundDifficulty"/>).</param>
+        public static SetMaterializer Capture(EditorBeatmap editorBeatmap, bool hasUnsavedChanges, OsuConfigManager? config)
         {
             var beatmapInfo = editorBeatmap.BeatmapInfo;
             string currentFilename = beatmapInfo.File?.Filename ?? getFilenameForNewDifficulty(editorBeatmap);
+            var excludedFilenames = getExcludedHitsoundDifficulties(beatmapInfo, config);
 
             if (!hasUnsavedChanges && beatmapInfo.File != null)
-                return new SetMaterializer(getSetFiles(beatmapInfo, null), null, null);
+                return new SetMaterializer(getSetFiles(beatmapInfo, excludedFilenames), null, null);
+
+            excludedFilenames.Add(currentFilename);
 
             byte[] encoded;
 
@@ -67,12 +73,38 @@ namespace osu.Game.MapsetVerifier
                 encoded = stream.ToArray();
             }
 
-            return new SetMaterializer(getSetFiles(beatmapInfo, currentFilename), currentFilename, encoded);
+            return new SetMaterializer(getSetFiles(beatmapInfo, excludedFilenames), currentFilename, encoded);
         }
 
-        private static (string, string)[] getSetFiles(Beatmaps.BeatmapInfo beatmapInfo, string? excludedFilename) =>
+        /// <summary>
+        /// The files of the hitsound difficulties, which aren't uploaded on submission and therefore aren't checked or shown.
+        /// They are still included while one of them is being edited, or if the set has no other difficulty.
+        /// </summary>
+        private static HashSet<string> getExcludedHitsoundDifficulties(Beatmaps.BeatmapInfo beatmapInfo, OsuConfigManager? config)
+        {
+            var excluded = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var difficulties = beatmapInfo.BeatmapSet?.Beatmaps.ToList();
+
+            if (difficulties == null || HitsoundPreferences.IsHitsoundDifficulty(config, beatmapInfo))
+                return excluded;
+
+            var hitsoundDifficulties = difficulties.Where(b => HitsoundPreferences.IsHitsoundDifficulty(config, b)).ToList();
+
+            if (hitsoundDifficulties.Count == difficulties.Count)
+                return excluded;
+
+            foreach (var difficulty in hitsoundDifficulties)
+            {
+                if (difficulty.File != null)
+                    excluded.Add(difficulty.File.Filename);
+            }
+
+            return excluded;
+        }
+
+        private static (string, string)[] getSetFiles(Beatmaps.BeatmapInfo beatmapInfo, HashSet<string> excludedFilenames) =>
             beatmapInfo.BeatmapSet?.Files
-                       .Where(f => excludedFilename == null || !f.Filename.Equals(excludedFilename, StringComparison.OrdinalIgnoreCase))
+                       .Where(f => !excludedFilenames.Contains(f.Filename))
                        .Select(f => (f.Filename, f.File.GetStoragePath()))
                        .OrderBy(f => f.Filename, StringComparer.OrdinalIgnoreCase)
                        .ToArray() ?? Array.Empty<(string, string)>();

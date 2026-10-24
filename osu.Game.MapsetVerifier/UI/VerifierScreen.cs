@@ -188,7 +188,7 @@ namespace osu.Game.MapsetVerifier.UI
         public void Check(bool force = false)
         {
             var options = new VerifierCheckOptions(includeDelta.Value, createSnapshot.Value, includeTimings.Value);
-            Session.Check(SetMaterializer.Capture(EditorBeatmap, editor?.HasUnsavedChanges ?? false), options, force);
+            Session.Check(SetMaterializer.Capture(EditorBeatmap, editor?.HasUnsavedChanges ?? false, config), options, force);
         }
 
         /// <summary>

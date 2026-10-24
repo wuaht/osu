@@ -1,5 +1,4 @@
 ﻿using System.Collections.Concurrent;
-using System.Text.RegularExpressions;
 using MapsetVerifier.Parser.Objects.Events;
 using MapsetVerifier.Parser.Statics;
 
@@ -22,12 +21,6 @@ namespace MapsetVerifier.Parser.Objects
         public List<string> EmptyBeatmapFiles { get; } = new();
 
         public string SongPath { get; }
-
-        /// <summary> Whether a difficulty name is one of a hitsound template difficulty, e.g. "Hitsounds" or "_hs_". </summary>
-        public static bool IsHitsoundDifficulty(string? version) =>
-            version != null
-            && (Regex.IsMatch(version, "^.*hit.*sound.*$", RegexOptions.IgnoreCase)
-                || Regex.IsMatch(version, "^_hs_$", RegexOptions.IgnoreCase));
 
         public BeatmapSet(string beatmapSetPath)
         {
@@ -163,17 +156,8 @@ namespace MapsetVerifier.Parser.Objects
                 throw ex.Flatten().InnerException!;
             }
 
-            // hitsound difficulties are only templates for the other difficulties and aren't uploaded on submission,
-            // so they aren't checked or shown, unless the set has nothing else to check.
-            bool excludeHitsoundDifficulties = concurrentBeatmaps.Any(beatmap => !IsHitsoundDifficulty(beatmap.MetadataSettings.version));
-
             foreach (var beatmap in concurrentBeatmaps)
-            {
-                if (excludeHitsoundDifficulties && IsHitsoundDifficulty(beatmap.MetadataSettings.version))
-                    continue;
-
                 Beatmaps.Add(beatmap);
-            }
 
             var expectedOsbFileName = GetOsbFileName()?.ToLower();
 
