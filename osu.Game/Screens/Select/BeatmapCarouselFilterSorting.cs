@@ -29,6 +29,7 @@ namespace osu.Game.Screens.Select
             var criteria = getCriteria();
 
             bool groupedSets = BeatmapCarouselFilterGrouping.ShouldGroupBeatmapsTogether(criteria);
+            int direction = criteria.SortDirection == SongSelectSortDirection.BottomToTop ? -1 : 1;
 
             BeatmapItemsCount = items.Count();
 
@@ -43,10 +44,11 @@ namespace osu.Game.Screens.Select
                         return compareDifficulty(ab, bb, criteria.Sort);
 
                     // If we're grouping by sets, all fallback sorts need to be aggregates for the set.
-                    return compare(ab, bb, criteria.Sort, aggregate: true);
+                    // Difficulties within a set keep their order, only the order of the sets is reversed.
+                    return direction * compare(ab, bb, criteria.Sort, aggregate: true);
                 }
 
-                return compare(ab, bb, criteria.Sort, aggregate: false);
+                return direction * compare(ab, bb, criteria.Sort, aggregate: false);
             })).ToList();
         }, cancellationToken).ConfigureAwait(false);
 

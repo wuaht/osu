@@ -417,6 +417,7 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopSkipIntro, false);
             SetDefault(OsuSetting.SlopInstantScreenTransitions, false);
             SetDefault(OsuSetting.SlopFrostedSettings, true);
+            SetDefault(OsuSetting.SlopSongSelectSortDirection, SongSelectSortDirection.TopToBottom);
             SetDefault(OsuSetting.SlopBackupOnUpdate, true);
             SetDefault(OsuSetting.SlopStrainGraphLowColour, @"#FFFFFF");
             SetDefault(OsuSetting.SlopStrainGraphHighColour, @"#FFFFFF");
@@ -1455,6 +1456,11 @@ namespace osu.Game.Configuration
         /// Whether the background of the settings is blurred behind them (frosted glass).
         /// </summary>
         SlopFrostedSettings,
+
+        /// <summary>
+        /// The direction in which the song select carousel is sorted.
+        /// </summary>
+        SlopSongSelectSortDirection,
 
         /// <summary>
         /// Whether the beatmap files of a beatmap set are backed up before it gets updated.

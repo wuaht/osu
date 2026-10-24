@@ -48,6 +48,7 @@ namespace osu.Game.Screens.Select
         private ShearedDropdown<SortMode> sortDropdown = null!;
         private ShearedDropdown<GroupModeDropdownItem> groupDropdown = null!;
         private readonly Bindable<string> configCollectionFilter = new Bindable<string>();
+        private readonly Bindable<SongSelectSortDirection> configSortDirection = new Bindable<SongSelectSortDirection>();
 
         /// <summary>
         /// An optional method which can force certain criteria adjustments.
@@ -227,6 +228,7 @@ namespace osu.Game.Screens.Select
             config.BindWith(OsuSetting.ShowConvertedBeatmaps, showConvertedBeatmapsButton.Active);
             config.BindWith(OsuSetting.SongSelectSortingMode, sortDropdown.Current);
             config.BindWith(OsuSetting.SongSelectCollectionFilter, configCollectionFilter);
+            config.BindWith(OsuSetting.SlopSongSelectSortDirection, configSortDirection);
 
             ruleset.BindValueChanged(_ => updateCriteria());
             mods.BindValueChanged(m =>
@@ -262,6 +264,7 @@ namespace osu.Game.Screens.Select
 
             showConvertedBeatmapsButton.Active.BindValueChanged(_ => updateCriteria());
             sortDropdown.Current.BindValueChanged(_ => updateCriteria());
+            configSortDirection.BindValueChanged(_ => updateCriteria());
             groupDropdown.Current.BindValueChanged(_ => updateCriteria());
             configCollectionFilter.BindValueChanged(_ => updateCriteria());
             collectionsSubscription = realm.RegisterForNotifications(r => r.All<BeatmapCollection>(), (_, changeSet) =>
@@ -300,6 +303,7 @@ namespace osu.Game.Screens.Select
             {
                 SelectedBeatmapSet = ScopedBeatmapSet.Value,
                 Sort = sortDropdown.Current.Value,
+                SortDirection = configSortDirection.Value,
                 Group = groupDropdown.Current.Value?.Value ?? GroupMode.None,
                 AllowConvertedBeatmaps = showConvertedBeatmapsButton.Active.Value,
                 Ruleset = ruleset.Value,

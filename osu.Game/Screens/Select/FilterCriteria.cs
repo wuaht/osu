@@ -20,6 +20,8 @@ namespace osu.Game.Screens.Select
         public GroupMode Group;
         public SortMode Sort;
 
+        public SongSelectSortDirection SortDirection;
+
         public BeatmapSetInfo? SelectedBeatmapSet;
 
         public OptionalRange<double> StarDifficulty;
@@ -276,7 +278,7 @@ namespace osu.Game.Screens.Select
         /// <returns></returns>
         public bool RequiresSorting(FilterCriteria newCriteria)
         {
-            if (Sort != newCriteria.Sort)
+            if (Sort != newCriteria.Sort || SortDirection != newCriteria.SortDirection)
                 return true;
 
             switch (Sort)

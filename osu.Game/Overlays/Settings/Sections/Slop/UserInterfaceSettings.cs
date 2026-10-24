@@ -10,6 +10,7 @@ using osu.Framework.Localisation;
 using osu.Game.Configuration;
 using osu.Game.Graphics.UserInterfaceV2;
 using osu.Game.Localisation;
+using osu.Game.Screens.Select.Filter;
 
 namespace osu.Game.Overlays.Settings.Sections.Slop
 {
@@ -17,7 +18,7 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
     {
         protected override LocalisableString Header => SlopSettingsStrings.UserInterfaceHeader;
 
-        public override IEnumerable<LocalisableString> FilterTerms => base.FilterTerms.Concat(new LocalisableString[] { "intro", "startup", "menu", "navigation", "transition", "fade", "instant", "logo", "miku", "frosted", "blur", "glass", "transparent" });
+        public override IEnumerable<LocalisableString> FilterTerms => base.FilterTerms.Concat(new LocalisableString[] { "intro", "startup", "menu", "navigation", "transition", "fade", "instant", "logo", "miku", "frosted", "blur", "glass", "transparent", "sort", "order", "reverse", "song select" });
 
         private Bindable<bool> mikuMedalUnlocked = null!;
 
@@ -45,6 +46,12 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                     Caption = SlopSettingsStrings.FrostedSettings,
                     HintText = SlopSettingsStrings.FrostedSettingsDescription,
                     Current = config.GetBindable<bool>(OsuSetting.SlopFrostedSettings),
+                }),
+                new SettingsItemV2(new FormEnumDropdown<SongSelectSortDirection>
+                {
+                    Caption = SlopSettingsStrings.SongSelectSortDirection,
+                    HintText = SlopSettingsStrings.SongSelectSortDirectionDescription,
+                    Current = config.GetBindable<SongSelectSortDirection>(OsuSetting.SlopSongSelectSortDirection),
                 }),
                 mikuTakeoverItem = new SettingsItemV2(new FormCheckBox
                 {

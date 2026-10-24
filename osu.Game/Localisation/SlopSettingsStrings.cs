@@ -1348,6 +1348,16 @@ namespace osu.Game.Localisation
         public static LocalisableString InstantScreenTransitionsDescription => new TranslatableString(getKey(@"instant_screen_transitions_description"), @"Disables fade transitions between screens");
 
         /// <summary>
+        /// "Song select sort direction"
+        /// </summary>
+        public static LocalisableString SongSelectSortDirection => new TranslatableString(getKey(@"song_select_sort_direction"), @"Song select sort direction");
+
+        /// <summary>
+        /// "Reverses the order of the selected sort mode"
+        /// </summary>
+        public static LocalisableString SongSelectSortDirectionDescription => new TranslatableString(getKey(@"song_select_sort_direction_description"), @"Reverses the order of the selected sort mode");
+
+        /// <summary>
         /// "Backup beatmaps on update"
         /// </summary>
         public static LocalisableString BackupOnUpdate => new TranslatableString(getKey(@"backup_on_update"), @"Backup beatmaps on update");
