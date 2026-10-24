@@ -336,7 +336,7 @@ namespace osu.Game.Online.Discord.Sdk
                 ulong recipientId = MessageRecipientId(message);
 
                 DiscordString content;
-                MessageContent(message, &content);
+                MessageRawContent(message, &content);
 
                 var author = GetUser(authorId);
 

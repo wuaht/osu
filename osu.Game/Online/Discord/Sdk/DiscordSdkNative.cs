@@ -138,7 +138,10 @@ namespace osu.Game.Online.Discord.Sdk
         public static delegate* unmanaged[Cdecl]<nint*, ulong> MessageAuthorId;
         public static delegate* unmanaged[Cdecl]<nint*, ulong> MessageRecipientId;
         public static delegate* unmanaged[Cdecl]<nint*, ulong> MessageSentTimestamp;
-        public static delegate* unmanaged[Cdecl]<nint*, DiscordString*, void> MessageContent;
+        /// <summary>
+        /// The content with its markup, as Discord_MessageHandle_Content replaces custom emojis and mentions with plain text.
+        /// </summary>
+        public static delegate* unmanaged[Cdecl]<nint*, DiscordString*, void> MessageRawContent;
         public static delegate* unmanaged[Cdecl]<nint*, nint*, byte> MessageAuthor;
         public static delegate* unmanaged[Cdecl]<nint*, nint*, byte> MessageAdditionalContent;
 
@@ -251,7 +254,7 @@ namespace osu.Game.Online.Discord.Sdk
             MessageAuthorId = (delegate* unmanaged[Cdecl]<nint*, ulong>)get(@"Discord_MessageHandle_AuthorId");
             MessageRecipientId = (delegate* unmanaged[Cdecl]<nint*, ulong>)get(@"Discord_MessageHandle_RecipientId");
             MessageSentTimestamp = (delegate* unmanaged[Cdecl]<nint*, ulong>)get(@"Discord_MessageHandle_SentTimestamp");
-            MessageContent = (delegate* unmanaged[Cdecl]<nint*, DiscordString*, void>)get(@"Discord_MessageHandle_Content");
+            MessageRawContent = (delegate* unmanaged[Cdecl]<nint*, DiscordString*, void>)get(@"Discord_MessageHandle_RawContent");
             MessageAuthor = (delegate* unmanaged[Cdecl]<nint*, nint*, byte>)get(@"Discord_MessageHandle_Author");
             MessageAdditionalContent = (delegate* unmanaged[Cdecl]<nint*, nint*, byte>)get(@"Discord_MessageHandle_AdditionalContent");
 
