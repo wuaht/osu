@@ -209,6 +209,9 @@ namespace osu.Game.Online.Discord
         [JsonProperty("owner_id")]
         public ulong OwnerId { get; set; }
 
+        [JsonProperty("banner")]
+        public string? Banner { get; set; }
+
         [JsonProperty("channels")]
         public List<DiscordChannel> Channels { get; set; } = new List<DiscordChannel>();
 
@@ -222,6 +225,8 @@ namespace osu.Game.Online.Discord
         public List<ulong>? LocalUserRoles { get; set; }
 
         public string? GetIconUrl(int size = 96) => string.IsNullOrEmpty(Icon) ? null : $@"https://cdn.discordapp.com/icons/{Id}/{Icon}.png?size={size}";
+
+        public string? GetBannerUrl(int size = 480) => string.IsNullOrEmpty(Banner) ? null : $@"https://cdn.discordapp.com/banners/{Id}/{Banner}.png?size={size}";
 
         /// <summary>
         /// The initials of the guild name, shown in place of a missing icon.

@@ -620,6 +620,7 @@ namespace osu.Game.Online.Discord.Full
                     ulong updatedGuildId = obj.Value<ulong>(@"id");
                     string? name = obj.Value<string>(@"name");
                     string? icon = obj.Value<string>(@"icon");
+                    string? banner = obj.Value<string>(@"banner");
 
                     Schedule(() =>
                     {
@@ -632,6 +633,7 @@ namespace osu.Game.Online.Discord.Full
                         int index = Guilds.IndexOf(guild);
                         guild.Name = name ?? guild.Name;
                         guild.Icon = icon;
+                        guild.Banner = banner;
                         Guilds[index] = guild;
                     });
                     break;

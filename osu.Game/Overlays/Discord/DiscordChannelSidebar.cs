@@ -5,9 +5,11 @@ using System.Collections.Generic;
 using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
+using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Extensions.LocalisationExtensions;
 using osu.Framework.Extensions.ObjectExtensions;
 using osu.Framework.Graphics;
+using osu.Framework.Graphics.Colour;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
@@ -30,6 +32,11 @@ namespace osu.Game.Overlays.Discord
     {
         private const float user_panel_height = 52;
 
+        /// <summary>
+        /// The height of the header with the banner of a guild, which has the aspect ratio of guild banners like in Discord.
+        /// </summary>
+        private const float banner_height = DiscordStyle.SIDEBAR_WIDTH * 9 / 16;
+
         [Resolved]
         private DiscordClient client { get; set; } = null!;
 
@@ -43,7 +50,10 @@ namespace osu.Game.Overlays.Discord
         private readonly Bindable<DiscordChannel?> channel = new Bindable<DiscordChannel?>();
         private readonly BindableList<DiscordChannel> privateChannels = new BindableList<DiscordChannel>();
 
+        private Container header = null!;
+        private Container bannerContainer = null!;
         private OsuSpriteText headerText = null!;
+        private string? bannerUrl;
         private FillFlowContainer channelFlow = null!;
 
         private readonly HashSet<ulong> collapsedCategories = new HashSet<ulong>();
@@ -87,7 +97,7 @@ namespace osu.Game.Overlays.Discord
                 RelativeSizeAxes = Axes.Both,
                 RowDimensions = new[]
                 {
-                    new Dimension(GridSizeMode.Absolute, DiscordStyle.HEADER_HEIGHT),
+                    new Dimension(GridSizeMode.AutoSize),
                     new Dimension(),
                     new Dimension(GridSizeMode.Absolute, user_panel_height),
                 },
@@ -95,15 +105,21 @@ namespace osu.Game.Overlays.Discord
                 {
                     new Drawable[]
                     {
-                        new Container
+                        header = new Container
                         {
-                            RelativeSizeAxes = Axes.Both,
+                            RelativeSizeAxes = Axes.X,
+                            Height = DiscordStyle.HEADER_HEIGHT,
                             Children = new Drawable[]
                             {
+                                bannerContainer = new Container
+                                {
+                                    RelativeSizeAxes = Axes.Both,
+                                },
+                                // The name stays at the top when the banner of a guild is shown below it.
                                 headerText = new TruncatingSpriteText
                                 {
-                                    Anchor = Anchor.CentreLeft,
                                     Origin = Anchor.CentreLeft,
+                                    Y = DiscordStyle.HEADER_HEIGHT / 2,
                                     RelativeSizeAxes = Axes.X,
                                     Padding = new MarginPadding { Horizontal = 16 },
                                     Font = DiscordStyle.UiFont(16, FontWeight.Bold),
@@ -189,6 +205,7 @@ namespace osu.Game.Overlays.Discord
             if (guild.Value == null)
             {
                 headerText.Text = SlopDiscordStrings.DirectMessages;
+                updateBanner(null);
 
                 // The friends are shown in the friends view, so only the conversations with messages and the open one are listed here.
                 channelFlow.Add(new FriendsRow());
@@ -210,6 +227,7 @@ namespace osu.Game.Overlays.Discord
             }
 
             headerText.Text = guild.Value.Name;
+            updateBanner(guild.Value.GetBannerUrl());
 
             foreach (var (category, channels) in getGroups(guild.Value))
             {
@@ -239,6 +257,41 @@ namespace osu.Game.Overlays.Discord
                     channelFlow.Add(new GuildChannelRow(c));
                 }
             }
+        }
+
+        /// <summary>
+        /// Shows the banner of a guild in the header like Discord does, with the name of the guild on top of it.
+        /// </summary>
+        private void updateBanner(string? url)
+        {
+            if (url == bannerUrl)
+                return;
+
+            bannerUrl = url;
+            bannerContainer.Clear();
+
+            if (url == null)
+            {
+                header.Height = DiscordStyle.HEADER_HEIGHT;
+                return;
+            }
+
+            header.Height = banner_height;
+            bannerContainer.Children = new Drawable[]
+            {
+                new DiscordRemoteImage(url)
+                {
+                    RelativeSizeAxes = Axes.Both,
+                    ShowPlaceholder = false,
+                },
+                // Keeps the name readable on bright banners.
+                new Box
+                {
+                    RelativeSizeAxes = Axes.X,
+                    Height = DiscordStyle.HEADER_HEIGHT * 1.5f,
+                    Colour = ColourInfo.GradientVertical(Color4.Black.Opacity(0.6f), Color4.Black.Opacity(0)),
+                },
+            };
         }
 
         protected override void Dispose(bool isDisposing)
