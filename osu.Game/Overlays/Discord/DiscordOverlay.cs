@@ -45,6 +45,9 @@ namespace osu.Game.Overlays.Discord
         [Cached]
         private readonly DiscordLayout layout = new DiscordLayout();
 
+        [Cached]
+        private readonly DiscordUnreadMessages unread = new DiscordUnreadMessages();
+
         [Resolved]
         private OsuConfigManager config { get; set; } = null!;
 
@@ -163,6 +166,7 @@ namespace osu.Game.Overlays.Discord
                 if (c.NewValue != null)
                     c.NewValue.MessageCreated += onMessageCreated;
 
+                unread.Clear();
                 state.UnbindBindings();
 
                 if (c.NewValue != null)
@@ -178,8 +182,15 @@ namespace osu.Game.Overlays.Discord
         {
             var c = client.Value;
 
-            if (c == null || notifications == null || message.Author.Id == c.LocalUser.Value?.Id)
+            if (c == null)
                 return;
+
+            // Replying (even from another Discord client) means that the conversation was read.
+            if (message.Author.Id == c.LocalUser.Value?.Id)
+            {
+                unread.MarkRead(message.ChannelId);
+                return;
+            }
 
             var channel = c.PrivateChannels.FirstOrDefault(ch => ch.Id == message.ChannelId);
 
@@ -190,6 +201,11 @@ namespace osu.Game.Overlays.Discord
             var main = currentView as DiscordMainView;
 
             if (State.Value == Visibility.Visible && main?.Navigation.Channel.Value?.Id == channel.Id)
+                return;
+
+            unread.Add(channel.Id);
+
+            if (notifications == null)
                 return;
 
             notifications.Post(new SimpleNotification
@@ -209,6 +225,15 @@ namespace osu.Game.Overlays.Discord
                 },
             });
         });
+
+        protected override void Update()
+        {
+            base.Update();
+
+            // The open conversation is read while the overlay is shown.
+            if (State.Value == Visibility.Visible && currentView is DiscordMainView main && main.Navigation.Channel.Value is DiscordChannel open)
+                unread.MarkRead(open.Id);
+        }
 
         protected override void Dispose(bool isDisposing)
         {

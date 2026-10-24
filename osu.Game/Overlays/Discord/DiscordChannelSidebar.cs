@@ -353,6 +353,11 @@ namespace osu.Game.Overlays.Discord
 
             protected virtual bool Selectable => true;
 
+            /// <summary>
+            /// Whether the row is shown as bright as a selected one, for example because of unread messages.
+            /// </summary>
+            protected virtual bool Highlighted => false;
+
             protected SidebarRow(float height)
             {
                 RelativeSizeAxes = Axes.X;
@@ -396,23 +401,23 @@ namespace osu.Game.Overlays.Discord
             {
                 base.LoadComplete();
 
-                selectedChannel.BindValueChanged(_ => updateState(), true);
+                selectedChannel.BindValueChanged(_ => UpdateState(), true);
                 FinishTransforms(true);
             }
 
             protected override bool OnHover(HoverEvent e)
             {
-                updateState();
+                UpdateState();
                 return base.OnHover(e);
             }
 
             protected override void OnHoverLost(HoverLostEvent e)
             {
-                updateState();
+                UpdateState();
                 base.OnHoverLost(e);
             }
 
-            private void updateState()
+            protected void UpdateState()
             {
                 if (!Selectable)
                 {
@@ -421,7 +426,7 @@ namespace osu.Game.Overlays.Discord
                 }
 
                 background.FadeTo(selected ? 0.12f : IsHovered ? 0.06f : 0, 100);
-                content.FadeColour(selected || IsHovered ? Color4.White : ColourProvider.Content2, 100);
+                content.FadeColour(selected || IsHovered || Highlighted ? Color4.White : ColourProvider.Content2, 100);
             }
         }
 
@@ -525,9 +530,51 @@ namespace osu.Game.Overlays.Discord
 
         private partial class PrivateChannelRow : ChannelRow
         {
+            [Resolved]
+            private DiscordUnreadMessages? unread { get; set; }
+
+            private TruncatingSpriteText name = null!;
+            private Container badge = null!;
+            private OsuSpriteText badgeText = null!;
+
+            private int unreadCount => unread?.Get(Channel.Id) ?? 0;
+
+            protected override bool Highlighted => unreadCount > 0;
+
             public PrivateChannelRow(DiscordChannel channel)
                 : base(channel, 42)
             {
+            }
+
+            protected override void LoadComplete()
+            {
+                base.LoadComplete();
+
+                if (unread != null)
+                    unread.Changed += onUnreadChanged;
+
+                updateUnread();
+            }
+
+            private void onUnreadChanged() => Scheduler.AddOnce(updateUnread);
+
+            private void updateUnread()
+            {
+                int count = unreadCount;
+
+                badge.Alpha = count > 0 ? 1 : 0;
+                badgeText.Text = count > 99 ? @"99+" : count.ToString();
+                name.Font = DiscordStyle.UiFont(15, count > 0 ? FontWeight.Bold : FontWeight.Medium);
+
+                UpdateState();
+            }
+
+            protected override void Dispose(bool isDisposing)
+            {
+                base.Dispose(isDisposing);
+
+                if (unread != null)
+                    unread.Changed -= onUnreadChanged;
             }
 
             protected override Drawable CreateContent()
@@ -579,19 +626,47 @@ namespace osu.Game.Overlays.Discord
                     {
                         new Dimension(GridSizeMode.Absolute, 42),
                         new Dimension(),
+                        new Dimension(GridSizeMode.AutoSize),
                     },
                     Content = new[]
                     {
                         new[]
                         {
                             avatar,
-                            new TruncatingSpriteText
+                            name = new TruncatingSpriteText
                             {
                                 Anchor = Anchor.CentreLeft,
                                 Origin = Anchor.CentreLeft,
                                 RelativeSizeAxes = Axes.X,
                                 Text = Channel.DisplayName,
                                 Font = DiscordStyle.UiFont(15, FontWeight.Medium),
+                            },
+                            // The number of unread messages, like the mention badge of Discord.
+                            badge = new CircularContainer
+                            {
+                                Anchor = Anchor.CentreRight,
+                                Origin = Anchor.CentreRight,
+                                AutoSizeAxes = Axes.X,
+                                Height = 16,
+                                Masking = true,
+                                Alpha = 0,
+                                Margin = new MarginPadding { Left = 6 },
+                                Children = new Drawable[]
+                                {
+                                    new Box
+                                    {
+                                        RelativeSizeAxes = Axes.Both,
+                                        Colour = DiscordStyle.Error,
+                                    },
+                                    badgeText = new OsuSpriteText
+                                    {
+                                        Anchor = Anchor.Centre,
+                                        Origin = Anchor.Centre,
+                                        Font = DiscordStyle.UiFont(11, FontWeight.Bold),
+                                        Colour = Color4.White,
+                                        Margin = new MarginPadding { Horizontal = 5 },
+                                    },
+                                },
                             },
                         },
                     },
