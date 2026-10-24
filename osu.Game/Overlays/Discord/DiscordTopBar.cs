@@ -3,6 +3,7 @@
 
 using osu.Framework;
 using osu.Framework.Allocation;
+using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
@@ -25,8 +26,15 @@ namespace osu.Game.Overlays.Discord
     {
         public Drawable DragBar { get; private set; } = null!;
 
+        private Drawable guildsButton = null!;
+
+        private readonly BindableBool hasGuilds = new BindableBool();
+
         [Resolved]
         private SettingsOverlay? settings { get; set; }
+
+        [Resolved]
+        private DiscordLayout? layout { get; set; }
 
         [BackgroundDependencyLoader]
         private void load(OverlayColourProvider colourProvider, TextureStore textures)
@@ -67,12 +75,29 @@ namespace osu.Game.Overlays.Discord
                         },
                     },
                 },
-                new IconButton(FontAwesome.Solid.Cog, () => settings?.ShowAtControl<DiscordSettings>())
+                new FillFlowContainer
                 {
                     Anchor = Anchor.CentreRight,
                     Origin = Anchor.CentreRight,
+                    AutoSizeAxes = Axes.Both,
+                    Direction = FillDirection.Horizontal,
+                    Spacing = new Vector2(4, 0),
                     Margin = new MarginPadding { Right = 12 },
-                    TooltipText = SlopDiscordStrings.OpenSettings,
+                    Children = new Drawable[]
+                    {
+                        guildsButton = new ToggleButton(FontAwesome.Solid.Server, layout?.ShowGuilds)
+                        {
+                            TooltipText = SlopDiscordStrings.ToggleServers,
+                        },
+                        new ToggleButton(FontAwesome.Solid.Hashtag, layout?.ShowChannels)
+                        {
+                            TooltipText = SlopDiscordStrings.ToggleChannels,
+                        },
+                        new IconButton(FontAwesome.Solid.Cog, () => settings?.ShowAtControl<DiscordSettings>())
+                        {
+                            TooltipText = SlopDiscordStrings.OpenSettings,
+                        },
+                    },
                 },
                 DragBar = new DragArea
                 {
@@ -82,6 +107,16 @@ namespace osu.Game.Overlays.Discord
                     Colour = colourProvider.Background1,
                 },
             };
+        }
+
+        protected override void LoadComplete()
+        {
+            base.LoadComplete();
+
+            if (layout != null)
+                hasGuilds.BindTo(layout.HasGuilds);
+
+            hasGuilds.BindValueChanged(h => guildsButton.Alpha = h.NewValue ? 1 : 0, true);
         }
 
         protected override bool OnHover(HoverEvent e)
@@ -137,6 +172,62 @@ namespace osu.Game.Overlays.Discord
                 spriteIcon.FadeColour(colourProvider.Content2, 100);
                 spriteIcon.RotateTo(0, 400, Easing.OutQuint);
                 base.OnHoverLost(e);
+            }
+        }
+
+        /// <summary>
+        /// A button which shows or hides a side panel, and is dimmed while the panel is hidden.
+        /// </summary>
+        private partial class ToggleButton : OsuClickableContainer
+        {
+            private readonly SpriteIcon spriteIcon;
+
+            private readonly BindableBool shown = new BindableBool(true);
+
+            [Resolved]
+            private OverlayColourProvider colourProvider { get; set; } = null!;
+
+            public ToggleButton(IconUsage icon, BindableBool? target)
+            {
+                Size = new Vector2(28);
+
+                if (target != null)
+                    shown.BindTo(target);
+
+                Action = () => shown.Toggle();
+
+                Child = spriteIcon = new SpriteIcon
+                {
+                    Anchor = Anchor.Centre,
+                    Origin = Anchor.Centre,
+                    Icon = icon,
+                    Size = new Vector2(14),
+                };
+            }
+
+            protected override void LoadComplete()
+            {
+                base.LoadComplete();
+                shown.BindValueChanged(_ => updateState(), true);
+                FinishTransforms(true);
+            }
+
+            protected override bool OnHover(HoverEvent e)
+            {
+                updateState();
+                return base.OnHover(e);
+            }
+
+            protected override void OnHoverLost(HoverLostEvent e)
+            {
+                updateState();
+                base.OnHoverLost(e);
+            }
+
+            private void updateState()
+            {
+                spriteIcon.FadeColour(IsHovered ? colourProvider.Content1 : colourProvider.Content2, 100);
+                spriteIcon.FadeTo(shown.Value ? 1 : 0.4f, 100);
             }
         }
 

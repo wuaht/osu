@@ -273,7 +273,8 @@ namespace osu.Game.Online.Discord.Sdk
                 Free(span.Ptr);
 
             // Keep the channels that already exist so that the order by activity is kept.
-            var channels = PrivateChannels.Where(c => friends.Any(f => f.Id == c.Id)).ToList();
+            // Conversations with messages are kept as well, as they may be with someone who isn't a friend.
+            var channels = PrivateChannels.Where(c => c.LastMessageId != null || friends.Any(f => f.Id == c.Id)).ToList();
 
             foreach (var friend in friends.OrderBy(f => f.DisplayName, StringComparer.OrdinalIgnoreCase))
             {
@@ -294,6 +295,26 @@ namespace osu.Game.Online.Discord.Sdk
 
             PrivateChannels.Clear();
             PrivateChannels.AddRange(channels);
+        }
+
+        /// <summary>
+        /// Creates the conversation of a message from someone who isn't a friend, so that it can be opened.
+        /// </summary>
+        private void ensurePrivateChannel(DiscordMessage message)
+        {
+            if (PrivateChannels.Any(c => c.Id == message.ChannelId))
+                return;
+
+            var recipient = message.Author.Id == message.ChannelId
+                ? message.Author
+                : GetUser(message.ChannelId) ?? new DiscordUser { Id = message.ChannelId, Username = message.ChannelId.ToString() };
+
+            PrivateChannels.Insert(0, new DiscordChannel
+            {
+                Id = message.ChannelId,
+                Type = DiscordChannelType.DirectMessage,
+                Recipients = new List<DiscordUser> { recipient },
+            });
         }
 
         private DiscordMessage? getMessage(ulong id)
@@ -451,6 +472,7 @@ namespace osu.Game.Online.Discord.Sdk
                 if (self == null || message == null)
                     return;
 
+                self.ensurePrivateChannel(message);
                 self.BumpPrivateChannel(message.ChannelId, message.Id);
                 self.TriggerMessageCreated(message);
             }

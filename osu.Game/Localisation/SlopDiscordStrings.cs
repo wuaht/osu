@@ -207,6 +207,26 @@ namespace osu.Game.Localisation
         /// </summary>
         public static LocalisableString StatusOffline => new TranslatableString(getKey(@"status_offline"), @"Offline");
 
+        /// <summary>
+        /// "{0}: {1}"
+        /// </summary>
+        public static LocalisableString MessageNotification(string author, string content) => new TranslatableString(getKey(@"message_notification"), @"{0}: {1}", author, content);
+
+        /// <summary>
+        /// "{0} sent an attachment"
+        /// </summary>
+        public static LocalisableString AttachmentNotification(string author) => new TranslatableString(getKey(@"attachment_notification"), @"{0} sent an attachment", author);
+
+        /// <summary>
+        /// "Show or hide the servers"
+        /// </summary>
+        public static LocalisableString ToggleServers => new TranslatableString(getKey(@"toggle_servers"), @"Show or hide the servers");
+
+        /// <summary>
+        /// "Show or hide the channels"
+        /// </summary>
+        public static LocalisableString ToggleChannels => new TranslatableString(getKey(@"toggle_channels"), @"Show or hide the channels");
+
         private static string getKey(string key) => $@"{prefix}:{key}";
     }
 }

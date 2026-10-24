@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
@@ -16,6 +17,7 @@ using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.Cursor;
 using osu.Game.Localisation;
 using osu.Game.Online.Discord;
+using osu.Game.Overlays.Notifications;
 using osu.Game.Screens.Edit.Components;
 using osuTK.Graphics;
 
@@ -40,11 +42,17 @@ namespace osu.Game.Overlays.Discord
         [Cached]
         private readonly OverlayColourProvider colourProvider = new OverlayColourProvider(DiscordStyle.HUE);
 
+        [Cached]
+        private readonly DiscordLayout layout = new DiscordLayout();
+
         [Resolved]
         private OsuConfigManager config { get; set; } = null!;
 
         [Resolved]
         private DiscordManager? discordManager { get; set; }
+
+        [Resolved]
+        private INotificationOverlay? notifications { get; set; }
 
         private readonly BindableFloat overlayHeight = new BindableFloat();
         private readonly BindableFloat backgroundOpacity = new BindableFloat();
@@ -89,12 +97,6 @@ namespace osu.Game.Overlays.Discord
             var dependencies = new DependencyContainer(base.CreateChildDependencies(parent));
             dependencies.Cache(textures = new DiscordTextureStore(parent.Get<GameHost>()));
             return dependencies;
-        }
-
-        protected override void Dispose(bool isDisposing)
-        {
-            base.Dispose(isDisposing);
-            textures?.Dispose();
         }
 
         [BackgroundDependencyLoader]
@@ -155,6 +157,12 @@ namespace osu.Game.Overlays.Discord
 
             client.BindValueChanged(c =>
             {
+                if (c.OldValue != null)
+                    c.OldValue.MessageCreated -= onMessageCreated;
+
+                if (c.NewValue != null)
+                    c.NewValue.MessageCreated += onMessageCreated;
+
                 state.UnbindBindings();
 
                 if (c.NewValue != null)
@@ -164,6 +172,51 @@ namespace osu.Game.Overlays.Discord
             }, true);
 
             state.BindValueChanged(_ => updateView());
+        }
+
+        private void onMessageCreated(DiscordMessage message) => Schedule(() =>
+        {
+            var c = client.Value;
+
+            if (c == null || notifications == null || message.Author.Id == c.LocalUser.Value?.Id)
+                return;
+
+            var channel = c.PrivateChannels.FirstOrDefault(ch => ch.Id == message.ChannelId);
+
+            // Like Discord, only direct messages notify.
+            if (channel == null)
+                return;
+
+            var main = currentView as DiscordMainView;
+
+            if (State.Value == Visibility.Visible && main?.Navigation.Channel.Value?.Id == channel.Id)
+                return;
+
+            notifications.Post(new SimpleNotification
+            {
+                Icon = FontAwesome.Brands.Discord,
+                Text = string.IsNullOrEmpty(message.Content)
+                    ? SlopDiscordStrings.AttachmentNotification(message.Author.DisplayName)
+                    : SlopDiscordStrings.MessageNotification(message.Author.DisplayName, message.Content),
+                Activated = () =>
+                {
+                    Show();
+
+                    if (currentView is DiscordMainView view && view.Client == c)
+                        view.Navigation.OpenChannel(channel, c);
+
+                    return true;
+                },
+            });
+        });
+
+        protected override void Dispose(bool isDisposing)
+        {
+            if (client.Value != null)
+                client.Value.MessageCreated -= onMessageCreated;
+
+            base.Dispose(isDisposing);
+            textures?.Dispose();
         }
 
         private void updateBackground()

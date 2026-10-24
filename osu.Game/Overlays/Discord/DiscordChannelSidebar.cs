@@ -166,6 +166,14 @@ namespace osu.Game.Overlays.Discord
             });
 
             client.GuildChannelsChanged += onGuildChannelsChanged;
+            client.MessageCreated += onMessageCreated;
+        }
+
+        private void onMessageCreated(DiscordMessage message)
+        {
+            // A conversation which received its first message is listed now, even if it didn't move in the list.
+            if (message.GuildId == null && guild.Value == null)
+                Scheduler.AddOnce(updateChannels);
         }
 
         private void onGuildChannelsChanged(DiscordGuild changed)
@@ -182,13 +190,20 @@ namespace osu.Game.Overlays.Discord
             {
                 headerText.Text = SlopDiscordStrings.DirectMessages;
 
-                // The friends are shown in the friends view, so only the open conversation is listed here.
+                // The friends are shown in the friends view, so only the conversations with messages and the open one are listed here.
                 channelFlow.Add(new FriendsRow());
 
-                if (channel.Value?.IsPrivate == true)
+                var conversations = privateChannels.Where(c => c.LastMessageId != null || c.Id == channel.Value?.Id).ToList();
+
+                if (channel.Value?.IsPrivate == true && conversations.All(c => c.Id != channel.Value.Id))
+                    conversations.Insert(0, channel.Value);
+
+                if (conversations.Count > 0)
                 {
                     channelFlow.Add(new CategoryHeader(SlopDiscordStrings.DirectMessages.ToUpper(), false, null));
-                    channelFlow.Add(new PrivateChannelRow(channel.Value));
+
+                    foreach (var c in conversations)
+                        channelFlow.Add(new PrivateChannelRow(c));
                 }
 
                 return;
@@ -231,7 +246,10 @@ namespace osu.Game.Overlays.Discord
             base.Dispose(isDisposing);
 
             if (client.IsNotNull())
+            {
                 client.GuildChannelsChanged -= onGuildChannelsChanged;
+                client.MessageCreated -= onMessageCreated;
+            }
         }
 
         private partial class CategoryHeader : OsuClickableContainer

@@ -3,11 +3,9 @@
 
 using osu.Framework.Allocation;
 using osu.Framework.Graphics;
-using osu.Framework.Graphics.Sprites;
-using osu.Framework.Graphics.Textures;
+using osu.Game.Graphics;
 using osu.Game.Input.Bindings;
 using osu.Game.Overlays.Discord;
-using osuTK;
 
 namespace osu.Game.Overlays.Toolbar
 {
@@ -21,20 +19,12 @@ namespace osu.Game.Overlays.Toolbar
         }
 
         [BackgroundDependencyLoader(true)]
-        private void load(DiscordOverlay? discord, TextureStore textures)
+        private void load(DiscordOverlay? discord)
         {
             StateContainer = discord;
 
-            var texture = textures.Get(@"Slop/discord");
-
-            if (texture != null)
-            {
-                SetIcon(new Sprite
-                {
-                    Texture = texture,
-                    Size = new Vector2(20 * texture.Width / texture.Height, 20),
-                });
-            }
+            // The line icon matches the other toolbar icons.
+            SetIcon(OsuIcon.Discord);
         }
     }
 }

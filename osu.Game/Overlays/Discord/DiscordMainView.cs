@@ -48,6 +48,21 @@ namespace osu.Game.Overlays.Discord
     }
 
     /// <summary>
+    /// Which side panels of the <see cref="DiscordMainView"/> are shown. Kept by the overlay so that it survives reconnecting.
+    /// </summary>
+    public class DiscordLayout
+    {
+        public readonly BindableBool ShowGuilds = new BindableBool(true);
+
+        public readonly BindableBool ShowChannels = new BindableBool(true);
+
+        /// <summary>
+        /// Whether the shown client has guilds, so that they can be hidden.
+        /// </summary>
+        public readonly BindableBool HasGuilds = new BindableBool();
+    }
+
+    /// <summary>
     /// Shows the guilds, the channels and the chat of a logged in <see cref="DiscordClient"/>.
     /// </summary>
     public partial class DiscordMainView : CompositeDrawable
@@ -57,6 +72,8 @@ namespace osu.Game.Overlays.Discord
         [Cached]
         private readonly DiscordNavigation navigation = new DiscordNavigation();
 
+        public DiscordNavigation Navigation => navigation;
+
         private DiscordChatView chatView = null!;
         private DiscordFriendsView friendsView = null!;
 
@@ -64,6 +81,12 @@ namespace osu.Game.Overlays.Discord
 
         [Resolved]
         private OverlayColourProvider colourProvider { get; set; } = null!;
+
+        [Resolved]
+        private DiscordLayout? layout { get; set; }
+
+        private CollapsiblePanel? guildPanel;
+        private CollapsiblePanel channelPanel = null!;
 
         public DiscordMainView(DiscordClient client)
         {
@@ -97,10 +120,9 @@ namespace osu.Game.Overlays.Discord
 
             if (Client.SupportsGuilds)
             {
-                columns.Add(new Dimension(GridSizeMode.Absolute, DiscordStyle.GUILD_RAIL_WIDTH));
-                content.Add(new Container
+                columns.Add(new Dimension(GridSizeMode.AutoSize));
+                content.Add(guildPanel = new CollapsiblePanel(DiscordStyle.GUILD_RAIL_WIDTH)
                 {
-                    RelativeSizeAxes = Axes.Both,
                     Children = new Drawable[]
                     {
                         new Box
@@ -114,10 +136,9 @@ namespace osu.Game.Overlays.Discord
                 });
             }
 
-            columns.Add(new Dimension(GridSizeMode.Absolute, DiscordStyle.SIDEBAR_WIDTH));
-            content.Add(new Container
+            columns.Add(new Dimension(GridSizeMode.AutoSize));
+            content.Add(channelPanel = new CollapsiblePanel(DiscordStyle.SIDEBAR_WIDTH)
             {
-                RelativeSizeAxes = Axes.Both,
                 Children = new Drawable[]
                 {
                     new Box
@@ -152,6 +173,13 @@ namespace osu.Game.Overlays.Discord
         protected override void LoadComplete()
         {
             base.LoadComplete();
+
+            if (layout != null)
+            {
+                layout.HasGuilds.Value = Client.SupportsGuilds;
+                guildPanel?.Expanded.BindTo(layout.ShowGuilds);
+                channelPanel.Expanded.BindTo(layout.ShowChannels);
+            }
 
             navigation.Guild.BindValueChanged(g =>
             {
@@ -209,5 +237,48 @@ namespace osu.Game.Overlays.Discord
         }
 
         public void KillTextBoxFocus() => chatView.KillTextBoxFocus();
+
+        /// <summary>
+        /// A side panel which slides out to the left when collapsed.
+        /// </summary>
+        private partial class CollapsiblePanel : Container
+        {
+            public readonly BindableBool Expanded = new BindableBool(true);
+
+            private readonly float expandedWidth;
+
+            private readonly Container content;
+
+            protected override Container<Drawable> Content => content;
+
+            public CollapsiblePanel(float width)
+            {
+                expandedWidth = width;
+
+                RelativeSizeAxes = Axes.Y;
+                Width = width;
+                Masking = true;
+
+                InternalChild = content = new Container
+                {
+                    Anchor = Anchor.TopRight,
+                    Origin = Anchor.TopRight,
+                    RelativeSizeAxes = Axes.Y,
+                    Width = width,
+                };
+            }
+
+            protected override void LoadComplete()
+            {
+                base.LoadComplete();
+
+                Expanded.BindValueChanged(e =>
+                {
+                    this.ResizeWidthTo(e.NewValue ? expandedWidth : 0, 300, Easing.OutQuint);
+                    content.FadeTo(e.NewValue ? 1 : 0, 300, Easing.OutQuint);
+                }, true);
+                FinishTransforms(true);
+            }
+        }
     }
 }
