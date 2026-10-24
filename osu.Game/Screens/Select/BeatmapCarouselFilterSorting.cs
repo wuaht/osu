@@ -97,6 +97,13 @@ namespace osu.Game.Screens.Select
                         comparison = Nullable.Compare(b.LastPlayed, a.LastPlayed);
                     break;
 
+                case SortMode.LastEdited:
+                    if (aggregate)
+                        comparison = compareUsingAggregateMax(b, a, static b => (b.LastLocalUpdate ?? DateTimeOffset.MinValue).ToUnixTimeSeconds());
+                    else
+                        comparison = Nullable.Compare(b.LastLocalUpdate, a.LastLocalUpdate);
+                    break;
+
                 case SortMode.BPM:
                     if (aggregate)
                         comparison = compareUsingAggregateMax(a, b, static b => b.BPM);

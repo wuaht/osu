@@ -55,6 +55,11 @@ namespace osu.Game.Localisation
         public static LocalisableString LastLocalUpdate => new TranslatableString(getKey(@"last_local_update"), @"Last local update");
 
         /// <summary>
+        /// "Last Edited"
+        /// </summary>
+        public static LocalisableString LastEdited => new TranslatableString(getKey(@"last_edited"), @"Last Edited");
+
+        /// <summary>
         /// "Last online update"
         /// </summary>
         public static LocalisableString LastOnlineUpdate => new TranslatableString(getKey(@"last_online_update"), @"Last online update");

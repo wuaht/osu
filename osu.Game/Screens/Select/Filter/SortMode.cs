@@ -32,6 +32,9 @@ namespace osu.Game.Screens.Select.Filter
         [LocalisableDescription(typeof(SongSelectStrings), nameof(SongSelectStrings.LastPlayed))]
         LastPlayed,
 
+        [LocalisableDescription(typeof(SlopSongSelectStrings), nameof(SlopSongSelectStrings.LastEdited))]
+        LastEdited,
+
         [LocalisableDescription(typeof(SongSelectStrings), nameof(SongSelectStrings.Length))]
         Length,
 
