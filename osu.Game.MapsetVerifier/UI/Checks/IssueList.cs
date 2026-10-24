@@ -58,6 +58,8 @@ namespace osu.Game.MapsetVerifier.UI.Checks
         private LoadingSpinner reinterpretingSpinner = null!;
         private RoundedButton copyButton = null!;
         private OsuScrollContainer scroll = null!;
+        private GridContainer header = null!;
+        private Container issuesContainer = null!;
         private FillFlowContainer<CheckCard> cardFlow = null!;
         private VerifierMessage message = null!;
         private LoadingSpinner loadingSpinner = null!;
@@ -86,130 +88,128 @@ namespace osu.Game.MapsetVerifier.UI.Checks
             InternalChild = new VerifierPanel
             {
                 RelativeSizeAxes = Axes.Both,
-                Child = new GridContainer
+                // the header is drawn above the issues, so the open level dropdown overlaps them instead of making the header taller.
+                Child = new Container
                 {
                     RelativeSizeAxes = Axes.Both,
-                    RowDimensions = new[]
+                    Children = new Drawable[]
                     {
-                        new Dimension(GridSizeMode.AutoSize),
-                        new Dimension(),
-                    },
-                    Content = new[]
-                    {
-                        new Drawable[]
+                        header = new GridContainer
                         {
-                            new GridContainer
+                            RelativeSizeAxes = Axes.X,
+                            AutoSizeAxes = Axes.Y,
+                            Depth = -1,
+                            Padding = new MarginPadding { Horizontal = 16, Top = 12, Bottom = 8 },
+                            ColumnDimensions = new[]
                             {
-                                RelativeSizeAxes = Axes.X,
-                                AutoSizeAxes = Axes.Y,
-                                Padding = new MarginPadding { Horizontal = 16, Top = 12, Bottom = 8 },
-                                ColumnDimensions = new[]
-                                {
-                                    new Dimension(),
-                                    new Dimension(GridSizeMode.AutoSize),
-                                },
-                                RowDimensions = new[] { new Dimension(GridSizeMode.AutoSize, minSize: 30) },
-                                Content = new[]
-                                {
-                                    new Drawable[]
-                                    {
-                                        new FillFlowContainer
-                                        {
-                                            Anchor = Anchor.CentreLeft,
-                                            Origin = Anchor.CentreLeft,
-                                            RelativeSizeAxes = Axes.X,
-                                            AutoSizeAxes = Axes.Y,
-                                            Direction = FillDirection.Horizontal,
-                                            Spacing = new Vector2(10, 0),
-                                            Children = new Drawable[]
-                                            {
-                                                titleText = new TruncatingSpriteText
-                                                {
-                                                    Anchor = Anchor.BottomLeft,
-                                                    Origin = Anchor.BottomLeft,
-                                                    Font = OsuFont.Default.With(size: 20, weight: FontWeight.Bold),
-                                                },
-                                                countText = new OsuSpriteText
-                                                {
-                                                    Anchor = Anchor.BottomLeft,
-                                                    Origin = Anchor.BottomLeft,
-                                                    Margin = new MarginPadding { Bottom = 2 },
-                                                    Font = OsuFont.Default.With(size: 14),
-                                                    Alpha = 0.7f,
-                                                },
-                                            }
-                                        },
-                                        new FillFlowContainer
-                                        {
-                                            Anchor = Anchor.CentreRight,
-                                            Origin = Anchor.CentreRight,
-                                            AutoSizeAxes = Axes.Both,
-                                            Direction = FillDirection.Horizontal,
-                                            Spacing = new Vector2(8, 0),
-                                            Children = new Drawable[]
-                                            {
-                                                reinterpretingSpinner = new LoadingSpinner
-                                                {
-                                                    Anchor = Anchor.CentreLeft,
-                                                    Origin = Anchor.CentreLeft,
-                                                    Size = new Vector2(20),
-                                                },
-                                                // form controls are relatively sized, so they need a fixed width parent inside an auto-sized flow.
-                                                levelDropdownContainer = new Container
-                                                {
-                                                    Anchor = Anchor.CentreLeft,
-                                                    Origin = Anchor.CentreLeft,
-                                                    Width = 220,
-                                                    AutoSizeAxes = Axes.Y,
-                                                    Child = levelDropdown = new LevelDropdown
-                                                    {
-                                                        Caption = VerifierStrings.InterpretedAs,
-                                                        Current = level,
-                                                    },
-                                                },
-                                                copyButton = new RoundedButton
-                                                {
-                                                    Anchor = Anchor.CentreLeft,
-                                                    Origin = Anchor.CentreLeft,
-                                                    Height = 30,
-                                                    Width = 120,
-                                                    Action = copyAll,
-                                                },
-                                            }
-                                        },
-                                    }
-                                }
+                                new Dimension(),
+                                new Dimension(GridSizeMode.AutoSize),
                             },
-                        },
-                        new Drawable[]
-                        {
-                            new Container
+                            RowDimensions = new[] { new Dimension(GridSizeMode.AutoSize, minSize: 30) },
+                            Content = new[]
                             {
-                                RelativeSizeAxes = Axes.Both,
-                                Children = new Drawable[]
+                                new Drawable[]
                                 {
-                                    scroll = new OsuScrollContainer
+                                    new FillFlowContainer
                                     {
-                                        RelativeSizeAxes = Axes.Both,
-                                        Child = cardFlow = new FillFlowContainer<CheckCard>
+                                        Anchor = Anchor.CentreLeft,
+                                        Origin = Anchor.CentreLeft,
+                                        RelativeSizeAxes = Axes.X,
+                                        AutoSizeAxes = Axes.Y,
+                                        Direction = FillDirection.Horizontal,
+                                        Spacing = new Vector2(10, 0),
+                                        Children = new Drawable[]
                                         {
-                                            RelativeSizeAxes = Axes.X,
-                                            AutoSizeAxes = Axes.Y,
-                                            Direction = FillDirection.Vertical,
-                                            Spacing = new Vector2(0, 8),
-                                            Padding = new MarginPadding { Horizontal = 16, Bottom = 16, Top = 4 },
+                                            titleText = new TruncatingSpriteText
+                                            {
+                                                Anchor = Anchor.BottomLeft,
+                                                Origin = Anchor.BottomLeft,
+                                                Font = OsuFont.Default.With(size: 20, weight: FontWeight.Bold),
+                                            },
+                                            countText = new OsuSpriteText
+                                            {
+                                                Anchor = Anchor.BottomLeft,
+                                                Origin = Anchor.BottomLeft,
+                                                Margin = new MarginPadding { Bottom = 2 },
+                                                Font = OsuFont.Default.With(size: 14),
+                                                Alpha = 0.7f,
+                                            },
                                         }
                                     },
-                                    message = new VerifierMessage { Alpha = 0 },
-                                    loadingSpinner = new LoadingSpinner(),
+                                    new FillFlowContainer
+                                    {
+                                        Anchor = Anchor.CentreRight,
+                                        Origin = Anchor.CentreRight,
+                                        AutoSizeAxes = Axes.Both,
+                                        Direction = FillDirection.Horizontal,
+                                        Spacing = new Vector2(8, 0),
+                                        Children = new Drawable[]
+                                        {
+                                            reinterpretingSpinner = new LoadingSpinner
+                                            {
+                                                Anchor = Anchor.CentreLeft,
+                                                Origin = Anchor.CentreLeft,
+                                                Size = new Vector2(20),
+                                            },
+                                            // form controls are relatively sized, so they need a fixed width parent inside an auto-sized flow.
+                                            levelDropdownContainer = new Container
+                                            {
+                                                Anchor = Anchor.CentreLeft,
+                                                Origin = Anchor.CentreLeft,
+                                                Width = 220,
+                                                AutoSizeAxes = Axes.Y,
+                                                Child = levelDropdown = new LevelDropdown
+                                                {
+                                                    Caption = VerifierStrings.InterpretedAs,
+                                                    Current = level,
+                                                },
+                                            },
+                                            copyButton = new RoundedButton
+                                            {
+                                                Anchor = Anchor.CentreLeft,
+                                                Origin = Anchor.CentreLeft,
+                                                Height = 30,
+                                                Width = 120,
+                                                Action = copyAll,
+                                            },
+                                        }
+                                    },
                                 }
                             }
                         },
+                        issuesContainer = new Container
+                        {
+                            RelativeSizeAxes = Axes.Both,
+                            Children = new Drawable[]
+                            {
+                                scroll = new OsuScrollContainer
+                                {
+                                    RelativeSizeAxes = Axes.Both,
+                                    Child = cardFlow = new FillFlowContainer<CheckCard>
+                                    {
+                                        RelativeSizeAxes = Axes.X,
+                                        AutoSizeAxes = Axes.Y,
+                                        Direction = FillDirection.Vertical,
+                                        Spacing = new Vector2(0, 8),
+                                        Padding = new MarginPadding { Horizontal = 16, Bottom = 16, Top = 4 },
+                                    }
+                                },
+                                message = new VerifierMessage { Alpha = 0 },
+                                loadingSpinner = new LoadingSpinner(),
+                            }
+                        }
                     }
                 }
             };
 
             copyButton.BackgroundColour = colourProvider.Background3;
+        }
+
+        protected override void Update()
+        {
+            base.Update();
+
+            issuesContainer.Padding = new MarginPadding { Top = header.DrawHeight };
         }
 
         protected override void LoadComplete()
@@ -445,6 +445,9 @@ namespace osu.Game.MapsetVerifier.UI.Checks
             public LevelDropdown()
             {
                 Items = VerifierDisplay.INTERPRETABLE_LEVELS;
+
+                // the open menu overlaps what is below instead of resizing the header.
+                Menu.BypassAutoSizeAxes = Axes.Y;
             }
 
             [BackgroundDependencyLoader]

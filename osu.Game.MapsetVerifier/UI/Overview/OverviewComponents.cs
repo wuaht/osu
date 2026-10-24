@@ -172,7 +172,7 @@ namespace osu.Game.MapsetVerifier.UI.Overview
     public partial class DifficultyTable : CompositeDrawable
     {
         public const float LABEL_WIDTH = 170;
-        public const float MIN_COLUMN_WIDTH = 150;
+        public const float MIN_COLUMN_WIDTH = 60;
         public const float MAX_COLUMN_WIDTH = 300;
         public const float ROW_HEIGHT = 26;
 
@@ -261,13 +261,8 @@ namespace osu.Game.MapsetVerifier.UI.Overview
             for (int i = 0; i < rows.Count; i++)
                 flow.Add(createRow(rows[i], i % 2 == 0));
 
-            InternalChild = new OsuScrollContainer(Direction.Horizontal)
-            {
-                RelativeSizeAxes = Axes.X,
-                Height = 30 + 4 + rows.Count * ROW_HEIGHT + 8,
-                ScrollbarOverlapsContent = false,
-                Child = flow,
-            };
+            // not scrollable, as that gets in the way of scrolling the overview vertically. columns shrink to fit and truncate instead.
+            InternalChild = flow;
         }
 
         protected override void Update()
