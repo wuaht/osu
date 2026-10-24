@@ -646,7 +646,11 @@ namespace osu.Game.Online.Discord.Sdk
         [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
         private static void onMessagesReceived(nint* result, HandleSpan messages, void* userData)
         {
-            string? error = TakeResultError(result);
+            string? error = TakeResultError(result, out int httpStatus);
+
+            // A direct message channel only exists once a message was sent in it, so a conversation without messages can't be found.
+            if (httpStatus == 404 || error?.Contains(@"not found", StringComparison.OrdinalIgnoreCase) == true)
+                error = null;
             var request = get<MessagesRequest>(userData);
 
             var list = new List<DiscordMessage>();

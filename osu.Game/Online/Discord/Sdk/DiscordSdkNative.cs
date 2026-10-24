@@ -120,6 +120,7 @@ namespace osu.Game.Online.Discord.Sdk
         public static delegate* unmanaged[Cdecl]<nint*, void> ClientResultDrop;
         public static delegate* unmanaged[Cdecl]<nint*, byte> ClientResultSuccessful;
         public static delegate* unmanaged[Cdecl]<nint*, DiscordString*, void> ClientResultError;
+        public static delegate* unmanaged[Cdecl]<nint*, int> ClientResultStatus;
 
         // Relationships and users
         public static delegate* unmanaged[Cdecl]<nint*, void> RelationshipDrop;
@@ -238,6 +239,7 @@ namespace osu.Game.Online.Discord.Sdk
             ClientResultDrop = (delegate* unmanaged[Cdecl]<nint*, void>)get(@"Discord_ClientResult_Drop");
             ClientResultSuccessful = (delegate* unmanaged[Cdecl]<nint*, byte>)get(@"Discord_ClientResult_Successful");
             ClientResultError = (delegate* unmanaged[Cdecl]<nint*, DiscordString*, void>)get(@"Discord_ClientResult_Error");
+            ClientResultStatus = (delegate* unmanaged[Cdecl]<nint*, int>)get(@"Discord_ClientResult_Status");
 
             RelationshipDrop = (delegate* unmanaged[Cdecl]<nint*, void>)get(@"Discord_RelationshipHandle_Drop");
             RelationshipDiscordRelationshipType = (delegate* unmanaged[Cdecl]<nint*, int>)get(@"Discord_RelationshipHandle_DiscordRelationshipType");
@@ -302,12 +304,23 @@ namespace osu.Game.Online.Discord.Sdk
         /// <summary>
         /// Reads the error of an SDK result, or null if it succeeded. Drops the result.
         /// </summary>
-        public static string? TakeResultError(nint* result)
+        public static string? TakeResultError(nint* result) => TakeResultError(result, out _);
+
+        /// <summary>
+        /// Reads the error of an SDK result, or null if it succeeded. Drops the result.
+        /// </summary>
+        /// <param name="result">The result.</param>
+        /// <param name="httpStatus">The HTTP status code of the request which failed, or 0 if it wasn't an HTTP request.</param>
+        public static string? TakeResultError(nint* result, out int httpStatus)
         {
+            httpStatus = 0;
+
             try
             {
                 if (ClientResultSuccessful(result) != 0)
                     return null;
+
+                httpStatus = ClientResultStatus(result);
 
                 DiscordString error;
                 ClientResultError(result, &error);
