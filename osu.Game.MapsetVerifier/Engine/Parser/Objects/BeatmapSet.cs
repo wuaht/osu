@@ -21,11 +21,6 @@ namespace MapsetVerifier.Parser.Objects
         /// </summary>
         public List<string> EmptyBeatmapFiles { get; } = new();
 
-        /// <summary>
-        ///     Names of the hitsound difficulties, which are excluded from <see cref="Beatmaps" /> if the set has any other difficulty.
-        /// </summary>
-        public List<string> HitsoundDifficulties { get; } = new();
-
         public string SongPath { get; }
 
         /// <summary> Whether a difficulty name is one of a hitsound template difficulty, e.g. "Hitsounds" or "_hs_". </summary>
@@ -168,19 +163,14 @@ namespace MapsetVerifier.Parser.Objects
                 throw ex.Flatten().InnerException!;
             }
 
-            // hitsound difficulties are only templates for the other difficulties, so they aren't checked or shown like them,
-            // unless the set has nothing else to check.
+            // hitsound difficulties are only templates for the other difficulties and aren't uploaded on submission,
+            // so they aren't checked or shown, unless the set has nothing else to check.
             bool excludeHitsoundDifficulties = concurrentBeatmaps.Any(beatmap => !IsHitsoundDifficulty(beatmap.MetadataSettings.version));
 
             foreach (var beatmap in concurrentBeatmaps)
             {
-                if (IsHitsoundDifficulty(beatmap.MetadataSettings.version))
-                {
-                    HitsoundDifficulties.Add(beatmap.MetadataSettings.version);
-
-                    if (excludeHitsoundDifficulties)
-                        continue;
-                }
+                if (excludeHitsoundDifficulties && IsHitsoundDifficulty(beatmap.MetadataSettings.version))
+                    continue;
 
                 Beatmaps.Add(beatmap);
             }
