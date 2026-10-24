@@ -37,6 +37,13 @@ namespace osu.Game.Overlays.Discord
 
         private const float card_spacing = 10;
 
+        /// <summary>
+        /// The space between the header, the search box and the cards.
+        /// </summary>
+        private const float section_spacing = 20;
+
+        private const float header_icon_size = 18;
+
         private float cardWidth = FriendCard.MIN_WIDTH;
 
         [Resolved]
@@ -77,7 +84,13 @@ namespace osu.Game.Overlays.Discord
                         {
                             RelativeSizeAxes = Axes.X,
                             AutoSizeAxes = Axes.Y,
-                            Padding = new MarginPadding { Horizontal = horizontal_padding, Vertical = 20 },
+                            // The header is centred in its row, so the space below it already counts towards the space above the search box.
+                            Padding = new MarginPadding
+                            {
+                                Horizontal = horizontal_padding,
+                                Top = section_spacing - (DiscordStyle.HEADER_HEIGHT - header_icon_size) / 2,
+                                Bottom = section_spacing,
+                            },
                             Child = searchTextBox = new BasicSearchTextBox
                             {
                                 RelativeSizeAxes = Axes.X,
@@ -98,7 +111,7 @@ namespace osu.Game.Overlays.Discord
                             {
                                 RelativeSizeAxes = Axes.X,
                                 AutoSizeAxes = Axes.Y,
-                                Padding = new MarginPadding { Horizontal = horizontal_padding, Bottom = 20 },
+                                Padding = new MarginPadding { Horizontal = horizontal_padding, Bottom = section_spacing },
                                 Children = new Drawable[]
                                 {
                                     cardFlow = new FriendSearchContainer
@@ -173,7 +186,7 @@ namespace osu.Game.Overlays.Discord
                     Anchor = Anchor.CentreLeft,
                     Origin = Anchor.CentreLeft,
                     Icon = FontAwesome.Solid.UserFriends,
-                    Size = new Vector2(18),
+                    Size = new Vector2(header_icon_size),
                     Colour = colourProvider.Content2,
                 },
                 new OsuSpriteText
@@ -341,20 +354,23 @@ namespace osu.Game.Overlays.Discord
             {
                 Children = new Drawable[]
                 {
+                    // The cards are translucent like the rest of the overlay, so the background shows through.
                     new Box
                     {
                         RelativeSizeAxes = Axes.Both,
                         Colour = colourProvider.Background4,
+                        Alpha = 0.5f,
                     },
                     background = new Container
                     {
                         RelativeSizeAxes = Axes.Both,
+                        Alpha = 0.5f,
                     },
                     // Banners and profile colours can be bright, so they are darkened enough to keep the text readable, especially further right.
                     new Box
                     {
                         RelativeSizeAxes = Axes.Both,
-                        Colour = ColourInfo.GradientHorizontal(colourProvider.Background4.Opacity(0.4f), colourProvider.Background4.Opacity(0.9f)),
+                        Colour = ColourInfo.GradientHorizontal(colourProvider.Background4.Opacity(0.3f), colourProvider.Background4.Opacity(0.6f)),
                     },
                     hover = new Box
                     {
