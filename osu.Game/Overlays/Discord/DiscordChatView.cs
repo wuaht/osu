@@ -321,14 +321,7 @@ namespace osu.Game.Overlays.Discord
                 client.MessageUpdated += onMessageUpdated;
                 client.MessageDeleted += onMessageDeleted;
 
-                if (!client.SupportsHistory)
-                {
-                    reachedStart = true;
-                    topSpinner.Hide();
-                    topContainer.Child = createNote(SlopDiscordStrings.HistoryUnavailable, FontAwesome.Solid.InfoCircle, colourProvider.Content2);
-                }
-                else
-                    loadOlder();
+                loadOlder();
             }
 
             protected override void Update()
@@ -364,13 +357,18 @@ namespace osu.Game.Overlays.Discord
 
                     var messages = t.GetResultSafely();
 
-                    if (messages.Count == 0)
+                    // Without history, only the most recent messages can be fetched, so the first page is the only one.
+                    if (messages.Count == 0 || !client.SupportsHistory)
                         reachedStart = true;
 
                     prependMessages(messages);
 
                     if (reachedStart)
-                        topContainer.Child = createChannelStart();
+                    {
+                        topContainer.Child = client.SupportsHistory
+                            ? createChannelStart()
+                            : createNote(SlopDiscordStrings.HistoryUnavailable, FontAwesome.Solid.InfoCircle, colourProvider.Content2);
+                    }
                 }), TaskScheduler.Default);
             }
 
