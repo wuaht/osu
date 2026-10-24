@@ -40,6 +40,7 @@ namespace osu.Game.Overlays.Discord
         private OverlayColourProvider colourProvider { get; set; } = null!;
 
         private readonly Bindable<DiscordGuild?> guild = new Bindable<DiscordGuild?>();
+        private readonly Bindable<DiscordChannel?> channel = new Bindable<DiscordChannel?>();
         private readonly BindableList<DiscordChannel> privateChannels = new BindableList<DiscordChannel>();
 
         private OsuSpriteText headerText = null!;
@@ -144,6 +145,7 @@ namespace osu.Game.Overlays.Discord
             };
 
             guild.BindTo(navigation.Guild);
+            channel.BindTo(navigation.Channel);
             privateChannels.BindTo(client.PrivateChannels);
         }
 
@@ -152,6 +154,11 @@ namespace osu.Game.Overlays.Discord
             base.LoadComplete();
 
             guild.BindValueChanged(_ => Scheduler.AddOnce(updateChannels), true);
+            channel.BindValueChanged(_ =>
+            {
+                if (guild.Value == null)
+                    Scheduler.AddOnce(updateChannels);
+            });
             privateChannels.BindCollectionChanged((_, _) =>
             {
                 if (guild.Value == null)
@@ -175,22 +182,14 @@ namespace osu.Game.Overlays.Discord
             {
                 headerText.Text = SlopDiscordStrings.DirectMessages;
 
-                if (privateChannels.Count == 0)
+                // The friends are shown in the friends view, so only the open conversation is listed here.
+                channelFlow.Add(new FriendsRow());
+
+                if (channel.Value?.IsPrivate == true)
                 {
-                    channelFlow.Add(new OsuSpriteText
-                    {
-                        Text = SlopDiscordStrings.NoConversations,
-                        Font = DiscordStyle.UiFont(14),
-                        Colour = colourProvider.Content2,
-                        Margin = new MarginPadding { Horizontal = 8, Vertical = 6 },
-                    });
-                    return;
+                    channelFlow.Add(new CategoryHeader(SlopDiscordStrings.DirectMessages.ToUpper(), false, null));
+                    channelFlow.Add(new PrivateChannelRow(channel.Value));
                 }
-
-                channelFlow.Add(new CategoryHeader(SlopDiscordStrings.DirectMessages.ToUpper(), false, null));
-
-                foreach (var channel in privateChannels)
-                    channelFlow.Add(new PrivateChannelRow(channel));
 
                 return;
             }
@@ -216,13 +215,13 @@ namespace osu.Game.Overlays.Discord
                     }));
                 }
 
-                foreach (var channel in channels)
+                foreach (var c in channels)
                 {
                     // A collapsed category still shows the selected channel.
-                    if (collapsed && navigation.Channel.Value?.Id != channel.Id)
+                    if (collapsed && channel.Value?.Id != c.Id)
                         continue;
 
-                    channelFlow.Add(new GuildChannelRow(channel));
+                    channelFlow.Add(new GuildChannelRow(c));
                 }
             }
         }
@@ -319,29 +318,25 @@ namespace osu.Game.Overlays.Discord
         /// <summary>
         /// A row of the channel list which can be selected.
         /// </summary>
-        private abstract partial class ChannelRow : OsuClickableContainer
+        private abstract partial class SidebarRow : OsuClickableContainer
         {
-            protected readonly DiscordChannel Channel;
-
             private Box background = null!;
             private Container content = null!;
 
             [Resolved]
-            private DiscordNavigation navigation { get; set; } = null!;
+            protected DiscordNavigation Navigation { get; private set; } = null!;
 
             [Resolved]
             protected OverlayColourProvider ColourProvider { get; private set; } = null!;
 
             private readonly Bindable<DiscordChannel?> selectedChannel = new Bindable<DiscordChannel?>();
 
-            private bool selected => selectedChannel.Value?.Id == Channel.Id;
+            private bool selected => IsSelected(selectedChannel.Value);
 
-            protected virtual bool Selectable => Channel.IsTextBased;
+            protected virtual bool Selectable => true;
 
-            protected ChannelRow(DiscordChannel channel, float height)
+            protected SidebarRow(float height)
             {
-                Channel = channel;
-
                 RelativeSizeAxes = Axes.X;
                 Height = height;
                 Masking = true;
@@ -367,11 +362,15 @@ namespace osu.Game.Overlays.Discord
                     },
                 };
 
-                selectedChannel.BindTo(navigation.Channel);
+                selectedChannel.BindTo(Navigation.Channel);
 
                 if (Selectable)
-                    Action = () => navigation.Channel.Value = Channel;
+                    Action = Select;
             }
+
+            protected abstract bool IsSelected(DiscordChannel? selectedChannel);
+
+            protected abstract void Select();
 
             protected abstract Drawable CreateContent();
 
@@ -406,6 +405,69 @@ namespace osu.Game.Overlays.Discord
                 background.FadeTo(selected ? 0.12f : IsHovered ? 0.06f : 0, 100);
                 content.FadeColour(selected || IsHovered ? Color4.White : ColourProvider.Content2, 100);
             }
+        }
+
+        private abstract partial class ChannelRow : SidebarRow
+        {
+            protected readonly DiscordChannel Channel;
+
+            protected override bool Selectable => Channel.IsTextBased;
+
+            protected ChannelRow(DiscordChannel channel, float height)
+                : base(height)
+            {
+                Channel = channel;
+            }
+
+            protected override bool IsSelected(DiscordChannel? selectedChannel) => selectedChannel?.Id == Channel.Id;
+
+            protected override void Select() => Navigation.Channel.Value = Channel;
+        }
+
+        /// <summary>
+        /// Opens the friends view.
+        /// </summary>
+        private partial class FriendsRow : SidebarRow
+        {
+            public FriendsRow()
+                : base(42)
+            {
+            }
+
+            protected override bool IsSelected(DiscordChannel? selectedChannel) => selectedChannel == null;
+
+            protected override void Select() => Navigation.Channel.Value = null;
+
+            protected override Drawable CreateContent() => new GridContainer
+            {
+                RelativeSizeAxes = Axes.Both,
+                ColumnDimensions = new[]
+                {
+                    new Dimension(GridSizeMode.Absolute, 42),
+                    new Dimension(),
+                },
+                Content = new[]
+                {
+                    new Drawable[]
+                    {
+                        new SpriteIcon
+                        {
+                            Anchor = Anchor.CentreLeft,
+                            Origin = Anchor.CentreLeft,
+                            Icon = FontAwesome.Solid.UserFriends,
+                            Size = new Vector2(20),
+                            Margin = new MarginPadding { Left = 6 },
+                        },
+                        new OsuSpriteText
+                        {
+                            Anchor = Anchor.CentreLeft,
+                            Origin = Anchor.CentreLeft,
+                            Text = SlopDiscordStrings.Friends,
+                            Font = DiscordStyle.UiFont(15, FontWeight.Medium),
+                        },
+                    },
+                },
+            };
         }
 
         private partial class GuildChannelRow : ChannelRow

@@ -183,7 +183,7 @@ namespace osu.Game.Overlays.Discord
                 return;
             }
 
-            textures.GetAsync(url, cancellation.Token).ContinueWith(t => Schedule(() =>
+            textures.GetTextureAsync(url).ContinueWith(t => Schedule(() =>
             {
                 if (!t.IsCompletedSuccessfully || t.GetResultSafely() == null)
                 {

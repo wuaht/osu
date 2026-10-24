@@ -24,6 +24,19 @@ namespace osu.Game.Online.Discord
         GuildMedia = 16,
     }
 
+    public enum DiscordUserStatus
+    {
+        /// <summary>
+        /// The status is not provided by the client.
+        /// </summary>
+        Unknown,
+
+        Online,
+        Idle,
+        DoNotDisturb,
+        Offline,
+    }
+
     public class DiscordUser
     {
         [JsonProperty("id")]
@@ -42,10 +55,25 @@ namespace osu.Game.Online.Discord
         public bool Bot { get; set; }
 
         /// <summary>
+        /// The profile banner, which is only provided by some API endpoints.
+        /// </summary>
+        [JsonProperty("banner")]
+        public string? Banner { get; set; }
+
+        /// <summary>
+        /// The profile colour, which is only provided by some API endpoints.
+        /// </summary>
+        [JsonProperty("accent_color")]
+        public int? AccentColour { get; set; }
+
+        /// <summary>
         /// A full avatar URL, which takes precedence over <see cref="Avatar"/> (the Social SDK only provides full URLs).
         /// </summary>
         [JsonIgnore]
         public string? AvatarUrlOverride { get; set; }
+
+        [JsonIgnore]
+        public DiscordUserStatus Status { get; set; }
 
         [JsonIgnore]
         public string DisplayName => string.IsNullOrEmpty(GlobalName) ? Username : GlobalName;
@@ -60,6 +88,8 @@ namespace osu.Game.Online.Discord
 
             return $@"https://cdn.discordapp.com/avatars/{Id}/{Avatar}.png?size={size}";
         }
+
+        public string? GetBannerUrl(int size = 600) => string.IsNullOrEmpty(Banner) ? null : $@"https://cdn.discordapp.com/banners/{Id}/{Banner}.png?size={size}";
     }
 
     public class DiscordRole

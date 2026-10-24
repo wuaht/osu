@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -27,6 +28,8 @@ using osu.Game.Localisation;
 using osu.Game.Online.Discord.Full;
 using osuTK;
 using osuTK.Graphics;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Gif;
 using SixLabors.ImageSharp.PixelFormats;
@@ -141,9 +144,104 @@ namespace osu.Game.Overlays.Discord
     /// </summary>
     public class DiscordTextureStore : LargeTextureStore
     {
+        private readonly DiscordOnlineStore onlineStore;
+
         public DiscordTextureStore(GameHost host)
-            : base(host.Renderer, host.CreateTextureLoaderStore(new DiscordOnlineStore()))
+            : this(host, new DiscordOnlineStore())
         {
+        }
+
+        private DiscordTextureStore(GameHost host, DiscordOnlineStore onlineStore)
+            : base(host.Renderer, host.CreateTextureLoaderStore(onlineStore))
+        {
+            this.onlineStore = onlineStore;
+        }
+
+        private readonly Dictionary<string, Task<Texture?>> pendingLookups = new Dictionary<string, Task<Texture?>>();
+
+        private readonly Dictionary<string, Task<Color4?>> dominantColours = new Dictionary<string, Task<Color4?>>();
+
+        /// <summary>
+        /// Retrieves the dominant colour of an image in the background, which Discord uses as the profile colour of users without one.
+        /// </summary>
+        public Task<Color4?> GetDominantColourAsync(string url)
+        {
+            lock (dominantColours)
+            {
+                if (!dominantColours.TryGetValue(url, out var task))
+                    dominantColours[url] = task = Task.Run(() => computeDominantColour(url));
+
+                return task;
+            }
+        }
+
+        private Color4? computeDominantColour(string url)
+        {
+            try
+            {
+                byte[]? data = onlineStore.Get(url);
+
+                if (data == null)
+                    return null;
+
+                using var image = SixLabors.ImageSharp.Image.Load<Rgba32>(data);
+                image.Mutate(i => i.Resize(32, 32));
+
+                // Group similar colours and use the average of the largest group.
+                var groups = new Dictionary<int, (int count, Vector3 sum)>();
+
+                for (int y = 0; y < image.Height; y++)
+                {
+                    for (int x = 0; x < image.Width; x++)
+                    {
+                        var pixel = image[x, y];
+
+                        if (pixel.A < 128)
+                            continue;
+
+                        int key = (pixel.R >> 5) << 6 | (pixel.G >> 5) << 3 | pixel.B >> 5;
+                        groups.TryGetValue(key, out var group);
+                        groups[key] = (group.count + 1, group.sum + new Vector3(pixel.R, pixel.G, pixel.B));
+                    }
+                }
+
+                if (groups.Count == 0)
+                    return null;
+
+                var largest = groups.Values.MaxBy(g => g.count);
+                var average = largest.sum / largest.count / 255;
+
+                return new Color4(average.X, average.Y, average.Z, 1);
+            }
+            catch (Exception e)
+            {
+                Logger.Log($@"Failed to compute the colour of {url}: {e.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Retrieves a texture in the background. Unlike the base store's GetAsync, concurrent lookups of the same URL
+        /// share one retrieval, as the base store fails when a thread pool thread has to wait for a retrieval which is already running.
+        /// </summary>
+        public Task<Texture?> GetTextureAsync(string url)
+        {
+            lock (pendingLookups)
+            {
+                if (pendingLookups.TryGetValue(url, out var pending))
+                    return pending;
+
+                var task = Task.Run(() => (Texture?)Get(url));
+                pendingLookups[url] = task;
+
+                task.ContinueWith(_ =>
+                {
+                    lock (pendingLookups)
+                        pendingLookups.Remove(url);
+                }, TaskContinuationOptions.ExecuteSynchronously);
+
+                return task;
+            }
         }
 
         private class DiscordOnlineStore : OnlineStore
@@ -222,10 +320,10 @@ namespace osu.Game.Overlays.Discord
             if (animated)
                 Task.Run(loadAnimation);
             else
-                textures.GetAsync(url, cancellation.Token).ContinueWith(t => Schedule(() => onTextureLoaded(t)), TaskContinuationOptions.ExecuteSynchronously);
+                textures.GetTextureAsync(url).ContinueWith(t => Schedule(() => onTextureLoaded(t)), TaskContinuationOptions.ExecuteSynchronously);
         }
 
-        private void onTextureLoaded(Task<Texture> task)
+        private void onTextureLoaded(Task<Texture?> task)
         {
             if (!task.IsCompletedSuccessfully || task.GetResultSafely() == null)
                 return;

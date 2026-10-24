@@ -119,8 +119,9 @@ namespace osu.Desktop
                     if (trySendIPCMessage(host, cwd, args))
                         return;
 
-                    // we want to allow multiple instances to be started when in debug.
-                    if (!DebugUtils.IsDebugBuild)
+                    // Multiple instances share the same Discord login, which breaks it as its refresh token can only be used once.
+                    // They can still be allowed for debugging (e.g. to test multiplayer with two clients).
+                    if (!DebugUtils.IsDebugBuild || Environment.GetEnvironmentVariable(@"SLOP_ALLOW_MULTIPLE_INSTANCES") != @"1")
                     {
                         Logger.Log(@"osu! does not support multiple running instances.", LoggingTarget.Runtime, LogLevel.Error);
                         return;

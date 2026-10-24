@@ -7,6 +7,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
+using osu.Framework.Localisation;
+using osu.Game.Localisation;
 
 namespace osu.Game.Online.Discord
 {
@@ -15,11 +17,13 @@ namespace osu.Game.Online.Discord
         /// <summary>
         /// The official Social SDK, which only provides direct messages with friends.
         /// </summary>
+        [LocalisableDescription(typeof(SlopDiscordStrings), nameof(SlopDiscordStrings.ModeOfficialSdk))]
         Official,
 
         /// <summary>
         /// A full client logged in as the user, which provides servers as well.
         /// </summary>
+        [LocalisableDescription(typeof(SlopDiscordStrings), nameof(SlopDiscordStrings.ModeFullClient))]
         FullClient,
     }
 
@@ -67,6 +71,11 @@ namespace osu.Game.Online.Discord
         public readonly BindableList<DiscordChannel> PrivateChannels = new BindableList<DiscordChannel>();
 
         public event Action<DiscordMessage>? MessageCreated;
+
+        /// <summary>
+        /// Invoked when the status, name or avatar of a user changes.
+        /// </summary>
+        public event Action<DiscordUser>? UserUpdated;
 
         public event Action<DiscordMessage>? MessageUpdated;
 
@@ -182,6 +191,8 @@ namespace osu.Game.Online.Discord
         }
 
         protected void TriggerMessageCreated(DiscordMessage message) => MessageCreated?.Invoke(message);
+
+        protected void TriggerUserUpdated(DiscordUser user) => UserUpdated?.Invoke(user);
 
         protected void TriggerMessageUpdated(DiscordMessage message) => MessageUpdated?.Invoke(message);
 

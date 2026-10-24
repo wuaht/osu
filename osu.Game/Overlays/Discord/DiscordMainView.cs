@@ -58,6 +58,7 @@ namespace osu.Game.Overlays.Discord
         private readonly DiscordNavigation navigation = new DiscordNavigation();
 
         private DiscordChatView chatView = null!;
+        private DiscordFriendsView friendsView = null!;
 
         private DiscordTextureStore? ownTextures;
 
@@ -130,7 +131,15 @@ namespace osu.Game.Overlays.Discord
             });
 
             columns.Add(new Dimension());
-            content.Add(chatView = new DiscordChatView());
+            content.Add(new Container
+            {
+                RelativeSizeAxes = Axes.Both,
+                Children = new Drawable[]
+                {
+                    chatView = new DiscordChatView(),
+                    friendsView = new DiscordFriendsView { Alpha = 0 },
+                },
+            });
 
             InternalChild = new GridContainer
             {
@@ -150,18 +159,25 @@ namespace osu.Game.Overlays.Discord
                     Client.SelectGuild(g.NewValue);
 
                 // Open the channel which was open the last time the guild was selected, or the first channel of the guild.
-                ulong? last = navigation.GetLastChannel(g.NewValue);
+                // The direct messages start with the friends view.
+                DiscordChannel? channel = null;
 
-                DiscordChannel? channel = g.NewValue == null
-                    ? Client.PrivateChannels.FirstOrDefault(c => c.Id == last) ?? Client.PrivateChannels.FirstOrDefault()
-                    :g.NewValue.Channels.FirstOrDefault(c => c.Id == last) ?? DiscordChannelSidebar.GetOrderedChannels(g.NewValue).FirstOrDefault(c => c.IsTextBased);
+                if (g.NewValue != null)
+                {
+                    ulong? last = navigation.GetLastChannel(g.NewValue);
+                    channel = g.NewValue.Channels.FirstOrDefault(c => c.Id == last) ?? DiscordChannelSidebar.GetOrderedChannels(g.NewValue).FirstOrDefault(c => c.IsTextBased);
+                }
 
                 if (navigation.Channel.Value?.GuildId != g.NewValue?.Id || navigation.Channel.Value == null || navigation.Channel.Value.IsPrivate != (g.NewValue == null))
                     navigation.Channel.Value = channel;
+
+                updateFriendsView();
             });
 
             navigation.Channel.BindValueChanged(c =>
             {
+                updateFriendsView();
+
                 if (c.NewValue == null)
                     return;
 
@@ -176,7 +192,21 @@ namespace osu.Game.Overlays.Discord
                 navigation.Guild.TriggerChange();
         }
 
-        public void TakeTextBoxFocus() => chatView.TakeTextBoxFocus();
+        private void updateFriendsView()
+        {
+            bool showFriends = navigation.Guild.Value == null && navigation.Channel.Value == null;
+
+            friendsView.Alpha = showFriends ? 1 : 0;
+            chatView.Alpha = showFriends ? 0 : 1;
+        }
+
+        public void TakeTextBoxFocus()
+        {
+            if (friendsView.IsPresent)
+                friendsView.TakeSearchFocus();
+            else
+                chatView.TakeTextBoxFocus();
+        }
 
         public void KillTextBoxFocus() => chatView.KillTextBoxFocus();
     }

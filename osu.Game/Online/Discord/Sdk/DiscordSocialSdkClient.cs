@@ -91,6 +91,9 @@ namespace osu.Game.Online.Discord.Sdk
             self = (void*)GCHandle.ToIntPtr(GCHandle.Alloc(this));
             ClientSetRelationshipDeletedCallback(client, (void*)(delegate* unmanaged[Cdecl]<ulong, byte, void*, void>)&onRelationshipChanged, freeHandlePointer, self);
 
+            self = (void*)GCHandle.ToIntPtr(GCHandle.Alloc(this));
+            ClientSetUserUpdatedCallback(client, (void*)(delegate* unmanaged[Cdecl]<ulong, void*, void>)&onUserUpdated, freeHandlePointer, self);
+
             if (!string.IsNullOrEmpty(refreshToken.Value))
             {
                 State.Value = DiscordConnectionState.Connecting;
@@ -207,6 +210,36 @@ namespace osu.Game.Online.Discord.Sdk
             State.Value = DiscordConnectionState.Ready;
         }
 
+        /// <summary>
+        /// Stores a user, updating the already stored instance if there is one so that references to it stay current.
+        /// </summary>
+        private DiscordUser storeUser(DiscordUser user)
+        {
+            var existing = GetUser(user.Id);
+
+            if (existing == null)
+            {
+                StoreUser(user);
+                return user;
+            }
+
+            existing.Username = user.Username;
+            existing.GlobalName = user.GlobalName;
+            existing.AvatarUrlOverride = user.AvatarUrlOverride;
+            existing.Status = user.Status;
+            return existing;
+        }
+
+        private void updateUser(ulong userId)
+        {
+            nint user = 0;
+
+            if (ClientGetUser(client, userId, &user) == 0)
+                return;
+
+            TriggerUserUpdated(storeUser(TakeUser(&user)));
+        }
+
         private void refreshFriends()
         {
             HandleSpan span;
@@ -228,9 +261,7 @@ namespace osu.Game.Online.Discord.Sdk
                     if (RelationshipUser(relationship, &user) == 0)
                         continue;
 
-                    var friend = TakeUser(&user);
-                    StoreUser(friend);
-                    friends.Add(friend);
+                    friends.Add(storeUser(TakeUser(&user)));
                 }
                 finally
                 {
@@ -293,8 +324,7 @@ namespace osu.Game.Online.Discord.Sdk
 
                     if (MessageAuthor(message, &user) != 0)
                     {
-                        author = TakeUser(&user);
-                        StoreUser(author);
+                        author = storeUser(TakeUser(&user));
                     }
                 }
 
@@ -443,6 +473,22 @@ namespace osu.Game.Online.Discord.Sdk
             catch (Exception e)
             {
                 Logger.Error(e, @"Discord relationship callback failed");
+            }
+        }
+
+        [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
+        private static void onUserUpdated(ulong userId, void* userData)
+        {
+            var self = get<DiscordSocialSdkClient>(userData);
+
+            try
+            {
+                if (self?.client != null && self.State.Value == DiscordConnectionState.Ready)
+                    self.updateUser(userId);
+            }
+            catch (Exception e)
+            {
+                Logger.Error(e, @"Discord user callback failed");
             }
         }
 

@@ -43,6 +43,18 @@ namespace osu.Game.Online.Discord.Sdk
             HttpWait = 6,
         }
 
+        public enum StatusType
+        {
+            Online = 0,
+            Offline = 1,
+            Blocked = 2,
+            Idle = 3,
+            Dnd = 4,
+            Invisible = 5,
+            Streaming = 6,
+            Unknown = 7,
+        }
+
         public enum AvatarType
         {
             Gif = 0,
@@ -78,6 +90,7 @@ namespace osu.Game.Online.Discord.Sdk
         public static delegate* unmanaged[Cdecl]<nint*, void*, void*, void*, void> ClientSetMessageCreatedCallback;
         public static delegate* unmanaged[Cdecl]<nint*, void*, void*, void*, void> ClientSetRelationshipCreatedCallback;
         public static delegate* unmanaged[Cdecl]<nint*, void*, void*, void*, void> ClientSetRelationshipDeletedCallback;
+        public static delegate* unmanaged[Cdecl]<nint*, void*, void*, void*, void> ClientSetUserUpdatedCallback;
         public static delegate* unmanaged[Cdecl]<nint*, ulong, nint*, byte> ClientGetMessageHandle;
         public static delegate* unmanaged[Cdecl]<DiscordString*, void> ClientGetDefaultCommunicationScopes;
 
@@ -106,6 +119,7 @@ namespace osu.Game.Online.Discord.Sdk
         public static delegate* unmanaged[Cdecl]<nint*, DiscordString*, void> UserUsername;
         public static delegate* unmanaged[Cdecl]<nint*, DiscordString*, void> UserDisplayName;
         public static delegate* unmanaged[Cdecl]<nint*, AvatarType, AvatarType, DiscordString*, void> UserAvatarUrl;
+        public static delegate* unmanaged[Cdecl]<nint*, StatusType> UserStatus;
 
         // Messages
         public static delegate* unmanaged[Cdecl]<nint*, void> MessageDrop;
@@ -186,6 +200,7 @@ namespace osu.Game.Online.Discord.Sdk
             ClientSetMessageCreatedCallback = (delegate* unmanaged[Cdecl]<nint*, void*, void*, void*, void>)get(@"Discord_Client_SetMessageCreatedCallback");
             ClientSetRelationshipCreatedCallback = (delegate* unmanaged[Cdecl]<nint*, void*, void*, void*, void>)get(@"Discord_Client_SetRelationshipCreatedCallback");
             ClientSetRelationshipDeletedCallback = (delegate* unmanaged[Cdecl]<nint*, void*, void*, void*, void>)get(@"Discord_Client_SetRelationshipDeletedCallback");
+            ClientSetUserUpdatedCallback = (delegate* unmanaged[Cdecl]<nint*, void*, void*, void*, void>)get(@"Discord_Client_SetUserUpdatedCallback");
             ClientGetMessageHandle = (delegate* unmanaged[Cdecl]<nint*, ulong, nint*, byte>)get(@"Discord_Client_GetMessageHandle");
             ClientGetDefaultCommunicationScopes = (delegate* unmanaged[Cdecl]<DiscordString*, void>)get(@"Discord_Client_GetDefaultCommunicationScopes");
 
@@ -211,6 +226,7 @@ namespace osu.Game.Online.Discord.Sdk
             UserUsername = (delegate* unmanaged[Cdecl]<nint*, DiscordString*, void>)get(@"Discord_UserHandle_Username");
             UserDisplayName = (delegate* unmanaged[Cdecl]<nint*, DiscordString*, void>)get(@"Discord_UserHandle_DisplayName");
             UserAvatarUrl = (delegate* unmanaged[Cdecl]<nint*, AvatarType, AvatarType, DiscordString*, void>)get(@"Discord_UserHandle_AvatarUrl");
+            UserStatus = (delegate* unmanaged[Cdecl]<nint*, StatusType>)get(@"Discord_UserHandle_Status");
 
             MessageDrop = (delegate* unmanaged[Cdecl]<nint*, void>)get(@"Discord_MessageHandle_Drop");
             MessageId = (delegate* unmanaged[Cdecl]<nint*, ulong>)get(@"Discord_MessageHandle_Id");
@@ -280,6 +296,30 @@ namespace osu.Game.Online.Discord.Sdk
         /// <summary>
         /// Converts a user handle to a model. Drops the handle.
         /// </summary>
+        private static DiscordUserStatus getStatus(StatusType status)
+        {
+            switch (status)
+            {
+                case StatusType.Online:
+                case StatusType.Streaming:
+                    return DiscordUserStatus.Online;
+
+                case StatusType.Idle:
+                    return DiscordUserStatus.Idle;
+
+                case StatusType.Dnd:
+                    return DiscordUserStatus.DoNotDisturb;
+
+                case StatusType.Offline:
+                case StatusType.Invisible:
+                case StatusType.Blocked:
+                    return DiscordUserStatus.Offline;
+
+                default:
+                    return DiscordUserStatus.Unknown;
+            }
+        }
+
         public static DiscordUser TakeUser(nint* user)
         {
             try
@@ -295,6 +335,7 @@ namespace osu.Game.Online.Discord.Sdk
                     Username = TakeString(username),
                     GlobalName = TakeString(displayName),
                     AvatarUrlOverride = TakeString(avatar),
+                    Status = getStatus(UserStatus(user)),
                 };
             }
             finally

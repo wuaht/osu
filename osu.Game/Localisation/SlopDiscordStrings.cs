@@ -157,6 +157,56 @@ namespace osu.Game.Localisation
         /// </summary>
         public static LocalisableString OpenInBrowser => new TranslatableString(getKey(@"open_in_browser"), @"Open in browser");
 
+        /// <summary>
+        /// "Official SDK"
+        /// </summary>
+        public static LocalisableString ModeOfficialSdk => new TranslatableString(getKey(@"mode_official_sdk"), @"Official SDK");
+
+        /// <summary>
+        /// "Full client"
+        /// </summary>
+        public static LocalisableString ModeFullClient => new TranslatableString(getKey(@"mode_full_client"), @"Full client");
+
+        /// <summary>
+        /// "Search friends"
+        /// </summary>
+        public static LocalisableString SearchFriends => new TranslatableString(getKey(@"search_friends"), @"Search friends");
+
+        /// <summary>
+        /// "{0} members"
+        /// </summary>
+        public static LocalisableString Members(int count) => new TranslatableString(getKey(@"members"), @"{0} members", count);
+
+        /// <summary>
+        /// "You have no friends on Discord yet."
+        /// </summary>
+        public static LocalisableString NoFriends => new TranslatableString(getKey(@"no_friends"), @"You have no friends on Discord yet.");
+
+        /// <summary>
+        /// "No friends match your search."
+        /// </summary>
+        public static LocalisableString NoFriendsFound => new TranslatableString(getKey(@"no_friends_found"), @"No friends match your search.");
+
+        /// <summary>
+        /// "Online"
+        /// </summary>
+        public static LocalisableString StatusOnline => new TranslatableString(getKey(@"status_online"), @"Online");
+
+        /// <summary>
+        /// "Idle"
+        /// </summary>
+        public static LocalisableString StatusIdle => new TranslatableString(getKey(@"status_idle"), @"Idle");
+
+        /// <summary>
+        /// "Do Not Disturb"
+        /// </summary>
+        public static LocalisableString StatusDoNotDisturb => new TranslatableString(getKey(@"status_do_not_disturb"), @"Do Not Disturb");
+
+        /// <summary>
+        /// "Offline"
+        /// </summary>
+        public static LocalisableString StatusOffline => new TranslatableString(getKey(@"status_offline"), @"Offline");
+
         private static string getKey(string key) => $@"{prefix}:{key}";
     }
 }
