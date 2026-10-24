@@ -202,9 +202,29 @@ namespace osu.Game.Overlays.Discord
             lock (dominantColours)
             {
                 if (!dominantColours.TryGetValue(url, out var task))
-                    dominantColours[url] = task = Task.Run(() => computeDominantColour(url));
+                    dominantColours[url] = task = throttled(() => computeDominantColour(url));
 
                 return task;
+            }
+        }
+
+        /// <summary>
+        /// Limits how many lookups run at once. A lookup performs its request synchronously and blocks a thread pool thread,
+        /// so many at once (like the icons of all guilds) starve the thread pool which the requests need to complete.
+        /// </summary>
+        private static readonly SemaphoreSlim lookup_throttle = new SemaphoreSlim(4);
+
+        private static async Task<T> throttled<T>(Func<T> lookup)
+        {
+            await lookup_throttle.WaitAsync().ConfigureAwait(false);
+
+            try
+            {
+                return await Task.Run(lookup).ConfigureAwait(false);
+            }
+            finally
+            {
+                lookup_throttle.Release();
             }
         }
 
@@ -264,7 +284,7 @@ namespace osu.Game.Overlays.Discord
                 if (pendingLookups.TryGetValue(url, out var pending))
                     return pending;
 
-                var task = Task.Run(() => (Texture?)Get(url));
+                var task = throttled(() => (Texture?)Get(url));
                 pendingLookups[url] = task;
 
                 task.ContinueWith(_ =>
