@@ -417,7 +417,7 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopSkipIntro, false);
             SetDefault(OsuSetting.SlopInstantScreenTransitions, false);
             SetDefault(OsuSetting.SlopFrostedSettings, true);
-            SetDefault(OsuSetting.SlopSongSelectSortDirection, SongSelectSortDirection.TopToBottom);
+            SetDefault(OsuSetting.SlopSongSelectSortDirection, SongSelectSortDirection.BottomToTop);
             SetDefault(OsuSetting.SlopBackupOnUpdate, true);
             SetDefault(OsuSetting.SlopStrainGraphLowColour, @"#FFFFFF");
             SetDefault(OsuSetting.SlopStrainGraphHighColour, @"#FFFFFF");
