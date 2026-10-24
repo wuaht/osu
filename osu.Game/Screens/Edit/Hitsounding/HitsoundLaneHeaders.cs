@@ -260,13 +260,14 @@ namespace osu.Game.Screens.Edit.Hitsounding
                             Child = name,
                         },
                     },
-                    muteButton = new IconButton
+                    muteButton = new MuteButton
                     {
                         Anchor = Anchor.CentreRight,
                         Origin = Anchor.CentreRight,
                         Size = new Vector2(24),
                         IconScale = new Vector2(0.7f),
                         Action = toggleMute,
+                        RightClickAction = () => hitsoundEditor.ToggleSolo(lane),
                     },
                 };
 
@@ -343,6 +344,25 @@ namespace osu.Game.Screens.Edit.Hitsounding
                 // clicking plays the sample of the lane, which the click sound of the interface would play over.
                 protected override HoverSounds CreateHoverSounds(HoverSampleSet sampleSet) => new HoverSounds(sampleSet) { Enabled = { BindTarget = Enabled } };
 
+                public Action? RightClickAction { get; init; }
+
+                protected override bool OnMouseDown(MouseDownEvent e)
+                {
+                    if (e.Button == MouseButton.Right && RightClickAction != null)
+                    {
+                        RightClickAction();
+                        return true;
+                    }
+
+                    return base.OnMouseDown(e);
+                }
+            }
+
+            /// <summary>
+            /// Mutes the lane when clicked, and mutes all other lanes when right clicked.
+            /// </summary>
+            private partial class MuteButton : IconButton
+            {
                 public Action? RightClickAction { get; init; }
 
                 protected override bool OnMouseDown(MouseDownEvent e)
@@ -507,7 +527,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
 
                 muteButton.Enabled.Value = !mutedByParent;
                 muteButton.Icon = muted ? FontAwesome.Solid.VolumeMute : FontAwesome.Solid.VolumeUp;
-                muteButton.TooltipText = muted ? SlopHitsoundEditorStrings.UnmuteLane : SlopHitsoundEditorStrings.MuteLane;
+                muteButton.TooltipText = $@"{(muted ? SlopHitsoundEditorStrings.UnmuteLane : SlopHitsoundEditorStrings.MuteLane)}{Environment.NewLine}{SlopHitsoundEditorStrings.SoloLaneHint}";
                 muteButton.IconColour = muted ? Colour4.Gray : Colour4.White;
             }
         }

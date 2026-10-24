@@ -7,6 +7,7 @@ using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
+using osu.Framework.Localisation;
 using osu.Framework.Utils;
 using osu.Game.Configuration;
 using osu.Game.Graphics;
@@ -14,6 +15,7 @@ using osu.Game.Graphics.Sprites;
 using osu.Game.Localisation;
 using osu.Game.Overlays;
 using osu.Game.Screens.Edit.Components;
+using osuTK;
 
 namespace osu.Game.Screens.Edit.Hitsounding
 {
@@ -113,12 +115,45 @@ namespace osu.Game.Screens.Edit.Hitsounding
                             {
                                 new HitsoundHeaderCell
                                 {
-                                    Child = new OsuSpriteText
+                                    Child = new FillFlowContainer
                                     {
                                         Anchor = Anchor.CentreLeft,
                                         Origin = Anchor.CentreLeft,
-                                        Text = SlopHitsoundEditorStrings.Volume,
-                                        Font = OsuFont.Default.With(size: 13, weight: FontWeight.Bold),
+                                        RelativeSizeAxes = Axes.X,
+                                        AutoSizeAxes = Axes.Y,
+                                        Direction = FillDirection.Vertical,
+                                        Spacing = new Vector2(0, 6),
+                                        Children = new Drawable[]
+                                        {
+                                            new OsuSpriteText
+                                            {
+                                                Text = SlopHitsoundEditorStrings.Volume,
+                                                Font = OsuFont.Default.With(size: 13, weight: FontWeight.Bold),
+                                            },
+                                            new GridContainer
+                                            {
+                                                RelativeSizeAxes = Axes.X,
+                                                AutoSizeAxes = Axes.Y,
+                                                ColumnDimensions = new[]
+                                                {
+                                                    new Dimension(),
+                                                    new Dimension(GridSizeMode.Absolute, 4),
+                                                    new Dimension(),
+                                                },
+                                                RowDimensions = new[] { new Dimension(GridSizeMode.AutoSize) },
+                                                Content = new[]
+                                                {
+                                                    new Drawable?[]
+                                                    {
+                                                        new AudioMuteButton(SlopHitsoundEditorStrings.Effects, hitsoundEditor.EffectsMuted,
+                                                            SlopHitsoundEditorStrings.MuteEffects, SlopHitsoundEditorStrings.UnmuteEffects),
+                                                        null,
+                                                        new AudioMuteButton(SlopHitsoundEditorStrings.Music, hitsoundEditor.MusicMuted,
+                                                            SlopHitsoundEditorStrings.MuteMusic, SlopHitsoundEditorStrings.UnmuteMusic),
+                                                    },
+                                                },
+                                            },
+                                        },
                                     },
                                 },
                                 volumeArea = new HitsoundVolumeArea(),
@@ -183,6 +218,39 @@ namespace osu.Game.Screens.Edit.Hitsounding
             float availableHeight = DrawHeight - min_vertical_margin * 2 - volumeHeight - HitsoundPatternStrip.HEIGHT;
 
             lanes.Height = Math.Max(0, Math.Min(wantedHeight, availableHeight)) + volumeHeight + HitsoundPatternStrip.HEIGHT;
+        }
+
+        /// <summary>
+        /// Mutes or unmutes the hitsounds or the music. It's highlighted while they are played.
+        /// </summary>
+        private partial class AudioMuteButton : HitsoundToggleButton
+        {
+            private readonly Bindable<bool> muted;
+            private readonly LocalisableString muteTooltip;
+            private readonly LocalisableString unmuteTooltip;
+
+            public AudioMuteButton(LocalisableString label, Bindable<bool> muted, LocalisableString muteTooltip, LocalisableString unmuteTooltip)
+                : base(label, Colour4.White)
+            {
+                this.muted = muted.GetBoundCopy();
+                this.muteTooltip = muteTooltip;
+                this.unmuteTooltip = unmuteTooltip;
+
+                Outlined = true;
+                Height = 22;
+                Action = () => this.muted.Value = !this.muted.Value;
+            }
+
+            protected override void LoadComplete()
+            {
+                base.LoadComplete();
+
+                muted.BindValueChanged(m =>
+                {
+                    State = m.NewValue ? HitsoundToggleState.Off : HitsoundToggleState.On;
+                    TooltipText = m.NewValue ? unmuteTooltip : muteTooltip;
+                }, true);
+            }
         }
     }
 }

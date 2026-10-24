@@ -49,6 +49,16 @@ namespace osu.Game.Screens.Edit.Hitsounding
         public readonly BindableList<HitsoundLane> MutedLanes = new BindableList<HitsoundLane>();
 
         /// <summary>
+        /// Whether the hitsounds of the beatmap aren't played back while the track is playing. Previewing hitsounds still plays them.
+        /// </summary>
+        public readonly BindableBool EffectsMuted = new BindableBool();
+
+        /// <summary>
+        /// Whether the track is muted while the hitsound editor is shown.
+        /// </summary>
+        public readonly BindableBool MusicMuted = new BindableBool();
+
+        /// <summary>
         /// The lanes whose sub-lanes (one for each custom sample set) are displayed below them.
         /// </summary>
         public readonly BindableList<HitsoundLane> ExpandedLanes = new BindableList<HitsoundLane>();
@@ -289,6 +299,23 @@ namespace osu.Game.Screens.Edit.Hitsounding
                 indices.UnionWith(available);
 
             return indices.Any(i => i > 0) ? indices.ToList() : Array.Empty<int>();
+        }
+
+        /// <summary>
+        /// Mutes all lanes except for <paramref name="lane"/>, or plays all lanes again if it already is the only one being played.
+        /// Soloing a sub-lane keeps its lane playing, but mutes the other custom sample sets of the lane.
+        /// </summary>
+        public void ToggleSolo(HitsoundLane lane)
+        {
+            var others = HitsoundLane.ALL.Where(l => l != lane.Parent).ToList();
+
+            if (lane.CustomIndex is int customIndex)
+                others.AddRange(GetSubLaneIndices(lane).Where(i => i != customIndex).Select(lane.Parent.WithCustomIndex));
+
+            if (MutedLanes.Count == others.Count && others.All(MutedLanes.Contains))
+                MutedLanes.Clear();
+            else
+                MutedLanes.ReplaceRange(0, MutedLanes.Count, others);
         }
 
         public void ToggleExpanded(HitsoundLane lane)

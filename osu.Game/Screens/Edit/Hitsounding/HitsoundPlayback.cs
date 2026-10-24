@@ -49,7 +49,8 @@ namespace osu.Game.Screens.Edit.Hitsounding
 
             double time = clock.CurrentTime;
 
-            if (clock.IsRunning && !clock.IsSeeking && time > lastTime && time - lastTime < max_playback_gap)
+            // muting the effects only mutes the playback, such that hitsounds can still be previewed by clicking them.
+            if (!hitsoundEditor.EffectsMuted.Value && clock.IsRunning && !clock.IsSeeking && time > lastTime && time - lastTime < max_playback_gap)
             {
                 foreach (var column in hitsoundEditor.Map.GetColumnsInRange(lastTime, time))
                 {

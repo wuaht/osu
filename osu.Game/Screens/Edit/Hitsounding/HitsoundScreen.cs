@@ -5,7 +5,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using osu.Framework.Allocation;
+using osu.Framework.Audio;
 using osu.Framework.Bindables;
+using osu.Framework.Extensions.ObjectExtensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Sprites;
@@ -189,6 +191,48 @@ namespace osu.Game.Screens.Edit.Hitsounding
 
             hitsoundEditor.SelectionChanged += () => CanCopy.Value = hitsoundEditor.SelectedKeys.Count > 0;
             CanPaste.Value = clipboard != null;
+
+            hitsoundEditor.MusicMuted.BindValueChanged(m => musicVolume.Value = m.NewValue ? 0 : 1, true);
+        }
+
+        /// <summary>
+        /// Mutes the track while <see cref="HitsoundEditor.MusicMuted"/> is set. Only applied while this screen is shown, such that the other screens aren't muted.
+        /// </summary>
+        private readonly BindableDouble musicVolume = new BindableDouble(1);
+
+        private bool musicVolumeApplied;
+
+        protected override void PopIn()
+        {
+            base.PopIn();
+            applyMusicVolume(true);
+        }
+
+        protected override void PopOut()
+        {
+            base.PopOut();
+            applyMusicVolume(false);
+        }
+
+        private void applyMusicVolume(bool apply)
+        {
+            if (musicVolumeApplied == apply)
+                return;
+
+            musicVolumeApplied = apply;
+
+            if (apply)
+                clock.AudioAdjustments.AddAdjustment(AdjustableProperty.Volume, musicVolume);
+            else
+                clock.AudioAdjustments.RemoveAdjustment(AdjustableProperty.Volume, musicVolume);
+        }
+
+        protected override void Dispose(bool isDisposing)
+        {
+            if (clock.IsNotNull())
+                applyMusicVolume(false);
+
+            base.Dispose(isDisposing);
         }
 
         /// <summary>

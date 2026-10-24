@@ -501,6 +501,41 @@ Alt + scroll to zoom. Ctrl + click a lane name to preview the skin's sample inst
         public static LocalisableString UnmuteLane => new TranslatableString(getKey(@"unmute_lane"), @"Unmute lane");
 
         /// <summary>
+        /// "Right click to only play this lane, right click again to play all lanes"
+        /// </summary>
+        public static LocalisableString SoloLaneHint => new TranslatableString(getKey(@"solo_lane_hint"), @"Right click to only play this lane, right click again to play all lanes");
+
+        /// <summary>
+        /// "Effects"
+        /// </summary>
+        public static LocalisableString Effects => new TranslatableString(getKey(@"effects"), @"Effects");
+
+        /// <summary>
+        /// "Music"
+        /// </summary>
+        public static LocalisableString Music => new TranslatableString(getKey(@"music"), @"Music");
+
+        /// <summary>
+        /// "Mute the hitsounds"
+        /// </summary>
+        public static LocalisableString MuteEffects => new TranslatableString(getKey(@"mute_effects"), @"Mute the hitsounds");
+
+        /// <summary>
+        /// "Unmute the hitsounds"
+        /// </summary>
+        public static LocalisableString UnmuteEffects => new TranslatableString(getKey(@"unmute_effects"), @"Unmute the hitsounds");
+
+        /// <summary>
+        /// "Mute the music"
+        /// </summary>
+        public static LocalisableString MuteMusic => new TranslatableString(getKey(@"mute_music"), @"Mute the music");
+
+        /// <summary>
+        /// "Unmute the music"
+        /// </summary>
+        public static LocalisableString UnmuteMusic => new TranslatableString(getKey(@"unmute_music"), @"Unmute the music");
+
+        /// <summary>
         /// "Zoom in"
         /// </summary>
         public static LocalisableString ZoomIn => new TranslatableString(getKey(@"zoom_in"), @"Zoom in");
