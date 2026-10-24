@@ -148,7 +148,7 @@ namespace osu.Game.MapsetVerifier.UI
             foreach (var match in VerifierDisplay.FindTimestamps(message))
             {
                 if (match.Index > position)
-                    AddText(message[position..match.Index]);
+                    AddText(VerifierDisplay.FormatNumbers(message[position..match.Index]));
 
                 string timestamp = match.Timestamp;
 
@@ -159,7 +159,7 @@ namespace osu.Game.MapsetVerifier.UI
             }
 
             if (position < message.Length)
-                AddText(message[position..]);
+                AddText(VerifierDisplay.FormatNumbers(message[position..]));
         }
 
         private void onTimestampClicked(string timestamp)

@@ -182,7 +182,7 @@ namespace osu.Game.MapsetVerifier.UI.Checks
                     BackgroundColour = colourProvider.Background3,
                     Action = () =>
                     {
-                        clipboard.SetText(issue.Message);
+                        clipboard.SetText(VerifierDisplay.FormatNumbers(issue.Message));
                         onScreenDisplay?.Display(new CopiedToClipboardToast());
                     },
                 },

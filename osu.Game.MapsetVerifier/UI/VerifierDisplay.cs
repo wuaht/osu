@@ -7,6 +7,7 @@ using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Localisation;
+using System.Globalization;
 using System.Text.RegularExpressions;
 using osu.Game.Rulesets;
 using osu.Game.Rulesets.Edit;
@@ -262,6 +263,30 @@ namespace osu.Game.MapsetVerifier.UI
         {
             var time = TimeSpan.FromMilliseconds(Math.Max(0, timeMs));
             return $@"{(int)time.TotalMinutes:00}:{time.Seconds:00}:{time.Milliseconds:000}";
+        }
+
+        // numbers in scientific notation, or with more decimals than are meaningful to read.
+        private static readonly Regex raw_number_regex = new Regex(@"(?<![\w.])-?\d+(?:\.\d+)?E[+-]?\d+\b|(?<![\w.])-?\d+\.\d{4,}\b", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+        private static readonly Regex infinity_regex = new Regex(@"(?<![\w-])-?Infinity\b", RegexOptions.Compiled);
+
+        /// <summary>
+        /// Makes the numbers which Mapset Verifier writes without formatting readable,
+        /// e.g. "7.275957614183426E-12" becomes "0" and "Infinity" becomes "infinite".
+        /// </summary>
+        public static string FormatNumbers(string text)
+        {
+            text = raw_number_regex.Replace(text, m =>
+            {
+                if (!double.TryParse(m.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out double value))
+                    return m.Value;
+
+                // avoids "-0" for tiny negative values.
+                double rounded = Math.Round(value, 3);
+                return (rounded == 0 ? 0 : rounded).ToString(@"0.###", CultureInfo.InvariantCulture);
+            });
+
+            return infinity_regex.Replace(text, m => m.Value.StartsWith('-') ? @"-infinite" : @"infinite");
         }
 
         private static readonly Regex negative_timestamp_regex = new Regex(@"(?<![\d:])-\d+(?= - )", RegexOptions.Compiled);

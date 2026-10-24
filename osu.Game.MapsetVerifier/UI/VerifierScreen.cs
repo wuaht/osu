@@ -80,7 +80,7 @@ namespace osu.Game.MapsetVerifier.UI
             Session = VerifierSession.For(EditorBeatmap.BeatmapInfo.BeatmapSet!, storage);
 
             // a difficulty which was switched to elsewhere (e.g. using the menu) is the one which is shown.
-            if (Session.SelectedCategory != VerifierSession.GENERAL)
+            if (!Session.CategorySelected || Session.SelectedCategory != VerifierSession.GENERAL)
                 Session.SelectedCategory = EditorBeatmap.BeatmapInfo.DifficultyName;
 
             config.BindWith(OsuSetting.SlopMapsetVerifierShowCheckRunDelta, includeDelta);
@@ -219,6 +219,7 @@ namespace osu.Game.MapsetVerifier.UI
                 return;
 
             Session.SelectedCategory = category;
+            Session.CategorySelected = true;
             SessionChanged?.Invoke();
 
             var difficulty = FindDifficulty(category);

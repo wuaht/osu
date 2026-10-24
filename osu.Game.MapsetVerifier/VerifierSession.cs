@@ -94,6 +94,11 @@ namespace osu.Game.MapsetVerifier
         public string SelectedCategory = GENERAL;
 
         /// <summary>
+        /// Whether a category was selected yet, before which the difficulty open in the editor is shown instead of <see cref="GENERAL"/>.
+        /// </summary>
+        public bool CategorySelected;
+
+        /// <summary>
         /// The difficulty levels which difficulties are interpreted as, instead of the detected ones.
         /// </summary>
         public readonly Dictionary<string, MvBeatmap.Difficulty> LevelOverrides = new Dictionary<string, MvBeatmap.Difficulty>();

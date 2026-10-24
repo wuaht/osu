@@ -405,7 +405,7 @@ namespace osu.Game.MapsetVerifier.UI.Checks
                 builder.AppendLine(group.Key);
 
                 foreach (var issue in group)
-                    builder.AppendLine($"  {issue.Message}");
+                    builder.AppendLine($"  {VerifierDisplay.FormatNumbers(issue.Message)}");
             }
 
             clipboard.SetText(builder.ToString().TrimEnd());
