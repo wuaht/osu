@@ -113,13 +113,14 @@ namespace osu.Game.Overlays.Discord
         {
             content.Clear();
 
+            var logo = textures?.Get(@"Slop/discord");
+
             content.Add(new Sprite
             {
                 Anchor = Anchor.TopCentre,
                 Origin = Anchor.TopCentre,
-                Size = new Vector2(64),
-                FillMode = FillMode.Fit,
-                Texture = textures?.Get(@"Slop/discord"),
+                Size = logo == null ? new Vector2(64) : new Vector2(64 * logo.Width / (float)logo.Height, 64),
+                Texture = logo,
             });
 
             switch (state.Value)
