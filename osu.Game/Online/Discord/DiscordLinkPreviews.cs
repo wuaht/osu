@@ -12,6 +12,7 @@ using System.Net.Http;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using osu.Framework.Extensions;
 using osu.Framework.Logging;
 
 namespace osu.Game.Online.Discord
@@ -76,6 +77,20 @@ namespace osu.Game.Online.Discord
         /// Creates the embed of a link. Returns null if the link can't be embedded. Results are cached.
         /// </summary>
         public static Task<DiscordEmbed?> Resolve(string url) => cache.GetOrAdd(url, u => Task.Run(async () => trackMedia(await resolve(u).ConfigureAwait(false))));
+
+        /// <summary>
+        /// Returns whether the embed of a link was already created, without loading it.
+        /// </summary>
+        public static bool TryGetResolved(string url, out DiscordEmbed? embed)
+        {
+            embed = null;
+
+            if (!cache.TryGetValue(url, out var task) || !task.IsCompletedSuccessfully)
+                return false;
+
+            embed = task.GetResultSafely();
+            return true;
+        }
 
         /// <summary>
         /// Whether a URL is the image or video of an embed which was created here.

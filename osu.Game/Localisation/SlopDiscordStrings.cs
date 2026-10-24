@@ -263,6 +263,21 @@ namespace osu.Game.Localisation
         public static LocalisableString UnsupportedContentHint => new TranslatableString(getKey(@"unsupported_content_hint"), @"Can only be viewed in Discord");
 
         /// <summary>
+        /// "Load preview"
+        /// </summary>
+        public static LocalisableString LoadLinkPreview => new TranslatableString(getKey(@"load_link_preview"), @"Load preview");
+
+        /// <summary>
+        /// "Loading preview..."
+        /// </summary>
+        public static LocalisableString LoadingLinkPreview => new TranslatableString(getKey(@"loading_link_preview"), @"Loading preview...");
+
+        /// <summary>
+        /// "The linked site will see your IP address"
+        /// </summary>
+        public static LocalisableString LinkPreviewHint => new TranslatableString(getKey(@"link_preview_hint"), @"The linked site will see your IP address");
+
+        /// <summary>
         /// "Show or hide the servers"
         /// </summary>
         public static LocalisableString ToggleServers => new TranslatableString(getKey(@"toggle_servers"), @"Show or hide the servers");

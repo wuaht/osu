@@ -124,6 +124,9 @@ namespace osu.Game.Overlays.Discord
                     body.Add(drawable);
             }
 
+            foreach (string link in Message.PreviewLinks)
+                body.Add(new LinkPreviewButton(link, () => client.LoadLinkPreview(Message, link)));
+
             foreach (var sticker in Message.Stickers)
             {
                 string? url = sticker.GetUrl();
@@ -620,6 +623,97 @@ namespace osu.Game.Overlays.Discord
                     return $@"{bytes / 1024.0:0.##} KB";
 
                 return $@"{bytes / 1024.0 / 1024.0:0.##} MB";
+            }
+        }
+
+        /// <summary>
+        /// Loads the preview of a link when clicked.
+        /// Previews aren't loaded automatically, as that would reveal the IP address of the user to any site which is linked.
+        /// </summary>
+        private partial class LinkPreviewButton : OsuClickableContainer
+        {
+            private readonly string url;
+            private readonly Action loadPreview;
+
+            private Box background = null!;
+            private OsuSpriteText title = null!;
+
+            public LinkPreviewButton(string url, Action loadPreview)
+            {
+                this.url = url;
+                this.loadPreview = loadPreview;
+
+                Size = new Vector2(400, 56);
+                Masking = true;
+                CornerRadius = 6;
+                TooltipText = SlopDiscordStrings.LinkPreviewHint;
+            }
+
+            [BackgroundDependencyLoader]
+            private void load(OverlayColourProvider colourProvider)
+            {
+                Action = () =>
+                {
+                    Enabled.Value = false;
+                    title.Text = SlopDiscordStrings.LoadingLinkPreview;
+                    loadPreview();
+                };
+
+                Children = new Drawable[]
+                {
+                    background = new Box
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Colour = colourProvider.Background5,
+                        Alpha = 0.8f,
+                    },
+                    new SpriteIcon
+                    {
+                        Anchor = Anchor.CentreLeft,
+                        Origin = Anchor.CentreLeft,
+                        X = 14,
+                        Icon = FontAwesome.Solid.Link,
+                        Size = new Vector2(24),
+                        Colour = colourProvider.Content2,
+                    },
+                    new FillFlowContainer
+                    {
+                        Anchor = Anchor.CentreLeft,
+                        Origin = Anchor.CentreLeft,
+                        RelativeSizeAxes = Axes.X,
+                        AutoSizeAxes = Axes.Y,
+                        Direction = FillDirection.Vertical,
+                        Padding = new MarginPadding { Left = 50, Right = 12 },
+                        Children = new Drawable[]
+                        {
+                            title = new OsuSpriteText
+                            {
+                                Text = SlopDiscordStrings.LoadLinkPreview,
+                                Font = DiscordStyle.UiFont(15, FontWeight.SemiBold),
+                                Colour = DiscordStyle.Link,
+                            },
+                            new TruncatingSpriteText
+                            {
+                                RelativeSizeAxes = Axes.X,
+                                Text = url,
+                                Font = DiscordStyle.UiFont(12),
+                                Colour = colourProvider.Content2,
+                            },
+                        },
+                    },
+                };
+            }
+
+            protected override bool OnHover(HoverEvent e)
+            {
+                background.FadeTo(1, 100);
+                return base.OnHover(e);
+            }
+
+            protected override void OnHoverLost(HoverLostEvent e)
+            {
+                background.FadeTo(0.8f, 100);
+                base.OnHoverLost(e);
             }
         }
 

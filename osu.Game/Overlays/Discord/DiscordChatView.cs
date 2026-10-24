@@ -543,9 +543,10 @@ namespace osu.Game.Overlays.Discord
 
                 if (message.IsPartial)
                 {
-                    // Partial updates are sent when Discord resolved the embeds of the links in a message.
+                    // Partial updates are sent when the embeds of the links in a message were resolved.
                     var existing = drawable.Message;
                     existing.Embeds = message.Embeds;
+                    existing.PreviewLinks = message.PreviewLinks;
                     replace(drawable, existing);
                 }
                 else

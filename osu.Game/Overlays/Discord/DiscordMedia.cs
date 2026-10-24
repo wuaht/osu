@@ -62,7 +62,39 @@ namespace osu.Game.Overlays.Discord
             return client;
         }
 
-        public static Task<byte[]> Download(string url, CancellationToken cancellation) => http_client.GetByteArrayAsync(url, cancellation);
+        private static readonly string[] discord_hosts =
+        {
+            @"discordapp.com",
+            @"discordapp.net",
+            @"discord.com",
+        };
+
+        /// <summary>
+        /// Whether media may be loaded from a URL.
+        /// Only Discord (and the emoji images) is contacted automatically, so the IP address of the user isn't revealed to other sites.
+        /// </summary>
+        public static bool IsAllowedUrl(string url)
+        {
+            if (!Uri.TryCreate(url, UriKind.Absolute, out Uri? uri) || uri.Scheme != Uri.UriSchemeHttps)
+                return false;
+
+            if (discord_hosts.Any(h => uri.Host.Equals(h, StringComparison.OrdinalIgnoreCase) || uri.Host.EndsWith('.' + h, StringComparison.OrdinalIgnoreCase)))
+                return true;
+
+            if (uri.AbsoluteUri.StartsWith(DiscordEmoji.TWEMOJI_BASE_URL, StringComparison.Ordinal))
+                return true;
+
+            // Media of a link preview which the user chose to load.
+            return DiscordLinkPreviews.IsPreviewMedia(url);
+        }
+
+        public static Task<byte[]> Download(string url, CancellationToken cancellation)
+        {
+            if (!IsAllowedUrl(url))
+                return Task.FromException<byte[]>(new InvalidOperationException($@"Media is only loaded from Discord, not from {url}."));
+
+            return http_client.GetByteArrayAsync(url, cancellation);
+        }
 
         /// <summary>
         /// Fits media of a known size into the given bounds, keeping its aspect ratio and never scaling it up.
@@ -247,27 +279,7 @@ namespace osu.Game.Overlays.Discord
 
         private class DiscordOnlineStore : OnlineStore
         {
-            private static readonly string[] trusted_hosts =
-            {
-                @"discordapp.com",
-                @"discordapp.net",
-                @"discord.com",
-                @"cdn.jsdelivr.net",
-            };
-
-            protected override string GetLookupUrl(string url)
-            {
-                if (!Uri.TryCreate(url, UriKind.Absolute, out Uri? uri) || uri.Scheme != Uri.UriSchemeHttps)
-                    return string.Empty;
-
-                bool trusted = trusted_hosts.Any(h => uri.Host.Equals(h, StringComparison.OrdinalIgnoreCase) || uri.Host.EndsWith('.' + h, StringComparison.OrdinalIgnoreCase));
-
-                // Embeds of links which are created on the client link to media on any site.
-                if (!trusted && !DiscordLinkPreviews.IsPreviewMedia(url))
-                    return string.Empty;
-
-                return url;
-            }
+            protected override string GetLookupUrl(string url) => DiscordMedia.IsAllowedUrl(url) ? url : string.Empty;
         }
     }
 

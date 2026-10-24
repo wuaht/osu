@@ -491,6 +491,12 @@ namespace osu.Game.Online.Discord
         public DiscordUnsupportedContent? UnsupportedContent { get; set; }
 
         /// <summary>
+        /// Links whose preview is only created on the client when the user asks for it, as loading it reveals their IP address to the linked site.
+        /// </summary>
+        [JsonIgnore]
+        public List<string> PreviewLinks { get; set; } = new List<string>();
+
+        /// <summary>
         /// Whether this is a reply (type 19) to another message.
         /// </summary>
         [JsonIgnore]

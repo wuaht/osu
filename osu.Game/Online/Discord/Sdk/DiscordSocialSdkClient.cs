@@ -371,7 +371,14 @@ namespace osu.Game.Online.Discord.Sdk
                 if (result.UnsupportedContent?.Type == DiscordUnsupportedContentType.Embed && links.Count > 0)
                     result.UnsupportedContent = null;
 
-                loadLinkPreviews(result, links);
+                // Previews are only loaded when the user asks for it, unless they did so before.
+                foreach (string link in links)
+                {
+                    if (!DiscordLinkPreviews.TryGetResolved(link, out var embed))
+                        result.PreviewLinks.Add(link);
+                    else if (embed != null)
+                        result.Embeds.Add(embed);
+                }
 
                 return result;
             }
@@ -409,42 +416,6 @@ namespace osu.Game.Online.Discord.Sdk
             {
                 AdditionalContentDrop(&content);
             }
-        }
-
-        /// <summary>
-        /// The SDK doesn't provide the embeds of links, so they are created on the client.
-        /// </summary>
-        private void loadLinkPreviews(DiscordMessage message, IReadOnlyList<string> links)
-        {
-            if (links.Count == 0)
-                return;
-
-            var previews = links.Select(DiscordLinkPreviews.Resolve).ToArray();
-
-            List<DiscordEmbed> getEmbeds() => previews.Select(p => p.GetResultSafely()).OfType<DiscordEmbed>().ToList();
-
-            // Previews of links which were seen before are already known.
-            if (previews.All(p => p.IsCompleted))
-            {
-                message.Embeds = getEmbeds();
-                return;
-            }
-
-            Task.WhenAll(previews).ContinueWith(_ => Schedule(() =>
-            {
-                var embeds = getEmbeds();
-
-                if (embeds.Count == 0)
-                    return;
-
-                TriggerMessageUpdated(new DiscordMessage
-                {
-                    Id = message.Id,
-                    ChannelId = message.ChannelId,
-                    Embeds = embeds,
-                    IsPartial = true,
-                });
-            }));
         }
 
         private void handleTokenExchanged(TokenRequest request, string? error, string accessToken, string newRefreshToken)

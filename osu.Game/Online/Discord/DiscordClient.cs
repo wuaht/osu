@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using osu.Framework.Bindables;
+using osu.Framework.Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Localisation;
 using osu.Game.Localisation;
@@ -197,6 +198,26 @@ namespace osu.Game.Online.Discord
         protected void TriggerMessageUpdated(DiscordMessage message) => MessageUpdated?.Invoke(message);
 
         protected void TriggerMessageDeleted(ulong channelId, ulong messageId) => MessageDeleted?.Invoke(channelId, messageId);
+
+        /// <summary>
+        /// Creates the preview of a link in a message, which is only done when the user asks for it.
+        /// </summary>
+        public void LoadLinkPreview(DiscordMessage message, string url)
+        {
+            DiscordLinkPreviews.Resolve(url).ContinueWith(t => Schedule(() =>
+            {
+                var embed = t.GetResultSafely();
+
+                TriggerMessageUpdated(new DiscordMessage
+                {
+                    Id = message.Id,
+                    ChannelId = message.ChannelId,
+                    Embeds = embed != null ? message.Embeds.Append(embed).ToList() : message.Embeds,
+                    PreviewLinks = message.PreviewLinks.Where(l => l != url).ToList(),
+                    IsPartial = true,
+                });
+            }));
+        }
 
         protected void TriggerGuildChannelsChanged(DiscordGuild guild) => GuildChannelsChanged?.Invoke(guild);
 

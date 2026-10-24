@@ -21,7 +21,9 @@ namespace osu.Game.Overlays.Discord
 {
     public static class DiscordEmoji
     {
-        private const string twemoji_url = @"https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.1.0/assets/72x72/{0}.png";
+        public const string TWEMOJI_BASE_URL = @"https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.1.0/assets/72x72/";
+
+        private const string twemoji_url = TWEMOJI_BASE_URL + @"{0}.png";
 
         /// <summary>
         /// Returns the URL of the Twemoji image of a text element, or null if the text element is not an emoji.
