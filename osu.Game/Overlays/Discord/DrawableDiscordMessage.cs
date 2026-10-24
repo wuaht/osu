@@ -424,8 +424,7 @@ namespace osu.Game.Overlays.Discord
 
             var flow = new FillFlowContainer
             {
-                RelativeSizeAxes = Axes.X,
-                AutoSizeAxes = Axes.Y,
+                RelativeSizeAxes = Axes.Both,
                 Direction = FillDirection.Horizontal,
                 Spacing = new Vector2(4, 0),
             };
@@ -434,6 +433,8 @@ namespace osu.Game.Overlays.Discord
             {
                 flow.Add(new OsuSpriteText
                 {
+                    Anchor = Anchor.CentreLeft,
+                    Origin = Anchor.CentreLeft,
                     Text = @"Original message was deleted",
                     Font = DiscordStyle.UiFont(13, FontWeight.Regular).With(italics: true),
                     Colour = colourProvider.Content2,
@@ -473,29 +474,46 @@ namespace osu.Game.Overlays.Discord
                 });
             }
 
+            const float height = 18;
+            const float spine_thickness = 2;
+
+            // The spine starts in the middle of the avatar and ends just before the preview.
+            const float spine_x = -DiscordStyle.MESSAGE_GUTTER + 16 + DiscordStyle.AVATAR_SIZE / 2 - spine_thickness / 2;
+
             return new Container
             {
                 RelativeSizeAxes = Axes.X,
-                AutoSizeAxes = Axes.Y,
-                Padding = new MarginPadding { Left = DiscordStyle.MESSAGE_GUTTER, Right = 16, Top = 14 },
+                Height = height,
+                // Like the header of a message, the preview is preceded by the space between message groups.
+                Margin = new MarginPadding { Top = 14 },
+                Padding = new MarginPadding { Left = DiscordStyle.MESSAGE_GUTTER, Right = 16 },
                 Children = new Drawable[]
                 {
                     // The spine which connects the preview with the avatar of the reply.
+                    // Only its top and left border are visible, with a rounded corner between them.
                     new Container
                     {
                         Anchor = Anchor.CentreLeft,
                         Origin = Anchor.TopLeft,
-                        X = -DiscordStyle.MESSAGE_GUTTER + 16 + DiscordStyle.AVATAR_SIZE / 2,
-                        Size = new Vector2(DiscordStyle.MESSAGE_GUTTER - 16 - DiscordStyle.AVATAR_SIZE / 2 - 4, 12),
+                        X = spine_x,
+                        Y = -spine_thickness / 2,
+                        // Reaches down to the avatar, which is below the preview and the top padding of the message.
+                        Size = new Vector2(-spine_x - 4, height / 2 + spine_thickness / 2 + 4),
                         Masking = true,
-                        CornerRadius = 6,
-                        BorderThickness = 2,
-                        BorderColour = colourProvider.Background2,
-                        Child = new Box
+                        Child = new Container
                         {
                             RelativeSizeAxes = Axes.Both,
-                            Alpha = 0,
-                            AlwaysPresent = true,
+                            Size = new Vector2(2),
+                            Masking = true,
+                            CornerRadius = 6,
+                            BorderThickness = spine_thickness,
+                            BorderColour = colourProvider.Background2,
+                            Child = new Box
+                            {
+                                RelativeSizeAxes = Axes.Both,
+                                Alpha = 0,
+                                AlwaysPresent = true,
+                            },
                         },
                     },
                     flow,
