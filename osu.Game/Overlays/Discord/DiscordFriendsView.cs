@@ -12,6 +12,7 @@ using osu.Framework.Extensions.ObjectExtensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Colour;
 using osu.Framework.Graphics.Containers;
+using osu.Framework.Graphics.Primitives;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Input.Events;
@@ -455,6 +456,22 @@ namespace osu.Game.Overlays.Discord
                 Action = () => navigation.OpenChannel(Channel, client);
 
                 UpdateUser();
+            }
+
+            private bool profileRequested;
+
+            protected override bool ComputeIsMaskedAway(RectangleF maskingBounds)
+            {
+                bool maskedAway = base.ComputeIsMaskedAway(maskingBounds);
+
+                // The profile is only requested once the card is visible, as fetching it for every friend at once would be rate limited.
+                if (!profileRequested && !maskedAway && recipient != null)
+                {
+                    profileRequested = true;
+                    client.RequestProfile(recipient);
+                }
+
+                return maskedAway;
             }
 
             /// <summary>

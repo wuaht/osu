@@ -75,6 +75,12 @@ namespace osu.Game.Online.Discord.Full
         private readonly Dictionary<ulong, List<DiscordChannel>> allGuildChannels = new Dictionary<ulong, List<DiscordChannel>>();
 
         private readonly HashSet<ulong> requestedGuildMembers = new HashSet<ulong>();
+        private readonly HashSet<ulong> requestedProfiles = new HashSet<ulong>();
+
+        /// <summary>
+        /// Profiles are requested one after another, as Discord limits how often they can be requested.
+        /// </summary>
+        private readonly SemaphoreSlim profileRequests = new SemaphoreSlim(1);
         private readonly HashSet<ulong> subscribedGuilds = new HashSet<ulong>();
 
         [BackgroundDependencyLoader]
@@ -194,6 +200,55 @@ namespace osu.Game.Online.Discord.Full
                 TaskContinuationOptions.OnlyOnFaulted);
         }
 
+        public override void RequestProfile(DiscordUser user)
+        {
+            // Users in the gateway payloads don't include their banner, which is only provided with the profile.
+            if (user.Bot || user.Banner != null || !requestedProfiles.Add(user.Id))
+                return;
+
+            string token = userToken.Value;
+
+            Task.Run(async () =>
+            {
+                await profileRequests.WaitAsync().ConfigureAwait(false);
+
+                try
+                {
+                    var profile = await SendRequest(token, HttpMethod.Get, $@"users/{user.Id}/profile", null, CancellationToken.None).ConfigureAwait(false);
+
+                    string? banner = profile[@"user"]?.Value<string>(@"banner") ?? profile[@"user_profile"]?.Value<string>(@"banner");
+                    int? accentColour = profile[@"user_profile"]?.Value<int?>(@"accent_color") ?? profile[@"user"]?.Value<int?>(@"accent_color");
+
+                    Schedule(() => applyProfile(user.Id, banner, accentColour));
+
+                    await Task.Delay(500).ConfigureAwait(false);
+                }
+                finally
+                {
+                    profileRequests.Release();
+                }
+            }).ContinueWith(t => Logger.Log($@"Discord profile could not be fetched: {t.Exception?.InnerException?.Message}", LoggingTarget.Network),
+                TaskContinuationOptions.OnlyOnFaulted);
+        }
+
+        private void applyProfile(ulong userId, string? banner, int? accentColour)
+        {
+            // The same user can be stored in several places (such as the recipients of conversations).
+            var users = PrivateChannels.SelectMany(c => c.Recipients).Where(u => u.Id == userId).ToList();
+
+            if (GetUser(userId) is DiscordUser stored)
+                users.Add(stored);
+
+            foreach (var u in users)
+            {
+                u.Banner = banner;
+                u.AccentColour = accentColour ?? u.AccentColour;
+            }
+
+            if (users.Count > 0)
+                TriggerUserUpdated(users[^1]);
+        }
+
         public override void SelectChannel(DiscordChannel channel)
         {
             if (channel.GuildId is ulong guildId)
@@ -294,6 +349,7 @@ namespace osu.Game.Online.Discord.Full
             Users.Clear();
             allGuildChannels.Clear();
             requestedGuildMembers.Clear();
+            requestedProfiles.Clear();
             subscribedGuilds.Clear();
         }
 

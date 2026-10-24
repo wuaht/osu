@@ -129,6 +129,14 @@ namespace osu.Game.Online.Discord
         }
 
         /// <summary>
+        /// Invoked when the profile of a user is shown, so that its banner and colour can be fetched if needed.
+        /// <see cref="UserUpdated"/> is invoked once they are known.
+        /// </summary>
+        public virtual void RequestProfile(DiscordUser user)
+        {
+        }
+
+        /// <summary>
         /// Logs out and forgets the stored credentials.
         /// </summary>
         public abstract void Logout();
