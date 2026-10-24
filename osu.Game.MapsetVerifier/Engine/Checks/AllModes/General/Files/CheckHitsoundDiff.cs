@@ -1,4 +1,3 @@
-using System.Text.RegularExpressions;
 using MapsetVerifier.Framework.Objects;
 using MapsetVerifier.Framework.Objects.Attributes;
 using MapsetVerifier.Framework.Objects.Metadata;
@@ -49,15 +48,9 @@ namespace MapsetVerifier.Checks.AllModes.General.Files
 
         public override IEnumerable<Issue> GetIssues(BeatmapSet beatmapSet)
         {
-            foreach (Beatmap beatmap in beatmapSet.Beatmaps)
-            {
-                string difficulty = beatmap.MetadataSettings.version;
-                if (
-                    Regex.IsMatch(difficulty, "^.*hit.*sound.*$", RegexOptions.IgnoreCase)
-                    | Regex.IsMatch(difficulty, "^_hs_$", RegexOptions.IgnoreCase)
-                )
-                    yield return new Issue(GetTemplate("HitsoundDiff"), beatmap, difficulty);
-            }
+            // hitsound difficulties are excluded from the beatmaps when parsing the set.
+            foreach (string difficulty in beatmapSet.HitsoundDifficulties)
+                yield return new Issue(GetTemplate("HitsoundDiff"), null, difficulty);
         }
     }
 }
