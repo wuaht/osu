@@ -50,6 +50,8 @@ namespace osu.Game.Online.Discord
 
         private static readonly ConcurrentDictionary<string, Task<DiscordEmbed?>> cache = new ConcurrentDictionary<string, Task<DiscordEmbed?>>();
 
+        private static readonly ConcurrentDictionary<string, bool> media_urls = new ConcurrentDictionary<string, bool>();
+
         private static HttpClient createHttpClient()
         {
             var client = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
@@ -73,7 +75,27 @@ namespace osu.Game.Online.Discord
         /// <summary>
         /// Creates the embed of a link. Returns null if the link can't be embedded. Results are cached.
         /// </summary>
-        public static Task<DiscordEmbed?> Resolve(string url) => cache.GetOrAdd(url, u => Task.Run(() => resolve(u)));
+        public static Task<DiscordEmbed?> Resolve(string url) => cache.GetOrAdd(url, u => Task.Run(async () => trackMedia(await resolve(u).ConfigureAwait(false))));
+
+        /// <summary>
+        /// Whether a URL is the image or video of an embed which was created here.
+        /// Media is usually only loaded from Discord, but these embeds don't go through its media proxy.
+        /// </summary>
+        public static bool IsPreviewMedia(string url) => media_urls.ContainsKey(url);
+
+        private static DiscordEmbed? trackMedia(DiscordEmbed? embed)
+        {
+            if (embed == null)
+                return null;
+
+            foreach (var media in new[] { embed.Image, embed.Thumbnail, embed.Video })
+            {
+                if (media?.Url != null)
+                    media_urls.TryAdd(media.Url, true);
+            }
+
+            return embed;
+        }
 
         private static async Task<DiscordEmbed?> resolve(string url)
         {
@@ -128,7 +150,7 @@ namespace osu.Game.Online.Discord
 
         private static async Task<byte[]> readStart(HttpResponseMessage response, int maxLength)
         {
-            await using var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
+            using var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
             using var buffer = new MemoryStream();
 
             byte[] chunk = new byte[16 * 1024];

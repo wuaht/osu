@@ -25,6 +25,7 @@ using osu.Framework.Platform;
 using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Localisation;
+using osu.Game.Online.Discord;
 using osu.Game.Online.Discord.Full;
 using osuTK;
 using osuTK.Graphics;
@@ -256,9 +257,13 @@ namespace osu.Game.Overlays.Discord
 
             protected override string GetLookupUrl(string url)
             {
-                if (!Uri.TryCreate(url, UriKind.Absolute, out Uri? uri) || uri.Scheme != Uri.UriSchemeHttps
-                                                                       || !trusted_hosts.Any(h => uri.Host.Equals(h, StringComparison.OrdinalIgnoreCase)
-                                                                                                 || uri.Host.EndsWith('.' + h, StringComparison.OrdinalIgnoreCase)))
+                if (!Uri.TryCreate(url, UriKind.Absolute, out Uri? uri) || uri.Scheme != Uri.UriSchemeHttps)
+                    return string.Empty;
+
+                bool trusted = trusted_hosts.Any(h => uri.Host.Equals(h, StringComparison.OrdinalIgnoreCase) || uri.Host.EndsWith('.' + h, StringComparison.OrdinalIgnoreCase));
+
+                // Embeds of links which are created on the client link to media on any site.
+                if (!trusted && !DiscordLinkPreviews.IsPreviewMedia(url))
                     return string.Empty;
 
                 return url;
