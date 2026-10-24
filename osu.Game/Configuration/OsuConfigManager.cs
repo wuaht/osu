@@ -18,6 +18,7 @@ using osu.Game.Input.Bindings;
 using osu.Game.Localisation;
 using osu.Game.Online.BeatmapMirrors;
 using osu.Game.Online.BnTracker;
+using osu.Game.Online.Discord;
 using osu.Game.Online.Leaderboards;
 using osu.Game.Overlays;
 using osu.Game.Overlays.Dashboard.Friends;
@@ -458,6 +459,13 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopAutoPlusTagSplit, AutoPlusTagSplitMode.Colour);
             SetDefault(OsuSetting.SlopAutoPlusTagColours, AutoPlusTagColourSource.MapColours);
             SetDefault(OsuSetting.SlopAllowOverlaysDuringGameplay, true);
+            SetDefault(OsuSetting.SlopDiscordMode, DiscordClientMode.Official);
+            SetDefault(OsuSetting.SlopDiscordApplicationId, string.Empty);
+            SetDefault(OsuSetting.SlopDiscordRefreshToken, string.Empty);
+            SetDefault(OsuSetting.SlopDiscordUserToken, string.Empty);
+            SetDefault(OsuSetting.SlopDiscordFrosted, false);
+            SetDefault(OsuSetting.SlopDiscordBackgroundOpacity, 0.6f, 0.2f, 1f, 0.01f);
+            SetDefault(OsuSetting.SlopDiscordOverlayHeight, 0.5f, 0.2f, 1f, 0.01f);
         }
 
         protected override bool CheckLookupContainsPrivateInformation(OsuSetting lookup)
@@ -466,6 +474,8 @@ namespace osu.Game.Configuration
             {
                 case OsuSetting.Token:
                 case OsuSetting.SlopBnTrackerToken:
+                case OsuSetting.SlopDiscordRefreshToken:
+                case OsuSetting.SlopDiscordUserToken:
                     return true;
             }
 
@@ -1661,5 +1671,40 @@ namespace osu.Game.Configuration
         /// Whether overlays such as the settings can be opened while actively playing.
         /// </summary>
         SlopAllowOverlaysDuringGameplay,
+
+        /// <summary>
+        /// Which backend the Discord overlay uses.
+        /// </summary>
+        SlopDiscordMode,
+
+        /// <summary>
+        /// The Discord application ID used for the official Social SDK login.
+        /// </summary>
+        SlopDiscordApplicationId,
+
+        /// <summary>
+        /// The OAuth refresh token of the official Social SDK login.
+        /// </summary>
+        SlopDiscordRefreshToken,
+
+        /// <summary>
+        /// The user token of the full client login.
+        /// </summary>
+        SlopDiscordUserToken,
+
+        /// <summary>
+        /// Whether the Discord overlay blurs what is behind it.
+        /// </summary>
+        SlopDiscordFrosted,
+
+        /// <summary>
+        /// The opacity of the Discord overlay background.
+        /// </summary>
+        SlopDiscordBackgroundOpacity,
+
+        /// <summary>
+        /// The height of the Discord overlay, relative to the screen.
+        /// </summary>
+        SlopDiscordOverlayHeight,
     }
 }

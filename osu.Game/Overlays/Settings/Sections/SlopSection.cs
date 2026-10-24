@@ -37,6 +37,7 @@ namespace osu.Game.Overlays.Settings.Sections
                 new MapsetVerifierSettings(),
                 new OfflineProfileSettings(),
                 new OnlineSettings(),
+                new DiscordSettings(),
             };
         }
 

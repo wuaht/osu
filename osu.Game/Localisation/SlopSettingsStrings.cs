@@ -1772,6 +1772,56 @@ namespace osu.Game.Localisation
         /// </summary>
         public static LocalisableString MapsetVerifierFrostedPanelsDescription => new TranslatableString(getKey(@"mapset_verifier_frosted_panels_description"), @"Blurs the beatmap background behind the panels of the verify screen like frosted glass, instead of covering it.");
 
+        /// <summary>
+        /// "Discord"
+        /// </summary>
+        public static LocalisableString DiscordHeader => new TranslatableString(getKey(@"discord_header"), @"Discord");
+
+        /// <summary>
+        /// "Discord client"
+        /// </summary>
+        public static LocalisableString DiscordMode => new TranslatableString(getKey(@"discord_mode"), @"Discord client");
+
+        /// <summary>
+        /// "The official SDK only provides direct messages with friends. The full client also shows your servers, but logs in with your user account, which is against the Discord Terms of Service and can get your account banned."
+        /// </summary>
+        public static LocalisableString DiscordModeDescription => new TranslatableString(getKey(@"discord_mode_description"), @"The official SDK only provides direct messages with friends. The full client also shows your servers, but logs in with your user account, which is against the Discord Terms of Service and can get your account banned.");
+
+        /// <summary>
+        /// "Discord application ID"
+        /// </summary>
+        public static LocalisableString DiscordApplicationId => new TranslatableString(getKey(@"discord_application_id"), @"Discord application ID");
+
+        /// <summary>
+        /// "The ID of your own Discord application with the Social SDK enabled. Only used by the official SDK."
+        /// </summary>
+        public static LocalisableString DiscordApplicationIdDescription => new TranslatableString(getKey(@"discord_application_id_description"), @"The ID of your own Discord application with the Social SDK enabled. Only used by the official SDK.");
+
+        /// <summary>
+        /// "Frosted Discord background"
+        /// </summary>
+        public static LocalisableString DiscordFrosted => new TranslatableString(getKey(@"discord_frosted"), @"Frosted Discord background");
+
+        /// <summary>
+        /// "Blurs what is behind the Discord overlay like frosted glass."
+        /// </summary>
+        public static LocalisableString DiscordFrostedDescription => new TranslatableString(getKey(@"discord_frosted_description"), @"Blurs what is behind the Discord overlay like frosted glass.");
+
+        /// <summary>
+        /// "Discord background opacity"
+        /// </summary>
+        public static LocalisableString DiscordBackgroundOpacity => new TranslatableString(getKey(@"discord_background_opacity"), @"Discord background opacity");
+
+        /// <summary>
+        /// "Log out of Discord ({0})"
+        /// </summary>
+        public static LocalisableString DiscordLogout(string username) => new TranslatableString(getKey(@"discord_logout"), @"Log out of Discord ({0})", username);
+
+        /// <summary>
+        /// "Not logged in to Discord"
+        /// </summary>
+        public static LocalisableString DiscordNotLoggedIn => new TranslatableString(getKey(@"discord_not_logged_in"), @"Not logged in to Discord");
+
         private static string getKey(string key) => $"{prefix}:{key}";
     }
 }

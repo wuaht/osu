@@ -150,6 +150,7 @@ namespace osu.Game.Overlays.Toolbar
                                             new ToolbarRankingsButton(),
                                             new ToolbarBeatmapListingButton(),
                                             new ToolbarChatButton(),
+                                            new ToolbarDiscordButton(),
                                             new ToolbarSocialButton(),
                                             new ToolbarMusicButton(),
                                             //new ToolbarButton

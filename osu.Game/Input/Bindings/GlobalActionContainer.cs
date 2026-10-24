@@ -123,6 +123,7 @@ namespace osu.Game.Input.Bindings
             new KeyBinding(InputKey.F8, GlobalAction.ToggleChat),
             new KeyBinding(InputKey.F6, GlobalAction.ToggleNowPlaying),
             new KeyBinding(InputKey.F9, GlobalAction.ToggleSocial),
+            new KeyBinding(InputKey.F7, GlobalAction.ToggleDiscord),
             new KeyBinding(new[] { InputKey.Control, InputKey.B }, GlobalAction.ToggleBeatmapListing),
             new KeyBinding(new[] { InputKey.Control, InputKey.O }, GlobalAction.ToggleSettings),
             new KeyBinding(new[] { InputKey.Control, InputKey.N }, GlobalAction.ToggleNotifications),
@@ -778,6 +779,9 @@ namespace osu.Game.Input.Bindings
 
         [LocalisableDescription(typeof(SlopEditorStrings), nameof(SlopEditorStrings.RotateByCustomAngleCounterclockwise))]
         EditorRotateByCustomAngleCounterclockwise,
+
+        [LocalisableDescription(typeof(SlopDiscordStrings), nameof(SlopDiscordStrings.ToggleDiscord))]
+        ToggleDiscord,
     }
 
     public enum GlobalActionCategory
