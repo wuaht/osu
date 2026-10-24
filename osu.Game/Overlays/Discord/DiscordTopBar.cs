@@ -39,6 +39,8 @@ namespace osu.Game.Overlays.Discord
         [BackgroundDependencyLoader]
         private void load(OverlayColourProvider colourProvider, TextureStore textures)
         {
+            const float icon_height = 12;
+
             var icon = textures.Get(@"Slop/discord");
 
             Children = new Drawable[]
@@ -54,7 +56,7 @@ namespace osu.Game.Overlays.Discord
                     AutoSizeAxes = Axes.X,
                     RelativeSizeAxes = Axes.Y,
                     Direction = FillDirection.Horizontal,
-                    Spacing = new Vector2(10, 0),
+                    Spacing = new Vector2(8, 0),
                     Padding = new MarginPadding { Left = 16 },
                     Children = new Drawable[]
                     {
@@ -63,7 +65,9 @@ namespace osu.Game.Overlays.Discord
                             Anchor = Anchor.CentreLeft,
                             Origin = Anchor.CentreLeft,
                             Texture = icon,
-                            Size = icon == null ? new Vector2(22) : new Vector2(22 * icon.Width / (float)icon.Height, 22),
+                            // As high as the capital letters of the title, and centred on them.
+                            Size = icon == null ? new Vector2(icon_height) : new Vector2(icon_height * icon.Width / (float)icon.Height, icon_height),
+                            Y = -2,
                         },
                         new OsuSpriteText
                         {
