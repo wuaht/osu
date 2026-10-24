@@ -326,6 +326,11 @@ namespace osu.Game.Overlays.Discord
         /// </summary>
         public bool ShowPlaceholder { get; init; } = true;
 
+        /// <summary>
+        /// Invoked once the image was loaded and is shown.
+        /// </summary>
+        public event Action? Loaded;
+
         [Resolved]
         private DiscordTextureStore textures { get; set; } = null!;
 
@@ -427,6 +432,8 @@ namespace osu.Game.Overlays.Discord
             AddInternal(content);
             content.FadeIn(200, Easing.OutQuint);
             placeholder.FadeOut(200);
+
+            Loaded?.Invoke();
         }
 
         protected override void Dispose(bool isDisposing)
@@ -454,23 +461,37 @@ namespace osu.Game.Overlays.Discord
     }
 
     /// <summary>
-    /// An image of a message, which opens in the browser when clicked.
+    /// An image of a message, which is shown over the whole screen when clicked.
     /// </summary>
     public partial class DiscordMediaImage : OsuClickableContainer
     {
         [Resolved]
         private GameHost host { get; set; } = null!;
 
-        public DiscordMediaImage(string url, string? displayUrl, Vector2 size, bool animated)
+        [Resolved]
+        private DiscordMediaViewer? viewer { get; set; }
+
+        /// <param name="url">The URL which is opened in the browser.</param>
+        /// <param name="displayUrl">The URL the image is loaded from, if it differs from <paramref name="url"/>.</param>
+        /// <param name="size">The displayed size.</param>
+        /// <param name="animated">Whether the image is an animated GIF.</param>
+        /// <param name="width">The width of the full image, if known.</param>
+        /// <param name="height">The height of the full image, if known.</param>
+        public DiscordMediaImage(string url, string? displayUrl, Vector2 size, bool animated, int? width = null, int? height = null)
         {
             Size = size;
             Masking = true;
             CornerRadius = 6;
 
-            TooltipText = SlopDiscordStrings.OpenInBrowser;
-            Action = () => host.OpenUrlExternally(url);
+            Action = () =>
+            {
+                if (viewer != null)
+                    viewer.ShowImage(url, displayUrl ?? url, width, height, animated);
+                else
+                    host.OpenUrlExternally(url);
+            };
 
-            Child = new DiscordRemoteImage(animated ? displayUrl ?? url : DiscordMedia.Downscale(displayUrl ?? url, size))
+            Child = new DiscordRemoteImage(animated ? displayUrl ?? url : DiscordMedia.Downscale(displayUrl ?? url, size), animated)
             {
                 RelativeSizeAxes = Axes.Both,
             };

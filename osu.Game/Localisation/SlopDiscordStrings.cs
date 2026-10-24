@@ -158,6 +158,11 @@ namespace osu.Game.Localisation
         public static LocalisableString OpenInBrowser => new TranslatableString(getKey(@"open_in_browser"), @"Open in browser");
 
         /// <summary>
+        /// "Close"
+        /// </summary>
+        public static LocalisableString CloseViewer => new TranslatableString(getKey(@"close_viewer"), @"Close");
+
+        /// <summary>
         /// "Play"
         /// </summary>
         public static LocalisableString PlayVideo => new TranslatableString(getKey(@"play_video"), @"Play");

@@ -527,7 +527,8 @@ namespace osu.Game.Overlays.Discord
         {
             if (attachment.IsImage)
             {
-                return new DiscordMediaImage(attachment.Url, attachment.ProxyUrl, DiscordMedia.FitSize(attachment.Width, attachment.Height), attachment.IsAnimatedImage);
+                return new DiscordMediaImage(attachment.Url, attachment.ProxyUrl, DiscordMedia.FitSize(attachment.Width, attachment.Height), attachment.IsAnimatedImage,
+                    attachment.Width, attachment.Height);
             }
 
             if (attachment.IsVideo)
@@ -556,7 +557,7 @@ namespace osu.Game.Overlays.Discord
                         return null;
 
                     return new DiscordMediaImage(embed.Url ?? image.Url, image.ProxyUrl ?? image.Url, DiscordMedia.FitSize(image.Width, image.Height),
-                        image.Url.EndsWith(@".gif", StringComparison.OrdinalIgnoreCase));
+                        image.Url.EndsWith(@".gif", StringComparison.OrdinalIgnoreCase), image.Width, image.Height);
 
                 case @"video" when string.IsNullOrEmpty(embed.Title) && embed.Video?.Url != null && embed.Provider == null:
                     return new DiscordMediaVideo(embed.Video.ProxyUrl ?? embed.Video.Url, embed.Thumbnail?.ProxyUrl ?? embed.Thumbnail?.Url,
@@ -949,7 +950,7 @@ namespace osu.Game.Overlays.Discord
                 if (image?.Url != null)
                 {
                     content.Add(new DiscordMediaImage(embed.Url ?? image.Url, image.ProxyUrl ?? image.Url, DiscordMedia.FitSize(image.Width, image.Height, 400, 300),
-                        image.Url.EndsWith(@".gif", StringComparison.OrdinalIgnoreCase)));
+                        image.Url.EndsWith(@".gif", StringComparison.OrdinalIgnoreCase), image.Width, image.Height));
                 }
 
                 Color4 barColour = DiscordStyle.FromInteger(embed.Colour) ?? colourProvider.Background2;
@@ -979,7 +980,7 @@ namespace osu.Game.Overlays.Discord
                 if (hasThumbnail)
                 {
                     AddInternal(new DiscordMediaImage(embed.Url ?? embed.Thumbnail!.Url!, embed.Thumbnail!.ProxyUrl ?? embed.Thumbnail.Url,
-                        DiscordMedia.FitSize(embed.Thumbnail.Width, embed.Thumbnail.Height, 80, 80), false)
+                        DiscordMedia.FitSize(embed.Thumbnail.Width, embed.Thumbnail.Height, 80, 80), false, embed.Thumbnail.Width, embed.Thumbnail.Height)
                     {
                         Anchor = Anchor.TopRight,
                         Origin = Anchor.TopRight,
