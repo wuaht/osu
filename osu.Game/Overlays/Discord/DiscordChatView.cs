@@ -340,7 +340,7 @@ namespace osu.Game.Overlays.Discord
                 loadingOlder = true;
                 topSpinner.Show();
 
-                ulong? before = messageFlow.FirstOrDefault(m => !m.Message.Pending)?.Message.Id;
+                ulong? before = orderedMessages.FirstOrDefault(m => !m.Message.Pending)?.Message.Id;
 
                 client.GetMessages(Channel, before).ContinueWith(t => Schedule(() =>
                 {
@@ -384,7 +384,7 @@ namespace osu.Game.Overlays.Discord
                 float distanceFromEnd = (float)(scroll.ScrollableExtent - scroll.Current);
                 bool wasAtEnd = scroll.IsScrolledToEnd(10);
 
-                var current = messageFlow.ToList();
+                var current = orderedMessages.ToList();
                 messageFlow.Clear(false);
 
                 foreach (var message in toAdd.OrderBy(m => m.Timestamp))
@@ -404,9 +404,14 @@ namespace osu.Game.Overlays.Discord
 
             private DrawableDiscordMessage createDrawable(DiscordMessage message) => new DrawableDiscordMessage(message, markdownContext);
 
+            /// <summary>
+            /// The messages in the order they are shown, which differs from the order of the children once a message was replaced.
+            /// </summary>
+            private IEnumerable<DrawableDiscordMessage> orderedMessages => messageFlow.OrderBy(m => messageFlow.GetLayoutPosition(m));
+
             private void appendMessage(DiscordMessage message)
             {
-                messageFlow.Add(createDrawable(message));
+                messageFlow.Insert(messageFlow.Count, createDrawable(message));
                 updateLayout();
             }
 
@@ -418,7 +423,7 @@ namespace osu.Game.Overlays.Discord
                 DiscordMessage? previous = null;
                 int index = 0;
 
-                foreach (var drawable in messageFlow)
+                foreach (var drawable in orderedMessages.ToList())
                 {
                     var message = drawable.Message;
 
