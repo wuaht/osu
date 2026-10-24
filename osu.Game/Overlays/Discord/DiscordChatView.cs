@@ -345,7 +345,10 @@ namespace osu.Game.Overlays.Discord
                 client.GetMessages(Channel, before).ContinueWith(t => Schedule(() =>
                 {
                     loadingOlder = false;
+
+                    // The spinner is hidden right away, as the content would otherwise shrink once it faded out, which makes the scroll position bounce.
                     topSpinner.Hide();
+                    topSpinner.FinishTransforms(true);
 
                     if (t.IsFaulted)
                     {
@@ -361,7 +364,16 @@ namespace osu.Game.Overlays.Discord
                     if (messages.Count == 0 || !client.SupportsHistory)
                         reachedStart = true;
 
+                    bool initial = messageFlow.Count == 0;
+
                     prependMessages(messages);
+
+                    if (initial)
+                    {
+                        // An opened channel starts at its latest messages and fades them in, instead of scrolling down from the top.
+                        ScheduleAfterChildren(() => scroll.ScrollToEnd(false));
+                        messageFlow.FadeInFromZero(300, Easing.OutQuint);
+                    }
 
                     if (reachedStart)
                     {
