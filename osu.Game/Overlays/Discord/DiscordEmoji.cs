@@ -115,7 +115,10 @@ namespace osu.Game.Overlays.Discord
 
         public LocalisableString TooltipText { get; }
 
-        public float LineBaseHeight => DrawHeight * 0.8f;
+        /// <summary>
+        /// Places the emoji in the middle of a line of message text, so that it doesn't make the line higher.
+        /// </summary>
+        public float LineBaseHeight => DrawHeight * 0.725f;
 
         [Resolved]
         private DiscordTextureStore textures { get; set; } = null!;

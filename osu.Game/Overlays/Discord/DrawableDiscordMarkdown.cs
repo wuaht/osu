@@ -179,6 +179,7 @@ namespace osu.Game.Overlays.Discord
                                     Text = block.Marker ?? (block.Level == 0 ? @"•" : @"◦"),
                                     Font = DiscordStyle.MessageFont(textSize),
                                     Colour = TextColour ?? colourProvider.Content1,
+                                    Padding = new MarginPadding { Vertical = flow.LinePadding },
                                 },
                                 lastFlow = flow,
                             },
@@ -208,7 +209,7 @@ namespace osu.Game.Overlays.Discord
 
         private DiscordTextFlow createFlow(string text, float size, bool bold, bool jumbo, Dictionary<int, BindableBool> spoilers)
         {
-            var flow = new DiscordTextFlow
+            var flow = new DiscordTextFlow(size)
             {
                 RelativeSizeAxes = Axes.X,
                 AutoSizeAxes = Axes.Y,
@@ -391,6 +392,7 @@ namespace osu.Game.Overlays.Discord
                 {
                     CodeBackground = codeBackground,
                     TextColour = textColour,
+                    LinePadding = flow.LinePadding,
                 };
 
                 addDecorated(flow, word, spoiler);
@@ -400,6 +402,9 @@ namespace osu.Game.Overlays.Discord
 
         private void addDecorated(DiscordTextFlow flow, Drawable drawable, BindableBool? spoiler)
         {
+            if (drawable is MentionChip chip)
+                chip.Margin = new MarginPadding { Horizontal = 1, Vertical = flow.LinePadding };
+
             flow.AddArbitraryDrawable(spoiler == null ? drawable : new SpoilerCover(drawable, spoiler));
         }
 
@@ -467,11 +472,31 @@ namespace osu.Game.Overlays.Discord
 
         public partial class DiscordTextFlow : LinkFlowContainer
         {
+            /// <summary>
+            /// The vertical padding of text, which makes every line <see cref="DiscordStyle.LineHeight"/> high.
+            /// </summary>
+            public readonly float LinePadding;
+
+            public DiscordTextFlow(float textSize)
+            {
+                LinePadding = (DiscordStyle.LineHeight(textSize) - textSize) / 2;
+            }
+
+            protected override SpriteText CreateSpriteText() => new LineSpriteText { Padding = new MarginPadding { Vertical = LinePadding } };
+
             protected override DrawableLinkCompiler CreateLinkCompiler(ITextPart textPart) => new DrawableLinkCompiler(textPart)
             {
                 IdleColour = DiscordStyle.Link,
                 HoverColour = Color4.White,
             };
+        }
+
+        /// <summary>
+        /// Text whose base line includes its padding, so that it lines up with the other content of a line.
+        /// </summary>
+        private partial class LineSpriteText : OsuSpriteText, IHasLineBaseHeight
+        {
+            float IHasLineBaseHeight.LineBaseHeight => Padding.Top + LineBaseHeight;
         }
 
         /// <summary>
@@ -482,13 +507,21 @@ namespace osu.Game.Overlays.Discord
             public bool CodeBackground { get; init; }
             public Color4? TextColour { get; init; }
 
+            /// <summary>
+            /// The vertical padding around the word, so that it lines up with plain text.
+            /// </summary>
+            public float LinePadding
+            {
+                init => Padding = new MarginPadding { Vertical = value };
+            }
+
             private readonly string text;
             private readonly FontUsage font;
             private readonly MarkdownStyle style;
 
             private OsuSpriteText spriteText = null!;
 
-            public float LineBaseHeight => spriteText.Y + spriteText.LineBaseHeight;
+            public float LineBaseHeight => Padding.Top + spriteText.LineBaseHeight;
 
             public DecoratedWord(string text, FontUsage font, MarkdownStyle style)
             {
@@ -574,7 +607,7 @@ namespace osu.Game.Overlays.Discord
 
             public bool Highlighted { get; init; }
 
-            public float LineBaseHeight => spriteText.Y + spriteText.LineBaseHeight;
+            public float LineBaseHeight => Margin.Top + spriteText.LineBaseHeight;
 
             public MentionChip(string text, FontUsage font, Color4 textColour, Color4 backgroundColour)
             {

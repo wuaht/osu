@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Sprites;
@@ -49,6 +50,11 @@ namespace osu.Game.Overlays.Discord
         public static FontUsage CodeFont(float size = MESSAGE_TEXT_SIZE - 1) => new FontUsage(@"Inter", size, @"Regular");
 
         public static FontUsage UiFont(float size = 14, FontWeight weight = FontWeight.Regular) => OsuFont.Torus.With(size: size, weight: weight);
+
+        /// <summary>
+        /// The height of a line of message text with the given font size, so that lines are evenly spaced no matter what they contain (like emoji).
+        /// </summary>
+        public static float LineHeight(float size = MESSAGE_TEXT_SIZE) => MathF.Round(size * 4 / 3);
 
         /// <summary>
         /// Converts a Discord colour integer (such as a role or embed colour) to a colour, or returns null if no colour is set.

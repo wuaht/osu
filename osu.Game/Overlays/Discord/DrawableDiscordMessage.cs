@@ -297,6 +297,8 @@ namespace osu.Game.Overlays.Discord
 
             var flow = new FillFlowContainer
             {
+                Anchor = Anchor.CentreLeft,
+                Origin = Anchor.CentreLeft,
                 AutoSizeAxes = Axes.Both,
                 Direction = FillDirection.Horizontal,
                 Spacing = new Vector2(8, 0),
@@ -350,11 +352,11 @@ namespace osu.Game.Overlays.Discord
                 Margin = new MarginPadding { Bottom = 1 },
             });
 
+            // The header is as high as a line of text, so that it and the first line are as high as the avatar.
             return new Container
             {
                 RelativeSizeAxes = Axes.X,
-                AutoSizeAxes = Axes.Y,
-                Margin = new MarginPadding { Bottom = 2 },
+                Height = DiscordStyle.LineHeight(),
                 Child = flow,
             };
         }
