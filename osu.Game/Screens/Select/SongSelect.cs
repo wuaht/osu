@@ -1282,10 +1282,14 @@ namespace osu.Game.Screens.Select
                     yield return new OsuMenuItem(CommonStrings.CopyLink, MenuItemType.Standard, () => (game as OsuGame)?.CopyToClipboard(url));
             }
 
-            foreach (var i in CreateBeatmapFileMenuActions(beatmap))
+            var fileActions = CreateBeatmapFileMenuActions(beatmap).ToList();
+
+            foreach (var i in fileActions)
                 yield return i;
 
-            yield return new OsuMenuItemSpacer();
+            // the online and file actions are only separated from the collections if there are any.
+            if (beatmap.OnlineID > 0 || fileActions.Count > 0)
+                yield return new OsuMenuItemSpacer();
 
             foreach (var i in CreateCollectionMenuActions(beatmap))
                 yield return i;
