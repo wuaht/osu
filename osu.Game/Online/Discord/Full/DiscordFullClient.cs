@@ -207,6 +207,7 @@ namespace osu.Game.Online.Discord.Full
             {
                 [@"code"] = code.Replace(@" ", string.Empty).Replace(@"-", string.Empty),
                 [@"ticket"] = challenge.Ticket,
+                [@"login_instance_id"] = challenge.LoginInstanceId,
                 [@"login_source"] = null,
                 [@"gift_code_sku_id"] = null,
             });
@@ -250,11 +251,11 @@ namespace osu.Game.Online.Discord.Full
                 if (!t.IsCompletedSuccessfully)
                 {
                     var exception = t.Exception?.GetBaseException();
+                    Logger.Log($@"Discord login request {path} failed: {exception?.Message}", LoggingTarget.Network);
 
                     Error.Value = exception switch
                     {
                         DiscordCaptchaRequiredException => @"Discord requires a captcha for this login, which can't be shown here. Please log in with the QR code instead.",
-                        DiscordUnauthorizedException => @"The code is invalid or expired.",
                         _ => exception?.Message,
                     };
 
@@ -276,7 +277,8 @@ namespace osu.Game.Online.Discord.Full
 
                 if (response.Value<bool?>(@"mfa") == true && !string.IsNullOrEmpty(ticket))
                 {
-                    MfaChallenge.Value = new DiscordMfaChallenge(ticket, response.Value<bool?>(@"totp") ?? false, response.Value<bool?>(@"sms") ?? false,
+                    MfaChallenge.Value = new DiscordMfaChallenge(ticket, response.Value<string>(@"login_instance_id"), response.Value<bool?>(@"totp") ?? false,
+                        response.Value<bool?>(@"sms") ?? false,
                         response.Value<bool?>(@"backup") ?? false);
                     return;
                 }
@@ -1793,7 +1795,8 @@ namespace osu.Game.Online.Discord.Full
                     continue;
                 }
 
-                if (response.StatusCode == HttpStatusCode.Unauthorized)
+                // Requests without a token (such as logging in) can't fail due to an expired login, so the message of Discord is shown for them instead.
+                if (response.StatusCode == HttpStatusCode.Unauthorized && token != null)
                     throw new DiscordUnauthorizedException();
 
                 if (!response.IsSuccessStatusCode)
@@ -1902,7 +1905,9 @@ namespace osu.Game.Online.Discord.Full
     /// <summary>
     /// The second factor which is required to complete a login with a password.
     /// </summary>
-    public record DiscordMfaChallenge(string Ticket, bool Totp, bool Sms, bool Backup);
+    /// <param name="Ticket">Identifies the login which the second factor completes.</param>
+    /// <param name="LoginInstanceId">Identifies the login attempt, which Discord requires again with the second factor.</param>
+    public record DiscordMfaChallenge(string Ticket, string? LoginInstanceId, bool Totp, bool Sms, bool Backup);
 
     public enum DiscordMfaMethod
     {
