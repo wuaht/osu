@@ -123,10 +123,12 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
         private const double movement_speed = 0.85;
 
         /// <summary>
-        /// How long the cursor rests on an object before hitting it, in milliseconds.
+        /// The shortest and longest time the cursor rests on an object before hitting it, in milliseconds.
         /// Only kept when the pause before the object is long enough for it.
         /// </summary>
-        private const double arrival_hold = 40;
+        private const double arrival_hold_min = 10;
+
+        private const double arrival_hold_max = 30;
 
         private static readonly Vector2 playfield_min = new Vector2(-512, -384);
         private static readonly Vector2 playfield_max = new Vector2(1024, 768);
@@ -498,7 +500,8 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
             double gap = next.StartTime - leaveTime;
             double realGap = ApplyModsToTimeDelta(leaveTime, next.StartTime);
             double movementTime = (80 + 90 * Math.Log2(distance / (2 * next.Radius) + 1)) * movement_speed;
-            double hold = Math.Clamp(realGap - movementTime, 0, arrival_hold);
+            double arrivalHold = arrival_hold_min + (arrival_hold_max - arrival_hold_min) * RealisticMath.Random(next.StackedPosition + new Vector2(1, 1));
+            double hold = Math.Clamp(realGap - movementTime, 0, arrivalHold);
             double arrivalTime = realGap > 0 ? next.StartTime - gap * hold / realGap : next.StartTime;
             double moveStartTime = realGap > movementTime + hold ? arrivalTime - gap * movementTime / realGap : leaveTime;
 
