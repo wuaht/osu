@@ -96,6 +96,17 @@ namespace osu.Game.Online.Discord
         public event Action<DiscordGuild>? GuildChannelsChanged;
 
         /// <summary>
+        /// Invoked with the channel ID when a channel was read in another Discord client of the local user.
+        /// </summary>
+        public event Action<ulong>? ChannelRead;
+
+        /// <summary>
+        /// Invoked with the number of unread mentions of each channel which has any, as Discord knows them when connecting.
+        /// In direct messages, every message counts as a mention.
+        /// </summary>
+        public event Action<IReadOnlyDictionary<ulong, int>>? UnreadMentionsLoaded;
+
+        /// <summary>
         /// Whether this client provides guilds. If not, only direct messages are shown.
         /// </summary>
         public abstract bool SupportsGuilds { get; }
@@ -269,6 +280,14 @@ namespace osu.Game.Online.Discord
         /// </summary>
         public virtual DiscordGuildNotificationSettings? GetNotificationSettings(ulong? guildId) => null;
 
+        /// <summary>
+        /// Tells Discord that a channel was read up to its latest message, so that it is shown as read in other Discord clients too.
+        /// Clients which can't do this only know locally which messages were read.
+        /// </summary>
+        public virtual void MarkRead(DiscordChannel channel)
+        {
+        }
+
         public DiscordRole? GetRole(ulong id)
         {
             foreach (var guild in Guilds)
@@ -292,6 +311,10 @@ namespace osu.Game.Online.Discord
         }
 
         protected void TriggerMessageCreated(DiscordMessage message) => MessageCreated?.Invoke(message);
+
+        protected void TriggerChannelRead(ulong channelId) => ChannelRead?.Invoke(channelId);
+
+        protected void TriggerUnreadMentionsLoaded(IReadOnlyDictionary<ulong, int> mentions) => UnreadMentionsLoaded?.Invoke(mentions);
 
         protected void TriggerUserUpdated(DiscordUser user) => UserUpdated?.Invoke(user);
 

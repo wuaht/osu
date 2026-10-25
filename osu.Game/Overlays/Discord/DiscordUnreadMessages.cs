@@ -9,7 +9,7 @@ namespace osu.Game.Overlays.Discord
 {
     /// <summary>
     /// Counts the unread direct messages of each conversation, and the unread mentions of the local user in guild channels.
-    /// Discord can't be told that a message was read through the Social SDK, so this is only known to the client.
+    /// Discord can't be told that a message was read through the Social SDK, so there this is only known to the client.
     /// </summary>
     public class DiscordUnreadMessages
     {
@@ -28,6 +28,22 @@ namespace osu.Game.Overlays.Discord
         public void Add(ulong channelId, ulong? guildId = null)
         {
             counts[channelId] = Get(channelId) + 1;
+
+            if (guildId is ulong id)
+                channelGuilds[channelId] = id;
+
+            Changed?.Invoke();
+        }
+
+        public void Set(ulong channelId, int count, ulong? guildId = null)
+        {
+            if (count <= 0)
+            {
+                MarkRead(channelId);
+                return;
+            }
+
+            counts[channelId] = count;
 
             if (guildId is ulong id)
                 channelGuilds[channelId] = id;

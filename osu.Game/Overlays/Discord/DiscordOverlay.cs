@@ -175,10 +175,18 @@ namespace osu.Game.Overlays.Discord
             client.BindValueChanged(c =>
             {
                 if (c.OldValue != null)
+                {
                     c.OldValue.MessageCreated -= onMessageCreated;
+                    c.OldValue.ChannelRead -= onChannelRead;
+                    c.OldValue.UnreadMentionsLoaded -= onUnreadMentionsLoaded;
+                }
 
                 if (c.NewValue != null)
+                {
                     c.NewValue.MessageCreated += onMessageCreated;
+                    c.NewValue.ChannelRead += onChannelRead;
+                    c.NewValue.UnreadMentionsLoaded += onUnreadMentionsLoaded;
+                }
 
                 unread.Clear();
                 state.UnbindBindings();
@@ -199,6 +207,19 @@ namespace osu.Game.Overlays.Discord
                 handleMessageCreated(message);
             else
                 host.UpdateThread.Scheduler.Add(() => handleMessageCreated(message));
+        }
+
+        private void onChannelRead(ulong channelId) => unread.MarkRead(channelId);
+
+        /// <summary>
+        /// Takes over what Discord knows about the unread messages when connecting, which replaces what was counted before.
+        /// </summary>
+        private void onUnreadMentionsLoaded(IReadOnlyDictionary<ulong, int> mentions)
+        {
+            unread.Clear();
+
+            foreach (var (channelId, count) in mentions)
+                unread.Set(channelId, count, client.Value?.GetChannel(channelId)?.GuildId);
         }
 
         private void handleMessageCreated(DiscordMessage message)
@@ -380,13 +401,20 @@ namespace osu.Game.Overlays.Discord
 
             // The open conversation is read while the overlay is shown.
             if (State.Value == Visibility.Visible && currentView is DiscordMainView main && main.Navigation.Channel.Value is DiscordChannel open)
+            {
                 unread.MarkRead(open.Id);
+                client.Value?.MarkRead(open);
+            }
         }
 
         protected override void Dispose(bool isDisposing)
         {
             if (client.Value != null)
+            {
                 client.Value.MessageCreated -= onMessageCreated;
+                client.Value.ChannelRead -= onChannelRead;
+                client.Value.UnreadMentionsLoaded -= onUnreadMentionsLoaded;
+            }
 
             base.Dispose(isDisposing);
             textures?.Dispose();

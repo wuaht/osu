@@ -97,6 +97,11 @@ namespace osu.Game.Online.Discord.Full
         /// </summary>
         private readonly Dictionary<ulong, DiscordGuildNotificationSettings> notificationSettings = new Dictionary<ulong, DiscordGuildNotificationSettings>();
 
+        /// <summary>
+        /// The latest message of each channel which Discord knows the local user has read.
+        /// </summary>
+        private readonly Dictionary<ulong, ulong> readMessages = new Dictionary<ulong, ulong>();
+
         private readonly HashSet<ulong> requestedGuildMembers = new HashSet<ulong>();
         private readonly HashSet<ulong> requestedProfiles = new HashSet<ulong>();
 
@@ -737,6 +742,7 @@ namespace osu.Game.Online.Discord.Full
             Users.Clear();
             allGuildChannels.Clear();
             notificationSettings.Clear();
+            readMessages.Clear();
             requestedGuildMembers.Clear();
             requestedProfiles.Clear();
             subscribedGuilds.Clear();
@@ -1369,6 +1375,14 @@ namespace osu.Game.Online.Discord.Full
                     });
                     break;
 
+                case @"MESSAGE_ACK":
+                    ulong ackedChannelId = obj.Value<ulong>(@"channel_id");
+                    ulong ackedMessageId = obj.Value<ulong?>(@"message_id") ?? 0;
+
+                    if (ackedMessageId != 0)
+                        Schedule(() => onMessageAcked(ackedChannelId, ackedMessageId));
+                    break;
+
                 case @"USER_GUILD_SETTINGS_UPDATE":
                     var updatedSettings = parseNotificationSettings(obj);
                     ulong settingsGuildId = obj.Value<ulong?>(@"guild_id") ?? 0;
@@ -1392,7 +1406,9 @@ namespace osu.Game.Online.Discord.Full
         private record ParsedGuild(DiscordGuild Guild, List<DiscordChannel> Channels);
 
         private record ParsedReady(DiscordUser User, List<ParsedGuild> Guilds, List<DiscordChannel> PrivateChannels, List<DiscordUser> Users,
-                                   Dictionary<ulong, DiscordGuildNotificationSettings> NotificationSettings);
+                                   Dictionary<ulong, DiscordGuildNotificationSettings> NotificationSettings, ParsedReadStates ReadStates);
+
+        private record ParsedReadStates(Dictionary<ulong, ulong> ReadMessages, Dictionary<ulong, int> UnreadMentions);
 
         public override DiscordGuildNotificationSettings? GetNotificationSettings(ulong? guildId) => notificationSettings.GetValueOrDefault(guildId ?? 0);
 
@@ -1500,7 +1516,38 @@ namespace osu.Game.Online.Discord.Full
 
             privateChannels.Sort((a, b) => (b.LastMessageId ?? b.Id).CompareTo(a.LastMessageId ?? a.Id));
 
-            return new ParsedReady(user, guilds, privateChannels, users, parseAllNotificationSettings(data[@"user_guild_settings"]));
+            return new ParsedReady(user, guilds, privateChannels, users, parseAllNotificationSettings(data[@"user_guild_settings"]), parseReadStates(data[@"read_state"]));
+        }
+
+        private static ParsedReadStates parseReadStates(JToken? data)
+        {
+            var states = new ParsedReadStates(new Dictionary<ulong, ulong>(), new Dictionary<ulong, int>());
+
+            // Depending on the capabilities of the connection, the read states are a list or an object which contains the list.
+            var entries = data as JArray ?? (data as JObject)?[@"entries"] as JArray;
+
+            if (entries == null)
+                return states;
+
+            foreach (var entry in entries.OfType<JObject>())
+            {
+                // The other types are read states of things which aren't channels, like guild events.
+                if ((entry.Value<int?>(@"read_state_type") ?? 0) != 0)
+                    continue;
+
+                if (!ulong.TryParse(entry.Value<string>(@"id"), out ulong channelId))
+                    continue;
+
+                if (ulong.TryParse(entry.Value<string>(@"last_message_id"), out ulong messageId))
+                    states.ReadMessages[channelId] = messageId;
+
+                int mentions = entry.Value<int?>(@"mention_count") ?? 0;
+
+                if (mentions > 0)
+                    states.UnreadMentions[channelId] = mentions;
+            }
+
+            return states;
         }
 
         private static ParsedGuild parseGuild(JObject data)
@@ -1592,8 +1639,36 @@ namespace osu.Game.Online.Discord.Full
             Guilds.AddRange(ready.Guilds.Select(g => g.Guild));
             PrivateChannels.AddRange(ready.PrivateChannels);
 
+            foreach (var (channelId, messageId) in ready.ReadStates.ReadMessages)
+                readMessages[channelId] = messageId;
+
             Error.Value = null;
             State.Value = DiscordConnectionState.Ready;
+
+            TriggerUnreadMentionsLoaded(ready.ReadStates.UnreadMentions);
+        }
+
+        public override void MarkRead(DiscordChannel channel)
+        {
+            channel = GetChannel(channel.Id) ?? channel;
+
+            if (channel.LastMessageId is not ulong latest || (readMessages.TryGetValue(channel.Id, out ulong read) && read >= latest))
+                return;
+
+            readMessages[channel.Id] = latest;
+
+            request(HttpMethod.Post, $@"channels/{channel.Id}/messages/{latest}/ack", new JObject { [@"token"] = null })
+                .ContinueWith(_ => { }, TaskContinuationOptions.OnlyOnFaulted);
+        }
+
+        private void onMessageAcked(ulong channelId, ulong messageId)
+        {
+            // Acknowledgements of this client arrive as well, which are already known.
+            if (readMessages.TryGetValue(channelId, out ulong read) && read >= messageId)
+                return;
+
+            readMessages[channelId] = messageId;
+            TriggerChannelRead(channelId);
         }
 
         private void addGuild(ParsedGuild parsed)
@@ -1741,6 +1816,10 @@ namespace osu.Game.Online.Discord.Full
                 // A direct message from someone who wasn't messaged before. The channel is created by a separate event, which may arrive later.
                 return;
             }
+
+            // Discord marks the channel as read when the local user sends a message.
+            if (message.Author.Id == LocalUser.Value?.Id)
+                readMessages[message.ChannelId] = message.Id;
 
             if (channel?.IsPrivate == true)
                 BumpPrivateChannel(channel.Id, message.Id);
