@@ -44,7 +44,8 @@ namespace osu.Game.Overlays.Discord
             {
                 lastExtent = ScrollableExtent;
 
-                if (trackEnd)
+                // While the chat is scrolled past its end, it already bounces back to the end, which jumping there would cut off.
+                if (trackEnd && !isPastEnd)
                     base.ScrollToEnd(false, true);
                 else if (keptDistanceFromEnd is double distance)
                     base.ScrollTo(ScrollableExtent - distance, false);
@@ -52,6 +53,8 @@ namespace osu.Game.Overlays.Discord
 
             base.ApplyCurrentToContent();
         }
+
+        private bool isPastEnd => Current > ScrollableExtent || Target > ScrollableExtent;
 
         private void updateTrackState()
         {
