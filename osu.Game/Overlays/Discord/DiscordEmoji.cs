@@ -15,6 +15,7 @@ using osu.Framework.Graphics.Textures;
 using osu.Framework.Graphics.Rendering;
 using osu.Framework.Localisation;
 using osu.Game.Graphics.Sprites;
+using osu.Game.Online.Discord;
 using osuTK;
 
 namespace osu.Game.Overlays.Discord
@@ -50,6 +51,33 @@ namespace osu.Game.Overlays.Discord
         }
 
         public static string GetCustomEmojiUrl(ulong id, bool animated) => $@"https://cdn.discordapp.com/emojis/{id}.{(animated ? @"gif" : @"png")}?size=96";
+
+        /// <summary>
+        /// Returns the URL of the image of a unicode or custom emoji.
+        /// </summary>
+        public static string? GetUrl(DiscordReactionEmoji emoji) =>
+            emoji.Id is ulong id ? GetCustomEmojiUrl(id, emoji.Animated) : GetUnicodeEmojiUrl(emoji.Name ?? string.Empty);
+
+        /// <summary>
+        /// Creates the image of a unicode or custom emoji.
+        /// </summary>
+        public static Drawable CreateDrawable(DiscordReactionEmoji emoji, float size)
+        {
+            string name = emoji.Name ?? string.Empty;
+            string tooltip = emoji.Id == null ? name : $@":{name}:";
+
+            return new DrawableDiscordEmoji(GetUrl(emoji) ?? string.Empty, emoji.Id == null ? name : tooltip, tooltip, size, emoji.Animated)
+            {
+                Anchor = Anchor.Centre,
+                Origin = Anchor.Centre,
+            };
+        }
+
+        /// <summary>
+        /// The text which shows an emoji in a message.
+        /// </summary>
+        public static string ToMessageText(DiscordReactionEmoji emoji) =>
+            emoji.Id is ulong id ? $@"<{(emoji.Animated ? @"a" : string.Empty)}:{emoji.Name}:{id}>" : emoji.Name ?? string.Empty;
 
         /// <summary>
         /// Whether a text element (a user-perceived character) is an emoji.

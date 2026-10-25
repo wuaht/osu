@@ -124,7 +124,8 @@ namespace osu.Game.Overlays.Discord
         /// <summary>
         /// The header, messages and text box of a single channel.
         /// </summary>
-        private partial class ChannelChat : CompositeDrawable
+        [Cached(typeof(IDiscordMessageActions))]
+        private partial class ChannelChat : CompositeDrawable, IDiscordMessageActions
         {
             /// <summary>
             /// Older messages are loaded when the scroll position is closer to the top than this.
@@ -142,11 +143,14 @@ namespace osu.Game.Overlays.Discord
             [Resolved]
             private OverlayColourProvider colourProvider { get; set; } = null!;
 
+            [Resolved]
+            private DiscordEmojiUsage? emojiUsage { get; set; }
+
             private DiscordChatScrollContainer scroll = null!;
             private FillFlowContainer<DrawableDiscordMessage> messageFlow = null!;
             private Container topContainer = null!;
             private LoadingSpinner topSpinner = null!;
-            private HistoryTextBox textBox = null!;
+            private DiscordMessageComposer composer = null!;
 
             private DiscordMarkdownContext markdownContext = null!;
 
@@ -219,21 +223,13 @@ namespace osu.Game.Overlays.Discord
                                 RelativeSizeAxes = Axes.X,
                                 AutoSizeAxes = Axes.Y,
                                 Padding = new MarginPadding { Horizontal = 16, Bottom = 16, Top = 4 },
-                                Child = textBox = new DiscordMessageTextBox
-                                {
-                                    RelativeSizeAxes = Axes.X,
-                                    Height = 44,
-                                    LengthLimit = 2000,
-                                    PlaceholderText = SlopDiscordStrings.MessagePlaceholder(Channel.IsPrivate ? Channel.DisplayName : $@"#{Channel.DisplayName}"),
-                                    ReleaseFocusOnCommit = false,
-                                    HoldFocus = true,
-                                },
+                                Child = composer = new DiscordMessageComposer(Channel, client.SupportsMessageActions, GetCustomEmojis, getMentionCandidates),
                             },
                         },
                     },
                 };
 
-                textBox.OnCommit += (_, _) => sendMessage();
+                composer.TextBox.OnCommit += (_, _) => sendMessage();
             }
 
             protected override void LoadComplete()
@@ -243,6 +239,7 @@ namespace osu.Game.Overlays.Discord
                 client.MessageCreated += onMessageCreated;
                 client.MessageUpdated += onMessageUpdated;
                 client.MessageDeleted += onMessageDeleted;
+                client.ReactionChanged += onReactionChanged;
 
                 loadOlder();
             }
@@ -390,12 +387,24 @@ namespace osu.Game.Overlays.Discord
 
             private void sendMessage()
             {
-                string text = textBox.Text.Trim();
+                string text = composer.GetMessageText();
+                var uploads = composer.Uploads.ToList();
+                var replyTo = composer.ReplyTo;
 
-                if (string.IsNullOrEmpty(text))
+                if (composer.Editing is DiscordMessage edited)
+                {
+                    composer.Reset();
+
+                    if (!string.IsNullOrEmpty(text) && text != edited.Content)
+                        client.EditMessage(edited, text).ContinueWith(t => logFailure(t, @"edit"), TaskContinuationOptions.OnlyOnFaulted);
+
+                    return;
+                }
+
+                if (string.IsNullOrEmpty(text) && uploads.Count == 0)
                     return;
 
-                textBox.Text = string.Empty;
+                composer.Reset();
 
                 string nonce = generateNonce();
 
@@ -414,7 +423,7 @@ namespace osu.Game.Overlays.Discord
                 appendMessage(pending);
                 scroll.ScrollToEnd();
 
-                client.SendMessage(Channel, text, nonce).ContinueWith(t => Schedule(() =>
+                client.SendMessage(Channel, text, nonce, replyTo, uploads.Count > 0 ? uploads : null).ContinueWith(t => Schedule(() =>
                 {
                     var drawable = messageFlow.FirstOrDefault(m => m.Message.Nonce == nonce && m.Message.Pending);
 
@@ -436,6 +445,70 @@ namespace osu.Game.Overlays.Discord
                     if (drawable != null)
                         replaceOrRemoveDuplicate(drawable, t.GetResultSafely());
                 }), TaskScheduler.Default);
+            }
+
+            private static void logFailure(Task task, string action)
+            {
+                string error = task.Exception?.GetBaseException().Message ?? string.Empty;
+                Logger.Log($@"Failed to {action} a Discord message: {error}", LoggingTarget.Network);
+            }
+
+            public void Reply(DiscordMessage message) => composer.SetReply(message);
+
+            public void StartEdit(DiscordMessage message) => composer.SetEdit(message);
+
+            public void Delete(DiscordMessage message) =>
+                client.DeleteMessage(message).ContinueWith(t => logFailure(t, @"delete"), TaskContinuationOptions.OnlyOnFaulted);
+
+            public IReadOnlyList<DiscordCustomEmojiGroup> GetCustomEmojis() => DiscordEmojiPicker.GetCustomGroups(client, Channel.GuildId);
+
+            public void ToggleReaction(DiscordMessage message, DiscordReactionEmoji emoji)
+            {
+                ulong localUserId = client.LocalUser.Value?.Id ?? 0;
+                bool remove = message.Reactions.Any(r => r.Emoji.Equals(emoji) && r.Me);
+
+                var update = new DiscordReactionUpdate(message.ChannelId, message.Id, emoji, localUserId, remove ? DiscordReactionUpdateType.Remove : DiscordReactionUpdateType.Add);
+
+                // The reaction is shown right away, the echo of the gateway is ignored as it was applied already.
+                applyReaction(update);
+
+                if (!remove)
+                    emojiUsage?.Record(emoji);
+
+                (remove ? client.RemoveReaction(message, emoji) : client.AddReaction(message, emoji)).ContinueWith(t => Schedule(() =>
+                {
+                    logFailure(t, @"react to");
+                    applyReaction(update with { Type = remove ? DiscordReactionUpdateType.Add : DiscordReactionUpdateType.Remove });
+                }), TaskContinuationOptions.OnlyOnFaulted);
+            }
+
+            private void onReactionChanged(DiscordReactionUpdate update) => Schedule(() =>
+            {
+                if (update.ChannelId == Channel.Id)
+                    applyReaction(update);
+            });
+
+            private void applyReaction(DiscordReactionUpdate update)
+            {
+                var drawable = messageFlow.FirstOrDefault(m => m.Message.Id == update.MessageId && !m.Message.Pending);
+
+                if (drawable == null)
+                    return;
+
+                drawable.Message.ApplyReaction(update, client.LocalUser.Value?.Id ?? 0);
+                drawable.UpdateReactions();
+            }
+
+            /// <summary>
+            /// The users which can be mentioned, which are the ones known from the channel and its messages, as the members of a guild aren't known.
+            /// </summary>
+            private IEnumerable<DiscordUser> getMentionCandidates()
+            {
+                ulong localUserId = client.LocalUser.Value?.Id ?? 0;
+
+                return Channel.Recipients
+                              .Concat(orderedMessages.Reverse().SelectMany(m => m.Message.Mentions.Prepend(m.Message.Author)))
+                              .Where(u => u.Id != localUserId && u.Id != 0);
             }
 
             private static string generateNonce()
@@ -594,14 +667,14 @@ namespace osu.Game.Overlays.Discord
 
             public void TakeTextBoxFocus()
             {
-                if (textBox.IsLoaded)
-                    textBox.TakeFocus();
+                if (composer.TextBox.IsLoaded)
+                    composer.TextBox.TakeFocus();
             }
 
             public void KillTextBoxFocus()
             {
-                if (textBox.IsLoaded)
-                    textBox.KillFocus();
+                if (composer.TextBox.IsLoaded)
+                    composer.TextBox.KillFocus();
             }
 
             protected override void Dispose(bool isDisposing)
@@ -613,22 +686,9 @@ namespace osu.Game.Overlays.Discord
                     client.MessageCreated -= onMessageCreated;
                     client.MessageUpdated -= onMessageUpdated;
                     client.MessageDeleted -= onMessageDeleted;
+                    client.ReactionChanged -= onReactionChanged;
                 }
             }
-        }
-
-        private partial class DiscordMessageTextBox : HistoryTextBox
-        {
-            [BackgroundDependencyLoader]
-            private void load(OverlayColourProvider colourProvider)
-            {
-                CornerRadius = 8;
-                BackgroundUnfocused = colourProvider.Background4.Opacity(0.8f);
-                BackgroundFocused = colourProvider.Background4.Opacity(0.9f);
-                BackgroundCommit = colourProvider.Background3;
-            }
-
-            protected override SpriteText CreatePlaceholder() => base.CreatePlaceholder().With(p => p.Font = DiscordStyle.UiFont(15));
         }
     }
 }

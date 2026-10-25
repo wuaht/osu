@@ -101,7 +101,7 @@ namespace osu.Game.Overlays.Discord
             if (discord_hosts.Any(h => uri.Host.Equals(h, StringComparison.OrdinalIgnoreCase) || uri.Host.EndsWith('.' + h, StringComparison.OrdinalIgnoreCase)))
                 return true;
 
-            if (uri.AbsoluteUri.StartsWith(DiscordEmoji.TWEMOJI_BASE_URL, StringComparison.Ordinal))
+            if (uri.AbsoluteUri.StartsWith(DiscordEmoji.TWEMOJI_BASE_URL, StringComparison.Ordinal) || uri.AbsoluteUri.StartsWith(DiscordEmojiData.BASE_URL, StringComparison.Ordinal))
                 return true;
 
             // Media of a link preview which the user chose to load.

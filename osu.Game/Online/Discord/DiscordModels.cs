@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Runtime.Serialization;
 using Newtonsoft.Json;
 
 namespace osu.Game.Online.Discord
@@ -186,7 +187,10 @@ namespace osu.Game.Online.Discord
         RemoveEmoji,
     }
 
-    public record DiscordReactionUpdate(ulong ChannelId, ulong MessageId, DiscordReactionEmoji? Emoji, ulong UserId, DiscordReactionUpdateType Type);
+    /// <param name="Burst">Whether the reaction is a super reaction.</param>
+    /// <param name="BurstColours">The colours of a super reaction which was added, as hex strings.</param>
+    public record DiscordReactionUpdate(ulong ChannelId, ulong MessageId, DiscordReactionEmoji? Emoji, ulong UserId, DiscordReactionUpdateType Type,
+                                        bool Burst = false, IReadOnlyList<string>? BurstColours = null);
 
     /// <summary>
     /// A file which is sent with a message.
@@ -198,14 +202,61 @@ namespace osu.Game.Online.Discord
         [JsonProperty("emoji")]
         public DiscordReactionEmoji Emoji { get; set; } = new DiscordReactionEmoji();
 
-        [JsonProperty("count")]
+        /// <summary>
+        /// The number of normal reactions with this emoji.
+        /// </summary>
+        [JsonIgnore]
         public int Count { get; set; }
+
+        /// <summary>
+        /// The number of super reactions with this emoji.
+        /// </summary>
+        [JsonIgnore]
+        public int BurstCount { get; set; }
 
         /// <summary>
         /// Whether the local user reacted with this emoji.
         /// </summary>
         [JsonProperty("me")]
         public bool Me { get; set; }
+
+        /// <summary>
+        /// Whether the local user super reacted with this emoji.
+        /// </summary>
+        [JsonProperty("me_burst")]
+        public bool MeBurst { get; set; }
+
+        /// <summary>
+        /// The colours of the super reactions, as hex strings.
+        /// </summary>
+        [JsonProperty("burst_colors")]
+        public List<string> BurstColours { get; set; } = new List<string>();
+
+        // Discord counts both kinds of reactions in "count", and splits them in "count_details".
+        [JsonProperty("count")]
+        private int totalCount { get; set; }
+
+        [JsonProperty("burst_count")]
+        private int burstCount { get; set; }
+
+        [JsonProperty("count_details")]
+        private CountDetails? countDetails { get; set; }
+
+        [OnDeserialized]
+        private void onDeserialized(StreamingContext context)
+        {
+            BurstCount = countDetails?.Burst ?? burstCount;
+            Count = countDetails?.Normal ?? Math.Max(0, totalCount - BurstCount);
+        }
+
+        private class CountDetails
+        {
+            [JsonProperty("normal")]
+            public int Normal { get; set; }
+
+            [JsonProperty("burst")]
+            public int Burst { get; set; }
+        }
     }
 
     public class DiscordMessageReference
@@ -785,24 +836,45 @@ namespace osu.Game.Online.Discord
                 if (reaction == null)
                     Reactions.Add(reaction = new DiscordReaction { Emoji = update.Emoji });
 
-                // The local user can only react once with each emoji.
-                if (byLocalUser && reaction.Me)
+                // The local user can only react once with each emoji and kind.
+                if (byLocalUser && (update.Burst ? reaction.MeBurst : reaction.Me))
                     return;
 
-                reaction.Count++;
-                reaction.Me |= byLocalUser;
+                if (update.Burst)
+                {
+                    reaction.BurstCount++;
+                    reaction.MeBurst |= byLocalUser;
+
+                    if (reaction.BurstColours.Count == 0 && update.BurstColours != null)
+                        reaction.BurstColours.AddRange(update.BurstColours);
+                }
+                else
+                {
+                    reaction.Count++;
+                    reaction.Me |= byLocalUser;
+                }
             }
             else if (reaction != null)
             {
-                if (byLocalUser && !reaction.Me)
+                if (byLocalUser && !(update.Burst ? reaction.MeBurst : reaction.Me))
                     return;
 
-                reaction.Count--;
+                if (update.Burst)
+                {
+                    reaction.BurstCount = Math.Max(0, reaction.BurstCount - 1);
 
-                if (byLocalUser)
-                    reaction.Me = false;
+                    if (byLocalUser)
+                        reaction.MeBurst = false;
+                }
+                else
+                {
+                    reaction.Count = Math.Max(0, reaction.Count - 1);
 
-                if (reaction.Count <= 0)
+                    if (byLocalUser)
+                        reaction.Me = false;
+                }
+
+                if (reaction.Count == 0 && reaction.BurstCount == 0)
                     Reactions.Remove(reaction);
             }
         }

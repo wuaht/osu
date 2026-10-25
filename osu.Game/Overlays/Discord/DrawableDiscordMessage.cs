@@ -2,6 +2,8 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using osu.Framework.Allocation;
@@ -9,14 +11,17 @@ using osu.Framework.Extensions;
 using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
+using osu.Framework.Graphics.Cursor;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
+using osu.Framework.Graphics.UserInterface;
 using osu.Framework.Input.Events;
 using osu.Framework.Localisation;
 using osu.Framework.Platform;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.Sprites;
+using osu.Game.Graphics.UserInterface;
 using osu.Game.Localisation;
 using osu.Game.Online.Discord;
 using osuTK;
@@ -27,7 +32,7 @@ namespace osu.Game.Overlays.Discord
     /// <summary>
     /// A message of the chat, with its attachments, embeds and stickers.
     /// </summary>
-    public partial class DrawableDiscordMessage : CompositeDrawable
+    public partial class DrawableDiscordMessage : CompositeDrawable, IHasContextMenu
     {
         public readonly DiscordMessage Message;
 
@@ -39,12 +44,26 @@ namespace osu.Game.Overlays.Discord
         [Resolved]
         private DiscordClient client { get; set; } = null!;
 
+        [Resolved]
+        private IDiscordMessageActions? actions { get; set; }
+
+        [Resolved]
+        private Clipboard clipboard { get; set; } = null!;
+
         private Container daySeparator = null!;
         private Container header = null!;
         private Container avatarContainer = null!;
         private OsuSpriteText gutterTime = null!;
         private Box hoverBackground = null!;
         private Container mainContent = null!;
+        private Container messageRow = null!;
+        private FillFlowContainer reactionFlow = null!;
+        private DiscordMessageToolbar? toolbar;
+
+        /// <summary>
+        /// Whether the message is hovered, or its toolbar is in use.
+        /// </summary>
+        private bool active;
 
         private bool showDaySeparator;
         private bool isContinuation;
@@ -156,6 +175,14 @@ namespace osu.Game.Overlays.Discord
             if (getThread() is DiscordChannel thread)
                 body.Add(new ThreadChip(thread, context.OpenChannel));
 
+            body.Add(reactionFlow = new FillFlowContainer
+            {
+                RelativeSizeAxes = Axes.X,
+                AutoSizeAxes = Axes.Y,
+                Direction = FillDirection.Full,
+                Spacing = new Vector2(4),
+            });
+
             if (Message.Failed)
             {
                 body.Add(new OsuSpriteText
@@ -181,7 +208,7 @@ namespace osu.Game.Overlays.Discord
             if (Message.IsReply)
                 rows.Add(createReplyPreview());
 
-            rows.Add(new Container
+            rows.Add(messageRow = new Container
             {
                 RelativeSizeAxes = Axes.X,
                 AutoSizeAxes = Axes.Y,
@@ -248,6 +275,72 @@ namespace osu.Game.Overlays.Discord
             });
 
             InternalChild = rows;
+
+            UpdateReactions();
+        }
+
+        private bool isOwn => Message.Author.Id == context.LocalUserId;
+
+        /// <summary>
+        /// Whether the message can be replied to, reacted to and so on, which isn't the case while it is sent.
+        /// </summary>
+        private bool canAct => actions != null && client.SupportsMessageActions && !Message.Pending && !Message.Failed && Message.Id != 0;
+
+        /// <summary>
+        /// Shows the current reactions of the message, after they changed.
+        /// </summary>
+        public void UpdateReactions()
+        {
+            reactionFlow.Clear();
+
+            var messageActions = canAct ? actions : null;
+
+            foreach (var reaction in Message.Reactions)
+            {
+                var emoji = reaction.Emoji;
+                Action? toggle = messageActions == null ? null : () => messageActions.ToggleReaction(Message, emoji);
+
+                if (reaction.BurstCount > 0)
+                    reactionFlow.Add(new DiscordReactionChip(reaction, true, toggle));
+
+                if (reaction.Count > 0)
+                    reactionFlow.Add(new DiscordReactionChip(reaction, false, toggle));
+            }
+
+            if (messageActions != null && reactionFlow.Count > 0)
+            {
+                reactionFlow.Add(new DiscordPopoverButton(FontAwesome.Regular.Smile, SlopDiscordStrings.AddReaction,
+                    () => new DiscordEmojiPicker(messageActions.GetCustomEmojis(), e => messageActions.ToggleReaction(Message, e)))
+                {
+                    Size = new Vector2(32, 26),
+                });
+            }
+
+            reactionFlow.Alpha = reactionFlow.Count > 0 ? 1 : 0;
+        }
+
+        public MenuItem[]? ContextMenuItems => canAct ? CreateMenuItems(Message, actions!, isOwn, clipboard).ToArray() : null;
+
+        /// <summary>
+        /// The actions of the context menu of a message, which are also shown by the "more" button of its toolbar.
+        /// </summary>
+        public static IEnumerable<MenuItem> CreateMenuItems(DiscordMessage message, IDiscordMessageActions actions, bool own, Clipboard? clipboard)
+        {
+            yield return new OsuMenuItem(SlopDiscordStrings.ReplyToMessage, MenuItemType.Standard, () => actions.Reply(message));
+
+            if (own)
+                yield return new OsuMenuItem(SlopDiscordStrings.EditMessage, MenuItemType.Standard, () => actions.StartEdit(message));
+
+            if (clipboard != null)
+            {
+                if (!string.IsNullOrEmpty(message.Content))
+                    yield return new OsuMenuItem(SlopDiscordStrings.CopyText, MenuItemType.Standard, () => clipboard.SetText(message.Content));
+
+                yield return new OsuMenuItem(SlopDiscordStrings.CopyMessageId, MenuItemType.Standard, () => clipboard.SetText(message.Id.ToString(CultureInfo.InvariantCulture)));
+            }
+
+            if (own)
+                yield return new OsuMenuItem(SlopDiscordStrings.DeleteMessage, MenuItemType.Destructive, () => actions.Delete(message));
         }
 
         protected override void LoadComplete()
@@ -269,21 +362,56 @@ namespace osu.Game.Overlays.Discord
                 mainContent.Padding = new MarginPadding { Left = DiscordStyle.MESSAGE_GUTTER, Right = 16, Top = 2, Bottom = 2 };
         }
 
-        protected override bool OnHover(HoverEvent e)
+        protected override void Update()
         {
-            hoverBackground.FadeTo(0.03f, 50);
+            base.Update();
 
-            if (isContinuation)
-                gutterTime.FadeIn(50);
+            // The message is no longer hovered while its toolbar is, as the toolbar handles hover itself.
+            bool nowActive = IsHovered || toolbar?.InUse == true;
 
-            return base.OnHover(e);
+            if (nowActive == active)
+                return;
+
+            active = nowActive;
+
+            if (active)
+            {
+                hoverBackground.FadeTo(0.03f, 50);
+
+                if (isContinuation)
+                    gutterTime.FadeIn(50);
+
+                showToolbar();
+            }
+            else
+            {
+                hoverBackground.FadeOut(100);
+                gutterTime.FadeOut(100);
+                toolbar?.FadeOut(100);
+            }
         }
 
-        protected override void OnHoverLost(HoverLostEvent e)
+        private void showToolbar()
         {
-            hoverBackground.FadeOut(100);
-            gutterTime.FadeOut(100);
-            base.OnHoverLost(e);
+            if (!canAct)
+                return;
+
+            // The toolbar is only created once it's needed, as most messages are never hovered.
+            if (toolbar == null)
+            {
+                messageRow.Add(toolbar = new DiscordMessageToolbar(Message, actions!, isOwn)
+                {
+                    Anchor = Anchor.TopRight,
+                    Origin = Anchor.TopRight,
+                    X = -16,
+                    Y = -16,
+                    Alpha = 0,
+                });
+            }
+            else
+                toolbar.UpdateQuickReactions();
+
+            toolbar.FadeIn(50);
         }
 
         /// <summary>

@@ -465,6 +465,7 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopDiscordFrosted, false);
             SetDefault(OsuSetting.SlopDiscordBackgroundOpacity, 0.6f, 0.2f, 1f, 0.01f);
             SetDefault(OsuSetting.SlopDiscordOverlayHeight, 0.5f, 0.2f, 1f, 0.01f);
+            SetDefault(OsuSetting.SlopDiscordEmojiUsage, string.Empty);
         }
 
         protected override bool CheckLookupContainsPrivateInformation(OsuSetting lookup)
@@ -1700,5 +1701,10 @@ namespace osu.Game.Configuration
         /// The height of the Discord overlay, relative to the screen.
         /// </summary>
         SlopDiscordOverlayHeight,
+
+        /// <summary>
+        /// How often each emoji was used in the Discord overlay, for the quick reactions.
+        /// </summary>
+        SlopDiscordEmojiUsage,
     }
 }

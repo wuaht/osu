@@ -51,6 +51,9 @@ namespace osu.Game.Overlays.Discord
         [Cached]
         private readonly DiscordMusicDucker musicDucker = new DiscordMusicDucker();
 
+        [Cached]
+        private readonly DiscordEmojiUsage emojiUsage = new DiscordEmojiUsage();
+
         [Resolved]
         private OsuConfigManager config { get; set; } = null!;
 
@@ -113,6 +116,7 @@ namespace osu.Game.Overlays.Discord
             Children = new Drawable[]
             {
                 musicDucker,
+                emojiUsage,
                 frostedBackground = new FrostedPanelBackground
                 {
                     Alpha = 0,

@@ -357,6 +357,146 @@ namespace osu.Game.Localisation
         /// </summary>
         public static LocalisableString ReplyOriginalUnavailable => new TranslatableString(getKey(@"reply_original_unavailable"), @"The original message could not be loaded");
 
+        /// <summary>
+        /// "Smileys & Emotion"
+        /// </summary>
+        public static LocalisableString EmojiCategorySmileys => new TranslatableString(getKey(@"emoji_category_smileys"), @"Smileys & Emotion");
+
+        /// <summary>
+        /// "People & Body"
+        /// </summary>
+        public static LocalisableString EmojiCategoryPeople => new TranslatableString(getKey(@"emoji_category_people"), @"People & Body");
+
+        /// <summary>
+        /// "Animals & Nature"
+        /// </summary>
+        public static LocalisableString EmojiCategoryNature => new TranslatableString(getKey(@"emoji_category_nature"), @"Animals & Nature");
+
+        /// <summary>
+        /// "Food & Drink"
+        /// </summary>
+        public static LocalisableString EmojiCategoryFood => new TranslatableString(getKey(@"emoji_category_food"), @"Food & Drink");
+
+        /// <summary>
+        /// "Travel & Places"
+        /// </summary>
+        public static LocalisableString EmojiCategoryTravel => new TranslatableString(getKey(@"emoji_category_travel"), @"Travel & Places");
+
+        /// <summary>
+        /// "Activities"
+        /// </summary>
+        public static LocalisableString EmojiCategoryActivities => new TranslatableString(getKey(@"emoji_category_activities"), @"Activities");
+
+        /// <summary>
+        /// "Objects"
+        /// </summary>
+        public static LocalisableString EmojiCategoryObjects => new TranslatableString(getKey(@"emoji_category_objects"), @"Objects");
+
+        /// <summary>
+        /// "Symbols"
+        /// </summary>
+        public static LocalisableString EmojiCategorySymbols => new TranslatableString(getKey(@"emoji_category_symbols"), @"Symbols");
+
+        /// <summary>
+        /// "Flags"
+        /// </summary>
+        public static LocalisableString EmojiCategoryFlags => new TranslatableString(getKey(@"emoji_category_flags"), @"Flags");
+
+        /// <summary>
+        /// "Other"
+        /// </summary>
+        public static LocalisableString EmojiCategoryOther => new TranslatableString(getKey(@"emoji_category_other"), @"Other");
+
+        /// <summary>
+        /// "Frequently Used"
+        /// </summary>
+        public static LocalisableString EmojiFrequentlyUsed => new TranslatableString(getKey(@"emoji_frequently_used"), @"Frequently Used");
+
+        /// <summary>
+        /// "Find the perfect emoji"
+        /// </summary>
+        public static LocalisableString EmojiSearchPlaceholder => new TranslatableString(getKey(@"emoji_search_placeholder"), @"Find the perfect emoji");
+
+        /// <summary>
+        /// "Emojis could not be loaded: {0}"
+        /// </summary>
+        public static LocalisableString EmojiLoadFailed(string error) => new TranslatableString(getKey(@"emoji_load_failed"), @"Emojis could not be loaded: {0}", error);
+
+        /// <summary>
+        /// "No emoji matches your search"
+        /// </summary>
+        public static LocalisableString EmojiNoResults => new TranslatableString(getKey(@"emoji_no_results"), @"No emoji matches your search");
+
+        /// <summary>
+        /// "Select emoji"
+        /// </summary>
+        public static LocalisableString SelectEmoji => new TranslatableString(getKey(@"select_emoji"), @"Select emoji");
+
+        /// <summary>
+        /// "Add Reaction"
+        /// </summary>
+        public static LocalisableString AddReaction => new TranslatableString(getKey(@"add_reaction"), @"Add Reaction");
+
+        /// <summary>
+        /// "Super Reaction"
+        /// </summary>
+        public static LocalisableString SuperReaction => new TranslatableString(getKey(@"super_reaction"), @"Super Reaction");
+
+        /// <summary>
+        /// "Reply"
+        /// </summary>
+        public static LocalisableString ReplyToMessage => new TranslatableString(getKey(@"reply_to_message"), @"Reply");
+
+        /// <summary>
+        /// "Edit Message"
+        /// </summary>
+        public static LocalisableString EditMessage => new TranslatableString(getKey(@"edit_message"), @"Edit Message");
+
+        /// <summary>
+        /// "Delete Message"
+        /// </summary>
+        public static LocalisableString DeleteMessage => new TranslatableString(getKey(@"delete_message"), @"Delete Message");
+
+        /// <summary>
+        /// "Copy Text"
+        /// </summary>
+        public static LocalisableString CopyText => new TranslatableString(getKey(@"copy_text"), @"Copy Text");
+
+        /// <summary>
+        /// "Copy Message ID"
+        /// </summary>
+        public static LocalisableString CopyMessageId => new TranslatableString(getKey(@"copy_message_id"), @"Copy Message ID");
+
+        /// <summary>
+        /// "More"
+        /// </summary>
+        public static LocalisableString MoreActions => new TranslatableString(getKey(@"more_actions"), @"More");
+
+        /// <summary>
+        /// "Replying to {0}"
+        /// </summary>
+        public static LocalisableString ReplyingTo(string name) => new TranslatableString(getKey(@"replying_to"), @"Replying to {0}", name);
+
+        /// <summary>
+        /// "Editing message"
+        /// </summary>
+        public static LocalisableString EditingMessage => new TranslatableString(getKey(@"editing_message"), @"Editing message");
+
+        /// <summary>
+        /// "Upload a File"
+        /// </summary>
+        public static LocalisableString UploadFile => new TranslatableString(getKey(@"upload_file"), @"Upload a File");
+
+        /// <summary>
+        /// "Remove"
+        /// </summary>
+        public static LocalisableString RemoveAttachment => new TranslatableString(getKey(@"remove_attachment"), @"Remove");
+
+        /// <summary>
+        /// "That didn't work: {0}"
+        /// </summary>
+        public static LocalisableString ActionFailed(string error) => new TranslatableString(getKey(@"action_failed"), @"That didn't work: {0}", error);
+
         private static string getKey(string key) => $@"{prefix}:{key}";
     }
 }

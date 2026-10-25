@@ -961,7 +961,9 @@ namespace osu.Game.Online.Discord.Full
                             @"MESSAGE_REACTION_REMOVE" => DiscordReactionUpdateType.Remove,
                             @"MESSAGE_REACTION_REMOVE_ALL" => DiscordReactionUpdateType.RemoveAll,
                             _ => DiscordReactionUpdateType.RemoveEmoji,
-                        });
+                        },
+                        obj.Value<bool?>(@"burst") ?? obj.Value<int?>(@"type") == 1,
+                        obj[@"burst_colors"]?.ToObject<List<string>>());
 
                     Schedule(() => TriggerReactionChanged(reaction));
                     break;
