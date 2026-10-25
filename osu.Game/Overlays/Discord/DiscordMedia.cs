@@ -58,6 +58,20 @@ namespace osu.Game.Overlays.Discord
 
         private const int max_animation_frames = 300;
 
+        /// <summary>
+        /// Formats the size of a file for display.
+        /// </summary>
+        public static string FormatSize(long bytes)
+        {
+            if (bytes < 1024)
+                return $@"{bytes} B";
+
+            if (bytes < 1024 * 1024)
+                return $@"{bytes / 1024.0:0.##} KB";
+
+            return $@"{bytes / 1024.0 / 1024.0:0.##} MB";
+        }
+
         private static readonly HttpClient http_client = createHttpClient();
 
         private static HttpClient createHttpClient()
@@ -538,6 +552,9 @@ namespace osu.Game.Overlays.Discord
         [Resolved]
         private DiscordOverlay? overlay { get; set; }
 
+        [Resolved]
+        private DiscordMusicDucker? musicDucker { get; set; }
+
         /// <param name="videoUrl">The URL of the video.</param>
         /// <param name="thumbnailUrl">The URL of an image shown until the video is started.</param>
         /// <param name="size">The displayed size.</param>
@@ -680,7 +697,10 @@ namespace osu.Game.Overlays.Discord
             }
 
             controls.UpdateState(position, duration, playing, audioAttached, muteAdjustment.Value == 0);
+            updateDucking();
         }
+
+        private void updateDucking() => musicDucker?.SetPlaying(this, playing && audioAttached && muteAdjustment.Value > 0);
 
         protected override bool OnClick(ClickEvent e)
         {
@@ -722,6 +742,7 @@ namespace osu.Game.Overlays.Discord
         {
             playing = false;
             track?.Stop();
+            updateDucking();
         }
 
         private void seekTo(double time)
@@ -809,6 +830,7 @@ namespace osu.Game.Overlays.Discord
         protected override void Dispose(bool isDisposing)
         {
             cancellation.Cancel();
+            musicDucker?.SetPlaying(this, false);
 
             track?.Stop();
             track?.Dispose();
@@ -818,9 +840,9 @@ namespace osu.Game.Overlays.Discord
         }
 
         /// <summary>
-        /// Provides the downloaded video to the audio engine to play its sound.
+        /// Provides downloaded media to the audio engine to play its sound.
         /// </summary>
-        private class VideoSoundStore : IResourceStore<byte[]>
+        internal class VideoSoundStore : IResourceStore<byte[]>
         {
             private readonly byte[] data;
 
@@ -842,7 +864,7 @@ namespace osu.Game.Overlays.Discord
             }
         }
 
-        private partial class VideoControls : CompositeDrawable
+        internal partial class VideoControls : CompositeDrawable
         {
             public Action? TogglePlayback;
             public Action? ToggleMute;
@@ -854,7 +876,8 @@ namespace osu.Game.Overlays.Discord
             private readonly OsuSpriteText timeText;
             private readonly SeekBar seekBar;
 
-            public VideoControls()
+            /// <param name="shade">Whether the controls darken what is behind them, to be readable on top of a video.</param>
+            public VideoControls(bool shade = true)
             {
                 InternalChildren = new Drawable[]
                 {
@@ -862,6 +885,7 @@ namespace osu.Game.Overlays.Discord
                     {
                         RelativeSizeAxes = Axes.Both,
                         Colour = ColourInfo.GradientVertical(Color4.Black.Opacity(0), Color4.Black.Opacity(0.7f)),
+                        Alpha = shade ? 1 : 0,
                     },
                     new GridContainer
                     {
@@ -1034,6 +1058,251 @@ namespace osu.Game.Overlays.Discord
                     SeekTo?.Invoke(Math.Clamp(x / bar.DrawWidth, 0, 1));
                 }
             }
+        }
+    }
+
+    /// <summary>
+    /// An audio file of a message, which is downloaded when played and has playback controls.
+    /// </summary>
+    public partial class DiscordMediaAudio : CompositeDrawable
+    {
+        private readonly DiscordAttachment attachment;
+
+        private readonly CancellationTokenSource cancellation = new CancellationTokenSource();
+
+        private readonly BindableDouble muteAdjustment = new BindableDouble(1);
+
+        private LoadingSpinner spinner = null!;
+        private DiscordMediaVideo.VideoControls controls = null!;
+
+        private ITrackStore? trackStore;
+        private Track? track;
+
+        private bool downloading;
+        private bool playing;
+
+        private IBindable<Visibility>? overlayState;
+
+        [Resolved]
+        private AudioManager audio { get; set; } = null!;
+
+        [Resolved]
+        private GameHost host { get; set; } = null!;
+
+        [Resolved]
+        private DiscordOverlay? overlay { get; set; }
+
+        [Resolved]
+        private DiscordMusicDucker? musicDucker { get; set; }
+
+        public DiscordMediaAudio(DiscordAttachment attachment)
+        {
+            this.attachment = attachment;
+
+            Size = new Vector2(DiscordMedia.MAX_WIDTH, 72);
+            Masking = true;
+            CornerRadius = 6;
+        }
+
+        [BackgroundDependencyLoader]
+        private void load(OverlayColourProvider colourProvider)
+        {
+            InternalChildren = new Drawable[]
+            {
+                new Box
+                {
+                    RelativeSizeAxes = Axes.Both,
+                    Colour = colourProvider.Background5,
+                    Alpha = 0.8f,
+                },
+                new Container
+                {
+                    RelativeSizeAxes = Axes.X,
+                    Height = 40,
+                    Children = new Drawable[]
+                    {
+                        new SpriteIcon
+                        {
+                            Anchor = Anchor.CentreLeft,
+                            Origin = Anchor.CentreLeft,
+                            X = 14,
+                            Icon = FontAwesome.Solid.Music,
+                            Size = new Vector2(20),
+                            Colour = colourProvider.Content2,
+                        },
+                        spinner = new LoadingSpinner
+                        {
+                            Anchor = Anchor.CentreRight,
+                            Origin = Anchor.CentreRight,
+                            X = -12,
+                            Size = new Vector2(18),
+                        },
+                        new FillFlowContainer
+                        {
+                            Anchor = Anchor.CentreLeft,
+                            Origin = Anchor.CentreLeft,
+                            RelativeSizeAxes = Axes.X,
+                            AutoSizeAxes = Axes.Y,
+                            Direction = FillDirection.Vertical,
+                            Padding = new MarginPadding { Left = 46, Right = 40 },
+                            Children = new Drawable[]
+                            {
+                                new TruncatingSpriteText
+                                {
+                                    RelativeSizeAxes = Axes.X,
+                                    Text = attachment.Filename,
+                                    Font = DiscordStyle.UiFont(15, FontWeight.SemiBold),
+                                    Colour = DiscordStyle.Link,
+                                },
+                                new OsuSpriteText
+                                {
+                                    Text = DiscordMedia.FormatSize(attachment.Size),
+                                    Font = DiscordStyle.UiFont(12),
+                                    Colour = colourProvider.Content2,
+                                },
+                            },
+                        },
+                    },
+                },
+                controls = new DiscordMediaVideo.VideoControls(false)
+                {
+                    Anchor = Anchor.BottomLeft,
+                    Origin = Anchor.BottomLeft,
+                    RelativeSizeAxes = Axes.X,
+                    Height = 32,
+                    TogglePlayback = togglePlayback,
+                    ToggleMute = () => muteAdjustment.Value = muteAdjustment.Value > 0 ? 0 : 1,
+                    OpenInBrowser = () => host.OpenUrlExternally(attachment.Url),
+                    SeekTo = fraction => track?.Seek(fraction * track.Length),
+                },
+            };
+        }
+
+        protected override void LoadComplete()
+        {
+            base.LoadComplete();
+
+            if (overlay != null)
+            {
+                overlayState = overlay.State.GetBoundCopy();
+
+                // Drawables of a hidden overlay stop updating, but the sound would keep playing.
+                overlayState.BindValueChanged(s =>
+                {
+                    if (s.NewValue == Visibility.Hidden)
+                        pause();
+                });
+            }
+        }
+
+        private bool loaded => track?.IsLoaded == true;
+
+        protected override void Update()
+        {
+            base.Update();
+
+            // The track is decoded in the background, so it is started once it is ready.
+            if (loaded && playing && !track!.IsRunning && track.CurrentTime < track.Length)
+                track.Start();
+
+            controls.UpdateState(loaded ? track!.CurrentTime : 0, loaded ? track!.Length : 0, playing, true, muteAdjustment.Value == 0);
+            updateDucking();
+        }
+
+        private void updateDucking() => musicDucker?.SetPlaying(this, playing && loaded && muteAdjustment.Value > 0);
+
+        private void togglePlayback()
+        {
+            if (playing)
+                pause();
+            else
+                play();
+        }
+
+        private void play()
+        {
+            if (track == null)
+            {
+                download();
+                return;
+            }
+
+            // Restart a file which played until its end.
+            if (loaded && track.CurrentTime >= track.Length - 1)
+                track.Seek(0);
+
+            playing = true;
+        }
+
+        private void pause()
+        {
+            playing = false;
+            track?.Stop();
+            updateDucking();
+        }
+
+        private void download()
+        {
+            if (downloading)
+                return;
+
+            downloading = true;
+            spinner.Show();
+
+            Task.Run(async () =>
+            {
+                try
+                {
+                    byte[] data = await DiscordMedia.Download(attachment.ProxyUrl ?? attachment.Url, cancellation.Token).ConfigureAwait(false);
+
+                    Schedule(() => load(data));
+                }
+                catch (Exception e)
+                {
+                    if (cancellation.IsCancellationRequested)
+                        return;
+
+                    Logger.Log($@"Failed to load a Discord audio file: {e.Message}", LoggingTarget.Network);
+
+                    Schedule(() =>
+                    {
+                        downloading = false;
+                        spinner.Hide();
+                    });
+                }
+            });
+        }
+
+        private void load(byte[] data)
+        {
+            downloading = false;
+            spinner.Hide();
+
+            trackStore = audio.GetTrackStore(new DiscordMediaVideo.VideoSoundStore(data));
+            track = trackStore.Get(@"sound");
+
+            if (track == null)
+            {
+                Logger.Log($@"Failed to play the Discord audio file {attachment.Filename}", LoggingTarget.Network);
+                return;
+            }
+
+            track.AddAdjustment(AdjustableProperty.Volume, muteAdjustment);
+            track.Completed += () => Schedule(() => playing = false);
+
+            playing = true;
+        }
+
+        protected override void Dispose(bool isDisposing)
+        {
+            cancellation.Cancel();
+            musicDucker?.SetPlaying(this, false);
+
+            track?.Stop();
+            track?.Dispose();
+            trackStore?.Dispose();
+
+            base.Dispose(isDisposing);
         }
     }
 }

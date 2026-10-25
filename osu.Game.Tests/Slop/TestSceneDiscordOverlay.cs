@@ -206,7 +206,7 @@ namespace osu.Game.Tests.Slop
                 return Task.FromResult(result);
             }
 
-            public override Task<DiscordMessage> SendMessage(DiscordChannel channel, string content, string nonce)
+            public override Task<DiscordMessage> SendMessage(DiscordChannel channel, string content, string nonce, DiscordMessage? replyTo = null, IReadOnlyList<DiscordUpload>? files = null)
             {
                 var message = create(channel.Id, localUser, DateTimeOffset.Now, content);
                 message.Nonce = nonce;

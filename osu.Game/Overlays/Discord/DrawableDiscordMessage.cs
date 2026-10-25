@@ -608,6 +608,9 @@ namespace osu.Game.Overlays.Discord
                 return new DiscordMediaVideo(attachment.Url, attachment.ProxyUrl, DiscordMedia.FitSize(attachment.Width, attachment.Height), false);
             }
 
+            if (attachment.IsAudio)
+                return new DiscordMediaAudio(attachment);
+
             return new FileChip(attachment);
         }
 
@@ -698,24 +701,13 @@ namespace osu.Game.Overlays.Discord
                             },
                             new OsuSpriteText
                             {
-                                Text = formatSize(attachment.Size),
+                                Text = DiscordMedia.FormatSize(attachment.Size),
                                 Font = DiscordStyle.UiFont(12),
                                 Colour = colourProvider.Content2,
                             },
                         },
                     },
                 };
-            }
-
-            private static string formatSize(long bytes)
-            {
-                if (bytes < 1024)
-                    return $@"{bytes} B";
-
-                if (bytes < 1024 * 1024)
-                    return $@"{bytes / 1024.0:0.##} KB";
-
-                return $@"{bytes / 1024.0 / 1024.0:0.##} MB";
             }
         }
 

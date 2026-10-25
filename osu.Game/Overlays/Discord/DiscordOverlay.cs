@@ -48,6 +48,9 @@ namespace osu.Game.Overlays.Discord
         [Cached]
         private readonly DiscordUnreadMessages unread = new DiscordUnreadMessages();
 
+        [Cached]
+        private readonly DiscordMusicDucker musicDucker = new DiscordMusicDucker();
+
         [Resolved]
         private OsuConfigManager config { get; set; } = null!;
 
@@ -109,6 +112,7 @@ namespace osu.Game.Overlays.Discord
 
             Children = new Drawable[]
             {
+                musicDucker,
                 frostedBackground = new FrostedPanelBackground
                 {
                     Alpha = 0,

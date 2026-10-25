@@ -493,6 +493,9 @@ namespace osu.Game.Online.Discord
         [JsonIgnore]
         public bool IsVideo => ContentType?.StartsWith(@"video/", StringComparison.Ordinal) == true || hasExtension(@".mp4", @".webm", @".mov");
 
+        [JsonIgnore]
+        public bool IsAudio => ContentType?.StartsWith(@"audio/", StringComparison.Ordinal) == true || hasExtension(@".mp3", @".ogg", @".wav", @".flac", @".m4a", @".opus");
+
         private bool hasExtension(params string[] extensions)
         {
             foreach (string extension in extensions)
