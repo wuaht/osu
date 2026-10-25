@@ -3,6 +3,7 @@
 
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using osu.Framework.Allocation;
 using osu.Framework.Development;
 using osu.Framework.Bindables;
@@ -263,21 +264,22 @@ namespace osu.Game.Overlays.Discord
                 return;
 
             LocalisableString text;
+            string content = toReadableText(message, guild, c);
 
             if (guild != null)
             {
-                text = string.IsNullOrEmpty(message.Content)
+                text = string.IsNullOrEmpty(content)
                     ? SlopDiscordStrings.GuildAttachmentNotification(message.Author.DisplayName, channel.DisplayName)
-                    : SlopDiscordStrings.GuildMessageNotification(message.Author.DisplayName, channel.DisplayName, message.Content);
+                    : SlopDiscordStrings.GuildMessageNotification(message.Author.DisplayName, channel.DisplayName, content);
             }
             else
             {
-                text = string.IsNullOrEmpty(message.Content)
+                text = string.IsNullOrEmpty(content)
                     ? SlopDiscordStrings.AttachmentNotification(message.Author.DisplayName)
-                    : SlopDiscordStrings.MessageNotification(message.Author.DisplayName, message.Content);
+                    : SlopDiscordStrings.MessageNotification(message.Author.DisplayName, content);
             }
 
-            notifications.Post(new SimpleNotification
+            notifications.Post(new DiscordMessageNotification(message.Author.GetAvatarUrl(64), textures)
             {
                 Icon = FontAwesome.Brands.Discord,
                 Text = text,
@@ -292,6 +294,28 @@ namespace osu.Game.Overlays.Discord
                 },
             });
         }
+
+        private static readonly Regex mention_regex = new Regex(@"<(@!?|@&|#)(\d+)>|<a?(:\w+:)\d+>", RegexOptions.Compiled);
+
+        /// <summary>
+        /// The content of a message with mentions shown by name and custom emojis by their :name:, as it can't show them as chips.
+        /// </summary>
+        private static string toReadableText(DiscordMessage message, DiscordGuild? guild, DiscordClient client) => mention_regex.Replace(message.Content, m =>
+        {
+            if (m.Groups[3].Success)
+                return m.Groups[3].Value;
+
+            ulong id = ulong.Parse(m.Groups[2].Value);
+
+            string? name = m.Groups[1].Value switch
+            {
+                @"@&" => guild?.Roles.FirstOrDefault(r => r.Id == id)?.Name is string role ? $@"@{role}" : null,
+                @"#" => client.GetChannel(id)?.DisplayName is string channelName ? $@"#{channelName}" : null,
+                _ => message.Mentions.FirstOrDefault(u => u.Id == id)?.DisplayName is string user ? $@"@{user}" : null,
+            };
+
+            return name ?? m.Value;
+        });
 
         private static bool mentionsLocalUser(DiscordMessage message, DiscordGuild guild, DiscordClient client, DiscordGuildNotificationSettings? settings)
         {
