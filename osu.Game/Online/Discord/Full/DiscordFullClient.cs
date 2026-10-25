@@ -276,18 +276,64 @@ namespace osu.Game.Online.Discord.Full
             return messages;
         }
 
-        public override async Task<DiscordMessage> SendMessage(DiscordChannel channel, string content, string nonce)
+        public override bool SupportsMessageActions => true;
+
+        public override async Task<DiscordMessage> SendMessage(DiscordChannel channel, string content, string nonce, DiscordMessage? replyTo = null,
+                                                               IReadOnlyList<DiscordUpload>? files = null)
         {
-            var response = await request(HttpMethod.Post, $@"channels/{channel.Id}/messages", new JObject
+            var body = new JObject
             {
                 [@"content"] = content,
                 [@"nonce"] = nonce,
                 [@"tts"] = false,
                 [@"flags"] = 0,
-            }).ConfigureAwait(false);
+            };
+
+            if (replyTo != null)
+            {
+                body[@"message_reference"] = new JObject
+                {
+                    [@"message_id"] = replyTo.Id.ToString(),
+                    [@"channel_id"] = replyTo.ChannelId.ToString(),
+                    [@"guild_id"] = (replyTo.GuildId ?? channel.GuildId)?.ToString(),
+                };
+            }
+
+            if (files?.Count > 0)
+            {
+                var attachments = new JArray();
+
+                for (int i = 0; i < files.Count; i++)
+                    attachments.Add(new JObject { [@"id"] = i, [@"filename"] = files[i].Filename });
+
+                body[@"attachments"] = attachments;
+            }
+
+            var response = await request(HttpMethod.Post, $@"channels/{channel.Id}/messages", body, files).ConfigureAwait(false);
 
             return response.ToObject<DiscordMessage>() ?? throw new DiscordRequestException(@"Discord returned an invalid message.");
         }
+
+        public override async Task<DiscordMessage?> GetMessage(ulong channelId, ulong messageId)
+        {
+            // User accounts can't fetch a single message, but the messages around it start with the message itself.
+            var response = await request(HttpMethod.Get, $@"channels/{channelId}/messages?around={messageId}&limit=1", null).ConfigureAwait(false);
+            var messages = response.ToObject<List<DiscordMessage>>() ?? new List<DiscordMessage>();
+
+            return messages.FirstOrDefault(m => m.Id == messageId);
+        }
+
+        public override Task EditMessage(DiscordMessage message, string content) =>
+            request(HttpMethod.Patch, $@"channels/{message.ChannelId}/messages/{message.Id}", new JObject { [@"content"] = content });
+
+        public override Task DeleteMessage(DiscordMessage message) =>
+            request(HttpMethod.Delete, $@"channels/{message.ChannelId}/messages/{message.Id}", null);
+
+        public override Task AddReaction(DiscordMessage message, DiscordReactionEmoji emoji) =>
+            request(HttpMethod.Put, $@"channels/{message.ChannelId}/messages/{message.Id}/reactions/{emoji.UrlName}/@me", null);
+
+        public override Task RemoveReaction(DiscordMessage message, DiscordReactionEmoji emoji) =>
+            request(HttpMethod.Delete, $@"channels/{message.ChannelId}/messages/{message.Id}/reactions/{emoji.UrlName}/@me", null);
 
         public override async Task<DiscordThreadSearchResult> SearchThreads(DiscordChannel forum)
         {
@@ -325,13 +371,13 @@ namespace osu.Game.Online.Discord.Full
             };
         }
 
-        private async Task<JToken> request(HttpMethod method, string path, JToken? body)
+        private async Task<JToken> request(HttpMethod method, string path, JToken? body, IReadOnlyList<DiscordUpload>? files = null)
         {
             string token = userToken.Value;
 
             try
             {
-                return await SendRequest(token, method, path, body, CancellationToken.None).ConfigureAwait(false);
+                return await SendRequest(token, method, path, body, CancellationToken.None, files).ConfigureAwait(false);
             }
             catch (DiscordUnauthorizedException)
             {
@@ -900,6 +946,37 @@ namespace osu.Game.Online.Discord.Full
                     Schedule(() => TriggerMessageDeleted(messageChannelId, messageId));
                     break;
 
+                case @"MESSAGE_REACTION_ADD":
+                case @"MESSAGE_REACTION_REMOVE":
+                case @"MESSAGE_REACTION_REMOVE_ALL":
+                case @"MESSAGE_REACTION_REMOVE_EMOJI":
+                    var reaction = new DiscordReactionUpdate(
+                        obj.Value<ulong>(@"channel_id"),
+                        obj.Value<ulong>(@"message_id"),
+                        obj[@"emoji"]?.ToObject<DiscordReactionEmoji>(),
+                        obj.Value<ulong?>(@"user_id") ?? 0,
+                        type switch
+                        {
+                            @"MESSAGE_REACTION_ADD" => DiscordReactionUpdateType.Add,
+                            @"MESSAGE_REACTION_REMOVE" => DiscordReactionUpdateType.Remove,
+                            @"MESSAGE_REACTION_REMOVE_ALL" => DiscordReactionUpdateType.RemoveAll,
+                            _ => DiscordReactionUpdateType.RemoveEmoji,
+                        });
+
+                    Schedule(() => TriggerReactionChanged(reaction));
+                    break;
+
+                case @"GUILD_EMOJIS_UPDATE":
+                    ulong emojiGuildId = obj.Value<ulong>(@"guild_id");
+                    var emojis = obj[@"emojis"]?.ToObject<List<DiscordCustomEmoji>>() ?? new List<DiscordCustomEmoji>();
+
+                    Schedule(() =>
+                    {
+                        if (GetGuild(emojiGuildId) is DiscordGuild emojiGuild)
+                            emojiGuild.Emojis = emojis;
+                    });
+                    break;
+
                 case @"MESSAGE_DELETE_BULK":
                     ulong bulkChannelId = obj.Value<ulong>(@"channel_id");
                     var messageIds = obj[@"ids"]?.ToObject<List<ulong>>() ?? new List<ulong>();
@@ -1285,7 +1362,14 @@ namespace osu.Game.Online.Discord.Full
         /// <param name="path">The path relative to the API root.</param>
         /// <param name="body">The JSON body.</param>
         /// <param name="cancellation">A token to cancel the request.</param>
-        public static async Task<JToken> SendRequest(string? token, HttpMethod method, string path, JToken? body, CancellationToken cancellation)
+        /// <param name="token">The token of the user.</param>
+        /// <param name="method">The HTTP method.</param>
+        /// <param name="path">The path relative to the API.</param>
+        /// <param name="body">The JSON body.</param>
+        /// <param name="cancellation">Cancels the request.</param>
+        /// <param name="files">Files which are uploaded along with the body, which is then sent as form data.</param>
+        public static async Task<JToken> SendRequest(string? token, HttpMethod method, string path, JToken? body, CancellationToken cancellation,
+                                                     IReadOnlyList<DiscordUpload>? files = null)
         {
             for (int attempt = 0;; attempt++)
             {
@@ -1298,7 +1382,19 @@ namespace osu.Game.Online.Discord.Full
                 request.Headers.TryAddWithoutValidation(@"X-Super-Properties", encoded_super_properties);
                 request.Headers.TryAddWithoutValidation(@"X-Discord-Locale", @"en-US");
 
-                if (body != null)
+                if (files?.Count > 0)
+                {
+                    var form = new MultipartFormDataContent();
+
+                    if (body != null)
+                        form.Add(new StringContent(body.ToString(Formatting.None), Encoding.UTF8, @"application/json"), @"payload_json");
+
+                    for (int i = 0; i < files.Count; i++)
+                        form.Add(new ByteArrayContent(files[i].Data), $@"files[{i}]", files[i].Filename);
+
+                    request.Content = form;
+                }
+                else if (body != null)
                     request.Content = new StringContent(body.ToString(Formatting.None), Encoding.UTF8, @"application/json");
 
                 using var response = await http.SendAsync(request, cancellation).ConfigureAwait(false);

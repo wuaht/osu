@@ -55,6 +55,15 @@ namespace osu.Game.Online.Discord
         public bool Bot { get; set; }
 
         /// <summary>
+        /// The Nitro subscription of the user, which is only provided for the local user.
+        /// </summary>
+        [JsonProperty("premium_type")]
+        public int PremiumType { get; set; }
+
+        [JsonIgnore]
+        public bool HasNitro => PremiumType > 0;
+
+        /// <summary>
         /// The profile banner, which is only provided by some API endpoints.
         /// </summary>
         [JsonProperty("banner")]
@@ -108,6 +117,95 @@ namespace osu.Game.Online.Discord
 
         [JsonProperty("permissions")]
         public string Permissions { get; set; } = "0";
+    }
+
+    public class DiscordCustomEmoji
+    {
+        [JsonProperty("id")]
+        public ulong Id { get; set; }
+
+        [JsonProperty("name")]
+        public string Name { get; set; } = string.Empty;
+
+        [JsonProperty("animated")]
+        public bool Animated { get; set; }
+
+        /// <summary>
+        /// Whether the emoji can be used, which it can't once the guild lost the boost level it was added with.
+        /// </summary>
+        [JsonProperty("available")]
+        public bool Available { get; set; } = true;
+    }
+
+    /// <summary>
+    /// The emoji of a reaction, which is either a unicode emoji (without ID) or a custom emoji.
+    /// </summary>
+    public class DiscordReactionEmoji : IEquatable<DiscordReactionEmoji>
+    {
+        [JsonProperty("id")]
+        public ulong? Id { get; set; }
+
+        [JsonProperty("name")]
+        public string? Name { get; set; }
+
+        [JsonProperty("animated")]
+        public bool Animated { get; set; }
+
+        /// <summary>
+        /// The emoji as it is written in the URL of a reaction.
+        /// </summary>
+        [JsonIgnore]
+        public string UrlName => Id == null ? Uri.EscapeDataString(Name ?? string.Empty) : $@"{Uri.EscapeDataString(Name ?? @"_")}:{Id}";
+
+        public bool Equals(DiscordReactionEmoji? other)
+        {
+            if (other == null)
+                return false;
+
+            return Id != null || other.Id != null ? Id == other.Id : Name == other.Name;
+        }
+
+        public override bool Equals(object? obj) => obj is DiscordReactionEmoji other && Equals(other);
+
+        public override int GetHashCode() => Id?.GetHashCode() ?? Name?.GetHashCode() ?? 0;
+    }
+
+    public enum DiscordReactionUpdateType
+    {
+        Add,
+        Remove,
+
+        /// <summary>
+        /// All reactions of the message were removed.
+        /// </summary>
+        RemoveAll,
+
+        /// <summary>
+        /// All reactions with one emoji were removed.
+        /// </summary>
+        RemoveEmoji,
+    }
+
+    public record DiscordReactionUpdate(ulong ChannelId, ulong MessageId, DiscordReactionEmoji? Emoji, ulong UserId, DiscordReactionUpdateType Type);
+
+    /// <summary>
+    /// A file which is sent with a message.
+    /// </summary>
+    public record DiscordUpload(string Filename, byte[] Data);
+
+    public class DiscordReaction
+    {
+        [JsonProperty("emoji")]
+        public DiscordReactionEmoji Emoji { get; set; } = new DiscordReactionEmoji();
+
+        [JsonProperty("count")]
+        public int Count { get; set; }
+
+        /// <summary>
+        /// Whether the local user reacted with this emoji.
+        /// </summary>
+        [JsonProperty("me")]
+        public bool Me { get; set; }
     }
 
     public class DiscordMessageReference
@@ -323,6 +421,9 @@ namespace osu.Game.Online.Discord
 
         [JsonProperty("roles")]
         public List<DiscordRole> Roles { get; set; } = new List<DiscordRole>();
+
+        [JsonProperty("emojis")]
+        public List<DiscordCustomEmoji> Emojis { get; set; } = new List<DiscordCustomEmoji>();
 
         /// <summary>
         /// The role IDs of the local user in this guild, if known.
@@ -568,8 +669,28 @@ namespace osu.Game.Online.Discord
         [JsonProperty("mention_everyone")]
         public bool MentionEveryone { get; set; }
 
+        [JsonProperty("reactions")]
+        public List<DiscordReaction> Reactions { get; set; } = new List<DiscordReaction>();
+
+        private DiscordMessage? referencedMessage;
+
         [JsonProperty("referenced_message")]
-        public DiscordMessage? ReferencedMessage { get; set; }
+        public DiscordMessage? ReferencedMessage
+        {
+            get => referencedMessage;
+            set
+            {
+                referencedMessage = value;
+                ReferencedMessageProvided = true;
+            }
+        }
+
+        /// <summary>
+        /// Whether <see cref="ReferencedMessage"/> was provided. Discord only marks a deleted message with an explicit null,
+        /// while some payloads (like messages of bots) leave the field out, in which case the message has to be fetched.
+        /// </summary>
+        [JsonIgnore]
+        public bool ReferencedMessageProvided { get; private set; }
 
         [JsonProperty("message_reference")]
         public DiscordMessageReference? MessageReference { get; set; }
@@ -633,5 +754,54 @@ namespace osu.Game.Online.Discord
         /// </summary>
         [JsonIgnore]
         public bool IsReply => Type == 19;
+
+        /// <summary>
+        /// Applies a reaction which was added or removed.
+        /// </summary>
+        public void ApplyReaction(DiscordReactionUpdate update, ulong localUserId)
+        {
+            switch (update.Type)
+            {
+                case DiscordReactionUpdateType.RemoveAll:
+                    Reactions.Clear();
+                    return;
+
+                case DiscordReactionUpdateType.RemoveEmoji:
+                    Reactions.RemoveAll(r => r.Emoji.Equals(update.Emoji));
+                    return;
+            }
+
+            if (update.Emoji == null)
+                return;
+
+            var reaction = Reactions.Find(r => r.Emoji.Equals(update.Emoji));
+            bool byLocalUser = update.UserId == localUserId;
+
+            if (update.Type == DiscordReactionUpdateType.Add)
+            {
+                if (reaction == null)
+                    Reactions.Add(reaction = new DiscordReaction { Emoji = update.Emoji });
+
+                // The local user can only react once with each emoji.
+                if (byLocalUser && reaction.Me)
+                    return;
+
+                reaction.Count++;
+                reaction.Me |= byLocalUser;
+            }
+            else if (reaction != null)
+            {
+                if (byLocalUser && !reaction.Me)
+                    return;
+
+                reaction.Count--;
+
+                if (byLocalUser)
+                    reaction.Me = false;
+
+                if (reaction.Count <= 0)
+                    Reactions.Remove(reaction);
+            }
+        }
     }
 }

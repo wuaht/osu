@@ -86,6 +86,11 @@ namespace osu.Game.Online.Discord
         public event Action<ulong, ulong>? MessageDeleted;
 
         /// <summary>
+        /// Invoked when a reaction was added to or removed from a message.
+        /// </summary>
+        public event Action<DiscordReactionUpdate>? ReactionChanged;
+
+        /// <summary>
         /// Invoked when the channels of a guild change.
         /// </summary>
         public event Action<DiscordGuild>? GuildChannelsChanged;
@@ -99,6 +104,11 @@ namespace osu.Game.Online.Discord
         /// Whether older messages can be fetched beyond the first page.
         /// </summary>
         public abstract bool SupportsHistory { get; }
+
+        /// <summary>
+        /// Whether messages can be replied to, reacted to, edited and deleted, and files can be sent.
+        /// </summary>
+        public virtual bool SupportsMessageActions => false;
 
         protected readonly Dictionary<ulong, DiscordUser> Users = new Dictionary<ulong, DiscordUser>();
 
@@ -151,7 +161,26 @@ namespace osu.Game.Online.Discord
         /// <summary>
         /// Sends a message. The returned task completes with the message as Discord sees it.
         /// </summary>
-        public abstract Task<DiscordMessage> SendMessage(DiscordChannel channel, string content, string nonce);
+        /// <param name="channel">The channel to send the message to.</param>
+        /// <param name="content">The text of the message.</param>
+        /// <param name="nonce">Identifies the local echo of the message.</param>
+        /// <param name="replyTo">The message which is replied to, if <see cref="SupportsMessageActions"/>.</param>
+        /// <param name="files">Files which are attached, if <see cref="SupportsMessageActions"/>.</param>
+        public abstract Task<DiscordMessage> SendMessage(DiscordChannel channel, string content, string nonce, DiscordMessage? replyTo = null,
+                                                         IReadOnlyList<DiscordUpload>? files = null);
+
+        /// <summary>
+        /// Fetches a single message, or null if it doesn't exist anymore or can't be fetched.
+        /// </summary>
+        public virtual Task<DiscordMessage?> GetMessage(ulong channelId, ulong messageId) => Task.FromResult<DiscordMessage?>(null);
+
+        public virtual Task EditMessage(DiscordMessage message, string content) => Task.FromException(new NotSupportedException());
+
+        public virtual Task DeleteMessage(DiscordMessage message) => Task.FromException(new NotSupportedException());
+
+        public virtual Task AddReaction(DiscordMessage message, DiscordReactionEmoji emoji) => Task.FromException(new NotSupportedException());
+
+        public virtual Task RemoveReaction(DiscordMessage message, DiscordReactionEmoji emoji) => Task.FromException(new NotSupportedException());
 
         /// <summary>
         /// Fetches the recent posts of a forum, including archived ones. Clients which can't search return no posts,
@@ -218,6 +247,8 @@ namespace osu.Game.Online.Discord
         protected void TriggerMessageUpdated(DiscordMessage message) => MessageUpdated?.Invoke(message);
 
         protected void TriggerMessageDeleted(ulong channelId, ulong messageId) => MessageDeleted?.Invoke(channelId, messageId);
+
+        protected void TriggerReactionChanged(DiscordReactionUpdate update) => ReactionChanged?.Invoke(update);
 
         /// <summary>
         /// Creates the preview of a link in a message, which is only done when the user asks for it.

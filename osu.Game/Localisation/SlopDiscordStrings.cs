@@ -342,6 +342,21 @@ namespace osu.Game.Localisation
         /// </summary>
         public static LocalisableString ForumLoadFailed(string error) => new TranslatableString(getKey(@"forum_load_failed"), @"Posts could not be loaded: {0}", error);
 
+        /// <summary>
+        /// "Original message was deleted"
+        /// </summary>
+        public static LocalisableString ReplyOriginalDeleted => new TranslatableString(getKey(@"reply_original_deleted"), @"Original message was deleted");
+
+        /// <summary>
+        /// "Loading the original message…"
+        /// </summary>
+        public static LocalisableString ReplyOriginalLoading => new TranslatableString(getKey(@"reply_original_loading"), @"Loading the original message…");
+
+        /// <summary>
+        /// "The original message could not be loaded"
+        /// </summary>
+        public static LocalisableString ReplyOriginalUnavailable => new TranslatableString(getKey(@"reply_original_unavailable"), @"The original message could not be loaded");
+
         private static string getKey(string key) => $@"{prefix}:{key}";
     }
 }

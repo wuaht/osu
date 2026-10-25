@@ -179,7 +179,8 @@ namespace osu.Game.Online.Discord.Sdk
             return source.Task;
         }
 
-        public override Task<DiscordMessage> SendMessage(DiscordChannel channel, string content, string nonce)
+        public override Task<DiscordMessage> SendMessage(DiscordChannel channel, string content, string nonce, DiscordMessage? replyTo = null,
+                                                         IReadOnlyList<DiscordUpload>? files = null)
         {
             var source = new TaskCompletionSource<DiscordMessage>();
 

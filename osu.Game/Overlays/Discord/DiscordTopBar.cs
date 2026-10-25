@@ -8,7 +8,6 @@ using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
-using osu.Framework.Graphics.Textures;
 using osu.Framework.Input.Events;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Containers;
@@ -37,12 +36,8 @@ namespace osu.Game.Overlays.Discord
         private DiscordLayout? layout { get; set; }
 
         [BackgroundDependencyLoader]
-        private void load(OverlayColourProvider colourProvider, TextureStore textures)
+        private void load(OverlayColourProvider colourProvider)
         {
-            const float icon_height = 12;
-
-            var icon = textures.Get(@"Slop/discord");
-
             Children = new Drawable[]
             {
                 new Box
@@ -60,14 +55,14 @@ namespace osu.Game.Overlays.Discord
                     Padding = new MarginPadding { Left = 16 },
                     Children = new Drawable[]
                     {
-                        new Sprite
+                        new SpriteIcon
                         {
                             Anchor = Anchor.CentreLeft,
                             Origin = Anchor.CentreLeft,
-                            Texture = icon,
-                            // As high as the capital letters of the title, and centred on them.
-                            Size = icon == null ? new Vector2(icon_height) : new Vector2(icon_height * icon.Width / (float)icon.Height, icon_height),
-                            Y = -2,
+                            // The line art icon of the toolbar button, as high as the title.
+                            Icon = OsuIcon.Discord,
+                            Size = new Vector2(16),
+                            Y = -1,
                         },
                         new OsuSpriteText
                         {

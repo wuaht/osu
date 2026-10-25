@@ -3,7 +3,9 @@
 
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using osu.Framework.Allocation;
+using osu.Framework.Extensions;
 using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
@@ -478,49 +480,29 @@ namespace osu.Game.Overlays.Discord
                 Spacing = new Vector2(4, 0),
             };
 
-            if (referenced == null)
-            {
-                flow.Add(new OsuSpriteText
-                {
-                    Anchor = Anchor.CentreLeft,
-                    Origin = Anchor.CentreLeft,
-                    Text = @"Original message was deleted",
-                    Font = DiscordStyle.UiFont(13, FontWeight.Regular).With(italics: true),
-                    Colour = colourProvider.Content2,
-                });
-            }
+            if (referenced != null)
+                fillReplyPreview(flow, referenced);
+            else if (Message.ReferencedMessageProvided || Message.MessageReference?.MessageId is not ulong referencedId)
+                flow.Add(createReplyNote(SlopDiscordStrings.ReplyOriginalDeleted));
             else
             {
-                string preview = referenced.Content.ReplaceLineEndings(@" ");
+                // Some messages (like those of bots) leave out the message they reply to, which doesn't mean that it was deleted.
+                flow.Add(createReplyNote(SlopDiscordStrings.ReplyOriginalLoading));
 
-                if (string.IsNullOrWhiteSpace(preview))
-                    preview = referenced.Attachments.Count > 0 ? referenced.Attachments[0].Filename : @"…";
-
-                flow.AddRange(new Drawable[]
+                client.GetMessage(Message.MessageReference.ChannelId ?? Message.ChannelId, referencedId).ContinueWith(t => Schedule(() =>
                 {
-                    new DiscordAvatar(referenced.Author.GetAvatarUrl(32), 16)
+                    var fetched = t.IsCompletedSuccessfully ? t.GetResultSafely() : null;
+
+                    flow.Clear();
+
+                    if (fetched != null)
                     {
-                        Anchor = Anchor.CentreLeft,
-                        Origin = Anchor.CentreLeft,
-                    },
-                    new OsuSpriteText
-                    {
-                        Anchor = Anchor.CentreLeft,
-                        Origin = Anchor.CentreLeft,
-                        Text = referenced.Author.DisplayName,
-                        Font = DiscordStyle.UiFont(13, FontWeight.SemiBold),
-                        Colour = colourProvider.Content1,
-                    },
-                    new TruncatingSpriteText
-                    {
-                        Anchor = Anchor.CentreLeft,
-                        Origin = Anchor.CentreLeft,
-                        MaxWidth = 500,
-                        Text = preview,
-                        Font = DiscordStyle.UiFont(13),
-                        Colour = colourProvider.Content2,
-                    },
-                });
+                        Message.ReferencedMessage = fetched;
+                        fillReplyPreview(flow, fetched);
+                    }
+                    else
+                        flow.Add(createReplyNote(t.IsCompletedSuccessfully ? SlopDiscordStrings.ReplyOriginalDeleted : SlopDiscordStrings.ReplyOriginalUnavailable));
+                }), TaskScheduler.Default);
             }
 
             const float height = 18;
@@ -569,6 +551,49 @@ namespace osu.Game.Overlays.Discord
                 },
             };
         }
+
+        private void fillReplyPreview(FillFlowContainer flow, DiscordMessage referenced)
+        {
+            string preview = referenced.Content.ReplaceLineEndings(@" ");
+
+            if (string.IsNullOrWhiteSpace(preview))
+                preview = referenced.Attachments.Count > 0 ? referenced.Attachments[0].Filename : @"…";
+
+            flow.AddRange(new Drawable[]
+            {
+                new DiscordAvatar(referenced.Author.GetAvatarUrl(32), 16)
+                {
+                    Anchor = Anchor.CentreLeft,
+                    Origin = Anchor.CentreLeft,
+                },
+                new OsuSpriteText
+                {
+                    Anchor = Anchor.CentreLeft,
+                    Origin = Anchor.CentreLeft,
+                    Text = referenced.Author.DisplayName,
+                    Font = DiscordStyle.UiFont(13, FontWeight.SemiBold),
+                    Colour = colourProvider.Content1,
+                },
+                new TruncatingSpriteText
+                {
+                    Anchor = Anchor.CentreLeft,
+                    Origin = Anchor.CentreLeft,
+                    MaxWidth = 500,
+                    Text = preview,
+                    Font = DiscordStyle.UiFont(13),
+                    Colour = colourProvider.Content2,
+                },
+            });
+        }
+
+        private Drawable createReplyNote(LocalisableString text) => new OsuSpriteText
+        {
+            Anchor = Anchor.CentreLeft,
+            Origin = Anchor.CentreLeft,
+            Text = text,
+            Font = DiscordStyle.UiFont(13, FontWeight.Regular).With(italics: true),
+            Colour = colourProvider.Content2,
+        };
 
         private Drawable createAttachment(DiscordAttachment attachment)
         {

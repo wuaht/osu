@@ -22,7 +22,6 @@ using osu.Game.Graphics.Sprites;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Localisation;
 using osu.Game.Online.Discord;
-using osu.Game.Overlays.Chat;
 using osuTK;
 using osuTK.Graphics;
 
@@ -143,7 +142,7 @@ namespace osu.Game.Overlays.Discord
             [Resolved]
             private OverlayColourProvider colourProvider { get; set; } = null!;
 
-            private ChannelScrollContainer scroll = null!;
+            private DiscordChatScrollContainer scroll = null!;
             private FillFlowContainer<DrawableDiscordMessage> messageFlow = null!;
             private Container topContainer = null!;
             private LoadingSpinner topSpinner = null!;
@@ -179,7 +178,7 @@ namespace osu.Game.Overlays.Discord
                         new Drawable[] { new DiscordChannelHeader(Channel) },
                         new Drawable[]
                         {
-                            scroll = new ChannelScrollContainer
+                            scroll = new DiscordChatScrollContainer
                             {
                                 RelativeSizeAxes = Axes.Both,
                                 ScrollbarOverlapsContent = false,
@@ -295,7 +294,7 @@ namespace osu.Game.Overlays.Discord
                     if (initial)
                     {
                         // An opened channel starts at its latest messages and fades them in, instead of scrolling down from the top.
-                        ScheduleAfterChildren(() => scroll.ScrollToEnd(false));
+                        scroll.ScrollToEnd(false);
                         messageFlow.FadeInFromZero(300, Easing.OutQuint);
                     }
 
@@ -316,9 +315,8 @@ namespace osu.Game.Overlays.Discord
                 if (toAdd.Count == 0)
                     return;
 
-                // Keep the distance to the end, so that the visible messages don't move when older ones are added above them.
-                float distanceFromEnd = (float)(scroll.ScrollableExtent - scroll.Current);
-                bool wasAtEnd = scroll.IsScrolledToEnd(10);
+                // The visible messages don't move when older ones are added above them.
+                scroll.KeepDistanceFromEnd();
 
                 var current = orderedMessages.ToList();
                 messageFlow.Clear(false);
@@ -330,12 +328,6 @@ namespace osu.Game.Overlays.Discord
                     messageFlow.Add(drawable);
 
                 updateLayout();
-
-                if (!wasAtEnd)
-                {
-                    // The new content has to be measured before the scroll position can be restored.
-                    ScheduleAfterChildren(() => scroll.ScrollTo(scroll.ScrollableExtent - distanceFromEnd, false));
-                }
             }
 
             private DrawableDiscordMessage createDrawable(DiscordMessage message) => new DrawableDiscordMessage(getShownMessage(message), markdownContext);
