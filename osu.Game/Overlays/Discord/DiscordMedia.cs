@@ -210,7 +210,7 @@ namespace osu.Game.Overlays.Discord
             this.onlineStore = onlineStore;
         }
 
-        private readonly Dictionary<string, Task<Texture?>> pendingLookups = new Dictionary<string, Task<Texture?>>();
+        private readonly Dictionary<string, PendingLookup> pendingLookups = new Dictionary<string, PendingLookup>();
 
         private readonly Dictionary<string, Task<Color4?>> dominantColours = new Dictionary<string, Task<Color4?>>();
 
@@ -296,24 +296,52 @@ namespace osu.Game.Overlays.Discord
         /// <summary>
         /// Retrieves a texture in the background. Unlike the base store's GetAsync, concurrent lookups of the same URL
         /// share one retrieval, as the base store fails when a thread pool thread has to wait for a retrieval which is already running.
+        /// Every caller receives its own reference of the texture, as a sprite disposes its texture with itself.
         /// </summary>
         public Task<Texture?> GetTextureAsync(string url)
         {
+            PendingLookup? lookup;
+
             lock (pendingLookups)
             {
-                if (pendingLookups.TryGetValue(url, out var pending))
-                    return pending;
+                if (!pendingLookups.TryGetValue(url, out lookup))
+                    pendingLookups[url] = lookup = new PendingLookup(throttled(() => (Texture?)Get(url)));
 
-                var task = throttled(() => (Texture?)Get(url));
-                pendingLookups[url] = task;
+                lookup.Waiting++;
+            }
 
-                task.ContinueWith(_ =>
+            return lookup.Task.ContinueWith(t =>
+            {
+                // The shared reference keeps the texture cached, so this doesn't retrieve it again.
+                Texture? texture = t.IsCompletedSuccessfully && t.GetResultSafely() != null ? Get(url) : null;
+
+                lock (pendingLookups)
                 {
-                    lock (pendingLookups)
+                    if (--lookup.Waiting == 0)
+                    {
                         pendingLookups.Remove(url);
-                }, TaskContinuationOptions.ExecuteSynchronously);
 
-                return task;
+                        if (t.IsCompletedSuccessfully)
+                            t.GetResultSafely()?.Dispose();
+                    }
+                }
+
+                return texture;
+            }, TaskContinuationOptions.ExecuteSynchronously);
+        }
+
+        private class PendingLookup
+        {
+            public readonly Task<Texture?> Task;
+
+            /// <summary>
+            /// How many callers are still to receive their reference of the texture.
+            /// </summary>
+            public int Waiting;
+
+            public PendingLookup(Task<Texture?> task)
+            {
+                Task = task;
             }
         }
 
