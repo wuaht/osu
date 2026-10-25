@@ -101,9 +101,9 @@ namespace osu.Game.Screens.Select
 
                 case SortMode.LastEdited:
                     if (aggregate)
-                        comparison = compareUsingAggregateMax(b, a, static b => (b.LastLocalUpdate ?? DateTimeOffset.MinValue).ToUnixTimeSeconds());
+                        comparison = compareUsingAggregateMax(b, a, static b => getLastEdited(b).ToUnixTimeSeconds());
                     else
-                        comparison = Nullable.Compare(b.LastLocalUpdate, a.LastLocalUpdate);
+                        comparison = getLastEdited(b).CompareTo(getLastEdited(a));
                     break;
 
                 case SortMode.BPM:
@@ -163,6 +163,15 @@ namespace osu.Game.Screens.Select
             if (!bAny) return 1;
 
             return aMatchedBeatmaps.Max(func).CompareTo(bMatchedBeatmaps.Max(func));
+        }
+
+        /// <summary>
+        /// When the beatmap was last edited, counting its import as an edit.
+        /// </summary>
+        private static DateTimeOffset getLastEdited(BeatmapInfo beatmap)
+        {
+            DateTimeOffset added = beatmap.BeatmapSet!.DateAdded;
+            return beatmap.LastLocalUpdate > added ? beatmap.LastLocalUpdate.Value : added;
         }
     }
 }
