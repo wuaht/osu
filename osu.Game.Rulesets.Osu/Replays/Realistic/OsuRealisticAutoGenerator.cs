@@ -130,6 +130,12 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
 
         private const double arrival_hold_max = 15;
 
+        /// <summary>
+        /// The distance of a movement from which the cursor rests for the full time, relative to the radius of the objects.
+        /// Shorter movements rest for less time, down to no rest at all.
+        /// </summary>
+        private const float arrival_hold_full_distance = 4;
+
         private static readonly Vector2 playfield_min = new Vector2(-512, -384);
         private static readonly Vector2 playfield_max = new Vector2(1024, 768);
 
@@ -500,7 +506,9 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
             double gap = next.StartTime - leaveTime;
             double realGap = ApplyModsToTimeDelta(leaveTime, next.StartTime);
             double movementTime = (80 + 90 * Math.Log2(distance / (2 * next.Radius) + 1)) * movement_speed;
-            double arrivalHold = arrival_hold_min + (arrival_hold_max - arrival_hold_min) * RealisticMath.Random(next.StackedPosition + new Vector2(1, 1));
+            // the further the movement, the longer the cursor rests to aim, up to the full rest at the length of a jump.
+            double arrivalHold = (arrival_hold_min + (arrival_hold_max - arrival_hold_min) * RealisticMath.Random(next.StackedPosition + new Vector2(1, 1)))
+                                 * Math.Clamp(distance / (arrival_hold_full_distance * next.Radius), 0, 1);
             double hold = Math.Clamp(realGap - movementTime, 0, arrivalHold);
             double arrivalTime = realGap > 0 ? next.StartTime - gap * hold / realGap : next.StartTime;
             double moveStartTime = realGap > movementTime + hold ? arrivalTime - gap * movementTime / realGap : leaveTime;
