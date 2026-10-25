@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
@@ -117,8 +118,20 @@ namespace osu.Game.Overlays.Discord
         private DiscordPopoverButton emojiButton = null!;
         private OsuSpriteText contextText = null!;
         private FillFlowContainer<AttachmentChip> attachmentFlow = null!;
-        private FillFlowContainer<MentionSuggestion> suggestionFlow = null!;
+        private FillFlowContainer<Suggestion> suggestionFlow = null!;
         private Container suggestionContainer = null!;
+
+        /// <summary>
+        /// The suggestion which is accepted with enter, which tab and the arrow keys move.
+        /// </summary>
+        private int selectedSuggestion;
+
+        private IReadOnlyList<DiscordStandardEmoji>? standardEmojis;
+
+        /// <summary>
+        /// The standard emojis by their shortcodes, which are converted when the message is sent.
+        /// </summary>
+        private Dictionary<string, string>? standardShortcodes;
 
         /// <param name="channel">The channel which is written in.</param>
         /// <param name="supportsActions">Whether files, replies, edits and so on are supported by the client.</param>
@@ -172,7 +185,7 @@ namespace osu.Game.Overlays.Discord
                                 RelativeSizeAxes = Axes.Both,
                                 Colour = colourProvider.Background4,
                             },
-                            suggestionFlow = new FillFlowContainer<MentionSuggestion>
+                            suggestionFlow = new FillFlowContainer<Suggestion>
                             {
                                 RelativeSizeAxes = Axes.X,
                                 AutoSizeAxes = Axes.Y,
@@ -264,17 +277,41 @@ namespace osu.Game.Overlays.Discord
             };
 
             TextBox.PasteAttachments = pasteAttachments;
-            TextBox.AcceptSuggestion = acceptFirstSuggestion;
+            TextBox.AcceptSuggestion = acceptSelectedSuggestion;
+            TextBox.MoveSuggestion = moveSuggestion;
         }
 
         protected override void LoadComplete()
         {
             base.LoadComplete();
             TextBox.Current.BindValueChanged(_ => updateSuggestions());
+
+            DiscordEmojiData.Load().ContinueWith(t => Schedule(() =>
+            {
+                if (!t.IsCompletedSuccessfully)
+                    return;
+
+                standardEmojis = t.GetResultSafely().SelectMany(c => c.Emojis).ToList();
+                standardShortcodes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+                foreach (var emoji in standardEmojis)
+                {
+                    foreach (string code in emoji.Shortcodes)
+                        standardShortcodes.TryAdd(code, emoji.Unicode);
+                }
+
+                if (currentEmojiQuery != null)
+                    updateSuggestions();
+            }), TaskScheduler.Default);
         }
 
         /// <summary>
-        /// The text which is sent, with the mentions converted to the format of Discord.
+        /// Code, which is left as it is, or an emoji written as :name: outside of a custom emoji.
+        /// </summary>
+        private static readonly Regex emoji_shortcode_regex = new Regex(@"(```[\s\S]*?```|`[^`\n]*`)|(?<!<|<a):([\w+-]{1,32}):", RegexOptions.Compiled);
+
+        /// <summary>
+        /// The text which is sent, with the mentions and emojis converted to the format of Discord.
         /// </summary>
         public string GetMessageText()
         {
@@ -283,7 +320,22 @@ namespace osu.Game.Overlays.Discord
             foreach (var (shown, mention) in mentions.OrderByDescending(m => m.Key.Length))
                 text = text.Replace(shown, mention, StringComparison.Ordinal);
 
-            return text;
+            var customEmojis = getCustomEmojis().SelectMany(g => g.Emojis).ToList();
+
+            // Like in Discord, :name: is written as the emoji, where custom emojis take precedence over standard emojis of the same name.
+            return emoji_shortcode_regex.Replace(text, m =>
+            {
+                if (m.Groups[1].Success)
+                    return m.Value;
+
+                string name = m.Groups[2].Value;
+                var custom = customEmojis.FirstOrDefault(e => e.Name == name) ?? customEmojis.FirstOrDefault(e => e.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+
+                if (custom != null)
+                    return DiscordEmoji.ToMessageText(new DiscordReactionEmoji { Id = custom.Id, Name = custom.Name, Animated = custom.Animated });
+
+                return standardShortcodes?.GetValueOrDefault(name) ?? m.Value;
+            });
         }
 
         public void SetReply(DiscordMessage message)
@@ -450,6 +502,110 @@ namespace osu.Game.Overlays.Discord
             }
         }
 
+        #region Suggestions
+
+        /// <summary>
+        /// The emoji which is written at the end of the text, without the colon, once at least two characters of it are written like in Discord.
+        /// </summary>
+        private string? currentEmojiQuery
+        {
+            get
+            {
+                string text = TextBox.Text;
+                int colon = text.LastIndexOf(':');
+
+                if (colon < 0 || (colon > 0 && !char.IsWhiteSpace(text[colon - 1])))
+                    return null;
+
+                string query = text[(colon + 1)..];
+
+                return query.Length is >= 2 and <= 32 && query.All(c => char.IsLetterOrDigit(c) || c is '_' or '-' or '+') ? query : null;
+            }
+        }
+
+        private void updateSuggestions()
+        {
+            suggestionFlow.Clear();
+            selectedSuggestion = 0;
+
+            if (currentMentionQuery is string mentionQuery)
+                addMentionSuggestions(mentionQuery);
+            else if (currentEmojiQuery is string emojiQuery)
+                addEmojiSuggestions(emojiQuery);
+
+            updateSelectedSuggestion();
+            suggestionContainer.Alpha = suggestionFlow.Count > 0 ? 1 : 0;
+        }
+
+        private void addEmojiSuggestions(string query)
+        {
+            // Exact names first, then names which start with the query, then the others, with custom emojis before standard ones.
+            int rank(string name) => name.Equals(query, StringComparison.OrdinalIgnoreCase) ? 0 : name.StartsWith(query, StringComparison.OrdinalIgnoreCase) ? 1 : 2;
+
+            var custom = getCustomEmojis()
+                         .SelectMany(g => g.Emojis)
+                         .Where(e => e.Name.Contains(query, StringComparison.OrdinalIgnoreCase))
+                         .Select(e => (rank: rank(e.Name), name: e.Name, emoji: new DiscordReactionEmoji { Id = e.Id, Name = e.Name, Animated = e.Animated }));
+
+            var standard = (standardEmojis ?? Array.Empty<DiscordStandardEmoji>())
+                           .Select(e => (emoji: e, code: e.Shortcodes.OrderBy(rank).FirstOrDefault(c => c.Contains(query, StringComparison.OrdinalIgnoreCase))))
+                           .Where(e => e.code != null)
+                           .Select(e => (rank: rank(e.code!), name: e.code!, emoji: new DiscordReactionEmoji { Name = e.emoji.Unicode }));
+
+            var matches = custom.Concat(standard)
+                                .Select((e, index) => (e.rank, e.name, e.emoji, index))
+                                .OrderBy(e => e.rank)
+                                .ThenBy(e => e.index)
+                                .Take(max_suggestions);
+
+            foreach (var (_, name, emoji, _) in matches)
+                suggestionFlow.Add(new EmojiSuggestion(emoji, name, () => acceptEmojiSuggestion(emoji, name)));
+        }
+
+        private bool moveSuggestion(int direction)
+        {
+            if (suggestionFlow.Count == 0 || suggestionContainer.Alpha == 0)
+                return false;
+
+            selectedSuggestion = (selectedSuggestion + direction + suggestionFlow.Count) % suggestionFlow.Count;
+            updateSelectedSuggestion();
+            return true;
+        }
+
+        private void updateSelectedSuggestion()
+        {
+            int index = 0;
+
+            foreach (var suggestion in suggestionFlow)
+                suggestion.Selected = index++ == selectedSuggestion;
+        }
+
+        private bool acceptSelectedSuggestion()
+        {
+            var selected = suggestionFlow.ElementAtOrDefault(selectedSuggestion);
+
+            if (selected == null || suggestionContainer.Alpha == 0)
+                return false;
+
+            selected.TriggerClick();
+            return true;
+        }
+
+        private void acceptEmojiSuggestion(DiscordReactionEmoji emoji, string name)
+        {
+            string text = TextBox.Text;
+            int colon = text.LastIndexOf(':');
+
+            if (colon < 0)
+                return;
+
+            // Custom emojis are shown by their name, which is converted when the message is sent.
+            TextBox.Text = text[..colon] + (emoji.Id == null ? emoji.Name : $@":{name}:") + @" ";
+            TextBox.TakeFocus();
+        }
+
+        #endregion
+
         #region Mentions
 
         /// <summary>
@@ -471,29 +627,20 @@ namespace osu.Game.Overlays.Discord
             }
         }
 
-        private void updateSuggestions()
+        private void addMentionSuggestions(string query)
         {
-            suggestionFlow.Clear();
+            scheduleSearch(query);
 
-            string? query = currentMentionQuery;
+            var matches = getMentionCandidates()
+                          .Concat(searchedMembers.Values)
+                          .DistinctBy(u => u.Id)
+                          .Where(u => u.DisplayName.Contains(query, StringComparison.OrdinalIgnoreCase) || u.Username.Contains(query, StringComparison.OrdinalIgnoreCase))
+                          .OrderByDescending(u => u.DisplayName.StartsWith(query, StringComparison.OrdinalIgnoreCase) || u.Username.StartsWith(query, StringComparison.OrdinalIgnoreCase))
+                          .ThenBy(u => u.DisplayName, StringComparer.OrdinalIgnoreCase)
+                          .Take(max_suggestions);
 
-            if (query != null)
-            {
-                scheduleSearch(query);
-
-                var matches = getMentionCandidates()
-                              .Concat(searchedMembers.Values)
-                              .DistinctBy(u => u.Id)
-                              .Where(u => u.DisplayName.Contains(query, StringComparison.OrdinalIgnoreCase) || u.Username.Contains(query, StringComparison.OrdinalIgnoreCase))
-                              .OrderByDescending(u => u.DisplayName.StartsWith(query, StringComparison.OrdinalIgnoreCase) || u.Username.StartsWith(query, StringComparison.OrdinalIgnoreCase))
-                              .ThenBy(u => u.DisplayName, StringComparer.OrdinalIgnoreCase)
-                              .Take(max_suggestions);
-
-                foreach (var user in matches)
-                    suggestionFlow.Add(new MentionSuggestion(user, () => acceptSuggestion(user)));
-            }
-
-            suggestionContainer.Alpha = suggestionFlow.Count > 0 ? 1 : 0;
+            foreach (var user in matches)
+                suggestionFlow.Add(new MentionSuggestion(user, () => acceptSuggestion(user)));
         }
 
         private void scheduleSearch(string query)
@@ -520,17 +667,6 @@ namespace osu.Game.Overlays.Discord
                         updateSuggestions();
                 }), TaskScheduler.Default);
             }, 200);
-        }
-
-        private bool acceptFirstSuggestion()
-        {
-            var first = suggestionFlow.FirstOrDefault();
-
-            if (first == null || suggestionContainer.Alpha == 0)
-                return false;
-
-            acceptSuggestion(first.User);
-            return true;
         }
 
         private void acceptSuggestion(DiscordUser user)
@@ -632,6 +768,11 @@ namespace osu.Game.Overlays.Discord
             /// </summary>
             public Func<bool>? AcceptSuggestion { get; set; }
 
+            /// <summary>
+            /// Moves the selected suggestion by the given direction, returning whether suggestions are shown.
+            /// </summary>
+            public Func<int, bool>? MoveSuggestion { get; set; }
+
             public DiscordMessageTextBox(bool hasButtons)
             {
                 this.hasButtons = hasButtons;
@@ -669,22 +810,54 @@ namespace osu.Game.Overlays.Discord
 
             protected override bool OnKeyDown(KeyDownEvent e)
             {
-                if (e.Key == Key.Tab && AcceptSuggestion?.Invoke() == true)
-                    return true;
+                switch (e.Key)
+                {
+                    case Key.Tab:
+                        if (MoveSuggestion?.Invoke(e.ShiftPressed ? -1 : 1) == true)
+                            return true;
+
+                        break;
+
+                    case Key.Up:
+                    case Key.Down:
+                        if (MoveSuggestion?.Invoke(e.Key == Key.Up ? -1 : 1) == true)
+                            return true;
+
+                        break;
+
+                    case Key.Enter:
+                    case Key.KeypadEnter:
+                        if (AcceptSuggestion?.Invoke() == true)
+                            return true;
+
+                        break;
+                }
 
                 return base.OnKeyDown(e);
             }
         }
 
-        private partial class MentionSuggestion : OsuClickableContainer
+        private abstract partial class Suggestion : OsuClickableContainer
         {
-            public readonly DiscordUser User;
-
             private Box hoverBackground = null!;
+            private Box selectedBackground = null!;
 
-            public MentionSuggestion(DiscordUser user, Action select)
+            private bool selected;
+
+            public bool Selected
             {
-                User = user;
+                get => selected;
+                set
+                {
+                    selected = value;
+
+                    if (IsLoaded)
+                        selectedBackground.Alpha = value ? 0.1f : 0;
+                }
+            }
+
+            protected Suggestion(Action select)
+            {
                 Action = select;
 
                 RelativeSizeAxes = Axes.X;
@@ -698,47 +871,23 @@ namespace osu.Game.Overlays.Discord
             {
                 Children = new Drawable[]
                 {
+                    selectedBackground = new Box
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Colour = Color4.White,
+                        Alpha = selected ? 0.1f : 0,
+                    },
                     hoverBackground = new Box
                     {
                         RelativeSizeAxes = Axes.Both,
                         Colour = Color4.White,
                         Alpha = 0,
                     },
-                    new FillFlowContainer
-                    {
-                        Anchor = Anchor.CentreLeft,
-                        Origin = Anchor.CentreLeft,
-                        AutoSizeAxes = Axes.Both,
-                        Direction = FillDirection.Horizontal,
-                        Spacing = new Vector2(8, 0),
-                        Padding = new MarginPadding { Horizontal = 8 },
-                        Children = new Drawable[]
-                        {
-                            new DiscordAvatar(User.GetAvatarUrl(48), 24)
-                            {
-                                Anchor = Anchor.CentreLeft,
-                                Origin = Anchor.CentreLeft,
-                            },
-                            new OsuSpriteText
-                            {
-                                Anchor = Anchor.CentreLeft,
-                                Origin = Anchor.CentreLeft,
-                                Text = User.DisplayName,
-                                Font = DiscordStyle.UiFont(14, FontWeight.SemiBold),
-                                Colour = colourProvider.Content1,
-                            },
-                            new OsuSpriteText
-                            {
-                                Anchor = Anchor.CentreLeft,
-                                Origin = Anchor.CentreLeft,
-                                Text = User.Username,
-                                Font = DiscordStyle.UiFont(13),
-                                Colour = colourProvider.Content2,
-                            },
-                        },
-                    },
+                    CreateContent(colourProvider),
                 };
             }
+
+            protected abstract Drawable CreateContent(OverlayColourProvider colourProvider);
 
             protected override bool OnHover(HoverEvent e)
             {
@@ -751,6 +900,92 @@ namespace osu.Game.Overlays.Discord
                 hoverBackground.FadeOut(100);
                 base.OnHoverLost(e);
             }
+        }
+
+        private partial class EmojiSuggestion : Suggestion
+        {
+            private readonly DiscordReactionEmoji emoji;
+            private readonly string name;
+
+            public EmojiSuggestion(DiscordReactionEmoji emoji, string name, Action select)
+                : base(select)
+            {
+                this.emoji = emoji;
+                this.name = name;
+            }
+
+            protected override Drawable CreateContent(OverlayColourProvider colourProvider) => new FillFlowContainer
+            {
+                Anchor = Anchor.CentreLeft,
+                Origin = Anchor.CentreLeft,
+                AutoSizeAxes = Axes.Both,
+                Direction = FillDirection.Horizontal,
+                Spacing = new Vector2(8, 0),
+                Padding = new MarginPadding { Horizontal = 8 },
+                Children = new Drawable[]
+                {
+                    new Container
+                    {
+                        Anchor = Anchor.CentreLeft,
+                        Origin = Anchor.CentreLeft,
+                        Size = new Vector2(24),
+                        Child = DiscordEmoji.CreateDrawable(emoji, 22),
+                    },
+                    new OsuSpriteText
+                    {
+                        Anchor = Anchor.CentreLeft,
+                        Origin = Anchor.CentreLeft,
+                        Text = $@":{name}:",
+                        Font = DiscordStyle.UiFont(14, FontWeight.SemiBold),
+                        Colour = colourProvider.Content1,
+                    },
+                },
+            };
+        }
+
+        private partial class MentionSuggestion : Suggestion
+        {
+            public readonly DiscordUser User;
+
+            public MentionSuggestion(DiscordUser user, Action select)
+                : base(select)
+            {
+                User = user;
+            }
+
+            protected override Drawable CreateContent(OverlayColourProvider colourProvider) => new FillFlowContainer
+            {
+                Anchor = Anchor.CentreLeft,
+                Origin = Anchor.CentreLeft,
+                AutoSizeAxes = Axes.Both,
+                Direction = FillDirection.Horizontal,
+                Spacing = new Vector2(8, 0),
+                Padding = new MarginPadding { Horizontal = 8 },
+                Children = new Drawable[]
+                {
+                    new DiscordAvatar(User.GetAvatarUrl(48), 24)
+                    {
+                        Anchor = Anchor.CentreLeft,
+                        Origin = Anchor.CentreLeft,
+                    },
+                    new OsuSpriteText
+                    {
+                        Anchor = Anchor.CentreLeft,
+                        Origin = Anchor.CentreLeft,
+                        Text = User.DisplayName,
+                        Font = DiscordStyle.UiFont(14, FontWeight.SemiBold),
+                        Colour = colourProvider.Content1,
+                    },
+                    new OsuSpriteText
+                    {
+                        Anchor = Anchor.CentreLeft,
+                        Origin = Anchor.CentreLeft,
+                        Text = User.Username,
+                        Font = DiscordStyle.UiFont(13),
+                        Colour = colourProvider.Content2,
+                    },
+                },
+            };
         }
 
         private partial class AttachmentChip : CompositeDrawable, IHasTooltip
