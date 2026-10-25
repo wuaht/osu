@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using osu.Framework.Allocation;
 using osu.Framework.Extensions;
 using osu.Framework.Extensions.Color4Extensions;
@@ -61,63 +62,81 @@ namespace osu.Game.Overlays.Discord
     {
         private readonly DiscordReaction reaction;
         private readonly bool burst;
+        private readonly Func<Task<IReadOnlyList<DiscordUser>>>? fetchUsers;
+        private readonly string emojiName;
 
-        private Box background = null!;
         private Color4 accent;
+        private Color4 idleBorder;
+        private Color4 hoverBorder;
 
-        public DiscordReactionChip(DiscordReaction reaction, bool burst, Action? toggle)
+        private bool fetchedUsers;
+
+        /// <param name="fetchUsers">Fetches the first users who reacted, which are shown in the tooltip once the chip is hovered.</param>
+        public DiscordReactionChip(DiscordReaction reaction, bool burst, Action? toggle, Func<Task<IReadOnlyList<DiscordUser>>>? fetchUsers = null)
         {
             this.reaction = reaction;
             this.burst = burst;
+            this.fetchUsers = fetchUsers;
 
             Action = toggle;
             Enabled.Value = toggle != null;
 
-            AutoSizeAxes = Axes.Both;
+            Height = 24;
+            AutoSizeAxes = Axes.X;
             Masking = true;
             CornerRadius = 8;
             BorderThickness = 1;
 
-            string name = reaction.Emoji.Id == null ? reaction.Emoji.Name ?? string.Empty : $@":{reaction.Emoji.Name}:";
-            TooltipText = burst ? LocalisableString.Interpolate($@"{name} ({SlopDiscordStrings.SuperReaction})") : name;
+            emojiName = reaction.Emoji.Id == null ? reaction.Emoji.Name ?? string.Empty : $@":{reaction.Emoji.Name}:";
+            TooltipText = withBurst(emojiName);
         }
 
+        private int count => burst ? reaction.BurstCount : reaction.Count;
+
         private bool me => burst ? reaction.MeBurst : reaction.Me;
+
+        private LocalisableString withBurst(LocalisableString text) => burst ? LocalisableString.Interpolate($@"{text} ({SlopDiscordStrings.SuperReaction})") : text;
 
         [BackgroundDependencyLoader]
         private void load(OverlayColourProvider colourProvider)
         {
             accent = burst ? parseColour(reaction.BurstColours.FirstOrDefault()) ?? DiscordStyle.Blurple : DiscordStyle.Blurple;
 
-            BorderColour = me ? accent : burst ? accent.Opacity(0.5f) : Color4.Transparent;
+            // Like in Discord, chips of the local user are tinted with an outline, while the others only get an outline when hovered.
+            idleBorder = me ? accent : burst ? accent.Opacity(0.4f) : colourProvider.Background4;
+            hoverBorder = me ? accent : burst ? accent.Opacity(0.8f) : colourProvider.Light4.Opacity(0.5f);
+            BorderColour = idleBorder;
 
             Children = new Drawable[]
             {
-                background = new Box
+                new Box
                 {
                     RelativeSizeAxes = Axes.Both,
-                    Colour = me || burst ? accent.Opacity(me ? 0.3f : 0.15f) : colourProvider.Background4,
+                    Colour = me ? accent.Opacity(0.18f) : burst ? accent.Opacity(0.1f) : colourProvider.Background4,
                 },
                 new FillFlowContainer
                 {
+                    Anchor = Anchor.CentreLeft,
+                    Origin = Anchor.CentreLeft,
                     AutoSizeAxes = Axes.Both,
                     Direction = FillDirection.Horizontal,
-                    Spacing = new Vector2(5, 0),
-                    Padding = new MarginPadding { Horizontal = 7, Vertical = 3 },
+                    Spacing = new Vector2(6, 0),
+                    Padding = new MarginPadding { Horizontal = 8 },
                     Children = new Drawable[]
                     {
-                        new DrawableDiscordEmoji(DiscordEmoji.GetUrl(reaction.Emoji) ?? string.Empty, reaction.Emoji.Name ?? string.Empty, string.Empty, 18, reaction.Emoji.Animated)
+                        new DrawableDiscordEmoji(DiscordEmoji.GetUrl(reaction.Emoji) ?? string.Empty, reaction.Emoji.Name ?? string.Empty, string.Empty, 16, reaction.Emoji.Animated)
                         {
                             Anchor = Anchor.CentreLeft,
                             Origin = Anchor.CentreLeft,
+                            Margin = new MarginPadding(),
                         },
                         new OsuSpriteText
                         {
                             Anchor = Anchor.CentreLeft,
                             Origin = Anchor.CentreLeft,
-                            Text = (burst ? reaction.BurstCount : reaction.Count).ToString(),
+                            Text = count.ToString(),
                             Font = DiscordStyle.UiFont(14, FontWeight.SemiBold),
-                            Colour = me || burst ? Interpolation.ValueAt(0.6f, accent, Color4.White, 0, 1) : colourProvider.Content2,
+                            Colour = me || burst ? Interpolation.ValueAt(0.7f, accent, Color4.White, 0, 1) : colourProvider.Content2,
                         },
                     },
                 },
@@ -126,18 +145,41 @@ namespace osu.Game.Overlays.Discord
 
         protected override bool OnHover(HoverEvent e)
         {
-            if (Enabled.Value && !me)
-                this.TransformTo(nameof(BorderColour), (ColourInfo)accent.Opacity(0.6f), 100);
+            this.TransformTo(nameof(BorderColour), (ColourInfo)hoverBorder, 100);
+
+            if (!fetchedUsers && fetchUsers != null)
+            {
+                fetchedUsers = true;
+                fetchUsers().ContinueWith(t => Schedule(() =>
+                {
+                    if (t.IsCompletedSuccessfully)
+                        showUsers(t.GetResultSafely());
+                    else
+                        fetchedUsers = false;
+                }), TaskScheduler.Default);
+            }
 
             return base.OnHover(e);
         }
 
         protected override void OnHoverLost(HoverLostEvent e)
         {
-            if (!me)
-                this.TransformTo(nameof(BorderColour), (ColourInfo)(burst ? accent.Opacity(0.5f) : Color4.Transparent), 100);
-
+            this.TransformTo(nameof(BorderColour), (ColourInfo)idleBorder, 100);
             base.OnHoverLost(e);
+        }
+
+        private void showUsers(IReadOnlyList<DiscordUser> users)
+        {
+            if (users.Count == 0)
+                return;
+
+            const int shown_users = 3;
+
+            string names = string.Join(@", ", users.Take(shown_users).Select(u => u.GlobalName ?? u.Username));
+            int others = count - Math.Min(users.Count, shown_users);
+
+            LocalisableString who = others > 0 ? SlopDiscordStrings.ReactionUsersAndOthers(names, others) : names;
+            TooltipText = withBurst(SlopDiscordStrings.ReactedWith(who, emojiName));
         }
 
         private static Color4? parseColour(string? hex)

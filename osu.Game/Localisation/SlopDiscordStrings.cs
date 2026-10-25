@@ -158,6 +158,11 @@ namespace osu.Game.Localisation
         public static LocalisableString OpenInBrowser => new TranslatableString(getKey(@"open_in_browser"), @"Open in browser");
 
         /// <summary>
+        /// "Open in DMs"
+        /// </summary>
+        public static LocalisableString OpenInDirectMessages => new TranslatableString(getKey(@"open_in_direct_messages"), @"Open in DMs");
+
+        /// <summary>
         /// "Close"
         /// </summary>
         public static LocalisableString CloseViewer => new TranslatableString(getKey(@"close_viewer"), @"Close");
@@ -441,6 +446,51 @@ namespace osu.Game.Localisation
         /// "Super Reaction"
         /// </summary>
         public static LocalisableString SuperReaction => new TranslatableString(getKey(@"super_reaction"), @"Super Reaction");
+
+        /// <summary>
+        /// "Send a GIF"
+        /// </summary>
+        public static LocalisableString SelectGif => new TranslatableString(getKey(@"select_gif"), @"Send a GIF");
+
+        /// <summary>
+        /// "Send a sticker"
+        /// </summary>
+        public static LocalisableString SelectSticker => new TranslatableString(getKey(@"select_sticker"), @"Send a sticker");
+
+        /// <summary>
+        /// "Search GIFs"
+        /// </summary>
+        public static LocalisableString GifSearchPlaceholder => new TranslatableString(getKey(@"gif_search_placeholder"), @"Search GIFs");
+
+        /// <summary>
+        /// "Search stickers"
+        /// </summary>
+        public static LocalisableString StickerSearchPlaceholder => new TranslatableString(getKey(@"sticker_search_placeholder"), @"Search stickers");
+
+        /// <summary>
+        /// "No GIFs found."
+        /// </summary>
+        public static LocalisableString GifNoResults => new TranslatableString(getKey(@"gif_no_results"), @"No GIFs found.");
+
+        /// <summary>
+        /// "Couldn't load the GIFs: {0}"
+        /// </summary>
+        public static LocalisableString GifLoadFailed(string error) => new TranslatableString(getKey(@"gif_load_failed"), @"Couldn't load the GIFs: {0}", error);
+
+        /// <summary>
+        /// "There are no stickers which can be sent here."
+        /// </summary>
+        public static LocalisableString NoStickers => new TranslatableString(getKey(@"no_stickers"), @"There are no stickers which can be sent here.");
+
+        /// <summary>
+        /// "{0} reacted with {1}"
+        /// </summary>
+        public static LocalisableString ReactedWith(LocalisableString users, string emoji) => new TranslatableString(getKey(@"reacted_with"), @"{0} reacted with {1}", users, emoji);
+
+        /// <summary>
+        /// "{0} and {1} others"
+        /// </summary>
+        public static LocalisableString ReactionUsersAndOthers(string users, int others) => new TranslatableString(getKey(@"reaction_users_and_others"), @"{0} and {1} others", users, others);
 
         /// <summary>
         /// "Reply"

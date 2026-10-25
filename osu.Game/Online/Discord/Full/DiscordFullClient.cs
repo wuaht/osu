@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -281,6 +282,35 @@ namespace osu.Game.Online.Discord.Full
         public override async Task<DiscordMessage> SendMessage(DiscordChannel channel, string content, string nonce, DiscordMessage? replyTo = null,
                                                                IReadOnlyList<DiscordUpload>? files = null)
         {
+            var body = createMessageBody(channel, content, nonce, replyTo);
+
+            if (files?.Count > 0)
+            {
+                var attachments = new JArray();
+
+                for (int i = 0; i < files.Count; i++)
+                    attachments.Add(new JObject { [@"id"] = i, [@"filename"] = files[i].Filename });
+
+                body[@"attachments"] = attachments;
+            }
+
+            var response = await request(HttpMethod.Post, $@"channels/{channel.Id}/messages", body, files).ConfigureAwait(false);
+
+            return response.ToObject<DiscordMessage>() ?? throw new DiscordRequestException(@"Discord returned an invalid message.");
+        }
+
+        public override async Task<DiscordMessage> SendSticker(DiscordChannel channel, DiscordSticker sticker, string nonce, DiscordMessage? replyTo = null)
+        {
+            var body = createMessageBody(channel, string.Empty, nonce, replyTo);
+            body[@"sticker_ids"] = new JArray(sticker.Id.ToString());
+
+            var response = await request(HttpMethod.Post, $@"channels/{channel.Id}/messages", body).ConfigureAwait(false);
+
+            return response.ToObject<DiscordMessage>() ?? throw new DiscordRequestException(@"Discord returned an invalid message.");
+        }
+
+        private static JObject createMessageBody(DiscordChannel channel, string content, string nonce, DiscordMessage? replyTo)
+        {
             var body = new JObject
             {
                 [@"content"] = content,
@@ -299,19 +329,26 @@ namespace osu.Game.Online.Discord.Full
                 };
             }
 
-            if (files?.Count > 0)
+            return body;
+        }
+
+        public override async Task<IReadOnlyList<DiscordGif>> SearchGifs(string query)
+        {
+            string path = string.IsNullOrWhiteSpace(query)
+                ? @"gifs/trending-gifs?media_format=mp4&locale=en-US"
+                : $@"gifs/search?q={Uri.EscapeDataString(query.Trim())}&media_format=mp4&locale=en-US";
+
+            var response = await request(HttpMethod.Get, path, null).ConfigureAwait(false);
+            var gifs = response.ToObject<List<DiscordGif>>() ?? new List<DiscordGif>();
+
+            // The previews are hosted by the GIF provider instead of Discord.
+            foreach (var gif in gifs)
             {
-                var attachments = new JArray();
-
-                for (int i = 0; i < files.Count; i++)
-                    attachments.Add(new JObject { [@"id"] = i, [@"filename"] = files[i].Filename });
-
-                body[@"attachments"] = attachments;
+                if (!string.IsNullOrEmpty(gif.Preview))
+                    DiscordLinkPreviews.AllowMedia(gif.Preview);
             }
 
-            var response = await request(HttpMethod.Post, $@"channels/{channel.Id}/messages", body, files).ConfigureAwait(false);
-
-            return response.ToObject<DiscordMessage>() ?? throw new DiscordRequestException(@"Discord returned an invalid message.");
+            return gifs;
         }
 
         public override async Task<DiscordMessage?> GetMessage(ulong channelId, ulong messageId)
@@ -334,6 +371,31 @@ namespace osu.Game.Online.Discord.Full
 
         public override Task RemoveReaction(DiscordMessage message, DiscordReactionEmoji emoji) =>
             request(HttpMethod.Delete, $@"channels/{message.ChannelId}/messages/{message.Id}/reactions/{emoji.UrlName}/@me", null);
+
+        public override async Task<IReadOnlyList<DiscordUser>> GetReactionUsers(DiscordMessage message, DiscordReactionEmoji emoji, bool burst)
+        {
+            var response = await request(HttpMethod.Get, $@"channels/{message.ChannelId}/messages/{message.Id}/reactions/{emoji.UrlName}?limit=5&type={(burst ? 1 : 0)}", null)
+                .ConfigureAwait(false);
+
+            return response.ToObject<List<DiscordUser>>() ?? new List<DiscordUser>();
+        }
+
+        public override async Task<DiscordChannel?> OpenDirectMessage(DiscordUser user)
+        {
+            var existing = FindDirectMessage(user.Id);
+
+            if (existing != null)
+                return existing;
+
+            // Discord returns the existing channel if there already is one which isn't known yet.
+            var response = await request(HttpMethod.Post, @"users/@me/channels", new JObject { [@"recipients"] = new JArray(user.Id.ToString()) }).ConfigureAwait(false);
+            var channel = response.ToObject<DiscordChannel>();
+
+            if (channel != null)
+                Schedule(() => addOrUpdateChannel(channel));
+
+            return channel;
+        }
 
         public override async Task<DiscordThreadSearchResult> SearchThreads(DiscordChannel forum)
         {
@@ -683,6 +745,52 @@ namespace osu.Game.Online.Discord.Full
             },
         };
 
+        /// <summary>
+        /// The member searches which wait for their results, by their nonce.
+        /// </summary>
+        private readonly ConcurrentDictionary<string, TaskCompletionSource<IReadOnlyList<DiscordUser>>> memberSearches =
+            new ConcurrentDictionary<string, TaskCompletionSource<IReadOnlyList<DiscordUser>>>();
+
+        public override async Task<IReadOnlyList<DiscordUser>> SearchMembers(ulong guildId, string query)
+        {
+            var socket = gatewaySocket;
+
+            if (socket == null || State.Value != DiscordConnectionState.Ready)
+                return Array.Empty<DiscordUser>();
+
+            string nonce = Guid.NewGuid().ToString(@"N");
+            var completion = new TaskCompletionSource<IReadOnlyList<DiscordUser>>(TaskCreationOptions.RunContinuationsAsynchronously);
+            memberSearches[nonce] = completion;
+
+            // Members are searched through the gateway, which is what the Discord client does for mentions as well.
+            var payload = new JObject
+            {
+                [@"op"] = 8,
+                [@"d"] = new JObject
+                {
+                    [@"guild_id"] = new JArray(guildId.ToString()),
+                    [@"query"] = query,
+                    [@"limit"] = 10,
+                    [@"presences"] = false,
+                    [@"nonce"] = nonce,
+                },
+            };
+
+            try
+            {
+                await sendGateway(socket, payload, connectionCancellation?.Token ?? CancellationToken.None).ConfigureAwait(false);
+                return await completion.Task.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+            }
+            catch (TimeoutException)
+            {
+                return Array.Empty<DiscordUser>();
+            }
+            finally
+            {
+                memberSearches.TryRemove(nonce, out _);
+            }
+        }
+
         private void subscribeToGuild(ulong guildId)
         {
             var socket = gatewaySocket;
@@ -914,6 +1022,32 @@ namespace osu.Game.Online.Discord.Full
                     });
                     break;
 
+                case @"GUILD_MEMBERS_CHUNK":
+                    string? chunkNonce = obj.Value<string>(@"nonce");
+
+                    if (chunkNonce == null || !memberSearches.TryGetValue(chunkNonce, out var search))
+                        break;
+
+                    var foundMembers = new List<DiscordUser>();
+
+                    foreach (var chunkMember in obj[@"members"] as JArray ?? new JArray())
+                    {
+                        var user = chunkMember[@"user"]?.ToObject<DiscordUser>();
+
+                        if (user == null)
+                            continue;
+
+                        string? nick = chunkMember.Value<string>(@"nick");
+
+                        if (!string.IsNullOrEmpty(nick))
+                            user.GlobalName = nick;
+
+                        foundMembers.Add(user);
+                    }
+
+                    search.TrySetResult(foundMembers);
+                    break;
+
                 case @"MESSAGE_CREATE":
                     var message = obj.ToObject<DiscordMessage>();
 
@@ -966,6 +1100,17 @@ namespace osu.Game.Online.Discord.Full
                         obj[@"burst_colors"]?.ToObject<List<string>>());
 
                     Schedule(() => TriggerReactionChanged(reaction));
+                    break;
+
+                case @"GUILD_STICKERS_UPDATE":
+                    ulong stickerGuildId = obj.Value<ulong>(@"guild_id");
+                    var stickers = obj[@"stickers"]?.ToObject<List<DiscordSticker>>() ?? new List<DiscordSticker>();
+
+                    Schedule(() =>
+                    {
+                        if (GetGuild(stickerGuildId) is DiscordGuild stickerGuild)
+                            stickerGuild.Stickers = stickers;
+                    });
                     break;
 
                 case @"GUILD_EMOJIS_UPDATE":

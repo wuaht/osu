@@ -41,6 +41,11 @@ namespace osu.Game.Overlays.Discord
         /// </summary>
         public Action<DiscordChannel>? OpenChannel;
 
+        /// <summary>
+        /// Opens the direct messages with a user, which is only offered in guilds.
+        /// </summary>
+        public Action<DiscordUser>? OpenDirectMessage;
+
         public ulong LocalUserId;
 
         public static DiscordMarkdownContext FromClient(DiscordClient client, Action<DiscordChannel>? openChannel = null) => new DiscordMarkdownContext

@@ -858,11 +858,12 @@ namespace osu.Game.Overlays.Discord
         protected override void Dispose(bool isDisposing)
         {
             cancellation.Cancel();
-            musicDucker?.SetPlaying(this, false);
 
             track?.Stop();
             track?.Dispose();
             trackStore?.Dispose();
+
+            musicDucker?.SetPlaying(this, false);
 
             base.Dispose(isDisposing);
         }
@@ -1324,11 +1325,12 @@ namespace osu.Game.Overlays.Discord
         protected override void Dispose(bool isDisposing)
         {
             cancellation.Cancel();
-            musicDucker?.SetPlaying(this, false);
 
             track?.Stop();
             track?.Dispose();
             trackStore?.Dispose();
+
+            musicDucker?.SetPlaying(this, false);
 
             base.Dispose(isDisposing);
         }

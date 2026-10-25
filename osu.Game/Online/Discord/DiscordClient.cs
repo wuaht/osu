@@ -183,10 +183,44 @@ namespace osu.Game.Online.Discord
         public virtual Task RemoveReaction(DiscordMessage message, DiscordReactionEmoji emoji) => Task.FromException(new NotSupportedException());
 
         /// <summary>
+        /// Sends a sticker without any text, if <see cref="SupportsMessageActions"/>.
+        /// </summary>
+        public virtual Task<DiscordMessage> SendSticker(DiscordChannel channel, DiscordSticker sticker, string nonce, DiscordMessage? replyTo = null) =>
+            Task.FromException<DiscordMessage>(new NotSupportedException());
+
+        /// <summary>
+        /// Searches the GIFs of Discord's GIF picker, or fetches the trending ones if the query is empty.
+        /// </summary>
+        public virtual Task<IReadOnlyList<DiscordGif>> SearchGifs(string query) =>
+            Task.FromResult<IReadOnlyList<DiscordGif>>(Array.Empty<DiscordGif>());
+
+        /// <summary>
+        /// Fetches the first users who reacted to a message with an emoji.
+        /// </summary>
+        /// <param name="burst">Whether the users of the super reactions are fetched instead of the normal ones.</param>
+        public virtual Task<IReadOnlyList<DiscordUser>> GetReactionUsers(DiscordMessage message, DiscordReactionEmoji emoji, bool burst) =>
+            Task.FromResult<IReadOnlyList<DiscordUser>>(Array.Empty<DiscordUser>());
+
+        /// <summary>
         /// Fetches the recent posts of a forum, including archived ones. Clients which can't search return no posts,
         /// in which case only the known <see cref="DiscordGuild.Threads"/> are shown.
         /// </summary>
         public virtual Task<DiscordThreadSearchResult> SearchThreads(DiscordChannel forum) => Task.FromResult(new DiscordThreadSearchResult());
+
+        /// <summary>
+        /// Searches the members of a guild whose names start with the query, with their nickname in the guild as their <see cref="DiscordUser.GlobalName"/>.
+        /// Clients which can't search return no members.
+        /// </summary>
+        public virtual Task<IReadOnlyList<DiscordUser>> SearchMembers(ulong guildId, string query) => Task.FromResult<IReadOnlyList<DiscordUser>>(Array.Empty<DiscordUser>());
+
+        /// <summary>
+        /// Opens the direct messages with a user, which are created if there are none yet.
+        /// Clients which can't create them only find the existing ones.
+        /// </summary>
+        public virtual Task<DiscordChannel?> OpenDirectMessage(DiscordUser user) => Task.FromResult(FindDirectMessage(user.Id));
+
+        protected DiscordChannel? FindDirectMessage(ulong userId) =>
+            PrivateChannels.FirstOrDefault(c => c.Type == DiscordChannelType.DirectMessage && c.Recipients.Count == 1 && c.Recipients[0].Id == userId);
 
         public DiscordUser? GetUser(ulong id) => Users.GetValueOrDefault(id);
 

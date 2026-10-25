@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
@@ -16,6 +17,7 @@ using osu.Game.Graphics.Sprites;
 using osu.Game.Localisation;
 using osu.Game.Online.Discord;
 using osuTK;
+using osuTK.Graphics;
 
 namespace osu.Game.Overlays.Discord
 {
@@ -32,9 +34,14 @@ namespace osu.Game.Overlays.Discord
         [Resolved]
         private DiscordNavigation navigation { get; set; } = null!;
 
+        [Resolved]
+        private DiscordUnreadMessages? unread { get; set; }
+
         private readonly BindableList<DiscordGuild> guilds = new BindableList<DiscordGuild>();
+        private readonly BindableList<DiscordChannel> privateChannels = new BindableList<DiscordChannel>();
 
         private FillFlowContainer guildFlow = null!;
+        private FillFlowContainer unreadFlow = null!;
 
         public DiscordGuildRail()
         {
@@ -58,6 +65,14 @@ namespace osu.Game.Overlays.Discord
                     Children = new Drawable[]
                     {
                         new GuildButton(null, SlopDiscordStrings.DirectMessages),
+                        // Like in Discord, the conversations with unread messages are shown below the direct messages, the newest first.
+                        unreadFlow = new FillFlowContainer
+                        {
+                            RelativeSizeAxes = Axes.X,
+                            AutoSizeAxes = Axes.Y,
+                            Direction = FillDirection.Vertical,
+                            Spacing = new Vector2(0, 8),
+                        },
                         new Box
                         {
                             Anchor = Anchor.TopCentre,
@@ -77,6 +92,7 @@ namespace osu.Game.Overlays.Discord
             };
 
             guilds.BindTo(client.Guilds);
+            privateChannels.BindTo(client.PrivateChannels);
         }
 
         protected override void LoadComplete()
@@ -84,6 +100,149 @@ namespace osu.Game.Overlays.Discord
             base.LoadComplete();
 
             guilds.BindCollectionChanged((_, _) => Scheduler.AddOnce(updateGuilds), true);
+            privateChannels.BindCollectionChanged((_, _) => Scheduler.AddOnce(updateUnread), true);
+
+            if (unread != null)
+                unread.Changed += onUnreadChanged;
+        }
+
+        private void onUnreadChanged() => Scheduler.AddOnce(updateUnread);
+
+        private void updateUnread()
+        {
+            unreadFlow.Clear();
+
+            if (unread == null)
+                return;
+
+            // The private channels are ordered by their latest message.
+            foreach (var channel in privateChannels.Where(c => unread.Get(c.Id) > 0))
+                unreadFlow.Add(new UnreadChannelButton(channel, unread.Get(channel.Id)));
+        }
+
+        protected override void Dispose(bool isDisposing)
+        {
+            base.Dispose(isDisposing);
+
+            if (unread != null)
+                unread.Changed -= onUnreadChanged;
+        }
+
+        private partial class UnreadChannelButton : OsuClickableContainer
+        {
+            private readonly DiscordChannel channel;
+            private readonly int count;
+
+            [Resolved]
+            private DiscordClient client { get; set; } = null!;
+
+            [Resolved]
+            private DiscordNavigation navigation { get; set; } = null!;
+
+            private Container iconContainer = null!;
+            private Circle pill = null!;
+
+            public UnreadChannelButton(DiscordChannel channel, int count)
+            {
+                this.channel = channel;
+                this.count = count;
+
+                RelativeSizeAxes = Axes.X;
+                Height = icon_size;
+                TooltipText = channel.DisplayName;
+            }
+
+            [BackgroundDependencyLoader]
+            private void load(OverlayColourProvider colourProvider)
+            {
+                string? url = !string.IsNullOrEmpty(channel.Icon)
+                    ? $@"https://cdn.discordapp.com/channel-icons/{channel.Id}/{channel.Icon}.png?size=96"
+                    : channel.Recipients.FirstOrDefault()?.GetAvatarUrl(96);
+
+                Children = new Drawable[]
+                {
+                    pill = new Circle
+                    {
+                        Anchor = Anchor.CentreLeft,
+                        Origin = Anchor.Centre,
+                        Size = new Vector2(8),
+                        Colour = colourProvider.Content1,
+                    },
+                    new Container
+                    {
+                        Anchor = Anchor.Centre,
+                        Origin = Anchor.Centre,
+                        Size = new Vector2(icon_size),
+                        Children = new Drawable[]
+                        {
+                            iconContainer = new Container
+                            {
+                                RelativeSizeAxes = Axes.Both,
+                                Masking = true,
+                                CornerRadius = icon_size / 2,
+                                Children = new Drawable[]
+                                {
+                                    new Box
+                                    {
+                                        RelativeSizeAxes = Axes.Both,
+                                        Colour = colourProvider.Background3,
+                                    },
+                                    new DiscordRemoteImage(url)
+                                    {
+                                        RelativeSizeAxes = Axes.Both,
+                                        ShowPlaceholder = false,
+                                    },
+                                },
+                            },
+                            // The number of unread messages, which is cut out of the icon like in Discord.
+                            new CircularContainer
+                            {
+                                Anchor = Anchor.BottomRight,
+                                Origin = Anchor.BottomRight,
+                                AutoSizeAxes = Axes.X,
+                                Height = 22,
+                                Margin = new MarginPadding { Right = -4, Bottom = -4 },
+                                Masking = true,
+                                BorderThickness = 4,
+                                BorderColour = colourProvider.Background6,
+                                Children = new Drawable[]
+                                {
+                                    new Box
+                                    {
+                                        RelativeSizeAxes = Axes.Both,
+                                        Colour = DiscordStyle.Error,
+                                    },
+                                    new OsuSpriteText
+                                    {
+                                        Anchor = Anchor.Centre,
+                                        Origin = Anchor.Centre,
+                                        Text = count > 99 ? @"99+" : count.ToString(),
+                                        Font = DiscordStyle.UiFont(12, FontWeight.Bold),
+                                        Colour = Color4.White,
+                                        Margin = new MarginPadding { Horizontal = 7 },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                };
+
+                Action = () => navigation.OpenChannel(channel, client);
+            }
+
+            protected override bool OnHover(HoverEvent e)
+            {
+                iconContainer.TransformTo(nameof(CornerRadius), 16f, 200, Easing.OutQuint);
+                pill.ResizeHeightTo(20, 200, Easing.OutQuint);
+                return base.OnHover(e);
+            }
+
+            protected override void OnHoverLost(HoverLostEvent e)
+            {
+                iconContainer.TransformTo(nameof(CornerRadius), icon_size / 2, 200, Easing.OutQuint);
+                pill.ResizeHeightTo(8, 200, Easing.OutQuint);
+                base.OnHoverLost(e);
+            }
         }
 
         private void updateGuilds()

@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using osu.Framework.Allocation;
 using osu.Framework.Audio;
 using osu.Framework.Bindables;
+using osu.Framework.Development;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Audio;
 
@@ -35,6 +36,13 @@ namespace osu.Game.Overlays.Discord
         /// </summary>
         public void SetPlaying(object source, bool isPlaying)
         {
+            // Media is disposed in the background once its channel is closed.
+            if (!ThreadSafety.IsUpdateThread)
+            {
+                Schedule(() => SetPlaying(source, isPlaying));
+                return;
+            }
+
             bool changed = isPlaying ? playing.Add(source) : playing.Remove(source);
 
             if (!changed || musicController == null)

@@ -168,6 +168,10 @@ namespace osu.Game.Overlays.Discord
             {
                 markdownContext = DiscordMarkdownContext.FromClient(client, c => navigation.OpenChannel(c, client));
 
+                // The other users of a private channel are already listed with their direct messages.
+                if (Channel.GuildId != null)
+                    markdownContext.OpenDirectMessage = openDirectMessage;
+
                 InternalChild = new GridContainer
                 {
                     RelativeSizeAxes = Axes.Both,
@@ -223,7 +227,15 @@ namespace osu.Game.Overlays.Discord
                                 RelativeSizeAxes = Axes.X,
                                 AutoSizeAxes = Axes.Y,
                                 Padding = new MarginPadding { Horizontal = 16, Bottom = 16, Top = 4 },
-                                Child = composer = new DiscordMessageComposer(Channel, client.SupportsMessageActions, GetCustomEmojis, getMentionCandidates),
+                                Child = composer = new DiscordMessageComposer(Channel, client.SupportsMessageActions, GetCustomEmojis, getMentionCandidates,
+                                    Channel.GuildId is ulong guildId ? query => client.SearchMembers(guildId, query) : null)
+                                {
+                                    SearchGifs = client.SearchGifs,
+                                    GetStickers = () => DiscordStickerPicker.GetStickerGroups(client, Channel.GuildId),
+                                    // Like in Discord, a picked GIF or sticker is sent right away, while the text which was written stays.
+                                    GifPicked = gif => send(gif.Url, Array.Empty<DiscordUpload>(), takeReply(), null),
+                                    StickerPicked = sticker => send(string.Empty, Array.Empty<DiscordUpload>(), takeReply(), sticker),
+                                },
                             },
                         },
                     },
@@ -406,6 +418,24 @@ namespace osu.Game.Overlays.Discord
 
                 composer.Reset();
 
+                send(text, uploads, replyTo, null);
+            }
+
+            /// <summary>
+            /// Takes the message which is replied to out of the composer, for sending something without its text.
+            /// </summary>
+            private DiscordMessage? takeReply()
+            {
+                var replyTo = composer.Editing == null ? composer.ReplyTo : null;
+
+                if (replyTo != null)
+                    composer.ClearContext();
+
+                return replyTo;
+            }
+
+            private void send(string text, IReadOnlyList<DiscordUpload> uploads, DiscordMessage? replyTo, DiscordSticker? sticker)
+            {
                 string nonce = generateNonce();
 
                 var pending = new DiscordMessage
@@ -418,12 +448,17 @@ namespace osu.Game.Overlays.Discord
                     Timestamp = DateTimeOffset.Now,
                     Nonce = nonce,
                     Pending = true,
+                    Stickers = sticker != null ? new List<DiscordSticker> { sticker } : new List<DiscordSticker>(),
                 };
 
                 appendMessage(pending);
                 scroll.ScrollToEnd();
 
-                client.SendMessage(Channel, text, nonce, replyTo, uploads.Count > 0 ? uploads : null).ContinueWith(t => Schedule(() =>
+                var sending = sticker != null
+                    ? client.SendSticker(Channel, sticker, nonce, replyTo)
+                    : client.SendMessage(Channel, text, nonce, replyTo, uploads.Count > 0 ? uploads : null);
+
+                sending.ContinueWith(t => Schedule(() =>
                 {
                     var drawable = messageFlow.FirstOrDefault(m => m.Message.Nonce == nonce && m.Message.Pending);
 
@@ -509,6 +544,20 @@ namespace osu.Game.Overlays.Discord
                 return Channel.Recipients
                               .Concat(orderedMessages.Reverse().SelectMany(m => m.Message.Mentions.Prepend(m.Message.Author)))
                               .Where(u => u.Id != localUserId && u.Id != 0);
+            }
+
+            private void openDirectMessage(DiscordUser user)
+            {
+                if (user.Id == client.LocalUser.Value?.Id)
+                    return;
+
+                client.OpenDirectMessage(user).ContinueWith(t => Schedule(() =>
+                {
+                    if (t.IsCompletedSuccessfully && t.GetResultSafely() is DiscordChannel channel)
+                        navigation.OpenChannel(channel, client);
+                    else
+                        Logger.Log($@"Failed to open the direct messages with {user.Username}: {t.Exception?.GetBaseException().Message}", LoggingTarget.Network);
+                }), TaskScheduler.Default);
             }
 
             private static string generateNonce()

@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using osu.Framework.Utils;
 using osu.Game.Graphics.Containers;
 
@@ -61,7 +62,8 @@ namespace osu.Game.Overlays.Discord
 
         protected override void OnUserScroll(double value, bool animated = true, double? distanceDecay = null)
         {
-            base.OnUserScroll(value, animated, distanceDecay);
+            // The end isn't overscrolled, as bouncing back from it fights with following the end while the content grows.
+            base.OnUserScroll(Math.Min(value, ScrollableExtent), animated, distanceDecay);
             updateTrackState();
         }
 

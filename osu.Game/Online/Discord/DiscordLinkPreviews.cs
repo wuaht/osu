@@ -98,6 +98,11 @@ namespace osu.Game.Online.Discord
         /// </summary>
         public static bool IsPreviewMedia(string url) => media_urls.ContainsKey(url);
 
+        /// <summary>
+        /// Allows loading media which Discord linked to outside of its media proxy, such as the previews of its GIF picker.
+        /// </summary>
+        public static void AllowMedia(string url) => media_urls.TryAdd(url, true);
+
         private static DiscordEmbed? trackMedia(DiscordEmbed? embed)
         {
             if (embed == null)

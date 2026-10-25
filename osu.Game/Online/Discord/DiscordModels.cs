@@ -476,6 +476,9 @@ namespace osu.Game.Online.Discord
         [JsonProperty("emojis")]
         public List<DiscordCustomEmoji> Emojis { get; set; } = new List<DiscordCustomEmoji>();
 
+        [JsonProperty("stickers")]
+        public List<DiscordSticker> Stickers { get; set; } = new List<DiscordSticker>();
+
         /// <summary>
         /// The role IDs of the local user in this guild, if known.
         /// </summary>
@@ -643,6 +646,12 @@ namespace osu.Game.Online.Discord
         public string Name { get; set; } = string.Empty;
 
         /// <summary>
+        /// Whether a sticker of a guild can be used, which it can't when the guild lost the boosts it needs.
+        /// </summary>
+        [JsonProperty("available")]
+        public bool Available { get; set; } = true;
+
+        /// <summary>
         /// 1 = PNG, 2 = APNG, 3 = Lottie, 4 = GIF.
         /// </summary>
         [JsonProperty("format_type")]
@@ -654,6 +663,33 @@ namespace osu.Game.Online.Discord
             4 => $@"https://media.discordapp.net/stickers/{Id}.gif?size=160",
             _ => null,
         };
+    }
+
+    /// <summary>
+    /// A GIF of Discord's GIF picker, which is sent as its link.
+    /// </summary>
+    public class DiscordGif
+    {
+        /// <summary>
+        /// The page of the GIF, which is sent as the message.
+        /// </summary>
+        [JsonProperty("url")]
+        public string Url { get; set; } = string.Empty;
+
+        [JsonProperty("title")]
+        public string? Title { get; set; }
+
+        /// <summary>
+        /// A still image of the GIF.
+        /// </summary>
+        [JsonProperty("preview")]
+        public string? Preview { get; set; }
+
+        [JsonProperty("width")]
+        public int Width { get; set; }
+
+        [JsonProperty("height")]
+        public int Height { get; set; }
     }
 
     /// <summary>

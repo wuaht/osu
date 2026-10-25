@@ -79,12 +79,17 @@ namespace osu.Game.Overlays.Discord
             this.onPicked = onPicked;
         }
 
+        /// <summary>
+        /// The height which the picker is limited to, so that it fits into the space it is shown in.
+        /// </summary>
+        public float MaxHeight { get; init; } = 420;
+
         [BackgroundDependencyLoader]
         private void load()
         {
             Child = new Container
             {
-                Size = new Vector2(button_size * 9 + 28, 420),
+                Size = new Vector2(button_size * 9 + 28, Math.Clamp(MaxHeight, 200, 420)),
                 Children = new Drawable[]
                 {
                     new Container

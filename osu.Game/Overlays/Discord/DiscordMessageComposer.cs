@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading.Tasks;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Extensions;
@@ -23,6 +24,7 @@ using osu.Framework.Input.Events;
 using osu.Framework.Localisation;
 using osu.Framework.Logging;
 using osu.Framework.Platform;
+using osu.Framework.Threading;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.Sprites;
@@ -69,6 +71,16 @@ namespace osu.Game.Overlays.Discord
         private readonly bool supportsActions;
         private readonly Func<IReadOnlyList<DiscordCustomEmojiGroup>> getCustomEmojis;
         private readonly Func<IEnumerable<DiscordUser>> getMentionCandidates;
+        private readonly Func<string, Task<IReadOnlyList<DiscordUser>>>? searchMembers;
+
+        /// <summary>
+        /// The members which were found by searching the guild, as most of its members aren't known otherwise.
+        /// </summary>
+        private readonly Dictionary<ulong, DiscordUser> searchedMembers = new Dictionary<ulong, DiscordUser>();
+
+        private readonly HashSet<string> searchedQueries = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        private ScheduledDelegate? scheduledSearch;
 
         /// <summary>
         /// The mentions which were picked, by the text which is shown for them in the text box.
@@ -81,7 +93,28 @@ namespace osu.Game.Overlays.Discord
         [Resolved]
         private Clipboard clipboard { get; set; } = null!;
 
+        /// <summary>
+        /// Searches the GIFs of the GIF picker, which is only shown if <see cref="supportsActions"/>.
+        /// </summary>
+        public Func<string, Task<IReadOnlyList<DiscordGif>>>? SearchGifs { get; init; }
+
+        /// <summary>
+        /// The stickers which can be sent, which are only shown if <see cref="supportsActions"/>.
+        /// </summary>
+        public Func<IReadOnlyList<DiscordStickerGroup>>? GetStickers { get; init; }
+
+        /// <summary>
+        /// Called with a GIF which was picked to be sent.
+        /// </summary>
+        public Action<DiscordGif>? GifPicked { get; init; }
+
+        /// <summary>
+        /// Called with a sticker which was picked to be sent.
+        /// </summary>
+        public Action<DiscordSticker>? StickerPicked { get; init; }
+
         private Container contextBar = null!;
+        private DiscordPopoverButton emojiButton = null!;
         private OsuSpriteText contextText = null!;
         private FillFlowContainer<AttachmentChip> attachmentFlow = null!;
         private FillFlowContainer<MentionSuggestion> suggestionFlow = null!;
@@ -91,12 +124,14 @@ namespace osu.Game.Overlays.Discord
         /// <param name="supportsActions">Whether files, replies, edits and so on are supported by the client.</param>
         /// <param name="getCustomEmojis">The custom emojis which can be written.</param>
         /// <param name="getMentionCandidates">The users which can be mentioned.</param>
+        /// <param name="searchMembers">Searches the members of the guild by the start of their names, if the channel is in one.</param>
         public DiscordMessageComposer(DiscordChannel channel, bool supportsActions, Func<IReadOnlyList<DiscordCustomEmojiGroup>> getCustomEmojis,
-                                      Func<IEnumerable<DiscordUser>> getMentionCandidates)
+                                      Func<IEnumerable<DiscordUser>> getMentionCandidates, Func<string, Task<IReadOnlyList<DiscordUser>>>? searchMembers = null)
         {
             this.supportsActions = supportsActions;
             this.getCustomEmojis = getCustomEmojis;
             this.getMentionCandidates = getMentionCandidates;
+            this.searchMembers = searchMembers;
 
             RelativeSizeAxes = Axes.X;
             AutoSizeAxes = Axes.Y;
@@ -201,7 +236,23 @@ namespace osu.Game.Overlays.Discord
                                     X = 6,
                                 }
                                 : Empty(),
-                            new DiscordPopoverButton(FontAwesome.Regular.Smile, SlopDiscordStrings.SelectEmoji, () => new DiscordEmojiPicker(getCustomEmojis(), insertEmoji))
+                            supportsActions
+                                ? new DiscordPopoverButton(FontAwesome.Solid.Film, SlopDiscordStrings.SelectGif, createGifPicker)
+                                {
+                                    Anchor = Anchor.CentreRight,
+                                    Origin = Anchor.CentreRight,
+                                    X = -70,
+                                }
+                                : Empty(),
+                            supportsActions
+                                ? new DiscordPopoverButton(FontAwesome.Regular.StickyNote, SlopDiscordStrings.SelectSticker, createStickerPicker)
+                                {
+                                    Anchor = Anchor.CentreRight,
+                                    Origin = Anchor.CentreRight,
+                                    X = -38,
+                                }
+                                : Empty(),
+                            emojiButton = new DiscordPopoverButton(FontAwesome.Regular.Smile, SlopDiscordStrings.SelectEmoji, createEmojiPicker)
                             {
                                 Anchor = Anchor.CentreRight,
                                 Origin = Anchor.CentreRight,
@@ -322,6 +373,36 @@ namespace osu.Game.Overlays.Discord
                 attachmentFlow.Hide();
         }
 
+        private Popover createGifPicker() => new DiscordGifPicker(q => SearchGifs?.Invoke(q) ?? Task.FromResult<IReadOnlyList<DiscordGif>>(Array.Empty<DiscordGif>()), g => GifPicked?.Invoke(g))
+        {
+            AllowableAnchors = new[] { Anchor.TopCentre, Anchor.TopLeft, Anchor.TopRight },
+            MaxHeight = spaceAbovePickers,
+        };
+
+        private Popover createStickerPicker() => new DiscordStickerPicker(GetStickers?.Invoke() ?? Array.Empty<DiscordStickerGroup>(), s => StickerPicked?.Invoke(s))
+        {
+            AllowableAnchors = new[] { Anchor.TopCentre, Anchor.TopLeft, Anchor.TopRight },
+            MaxHeight = spaceAbovePickers,
+        };
+
+        /// <summary>
+        /// The space above the text box, which the pickers are limited to so that they don't cover it.
+        /// </summary>
+        private float spaceAbovePickers => -emojiButton.ToLocalSpace(new Vector2(emojiButton.ScreenSpaceDrawQuad.TopLeft.X, 0)).Y - 30;
+
+        private Popover createEmojiPicker()
+        {
+            // The picker only opens above the composer, as it would otherwise fall back to covering it when it doesn't fit.
+            // The arrow and the distance to the button are left free above it.
+            float spaceAbove = spaceAbovePickers;
+
+            return new DiscordEmojiPicker(getCustomEmojis(), insertEmoji)
+            {
+                AllowableAnchors = new[] { Anchor.TopCentre, Anchor.TopLeft, Anchor.TopRight },
+                MaxHeight = spaceAbove,
+            };
+        }
+
         private void insertEmoji(DiscordReactionEmoji emoji)
         {
             TextBox.Insert(DiscordEmoji.ToMessageText(emoji));
@@ -398,7 +479,10 @@ namespace osu.Game.Overlays.Discord
 
             if (query != null)
             {
+                scheduleSearch(query);
+
                 var matches = getMentionCandidates()
+                              .Concat(searchedMembers.Values)
                               .DistinctBy(u => u.Id)
                               .Where(u => u.DisplayName.Contains(query, StringComparison.OrdinalIgnoreCase) || u.Username.Contains(query, StringComparison.OrdinalIgnoreCase))
                               .OrderByDescending(u => u.DisplayName.StartsWith(query, StringComparison.OrdinalIgnoreCase) || u.Username.StartsWith(query, StringComparison.OrdinalIgnoreCase))
@@ -410,6 +494,32 @@ namespace osu.Game.Overlays.Discord
             }
 
             suggestionContainer.Alpha = suggestionFlow.Count > 0 ? 1 : 0;
+        }
+
+        private void scheduleSearch(string query)
+        {
+            scheduledSearch?.Cancel();
+
+            if (searchMembers == null || query.Length == 0 || searchedQueries.Contains(query))
+                return;
+
+            // The search is delayed while typing, so that only the final query is sent.
+            scheduledSearch = Scheduler.AddDelayed(() =>
+            {
+                searchedQueries.Add(query);
+
+                searchMembers(query).ContinueWith(t => Schedule(() =>
+                {
+                    if (!t.IsCompletedSuccessfully)
+                        return;
+
+                    foreach (var member in t.GetResultSafely())
+                        searchedMembers[member.Id] = member;
+
+                    if (currentMentionQuery != null)
+                        updateSuggestions();
+                }), TaskScheduler.Default);
+            }, 200);
         }
 
         private bool acceptFirstSuggestion()
@@ -529,6 +639,9 @@ namespace osu.Game.Overlays.Discord
 
             // Space for the buttons over the text box.
             protected override float LeftRightPadding => hasButtons ? 44 : 10;
+
+            // The GIF, sticker and emoji buttons are on the right.
+            protected override float RightPadding => hasButtons ? 108 : LeftRightPadding;
 
             [BackgroundDependencyLoader]
             private void load(OverlayColourProvider colourProvider)

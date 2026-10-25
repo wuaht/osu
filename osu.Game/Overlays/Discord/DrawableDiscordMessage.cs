@@ -245,7 +245,7 @@ namespace osu.Game.Overlays.Discord
                             {
                                 Size = new Vector2(DiscordStyle.AVATAR_SIZE),
                                 X = -DiscordStyle.MESSAGE_GUTTER + 16,
-                                Child = new DiscordAvatar(Message.Author.GetAvatarUrl(80)),
+                                Child = new AuthorAvatar(Message.Author, context.OpenDirectMessage),
                             },
                             gutterTime = new OsuSpriteText
                             {
@@ -301,10 +301,10 @@ namespace osu.Game.Overlays.Discord
                 Action? toggle = messageActions == null ? null : () => messageActions.ToggleReaction(Message, emoji);
 
                 if (reaction.BurstCount > 0)
-                    reactionFlow.Add(new DiscordReactionChip(reaction, true, toggle));
+                    reactionFlow.Add(new DiscordReactionChip(reaction, true, toggle, () => client.GetReactionUsers(Message, emoji, true)));
 
                 if (reaction.Count > 0)
-                    reactionFlow.Add(new DiscordReactionChip(reaction, false, toggle));
+                    reactionFlow.Add(new DiscordReactionChip(reaction, false, toggle, () => client.GetReactionUsers(Message, emoji, false)));
             }
 
             if (messageActions != null && reactionFlow.Count > 0)
@@ -769,6 +769,25 @@ namespace osu.Game.Overlays.Discord
                 default:
                     return new RichEmbed(embed, context);
             }
+        }
+
+        private partial class AuthorAvatar : CompositeDrawable, IHasContextMenu
+        {
+            private readonly DiscordUser author;
+            private readonly Action<DiscordUser>? openDirectMessage;
+
+            public AuthorAvatar(DiscordUser author, Action<DiscordUser>? openDirectMessage)
+            {
+                this.author = author;
+                this.openDirectMessage = openDirectMessage;
+
+                RelativeSizeAxes = Axes.Both;
+                InternalChild = new DiscordAvatar(author.GetAvatarUrl(80));
+            }
+
+            public MenuItem[]? ContextMenuItems => openDirectMessage == null
+                ? null
+                : new MenuItem[] { new OsuMenuItem(SlopDiscordStrings.OpenInDirectMessages, MenuItemType.Standard, () => openDirectMessage(author)) };
         }
 
         private partial class FileChip : OsuClickableContainer
