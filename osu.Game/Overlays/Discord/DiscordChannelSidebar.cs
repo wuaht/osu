@@ -577,34 +577,109 @@ namespace osu.Game.Overlays.Discord
 
         private partial class GuildChannelRow : ChannelRow
         {
+            [Resolved]
+            private DiscordUnreadMessages? unread { get; set; }
+
+            private TruncatingSpriteText name = null!;
+            private Container badge = null!;
+            private OsuSpriteText badgeText = null!;
+
+            private int mentionCount => unread?.Get(Channel.Id) ?? 0;
+
+            protected override bool Highlighted => mentionCount > 0;
+
             public GuildChannelRow(DiscordChannel channel)
                 : base(channel, 32)
             {
             }
 
-            protected override Drawable CreateContent() => new FillFlowContainer
+            protected override void LoadComplete()
+            {
+                base.LoadComplete();
+
+                if (unread != null)
+                    unread.Changed += onUnreadChanged;
+
+                updateMentions();
+            }
+
+            private void onUnreadChanged() => Scheduler.AddOnce(updateMentions);
+
+            private void updateMentions()
+            {
+                int count = mentionCount;
+
+                badge.Alpha = count > 0 ? 1 : 0;
+                badgeText.Text = count > 99 ? @"99+" : count.ToString();
+                name.Font = DiscordStyle.UiFont(15, count > 0 ? FontWeight.Bold : FontWeight.Medium);
+
+                UpdateState();
+            }
+
+            protected override void Dispose(bool isDisposing)
+            {
+                base.Dispose(isDisposing);
+
+                if (unread != null)
+                    unread.Changed -= onUnreadChanged;
+            }
+
+            protected override Drawable CreateContent() => new GridContainer
             {
                 RelativeSizeAxes = Axes.Both,
-                Direction = FillDirection.Horizontal,
-                Spacing = new Vector2(8, 0),
-                Children = new Drawable[]
+                ColumnDimensions = new[]
                 {
-                    new SpriteIcon
+                    new Dimension(GridSizeMode.Absolute, 22),
+                    new Dimension(),
+                    new Dimension(GridSizeMode.AutoSize),
+                },
+                Content = new[]
+                {
+                    new Drawable[]
                     {
-                        Anchor = Anchor.CentreLeft,
-                        Origin = Anchor.CentreLeft,
-                        Icon = GetIcon(Channel),
-                        Size = new Vector2(14),
-                        Colour = ColourProvider.Content2,
-                    },
-                    new TruncatingSpriteText
-                    {
-                        Anchor = Anchor.CentreLeft,
-                        Origin = Anchor.CentreLeft,
-                        RelativeSizeAxes = Axes.X,
-                        Width = 0.85f,
-                        Text = Channel.DisplayName,
-                        Font = DiscordStyle.UiFont(15, FontWeight.Medium),
+                        new SpriteIcon
+                        {
+                            Anchor = Anchor.CentreLeft,
+                            Origin = Anchor.CentreLeft,
+                            Icon = GetIcon(Channel),
+                            Size = new Vector2(14),
+                            Colour = ColourProvider.Content2,
+                        },
+                        name = new TruncatingSpriteText
+                        {
+                            Anchor = Anchor.CentreLeft,
+                            Origin = Anchor.CentreLeft,
+                            RelativeSizeAxes = Axes.X,
+                            Text = Channel.DisplayName,
+                            Font = DiscordStyle.UiFont(15, FontWeight.Medium),
+                        },
+                        // The number of unread mentions, like the mention badge of Discord.
+                        badge = new CircularContainer
+                        {
+                            Anchor = Anchor.CentreRight,
+                            Origin = Anchor.CentreRight,
+                            AutoSizeAxes = Axes.X,
+                            Height = 16,
+                            Masking = true,
+                            Alpha = 0,
+                            Margin = new MarginPadding { Left = 6 },
+                            Children = new Drawable[]
+                            {
+                                new Box
+                                {
+                                    RelativeSizeAxes = Axes.Both,
+                                    Colour = DiscordStyle.Error,
+                                },
+                                badgeText = new OsuSpriteText
+                                {
+                                    Anchor = Anchor.Centre,
+                                    Origin = Anchor.Centre,
+                                    Font = DiscordStyle.UiFont(11, FontWeight.Bold),
+                                    Colour = Color4.White,
+                                    Margin = new MarginPadding { Horizontal = 5 },
+                                },
+                            },
+                        },
                     },
                 },
             };

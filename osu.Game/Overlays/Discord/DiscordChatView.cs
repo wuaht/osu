@@ -230,7 +230,7 @@ namespace osu.Game.Overlays.Discord
                                 Child = composer = new DiscordMessageComposer(Channel, client.SupportsMessageActions, GetCustomEmojis, getMentionCandidates,
                                     Channel.GuildId is ulong guildId ? query => client.SearchMembers(guildId, query) : null)
                                 {
-                                    SearchGifs = client.SearchGifs,
+                                    GifClient = client,
                                     GetStickers = () => DiscordStickerPicker.GetStickerGroups(client, Channel.GuildId),
                                     // Like in Discord, a picked GIF or sticker is sent right away, while the text which was written stays.
                                     GifPicked = gif => send(gif.Url, Array.Empty<DiscordUpload>(), takeReply(), null),

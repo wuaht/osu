@@ -195,6 +195,17 @@ namespace osu.Game.Online.Discord
             Task.FromResult<IReadOnlyList<DiscordGif>>(Array.Empty<DiscordGif>());
 
         /// <summary>
+        /// Fetches the favourite GIFs of the user, the newest first.
+        /// </summary>
+        public virtual Task<IReadOnlyList<DiscordGif>> GetFavouriteGifs() =>
+            Task.FromResult<IReadOnlyList<DiscordGif>>(Array.Empty<DiscordGif>());
+
+        /// <summary>
+        /// Adds a GIF to the favourite GIFs of the user or removes it from them.
+        /// </summary>
+        public virtual Task SetGifFavourite(DiscordGif gif, bool favourite) => Task.FromException(new NotSupportedException());
+
+        /// <summary>
         /// Fetches the first users who reacted to a message with an emoji.
         /// </summary>
         /// <param name="burst">Whether the users of the super reactions are fetched instead of the normal ones.</param>

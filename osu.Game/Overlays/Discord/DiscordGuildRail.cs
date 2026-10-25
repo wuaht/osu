@@ -267,6 +267,12 @@ namespace osu.Game.Overlays.Discord
             [Resolved]
             private OverlayColourProvider colourProvider { get; set; } = null!;
 
+            [Resolved]
+            private DiscordUnreadMessages? unread { get; set; }
+
+            private Container badge = null!;
+            private OsuSpriteText badgeText = null!;
+
             private readonly Bindable<DiscordGuild?> selectedGuild = new Bindable<DiscordGuild?>();
 
             private bool selected => selectedGuild.Value?.Id == guild?.Id;
@@ -343,6 +349,41 @@ namespace osu.Game.Overlays.Discord
                             icon,
                         },
                     },
+                    // The number of unread mentions in the guild, which is cut out of the icon like in Discord.
+                    new Container
+                    {
+                        Anchor = Anchor.Centre,
+                        Origin = Anchor.Centre,
+                        Size = new Vector2(icon_size),
+                        Child = badge = new CircularContainer
+                        {
+                            Anchor = Anchor.BottomRight,
+                            Origin = Anchor.BottomRight,
+                            AutoSizeAxes = Axes.X,
+                            Height = 22,
+                            Margin = new MarginPadding { Right = -4, Bottom = -4 },
+                            Masking = true,
+                            BorderThickness = 4,
+                            BorderColour = colourProvider.Background6,
+                            Alpha = 0,
+                            Children = new Drawable[]
+                            {
+                                new Box
+                                {
+                                    RelativeSizeAxes = Axes.Both,
+                                    Colour = DiscordStyle.Error,
+                                },
+                                badgeText = new OsuSpriteText
+                                {
+                                    Anchor = Anchor.Centre,
+                                    Origin = Anchor.Centre,
+                                    Font = DiscordStyle.UiFont(12, FontWeight.Bold),
+                                    Colour = Color4.White,
+                                    Margin = new MarginPadding { Horizontal = 7 },
+                                },
+                            },
+                        },
+                    },
                 };
 
                 selectedGuild.BindTo(navigation.Guild);
@@ -356,6 +397,31 @@ namespace osu.Game.Overlays.Discord
 
                 selectedGuild.BindValueChanged(_ => updateState(), true);
                 FinishTransforms(true);
+
+                if (unread != null && guild != null)
+                    unread.Changed += onUnreadChanged;
+
+                updateMentions();
+            }
+
+            private void onUnreadChanged() => Scheduler.AddOnce(updateMentions);
+
+            private void updateMentions()
+            {
+                int count = guild != null ? unread?.GetGuild(guild.Id) ?? 0 : 0;
+
+                badge.Alpha = count > 0 ? 1 : 0;
+                badgeText.Text = count > 99 ? @"99+" : count.ToString();
+
+                updateState();
+            }
+
+            protected override void Dispose(bool isDisposing)
+            {
+                base.Dispose(isDisposing);
+
+                if (unread != null)
+                    unread.Changed -= onUnreadChanged;
             }
 
             protected override bool OnHover(HoverEvent e)
@@ -377,7 +443,8 @@ namespace osu.Game.Overlays.Discord
                 iconContainer.TransformTo(nameof(CornerRadius), active ? 16f : icon_size / 2, 200, Easing.OutQuint);
                 iconBackground.FadeColour(active ? DiscordStyle.Blurple : colourProvider.Background3, 200, Easing.OutQuint);
 
-                float pillHeight = selected ? 40 : IsHovered ? 20 : 0;
+                bool mentioned = guild != null && unread?.GetGuild(guild.Id) > 0;
+                float pillHeight = selected ? 40 : IsHovered ? 20 : mentioned ? 8 : 0;
                 pill.ResizeHeightTo(pillHeight, 200, Easing.OutQuint);
             }
         }

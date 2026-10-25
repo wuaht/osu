@@ -204,11 +204,15 @@ namespace osu.Game.Overlays.Discord
 
             rows.Add(daySeparator = createDaySeparator());
 
-            // The preview is added before the message, as the flow lays out children in the order they were added.
-            if (Message.IsReply)
-                rows.Add(createReplyPreview());
+            var messageRows = new FillFlowContainer
+            {
+                RelativeSizeAxes = Axes.X,
+                AutoSizeAxes = Axes.Y,
+                Direction = FillDirection.Vertical,
+            };
 
-            rows.Add(messageRow = new Container
+            // Like in Discord, the mention highlight covers the reply preview too.
+            rows.Add(new Container
             {
                 RelativeSizeAxes = Axes.X,
                 AutoSizeAxes = Axes.Y,
@@ -220,18 +224,32 @@ namespace osu.Game.Overlays.Discord
                         Colour = DiscordStyle.MentionedMessage,
                         Alpha = mentioned ? 1 : 0,
                     },
-                    hoverBackground = new Box
-                    {
-                        RelativeSizeAxes = Axes.Both,
-                        Colour = Color4.White,
-                        Alpha = 0,
-                    },
+                    messageRows,
                     new Box
                     {
                         RelativeSizeAxes = Axes.Y,
                         Width = 2,
                         Colour = DiscordStyle.MentionedMessageBar,
                         Alpha = mentioned ? 1 : 0,
+                    },
+                },
+            });
+
+            // The preview is added before the message, as the flow lays out children in the order they were added.
+            if (Message.IsReply)
+                messageRows.Add(createReplyPreview());
+
+            messageRows.Add(messageRow = new Container
+            {
+                RelativeSizeAxes = Axes.X,
+                AutoSizeAxes = Axes.Y,
+                Children = new Drawable[]
+                {
+                    hoverBackground = new Box
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Colour = Color4.White,
+                        Alpha = 0,
                     },
                     mainContent = new Container
                     {

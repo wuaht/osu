@@ -85,7 +85,7 @@ namespace osu.Game.Overlays.Discord
             AutoSizeAxes = Axes.X;
             Masking = true;
             CornerRadius = 8;
-            BorderThickness = 1;
+            BorderThickness = 2;
 
             emojiName = reaction.Emoji.Id == null ? reaction.Emoji.Name ?? string.Empty : $@":{reaction.Emoji.Name}:";
             TooltipText = withBurst(emojiName);

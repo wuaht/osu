@@ -341,14 +341,83 @@ namespace osu.Game.Online.Discord.Full
             var response = await request(HttpMethod.Get, path, null).ConfigureAwait(false);
             var gifs = response.ToObject<List<DiscordGif>>() ?? new List<DiscordGif>();
 
-            // The previews are hosted by the GIF provider instead of Discord.
             foreach (var gif in gifs)
             {
-                if (!string.IsNullOrEmpty(gif.Preview))
-                    DiscordLinkPreviews.AllowMedia(gif.Preview);
+                gif.IsVideo = true;
+                allowGifMedia(gif);
             }
 
             return gifs;
+        }
+
+        // The GIFs are hosted by the GIF provider instead of Discord.
+        private static void allowGifMedia(DiscordGif gif)
+        {
+            if (!string.IsNullOrEmpty(gif.Preview))
+                DiscordLinkPreviews.AllowMedia(gif.Preview);
+
+            if (!string.IsNullOrEmpty(gif.Src))
+                DiscordLinkPreviews.AllowMedia(gif.Src);
+        }
+
+        // The type of Discord's settings which contains the favourite GIFs.
+        private const string frecency_settings_path = @"users/@me/settings-proto/2";
+
+        /// <summary>
+        /// Only one change of the favourite GIFs is made at once, so that none is lost.
+        /// </summary>
+        private readonly SemaphoreSlim favouriteGifsLock = new SemaphoreSlim(1, 1);
+
+        public override async Task<IReadOnlyList<DiscordGif>> GetFavouriteGifs()
+        {
+            var gifs = DiscordFavouriteGifs.Read(await getFrecencySettings().ConfigureAwait(false));
+
+            foreach (var gif in gifs)
+                allowGifMedia(gif);
+
+            return gifs;
+        }
+
+        public override async Task SetGifFavourite(DiscordGif gif, bool favourite)
+        {
+            await favouriteGifsLock.WaitAsync().ConfigureAwait(false);
+
+            try
+            {
+                byte[] settings = await getFrecencySettings().ConfigureAwait(false);
+                var gifs = DiscordFavouriteGifs.Read(settings);
+
+                gifs.RemoveAll(g => g.Url == gif.Url);
+
+                if (favourite)
+                {
+                    gifs.Insert(0, new DiscordGif
+                    {
+                        Url = gif.Url,
+                        Src = gif.Src,
+                        Width = gif.Width,
+                        Height = gif.Height,
+                        IsVideo = gif.IsVideo,
+                        Order = gifs.Count > 0 ? gifs.Max(g => g.Order) + 1 : 1,
+                    });
+                }
+
+                byte[] updated = DiscordFavouriteGifs.Write(settings, gifs);
+
+                await request(HttpMethod.Patch, frecency_settings_path, new JObject { [@"settings"] = Convert.ToBase64String(updated) }).ConfigureAwait(false);
+            }
+            finally
+            {
+                favouriteGifsLock.Release();
+            }
+        }
+
+        private async Task<byte[]> getFrecencySettings()
+        {
+            var response = await request(HttpMethod.Get, frecency_settings_path, null).ConfigureAwait(false);
+            string? settings = response.Value<string>(@"settings");
+
+            return string.IsNullOrEmpty(settings) ? Array.Empty<byte>() : Convert.FromBase64String(settings);
         }
 
         public override async Task<DiscordMessage?> GetMessage(ulong channelId, ulong messageId)

@@ -94,9 +94,9 @@ namespace osu.Game.Overlays.Discord
         private Clipboard clipboard { get; set; } = null!;
 
         /// <summary>
-        /// Searches the GIFs of the GIF picker, which is only shown if <see cref="supportsActions"/>.
+        /// The client which the GIFs of the GIF picker are searched with, which is only shown if <see cref="supportsActions"/>.
         /// </summary>
-        public Func<string, Task<IReadOnlyList<DiscordGif>>>? SearchGifs { get; init; }
+        public DiscordClient? GifClient { get; init; }
 
         /// <summary>
         /// The stickers which can be sent, which are only shown if <see cref="supportsActions"/>.
@@ -373,7 +373,7 @@ namespace osu.Game.Overlays.Discord
                 attachmentFlow.Hide();
         }
 
-        private Popover createGifPicker() => new DiscordGifPicker(q => SearchGifs?.Invoke(q) ?? Task.FromResult<IReadOnlyList<DiscordGif>>(Array.Empty<DiscordGif>()), g => GifPicked?.Invoke(g))
+        private Popover createGifPicker() => new DiscordGifPicker(GifClient!, g => GifPicked?.Invoke(g))
         {
             AllowableAnchors = new[] { Anchor.TopCentre, Anchor.TopLeft, Anchor.TopRight },
             MaxHeight = spaceAbovePickers,

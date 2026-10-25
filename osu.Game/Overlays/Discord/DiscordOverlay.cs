@@ -201,27 +201,47 @@ namespace osu.Game.Overlays.Discord
             }
 
             var channel = c.PrivateChannels.FirstOrDefault(ch => ch.Id == message.ChannelId);
+            DiscordGuild? guild = null;
 
-            // Like Discord, only direct messages notify.
+            // Like Discord, direct messages and mentions of the local user in guilds notify.
             if (channel == null)
-                return;
+            {
+                guild = message.GuildId is ulong guildId ? c.GetGuild(guildId) : null;
+                channel = guild?.Channels.Concat(guild.Threads).FirstOrDefault(ch => ch.Id == message.ChannelId);
+
+                if (guild == null || channel == null || !mentionsLocalUser(message, guild, c))
+                    return;
+            }
 
             var main = currentView as DiscordMainView;
 
             if (State.Value == Visibility.Visible && main?.Navigation.Channel.Value?.Id == channel.Id)
                 return;
 
-            unread.Add(channel.Id);
+            unread.Add(channel.Id, guild?.Id);
 
             if (notifications == null)
                 return;
 
+            LocalisableString text;
+
+            if (guild != null)
+            {
+                text = string.IsNullOrEmpty(message.Content)
+                    ? SlopDiscordStrings.GuildAttachmentNotification(message.Author.DisplayName, channel.DisplayName)
+                    : SlopDiscordStrings.GuildMessageNotification(message.Author.DisplayName, channel.DisplayName, message.Content);
+            }
+            else
+            {
+                text = string.IsNullOrEmpty(message.Content)
+                    ? SlopDiscordStrings.AttachmentNotification(message.Author.DisplayName)
+                    : SlopDiscordStrings.MessageNotification(message.Author.DisplayName, message.Content);
+            }
+
             notifications.Post(new SimpleNotification
             {
                 Icon = FontAwesome.Brands.Discord,
-                Text = string.IsNullOrEmpty(message.Content)
-                    ? SlopDiscordStrings.AttachmentNotification(message.Author.DisplayName)
-                    : SlopDiscordStrings.MessageNotification(message.Author.DisplayName, message.Content),
+                Text = text,
                 Activated = () =>
                 {
                     Show();
@@ -233,6 +253,18 @@ namespace osu.Game.Overlays.Discord
                 },
             });
         });
+
+        private static bool mentionsLocalUser(DiscordMessage message, DiscordGuild guild, DiscordClient client)
+        {
+            ulong? localId = client.LocalUser.Value?.Id;
+
+            if (localId == null)
+                return false;
+
+            return message.MentionEveryone
+                   || message.Mentions.Any(u => u.Id == localId)
+                   || (guild.LocalUserRoles != null && message.MentionRoles.Any(guild.LocalUserRoles.Contains));
+        }
 
         protected override void Update()
         {

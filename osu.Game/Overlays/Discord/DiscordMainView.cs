@@ -213,11 +213,8 @@ namespace osu.Game.Overlays.Discord
                 Client.SelectChannel(c.NewValue);
             });
 
-            // Start with the first guild if guilds are available, as they are what can't be seen in the official client.
-            if (Client.SupportsGuilds && Client.Guilds.Count > 0)
-                navigation.Guild.Value = Client.Guilds[0];
-            else
-                navigation.Guild.TriggerChange();
+            // Like Discord, start with the friends list.
+            navigation.Guild.TriggerChange();
         }
 
         private void updateFriendsView()

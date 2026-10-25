@@ -243,6 +243,16 @@ namespace osu.Game.Localisation
         public static LocalisableString MessageNotification(string author, string content) => new TranslatableString(getKey(@"message_notification"), @"{0}: {1}", author, content);
 
         /// <summary>
+        /// "{0} in #{1}: {2}"
+        /// </summary>
+        public static LocalisableString GuildMessageNotification(string author, string channel, string content) => new TranslatableString(getKey(@"guild_message_notification"), @"{0} in #{1}: {2}", author, channel, content);
+
+        /// <summary>
+        /// "{0} mentioned you in #{1}"
+        /// </summary>
+        public static LocalisableString GuildAttachmentNotification(string author, string channel) => new TranslatableString(getKey(@"guild_attachment_notification"), @"{0} mentioned you in #{1}", author, channel);
+
+        /// <summary>
         /// "{0} sent an attachment"
         /// </summary>
         public static LocalisableString AttachmentNotification(string author) => new TranslatableString(getKey(@"attachment_notification"), @"{0} sent an attachment", author);
@@ -481,6 +491,26 @@ namespace osu.Game.Localisation
         /// "There are no stickers which can be sent here."
         /// </summary>
         public static LocalisableString NoStickers => new TranslatableString(getKey(@"no_stickers"), @"There are no stickers which can be sent here.");
+
+        /// <summary>
+        /// "Favourite GIFs"
+        /// </summary>
+        public static LocalisableString FavouriteGifs => new TranslatableString(getKey(@"favourite_gifs"), @"Favourite GIFs");
+
+        /// <summary>
+        /// "Add to favourites"
+        /// </summary>
+        public static LocalisableString AddGifToFavourites => new TranslatableString(getKey(@"add_gif_to_favourites"), @"Add to favourites");
+
+        /// <summary>
+        /// "Remove from favourites"
+        /// </summary>
+        public static LocalisableString RemoveGifFromFavourites => new TranslatableString(getKey(@"remove_gif_from_favourites"), @"Remove from favourites");
+
+        /// <summary>
+        /// "You have no favourite GIFs yet. Click the star on a GIF to add it."
+        /// </summary>
+        public static LocalisableString NoFavouriteGifs => new TranslatableString(getKey(@"no_favourite_gifs"), @"You have no favourite GIFs yet. Click the star on a GIF to add it.");
 
         /// <summary>
         /// "{0} reacted with {1}"

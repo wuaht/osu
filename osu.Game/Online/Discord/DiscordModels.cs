@@ -680,16 +680,34 @@ namespace osu.Game.Online.Discord
         public string? Title { get; set; }
 
         /// <summary>
-        /// A still image of the GIF.
+        /// A still image of the GIF, which some GIF providers give as a video instead.
         /// </summary>
         [JsonProperty("preview")]
         public string? Preview { get; set; }
+
+        /// <summary>
+        /// The GIF itself, which is a video when searching for videos.
+        /// </summary>
+        [JsonProperty("src")]
+        public string? Src { get; set; }
 
         [JsonProperty("width")]
         public int Width { get; set; }
 
         [JsonProperty("height")]
         public int Height { get; set; }
+
+        /// <summary>
+        /// Whether <see cref="Src"/> is a video instead of an image.
+        /// </summary>
+        [JsonIgnore]
+        public bool IsVideo { get; set; }
+
+        /// <summary>
+        /// The position of a favourite GIF, where the newest one is the highest.
+        /// </summary>
+        [JsonIgnore]
+        public int Order { get; set; }
     }
 
     /// <summary>
@@ -758,6 +776,9 @@ namespace osu.Game.Online.Discord
 
         [JsonProperty("mention_everyone")]
         public bool MentionEveryone { get; set; }
+
+        [JsonProperty("mention_roles")]
+        public List<ulong> MentionRoles { get; set; } = new List<ulong>();
 
         [JsonProperty("reactions")]
         public List<DiscordReaction> Reactions { get; set; } = new List<DiscordReaction>();

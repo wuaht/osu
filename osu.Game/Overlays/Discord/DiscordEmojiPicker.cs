@@ -104,40 +104,45 @@ namespace osu.Game.Overlays.Discord
                             PlaceholderText = SlopDiscordStrings.EmojiSearchPlaceholder,
                         },
                     },
-                    new OsuScrollContainer
+                    // The results are masked below the search box, which they would otherwise scroll over.
+                    new Container
                     {
                         RelativeSizeAxes = Axes.Both,
                         Padding = new MarginPadding { Top = 52 },
-                        Child = new FillFlowContainer
+                        Child = new OsuScrollContainer
                         {
-                            RelativeSizeAxes = Axes.X,
-                            AutoSizeAxes = Axes.Y,
-                            Direction = FillDirection.Vertical,
-                            Padding = new MarginPadding { Horizontal = 10, Bottom = 10 },
-                            Children = new Drawable[]
+                            RelativeSizeAxes = Axes.Both,
+                            Child = new FillFlowContainer
                             {
-                                sections = new FillFlowContainer<Section>
+                                RelativeSizeAxes = Axes.X,
+                                AutoSizeAxes = Axes.Y,
+                                Direction = FillDirection.Vertical,
+                                Padding = new MarginPadding { Horizontal = 10, Bottom = 10 },
+                                Children = new Drawable[]
                                 {
-                                    RelativeSizeAxes = Axes.X,
-                                    AutoSizeAxes = Axes.Y,
-                                    Direction = FillDirection.Vertical,
-                                    Spacing = new Vector2(0, 8),
-                                },
-                                spinner = new LoadingSpinner
-                                {
-                                    Anchor = Anchor.TopCentre,
-                                    Origin = Anchor.TopCentre,
-                                    Size = new Vector2(24),
-                                    Margin = new MarginPadding { Vertical = 12 },
-                                },
-                                status = new OsuSpriteText
-                                {
-                                    Anchor = Anchor.TopCentre,
-                                    Origin = Anchor.TopCentre,
-                                    Font = DiscordStyle.UiFont(14),
-                                    Colour = colourProvider.Content2,
-                                    Margin = new MarginPadding { Vertical = 12 },
-                                    Alpha = 0,
+                                    sections = new FillFlowContainer<Section>
+                                    {
+                                        RelativeSizeAxes = Axes.X,
+                                        AutoSizeAxes = Axes.Y,
+                                        Direction = FillDirection.Vertical,
+                                        Spacing = new Vector2(0, 8),
+                                    },
+                                    spinner = new LoadingSpinner
+                                    {
+                                        Anchor = Anchor.TopCentre,
+                                        Origin = Anchor.TopCentre,
+                                        Size = new Vector2(24),
+                                        Margin = new MarginPadding { Vertical = 12 },
+                                    },
+                                    status = new OsuSpriteText
+                                    {
+                                        Anchor = Anchor.TopCentre,
+                                        Origin = Anchor.TopCentre,
+                                        Font = DiscordStyle.UiFont(14),
+                                        Colour = colourProvider.Content2,
+                                        Margin = new MarginPadding { Vertical = 12 },
+                                        Alpha = 0,
+                                    },
                                 },
                             },
                         },
