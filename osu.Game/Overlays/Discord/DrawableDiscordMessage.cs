@@ -166,84 +166,86 @@ namespace osu.Game.Overlays.Discord
 
             bool mentioned = mentionsLocalUser;
 
-            InternalChild = new FillFlowContainer
+            var rows = new FillFlowContainer
             {
                 RelativeSizeAxes = Axes.X,
                 AutoSizeAxes = Axes.Y,
                 Direction = FillDirection.Vertical,
+            };
+
+            rows.Add(daySeparator = createDaySeparator());
+
+            // The preview is added before the message, as the flow lays out children in the order they were added.
+            if (Message.IsReply)
+                rows.Add(createReplyPreview());
+
+            rows.Add(new Container
+            {
+                RelativeSizeAxes = Axes.X,
+                AutoSizeAxes = Axes.Y,
                 Children = new Drawable[]
                 {
-                    daySeparator = createDaySeparator(),
-                    new Container
+                    new Box
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Colour = DiscordStyle.MentionedMessage,
+                        Alpha = mentioned ? 1 : 0,
+                    },
+                    hoverBackground = new Box
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Colour = Color4.White,
+                        Alpha = 0,
+                    },
+                    new Box
+                    {
+                        RelativeSizeAxes = Axes.Y,
+                        Width = 2,
+                        Colour = DiscordStyle.MentionedMessageBar,
+                        Alpha = mentioned ? 1 : 0,
+                    },
+                    mainContent = new Container
                     {
                         RelativeSizeAxes = Axes.X,
                         AutoSizeAxes = Axes.Y,
+                        Alpha = Message.Pending ? 0.5f : 1,
+                        Padding = new MarginPadding { Left = DiscordStyle.MESSAGE_GUTTER, Right = 16, Vertical = 2 },
                         Children = new Drawable[]
                         {
-                            new Box
+                            avatarContainer = new Container
                             {
-                                RelativeSizeAxes = Axes.Both,
-                                Colour = DiscordStyle.MentionedMessage,
-                                Alpha = mentioned ? 1 : 0,
+                                Size = new Vector2(DiscordStyle.AVATAR_SIZE),
+                                X = -DiscordStyle.MESSAGE_GUTTER + 16,
+                                Child = new DiscordAvatar(Message.Author.GetAvatarUrl(80)),
                             },
-                            hoverBackground = new Box
+                            gutterTime = new OsuSpriteText
                             {
-                                RelativeSizeAxes = Axes.Both,
-                                Colour = Color4.White,
+                                Anchor = Anchor.TopLeft,
+                                Origin = Anchor.TopCentre,
+                                X = -DiscordStyle.MESSAGE_GUTTER / 2,
+                                Y = 4,
+                                Text = Message.Timestamp.ToLocalTime().ToString(@"HH:mm"),
+                                Font = DiscordStyle.UiFont(11),
+                                Colour = colourProvider.Content2,
                                 Alpha = 0,
                             },
-                            new Box
-                            {
-                                RelativeSizeAxes = Axes.Y,
-                                Width = 2,
-                                Colour = DiscordStyle.MentionedMessageBar,
-                                Alpha = mentioned ? 1 : 0,
-                            },
-                            mainContent = new Container
+                            new FillFlowContainer
                             {
                                 RelativeSizeAxes = Axes.X,
                                 AutoSizeAxes = Axes.Y,
-                                Alpha = Message.Pending ? 0.5f : 1,
-                                Padding = new MarginPadding { Left = DiscordStyle.MESSAGE_GUTTER, Right = 16, Vertical = 2 },
+                                Direction = FillDirection.Vertical,
                                 Children = new Drawable[]
                                 {
-                                    avatarContainer = new Container
-                                    {
-                                        Size = new Vector2(DiscordStyle.AVATAR_SIZE),
-                                        X = -DiscordStyle.MESSAGE_GUTTER + 16,
-                                        Child = new DiscordAvatar(Message.Author.GetAvatarUrl(80)),
-                                    },
-                                    gutterTime = new OsuSpriteText
-                                    {
-                                        Anchor = Anchor.TopLeft,
-                                        Origin = Anchor.TopCentre,
-                                        X = -DiscordStyle.MESSAGE_GUTTER / 2,
-                                        Y = 4,
-                                        Text = Message.Timestamp.ToLocalTime().ToString(@"HH:mm"),
-                                        Font = DiscordStyle.UiFont(11),
-                                        Colour = colourProvider.Content2,
-                                        Alpha = 0,
-                                    },
-                                    new FillFlowContainer
-                                    {
-                                        RelativeSizeAxes = Axes.X,
-                                        AutoSizeAxes = Axes.Y,
-                                        Direction = FillDirection.Vertical,
-                                        Children = new Drawable[]
-                                        {
-                                            header = createHeader(),
-                                            body,
-                                        },
-                                    },
+                                    header = createHeader(),
+                                    body,
                                 },
                             },
                         },
                     },
                 },
-            };
+            });
 
-            if (Message.IsReply)
-                ((FillFlowContainer)InternalChild).Insert(1, createReplyPreview());
+            InternalChild = rows;
         }
 
         protected override void LoadComplete()
