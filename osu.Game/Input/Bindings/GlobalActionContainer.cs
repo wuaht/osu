@@ -201,6 +201,7 @@ namespace osu.Game.Input.Bindings
         {
             new KeyBinding(new[] { InputKey.Control, InputKey.Shift, InputKey.H }, GlobalAction.EditorHitsoundMode),
             new KeyBinding(new[] { InputKey.Control, InputKey.Shift, InputKey.N }, GlobalAction.EditorNominatorsMode),
+            new KeyBinding(new[] { InputKey.Control, InputKey.Shift, InputKey.D }, GlobalAction.EditorDiscussionMode),
             new KeyBinding(new[] { InputKey.M }, GlobalAction.EditorMuteMusic),
             new KeyBinding(new[] { InputKey.Control, InputKey.M }, GlobalAction.EditorMuteEffects),
             new KeyBinding(new[] { InputKey.Semicolon }, GlobalAction.EditorMuteObjectEnds),
@@ -782,6 +783,9 @@ namespace osu.Game.Input.Bindings
 
         [LocalisableDescription(typeof(SlopDiscordStrings), nameof(SlopDiscordStrings.ToggleDiscord))]
         ToggleDiscord,
+
+        [LocalisableDescription(typeof(SlopDiscussionStrings), nameof(SlopDiscussionStrings.DiscussionEditorMode))]
+        EditorDiscussionMode,
     }
 
     public enum GlobalActionCategory

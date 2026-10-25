@@ -58,6 +58,7 @@ using osu.Game.Screens.Edit.Components.Menus;
 using osu.Game.Screens.Edit.Compose;
 using osu.Game.Screens.Edit.Compose.Components.Timeline;
 using osu.Game.Screens.Edit.Design;
+using osu.Game.Screens.Edit.Discussion;
 using osu.Game.Screens.Edit.GameplayTest;
 using osu.Game.Screens.Edit.Hitsounding;
 using osu.Game.Screens.Edit.Nominators;
@@ -609,6 +610,8 @@ namespace osu.Game.Screens.Edit
             Mode.Value = isNewBeatmap ? EditorScreenMode.SongSetup : EditorScreenMode.Compose;
             Mode.BindValueChanged(onModeChanged, true);
 
+            updateDiscussionTabVisibility();
+
             MutationTracker.InProgress.BindValueChanged(_ =>
             {
                 foreach (var item in saveRelatedMenuItems)
@@ -641,6 +644,7 @@ namespace osu.Game.Screens.Edit
             Time = clock.CurrentTimeAccurate,
             ClipboardContent = nextRuleset == null || editorBeatmap.BeatmapInfo.Ruleset.ShortName == nextRuleset.ShortName ? Clipboard.Content.Value : string.Empty,
             PlaybackSpeed = PlaybackSpeed.Value,
+            Discussion = DiscussionState,
         };
 
         /// <summary>
@@ -649,6 +653,9 @@ namespace osu.Game.Screens.Edit
         /// <param name="state">The state to restore.</param>
         public void RestoreState([NotNull] EditorState state) => Schedule(() =>
         {
+            if (state.Discussion != null)
+                DiscussionState = state.Discussion;
+
             Mode.Value = state.Mode;
             clock.Seek(state.Time);
             Clipboard.Content.Value = state.ClipboardContent;
@@ -1231,6 +1238,13 @@ namespace osu.Game.Screens.Edit
                     screenSwitcher.SelectItem(EditorScreenMode.Verify);
                     return true;
 
+                case GlobalAction.EditorDiscussionMode:
+                    if (!screenSwitcher.Items.Contains(EditorScreenMode.Discussion))
+                        return false;
+
+                    screenSwitcher.SelectItem(EditorScreenMode.Discussion);
+                    return true;
+
                 case GlobalAction.EditorNominatorsMode:
                     screenSwitcher.SelectItem(EditorScreenMode.Nominators);
                     return true;
@@ -1734,6 +1748,10 @@ namespace osu.Game.Screens.Edit
                         currentScreen = CreateVerifyScreen();
                         break;
 
+                    case EditorScreenMode.Discussion:
+                        currentScreen = new DiscussionScreen();
+                        break;
+
                     case EditorScreenMode.Nominators:
                         currentScreen = new NominatorsScreen();
                         break;
@@ -1778,6 +1796,25 @@ namespace osu.Game.Screens.Edit
         private ScheduledDelegate playbackDisabledDebounce;
 
         private EditorScreenSwitcherControl screenSwitcher;
+
+        /// <summary>
+        /// What is shown in the discussion screen, which is kept when switching difficulties.
+        /// </summary>
+        public DiscussionViewState DiscussionState { get; private set; } = new DiscussionViewState();
+
+        /// <summary>
+        /// The discussion of a beatmap set only exists once it was submitted, so the discussion screen is only offered for submitted beatmap sets.
+        /// </summary>
+        private void updateDiscussionTabVisibility()
+        {
+            if (editorBeatmap.BeatmapInfo.BeatmapSet?.OnlineID > 0)
+                return;
+
+            if (Mode.Value == EditorScreenMode.Discussion)
+                Mode.Value = EditorScreenMode.Compose;
+
+            screenSwitcher.RemoveItem(EditorScreenMode.Discussion);
+        }
 
         private void updateSampleDisabledState()
         {

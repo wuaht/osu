@@ -1,6 +1,8 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using osu.Game.Screens.Edit.Discussion;
+
 namespace osu.Game.Screens.Edit
 {
     /// <summary>
@@ -32,5 +34,10 @@ namespace osu.Game.Screens.Edit
         /// An editor timestamp (e.g. "00:12:345 (1,2) -") to seek to and select in the compose screen once the editor is ready.
         /// </summary>
         public string? PendingTimestamp { get; set; }
+
+        /// <summary>
+        /// What is shown in the discussion screen, such that it is kept when switching difficulties.
+        /// </summary>
+        public DiscussionViewState? Discussion { get; set; }
     }
 }

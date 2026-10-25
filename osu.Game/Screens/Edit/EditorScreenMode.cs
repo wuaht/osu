@@ -26,6 +26,9 @@ namespace osu.Game.Screens.Edit
         [LocalisableDescription(typeof(EditorStrings), nameof(EditorStrings.VerifyScreen))]
         Verify,
 
+        [LocalisableDescription(typeof(SlopDiscussionStrings), nameof(SlopDiscussionStrings.DiscussionScreen))]
+        Discussion,
+
         [LocalisableDescription(typeof(SlopNominatorsStrings), nameof(SlopNominatorsStrings.NominatorsScreen))]
         Nominators,
     }
