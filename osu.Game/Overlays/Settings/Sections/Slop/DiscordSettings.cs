@@ -29,9 +29,14 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
 
         private SettingsButtonV2 logoutButton = null!;
 
+        private readonly Bindable<DiscordClientMode> mode = new Bindable<DiscordClientMode>();
+        private readonly Bindable<SettingsNote.Data?> modeNote = new Bindable<SettingsNote.Data?>();
+
         [BackgroundDependencyLoader]
         private void load(OsuConfigManager config)
         {
+            config.BindWith(OsuSetting.SlopDiscordMode, mode);
+
             Children = new Drawable[]
             {
                 new SettingsItemV2(new FormEnumDropdown<DiscordClientMode>
@@ -39,7 +44,10 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                     Caption = SlopSettingsStrings.DiscordMode,
                     HintText = SlopSettingsStrings.DiscordModeDescription,
                     Current = config.GetBindable<DiscordClientMode>(OsuSetting.SlopDiscordMode),
-                }),
+                })
+                {
+                    Note = { BindTarget = modeNote },
+                },
                 new SettingsItemV2(new FormCheckBox
                 {
                     Caption = SlopSettingsStrings.DiscordFrosted,
@@ -82,6 +90,10 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
             }, true);
 
             state.BindValueChanged(_ => updateLogoutButton());
+
+            mode.BindValueChanged(m => modeNote.Value = m.NewValue == DiscordClientMode.FullClient
+                ? new SettingsNote.Data(SlopDiscordStrings.FullClientWarning, SettingsNote.Type.Critical)
+                : null, true);
             localUser.BindValueChanged(_ => updateLogoutButton(), true);
         }
 

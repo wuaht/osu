@@ -16,6 +16,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
+using osu.Framework.Extensions;
 using osu.Framework.Logging;
 using osu.Game.Configuration;
 
@@ -52,6 +53,21 @@ namespace osu.Game.Online.Discord.Full
         /// Whether the shown QR code expired and has to be refreshed with <see cref="DiscordClient.Login"/>.
         /// </summary>
         public readonly BindableBool QrCodeExpired = new BindableBool();
+
+        /// <summary>
+        /// The second factor which is still required after logging in with a password, or null if none is required.
+        /// </summary>
+        public readonly Bindable<DiscordMfaChallenge?> MfaChallenge = new Bindable<DiscordMfaChallenge?>();
+
+        /// <summary>
+        /// Whether a login with a password or a code of the second factor is being sent.
+        /// </summary>
+        public readonly BindableBool PasswordLoginInProgress = new BindableBool();
+
+        /// <summary>
+        /// The masked phone number the last SMS code was sent to, or null if none was sent.
+        /// </summary>
+        public readonly Bindable<string?> SmsPhone = new Bindable<string?>();
 
         private static readonly HttpClient http = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
         private static readonly JObject super_properties = createSuperProperties();
@@ -149,6 +165,130 @@ namespace osu.Game.Online.Discord.Full
             });
 
             auth.Start();
+        }
+
+        /// <summary>
+        /// Logs in with the email address (or phone number) and password of the account, like the Discord website.
+        /// If the account uses two-factor authentication, <see cref="MfaChallenge"/> is set and the login is completed with <see cref="SubmitMfaCode"/>.
+        /// </summary>
+        public void LoginWithPassword(string login, string password)
+        {
+            disposeRemoteAuth();
+
+            sendPasswordLogin(@"auth/login", new JObject
+            {
+                [@"login"] = login,
+                [@"password"] = password,
+                [@"undelete"] = false,
+                [@"login_source"] = null,
+                [@"gift_code_sku_id"] = null,
+            });
+        }
+
+        /// <summary>
+        /// Completes a login with a password with a code of the second factor.
+        /// </summary>
+        public void SubmitMfaCode(DiscordMfaMethod method, string code)
+        {
+            if (MfaChallenge.Value is not DiscordMfaChallenge challenge)
+                return;
+
+            string path = method switch
+            {
+                DiscordMfaMethod.Sms => @"auth/mfa/sms",
+                DiscordMfaMethod.Backup => @"auth/mfa/backup",
+                _ => @"auth/mfa/totp",
+            };
+
+            sendPasswordLogin(path, new JObject
+            {
+                [@"code"] = code.Replace(@" ", string.Empty).Replace(@"-", string.Empty),
+                [@"ticket"] = challenge.Ticket,
+                [@"login_source"] = null,
+                [@"gift_code_sku_id"] = null,
+            });
+        }
+
+        /// <summary>
+        /// Sends a code of the second factor to the phone number of the account.
+        /// </summary>
+        public void SendMfaSms()
+        {
+            if (MfaChallenge.Value is not DiscordMfaChallenge challenge || PasswordLoginInProgress.Value)
+                return;
+
+            Error.Value = null;
+            PasswordLoginInProgress.Value = true;
+
+            SendRequest(null, HttpMethod.Post, @"auth/mfa/sms/send", new JObject { [@"ticket"] = challenge.Ticket }, CancellationToken.None).ContinueWith(t => Schedule(() =>
+            {
+                PasswordLoginInProgress.Value = false;
+
+                if (t.IsCompletedSuccessfully)
+                    SmsPhone.Value = t.GetResultSafely().Value<string>(@"phone") ?? string.Empty;
+                else
+                    Error.Value = t.Exception?.GetBaseException().Message;
+            }));
+        }
+
+        private void sendPasswordLogin(string path, JObject body)
+        {
+            if (PasswordLoginInProgress.Value)
+                return;
+
+            Error.Value = null;
+            PasswordLoginInProgress.Value = true;
+
+            SendRequest(null, HttpMethod.Post, path, body, CancellationToken.None).ContinueWith(t => Schedule(() =>
+            {
+                PasswordLoginInProgress.Value = false;
+
+                if (!t.IsCompletedSuccessfully)
+                {
+                    var exception = t.Exception?.GetBaseException();
+
+                    Error.Value = exception switch
+                    {
+                        DiscordCaptchaRequiredException => @"Discord requires a captcha for this login, which can't be shown here. Please log in with the QR code instead.",
+                        DiscordUnauthorizedException => @"The code is invalid or expired.",
+                        _ => exception?.Message,
+                    };
+
+                    return;
+                }
+
+                var response = t.GetResultSafely();
+                string? token = response.Value<string>(@"token");
+
+                if (!string.IsNullOrEmpty(token))
+                {
+                    MfaChallenge.Value = null;
+                    SmsPhone.Value = null;
+                    userToken.Value = token;
+                    return;
+                }
+
+                string? ticket = response.Value<string>(@"ticket");
+
+                if (response.Value<bool?>(@"mfa") == true && !string.IsNullOrEmpty(ticket))
+                {
+                    MfaChallenge.Value = new DiscordMfaChallenge(ticket, response.Value<bool?>(@"totp") ?? false, response.Value<bool?>(@"sms") ?? false,
+                        response.Value<bool?>(@"backup") ?? false);
+                    return;
+                }
+
+                Error.Value = @"Discord didn't accept the login.";
+            }));
+        }
+
+        /// <summary>
+        /// Abandons a login with a password which still requires a second factor.
+        /// </summary>
+        public void CancelPasswordLogin()
+        {
+            MfaChallenge.Value = null;
+            SmsPhone.Value = null;
+            Error.Value = null;
         }
 
         public override void CancelLogin()
@@ -1631,13 +1771,22 @@ namespace osu.Game.Online.Discord.Full
                     var error = tryParse(text);
 
                     if (error?[@"captcha_key"] != null)
-                        throw new DiscordRequestException(@"Discord requires a captcha for this. Please do it once in the official Discord client.");
+                        throw new DiscordCaptchaRequiredException();
 
-                    throw new DiscordRequestException(error?.Value<string>(@"message") ?? $@"{(int)response.StatusCode} {response.ReasonPhrase}");
+                    throw new DiscordRequestException(getErrorMessage(error) ?? $@"{(int)response.StatusCode} {response.ReasonPhrase}");
                 }
 
                 return string.IsNullOrWhiteSpace(text) ? new JObject() : JToken.Parse(text);
             }
+        }
+
+        /// <summary>
+        /// Retrieves the most specific message of an error, as errors of form fields (such as an invalid password) only have a generic message at the top level.
+        /// </summary>
+        private static string? getErrorMessage(JObject? error)
+        {
+            var fieldError = error?[@"errors"]?.SelectTokens(@"$.._errors[*].message").FirstOrDefault();
+            return fieldError?.Value<string>() ?? error?.Value<string>(@"message");
         }
 
         private static JObject? tryParse(string text)
@@ -1716,6 +1865,26 @@ namespace osu.Game.Online.Discord.Full
     {
         public DiscordUnauthorizedException()
             : base(@"Your Discord login expired. Please log in again.")
+        {
+        }
+    }
+
+    /// <summary>
+    /// The second factor which is required to complete a login with a password.
+    /// </summary>
+    public record DiscordMfaChallenge(string Ticket, bool Totp, bool Sms, bool Backup);
+
+    public enum DiscordMfaMethod
+    {
+        Totp,
+        Sms,
+        Backup,
+    }
+
+    public class DiscordCaptchaRequiredException : DiscordRequestException
+    {
+        public DiscordCaptchaRequiredException()
+            : base(@"Discord requires a captcha for this. Please do it once in the official Discord client.")
         {
         }
     }

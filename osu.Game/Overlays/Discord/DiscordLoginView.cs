@@ -42,6 +42,22 @@ namespace osu.Game.Overlays.Discord
         private readonly Bindable<DiscordUser?> scannedUser = new Bindable<DiscordUser?>();
         private readonly BindableBool qrCodeExpired = new BindableBool();
 
+        private readonly Bindable<DiscordMfaChallenge?> mfaChallenge = new Bindable<DiscordMfaChallenge?>();
+        private readonly BindableBool passwordLoginInProgress = new BindableBool();
+        private readonly Bindable<string?> smsPhone = new Bindable<string?>();
+
+        /// <summary>
+        /// Whether the login with email and password is shown instead of the choice of login methods.
+        /// </summary>
+        private bool passwordMode;
+
+        private DiscordMfaMethod mfaMethod;
+
+        // Kept across updates of the content, so that typed text isn't lost.
+        private OsuTextBox loginTextBox = null!;
+        private OsuPasswordTextBox passwordTextBox = null!;
+        private OsuTextBox codeTextBox = null!;
+
         private FillFlowContainer content = null!;
 
         [Resolved]
@@ -91,7 +107,24 @@ namespace osu.Game.Overlays.Discord
                 qrCodeUrl.BindTo(full.QrCodeUrl);
                 scannedUser.BindTo(full.ScannedUser);
                 qrCodeExpired.BindTo(full.QrCodeExpired);
+                mfaChallenge.BindTo(full.MfaChallenge);
+                passwordLoginInProgress.BindTo(full.PasswordLoginInProgress);
+                smsPhone.BindTo(full.SmsPhone);
             }
+
+            loginTextBox = createTextBox(new OsuTextBox(), SlopDiscordStrings.EmailOrPhone, () => GetContainingFocusManager()?.ChangeFocus(passwordTextBox));
+            passwordTextBox = createTextBox(new OsuPasswordTextBox(), SlopDiscordStrings.Password, submitPassword);
+            codeTextBox = createTextBox(new OsuTextBox(), SlopDiscordStrings.Code, submitCode);
+        }
+
+        private T createTextBox<T>(T textBox, osu.Framework.Localisation.LocalisableString placeholder, System.Action commit)
+            where T : OsuTextBox
+        {
+            textBox.RelativeSizeAxes = Axes.X;
+            textBox.PlaceholderText = placeholder;
+            textBox.TabbableContentContainer = content;
+            textBox.OnCommit += (_, _) => commit();
+            return textBox;
         }
 
         protected override void LoadComplete()
@@ -103,6 +136,20 @@ namespace osu.Game.Overlays.Discord
             qrCodeUrl.BindValueChanged(_ => Scheduler.AddOnce(updateContent));
             scannedUser.BindValueChanged(_ => Scheduler.AddOnce(updateContent));
             qrCodeExpired.BindValueChanged(_ => Scheduler.AddOnce(updateContent));
+            mfaChallenge.BindValueChanged(_ => Scheduler.AddOnce(updateContent));
+            passwordLoginInProgress.BindValueChanged(_ => Scheduler.AddOnce(updateContent));
+            smsPhone.BindValueChanged(_ => Scheduler.AddOnce(updateContent));
+
+            state.BindValueChanged(s =>
+            {
+                if (s.NewValue == DiscordConnectionState.LoggedOut)
+                    return;
+
+                // The password isn't kept around once the login succeeded.
+                passwordMode = false;
+                passwordTextBox.Text = string.Empty;
+                codeTextBox.Text = string.Empty;
+            });
 
             updateContent();
         }
@@ -111,6 +158,9 @@ namespace osu.Game.Overlays.Discord
 
         private void updateContent()
         {
+            content.Remove(loginTextBox, false);
+            content.Remove(passwordTextBox, false);
+            content.Remove(codeTextBox, false);
             content.Clear();
 
             var logo = textures?.Get(@"Slop/discord");
@@ -137,7 +187,18 @@ namespace osu.Game.Overlays.Discord
                     if (isFullClient)
                     {
                         addWarning(SlopDiscordStrings.FullClientWarning.ToString());
-                        addButton(SlopDiscordStrings.LoginWithQrCode, Client.Login);
+
+                        if (passwordMode)
+                            addPasswordContent();
+                        else
+                        {
+                            addButton(SlopDiscordStrings.LoginWithQrCode, Client.Login);
+                            addButton(SlopDiscordStrings.LoginWithEmail, () =>
+                            {
+                                passwordMode = true;
+                                updateContent();
+                            }, false);
+                        }
                     }
                     else
                     {
@@ -171,6 +232,112 @@ namespace osu.Game.Overlays.Discord
 
         [Resolved]
         private TextureStore? textures { get; set; }
+
+        private DiscordFullClient fullClient => (DiscordFullClient)Client;
+
+        private void addPasswordContent()
+        {
+            bool busy = passwordLoginInProgress.Value;
+
+            if (mfaChallenge.Value is not DiscordMfaChallenge challenge)
+            {
+                addTitle(SlopDiscordStrings.LoginWithEmail);
+                addText(SlopDiscordStrings.PasswordLoginDescription.ToString(), colourProvider.Content2);
+
+                content.Add(loginTextBox);
+                content.Add(passwordTextBox);
+                focus(string.IsNullOrEmpty(loginTextBox.Text) ? loginTextBox : passwordTextBox);
+
+                addButton(SlopDiscordStrings.LogIn, submitPassword).Enabled.Value = !busy;
+                addButton(SlopDiscordStrings.LoginWithQrCodeInstead, () =>
+                {
+                    passwordMode = false;
+                    Client.Login();
+                }, false);
+                addButton(SlopDiscordStrings.Back, () =>
+                {
+                    passwordMode = false;
+                    fullClient.CancelPasswordLogin();
+                    updateContent();
+                }, false);
+                return;
+            }
+
+            if (!isAvailable(challenge, mfaMethod))
+                mfaMethod = challenge.Totp ? DiscordMfaMethod.Totp : challenge.Sms ? DiscordMfaMethod.Sms : DiscordMfaMethod.Backup;
+
+            addTitle(SlopDiscordStrings.TwoFactorTitle);
+
+            if (mfaMethod == DiscordMfaMethod.Sms && smsPhone.Value == null)
+                addButton(SlopDiscordStrings.SendSmsCode, fullClient.SendMfaSms).Enabled.Value = !busy;
+            else
+            {
+                var description = mfaMethod switch
+                {
+                    DiscordMfaMethod.Sms => SlopDiscordStrings.TwoFactorSmsDescription(smsPhone.Value ?? string.Empty),
+                    DiscordMfaMethod.Backup => SlopDiscordStrings.TwoFactorBackupDescription,
+                    _ => SlopDiscordStrings.TwoFactorTotpDescription,
+                };
+
+                addText(description.ToString(), colourProvider.Content2);
+                content.Add(codeTextBox);
+                focus(codeTextBox);
+
+                addButton(SlopDiscordStrings.LogIn, submitCode).Enabled.Value = !busy;
+            }
+
+            // Like on the Discord website, the other methods of the account can be chosen instead.
+            if (mfaMethod != DiscordMfaMethod.Totp && challenge.Totp)
+                addButton(SlopDiscordStrings.UseAuthenticator, () => switchMfaMethod(DiscordMfaMethod.Totp), false);
+
+            if (mfaMethod != DiscordMfaMethod.Sms && challenge.Sms)
+                addButton(SlopDiscordStrings.SendSmsCode, () => switchMfaMethod(DiscordMfaMethod.Sms), false);
+
+            if (mfaMethod != DiscordMfaMethod.Backup && challenge.Backup)
+                addButton(SlopDiscordStrings.UseBackupCode, () => switchMfaMethod(DiscordMfaMethod.Backup), false);
+
+            addButton(SlopDiscordStrings.Cancel, () =>
+            {
+                codeTextBox.Text = string.Empty;
+                fullClient.CancelPasswordLogin();
+            }, false);
+        }
+
+        private static bool isAvailable(DiscordMfaChallenge challenge, DiscordMfaMethod method) => method switch
+        {
+            DiscordMfaMethod.Sms => challenge.Sms,
+            DiscordMfaMethod.Backup => challenge.Backup,
+            _ => challenge.Totp,
+        };
+
+        private void switchMfaMethod(DiscordMfaMethod method)
+        {
+            mfaMethod = method;
+            codeTextBox.Text = string.Empty;
+            updateContent();
+        }
+
+        private void submitPassword()
+        {
+            if (string.IsNullOrWhiteSpace(loginTextBox.Text) || string.IsNullOrEmpty(passwordTextBox.Text))
+                return;
+
+            fullClient.LoginWithPassword(loginTextBox.Text.Trim(), passwordTextBox.Text);
+        }
+
+        private void submitCode()
+        {
+            if (string.IsNullOrWhiteSpace(codeTextBox.Text))
+                return;
+
+            fullClient.SubmitMfaCode(mfaMethod, codeTextBox.Text.Trim());
+        }
+
+        private void focus(OsuTextBox textBox) => Schedule(() =>
+        {
+            if (!textBox.HasFocus && textBox.Parent != null)
+                GetContainingFocusManager()?.ChangeFocus(textBox);
+        });
 
         private void addQrCodeContent()
         {
@@ -374,7 +541,7 @@ namespace osu.Game.Overlays.Discord
             });
         }
 
-        private void addButton(osu.Framework.Localisation.LocalisableString text, System.Action action, bool primary = true)
+        private RoundedButton addButton(osu.Framework.Localisation.LocalisableString text, System.Action action, bool primary = true)
         {
             var button = new RoundedButton
             {
@@ -389,6 +556,7 @@ namespace osu.Game.Overlays.Discord
                 button.BackgroundColour = DiscordStyle.Blurple;
 
             content.Add(button);
+            return button;
         }
 
         private void addSpinner()

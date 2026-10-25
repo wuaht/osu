@@ -77,6 +77,82 @@ namespace osu.Game.Localisation
             @"The full client logs in with your user account, which is against the Discord Terms of Service and can get your account banned. Use at your own risk.");
 
         /// <summary>
+        /// "Log in with email"
+        /// </summary>
+        public static LocalisableString LoginWithEmail => new TranslatableString(getKey(@"login_with_email"), @"Log in with email");
+
+        /// <summary>
+        /// "Log in with a QR code"
+        /// </summary>
+        public static LocalisableString LoginWithQrCodeInstead => new TranslatableString(getKey(@"login_with_qr_code_instead"), @"Log in with a QR code");
+
+        /// <summary>
+        /// "Email or phone number"
+        /// </summary>
+        public static LocalisableString EmailOrPhone => new TranslatableString(getKey(@"email_or_phone"), @"Email or phone number");
+
+        /// <summary>
+        /// "Password"
+        /// </summary>
+        public static LocalisableString Password => new TranslatableString(getKey(@"password"), @"Password");
+
+        /// <summary>
+        /// "Log in"
+        /// </summary>
+        public static LocalisableString LogIn => new TranslatableString(getKey(@"log_in"), @"Log in");
+
+        /// <summary>
+        /// "Your password is sent to Discord only and isn't stored. Discord may require a captcha, which can't be shown here - use the QR code then."
+        /// </summary>
+        public static LocalisableString PasswordLoginDescription => new TranslatableString(getKey(@"password_login_description"),
+            @"Your password is sent to Discord only and isn't stored. Discord may require a captcha, which can't be shown here - use the QR code then.");
+
+        /// <summary>
+        /// "Two-factor authentication"
+        /// </summary>
+        public static LocalisableString TwoFactorTitle => new TranslatableString(getKey(@"two_factor_title"), @"Two-factor authentication");
+
+        /// <summary>
+        /// "Enter the 6-digit code from your authenticator app."
+        /// </summary>
+        public static LocalisableString TwoFactorTotpDescription => new TranslatableString(getKey(@"two_factor_totp_description"), @"Enter the 6-digit code from your authenticator app.");
+
+        /// <summary>
+        /// "Enter the code which was sent to {0}."
+        /// </summary>
+        public static LocalisableString TwoFactorSmsDescription(string phone) => new TranslatableString(getKey(@"two_factor_sms_description"), @"Enter the code which was sent to {0}.", phone);
+
+        /// <summary>
+        /// "Enter one of your 8-digit backup codes."
+        /// </summary>
+        public static LocalisableString TwoFactorBackupDescription => new TranslatableString(getKey(@"two_factor_backup_description"), @"Enter one of your 8-digit backup codes.");
+
+        /// <summary>
+        /// "Code"
+        /// </summary>
+        public static LocalisableString Code => new TranslatableString(getKey(@"code"), @"Code");
+
+        /// <summary>
+        /// "Use the authenticator app"
+        /// </summary>
+        public static LocalisableString UseAuthenticator => new TranslatableString(getKey(@"use_authenticator"), @"Use the authenticator app");
+
+        /// <summary>
+        /// "Send a code by SMS"
+        /// </summary>
+        public static LocalisableString SendSmsCode => new TranslatableString(getKey(@"send_sms_code"), @"Send a code by SMS");
+
+        /// <summary>
+        /// "Use a backup code"
+        /// </summary>
+        public static LocalisableString UseBackupCode => new TranslatableString(getKey(@"use_backup_code"), @"Use a backup code");
+
+        /// <summary>
+        /// "Back"
+        /// </summary>
+        public static LocalisableString Back => new TranslatableString(getKey(@"back"), @"Back");
+
+        /// <summary>
         /// "Connecting..."
         /// </summary>
         public static LocalisableString Connecting => new TranslatableString(getKey(@"connecting"), @"Connecting...");
