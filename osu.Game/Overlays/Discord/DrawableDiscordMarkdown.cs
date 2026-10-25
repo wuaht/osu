@@ -21,6 +21,7 @@ using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.Sprites;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Localisation;
+using osu.Game.Online;
 using osu.Game.Online.Chat;
 using osu.Game.Online.Discord;
 using osu.Game.Utils;
@@ -86,6 +87,9 @@ namespace osu.Game.Overlays.Discord
 
         [Resolved]
         private OverlayColourProvider colourProvider { get; set; } = null!;
+
+        [Resolved]
+        private ILinkHandler? linkHandler { get; set; }
 
         public DrawableDiscordMarkdown(string content, DiscordMarkdownContext context, bool edited = false, bool allowQuotes = true, float textSize = DiscordStyle.MESSAGE_TEXT_SIZE)
         {
@@ -366,7 +370,41 @@ namespace osu.Game.Overlays.Discord
                 // Channel links are only meaningful in osu! chat.
                 formatted.Links.RemoveAll(l => l.Action == LinkAction.OpenChannel);
 
-                flow.AddLinks(formatted.Text, formatted.Links, t => t.Font = font);
+                // Editor timestamps are shown like mentions, which open the editor at the timestamp when clicked.
+                int start = 0;
+                var links = new List<Link>();
+
+                foreach (var link in formatted.Links)
+                {
+                    if (link.Action != LinkAction.OpenEditorTimestamp)
+                    {
+                        links.Add(new Link(link.Url, link.Index - start, link.Length, link.Action, link.Argument));
+                        continue;
+                    }
+
+                    if (link.Index < start)
+                        continue;
+
+                    addLinks(formatted.Text[start..link.Index], links);
+
+                    var details = new LinkDetails(link.Action, link.Argument);
+
+                    addDecorated(flow, new MentionChip(formatted.Text.Substring(link.Index, link.Length), font, DiscordStyle.MentionText, DiscordStyle.MentionBackground)
+                    {
+                        Action = () => linkHandler?.HandleLink(details),
+                    }, spoiler);
+
+                    start = link.Index + link.Length;
+                    links.Clear();
+                }
+
+                addLinks(formatted.Text[start..], links);
+
+                void addLinks(string part, List<Link> partLinks)
+                {
+                    if (part.Length > 0)
+                        flow.AddLinks(part, partLinks, t => t.Font = font);
+                }
             }
 
             foreach (string element in DiscordMarkdown.GetTextElements(text))
