@@ -525,6 +525,9 @@ namespace osu.Game.Overlays.Discord
 
         private void updateSuggestions()
         {
+            // The member search updates the mention suggestions after a delay, which shouldn't move the selection back to the first one.
+            string? previouslySelected = suggestionFlow.ElementAtOrDefault(selectedSuggestion)?.Identity;
+
             suggestionFlow.Clear();
             selectedSuggestion = 0;
 
@@ -532,6 +535,9 @@ namespace osu.Game.Overlays.Discord
                 addMentionSuggestions(mentionQuery);
             else if (currentEmojiQuery is string emojiQuery)
                 addEmojiSuggestions(emojiQuery);
+
+            if (previouslySelected != null)
+                selectedSuggestion = Math.Max(0, suggestionFlow.ToList().FindIndex(s => s.Identity == previouslySelected));
 
             updateSelectedSuggestion();
             suggestionContainer.Alpha = suggestionFlow.Count > 0 ? 1 : 0;
@@ -882,6 +888,11 @@ namespace osu.Game.Overlays.Discord
                 };
             }
 
+            /// <summary>
+            /// What is suggested, which the selection is kept by when the suggestions are updated.
+            /// </summary>
+            public abstract string Identity { get; }
+
             protected abstract Drawable CreateContent(OverlayColourProvider colourProvider);
 
             protected override bool OnHover(HoverEvent e)
@@ -908,6 +919,8 @@ namespace osu.Game.Overlays.Discord
                 this.emoji = emoji;
                 this.name = name;
             }
+
+            public override string Identity => $@":{name}:";
 
             protected override Drawable CreateContent(OverlayColourProvider colourProvider) => new FillFlowContainer
             {
@@ -947,6 +960,8 @@ namespace osu.Game.Overlays.Discord
             {
                 User = user;
             }
+
+            public override string Identity => $@"@{User.Id}";
 
             protected override Drawable CreateContent(OverlayColourProvider colourProvider) => new FillFlowContainer
             {
