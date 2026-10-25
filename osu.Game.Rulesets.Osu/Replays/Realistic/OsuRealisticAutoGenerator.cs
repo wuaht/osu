@@ -117,6 +117,17 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
         /// </summary>
         private const double stream_tremor_interval = 35;
 
+        /// <summary>
+        /// How long movements between objects take, relative to the time given by Fitts's law.
+        /// </summary>
+        private const double movement_speed = 0.85;
+
+        /// <summary>
+        /// How long the cursor rests on an object before hitting it, in milliseconds.
+        /// Only kept when the pause before the object is long enough for it.
+        /// </summary>
+        private const double arrival_hold = 40;
+
         private static readonly Vector2 playfield_min = new Vector2(-512, -384);
         private static readonly Vector2 playfield_max = new Vector2(1024, 768);
 
@@ -483,14 +494,16 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
 
             float distance = Vector2.Distance(from, to);
 
-            // during pauses, players wait and only start moving when needed (Fitts's law), arriving at the next object just in time.
+            // during pauses, players wait and only start moving when needed (Fitts's law), arriving at the next object shortly before hitting it.
             double gap = next.StartTime - leaveTime;
             double realGap = ApplyModsToTimeDelta(leaveTime, next.StartTime);
-            double movementTime = 80 + 90 * Math.Log2(distance / (2 * next.Radius) + 1);
-            double moveStartTime = realGap > movementTime ? next.StartTime - gap * movementTime / realGap : leaveTime;
+            double movementTime = (80 + 90 * Math.Log2(distance / (2 * next.Radius) + 1)) * movement_speed;
+            double hold = Math.Clamp(realGap - movementTime, 0, arrival_hold);
+            double arrivalTime = realGap > 0 ? next.StartTime - gap * hold / realGap : next.StartTime;
+            double moveStartTime = realGap > movementTime + hold ? arrivalTime - gap * movementTime / realGap : leaveTime;
 
             double aheadTime = time + ApplyModsToRate(time, tracking_lag);
-            double progress = next.StartTime > moveStartTime ? Math.Clamp((aheadTime - moveStartTime) / (next.StartTime - moveStartTime), 0, 1) : 1;
+            double progress = arrivalTime > moveStartTime ? Math.Clamp((aheadTime - moveStartTime) / (arrivalTime - moveStartTime), 0, 1) : 1;
 
             Vector2 target = Vector2.Lerp(from, to, (float)minimumJerk(progress));
 
