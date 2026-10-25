@@ -122,7 +122,7 @@ namespace osu.Game.Overlays.Discord
         private Container suggestionContainer = null!;
 
         /// <summary>
-        /// The suggestion which is accepted with enter, which tab and the arrow keys move.
+        /// The suggestion which is accepted with tab or enter, which the arrow keys move.
         /// </summary>
         private int selectedSuggestion;
 
@@ -812,12 +812,6 @@ namespace osu.Game.Overlays.Discord
             {
                 switch (e.Key)
                 {
-                    case Key.Tab:
-                        if (MoveSuggestion?.Invoke(e.ShiftPressed ? -1 : 1) == true)
-                            return true;
-
-                        break;
-
                     case Key.Up:
                     case Key.Down:
                         if (MoveSuggestion?.Invoke(e.Key == Key.Up ? -1 : 1) == true)
@@ -825,6 +819,7 @@ namespace osu.Game.Overlays.Discord
 
                         break;
 
+                    case Key.Tab:
                     case Key.Enter:
                     case Key.KeypadEnter:
                         if (AcceptSuggestion?.Invoke() == true)
