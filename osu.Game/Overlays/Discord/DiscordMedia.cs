@@ -113,7 +113,18 @@ namespace osu.Game.Overlays.Discord
             if (!IsAllowedUrl(url))
                 return Task.FromException<byte[]>(new InvalidOperationException($@"Media is only loaded from Discord, not from {url}."));
 
-            return http_client.GetByteArrayAsync(url, cancellation);
+            // The cache is read and written in the background, as videos can be large.
+            return Task.Run(async () =>
+            {
+                byte[]? data = DiscordMediaCache.Get(url);
+
+                if (data != null)
+                    return data;
+
+                data = await http_client.GetByteArrayAsync(url, cancellation).ConfigureAwait(false);
+                DiscordMediaCache.Store(url, data);
+                return data;
+            }, cancellation);
         }
 
         /// <summary>
@@ -208,6 +219,7 @@ namespace osu.Game.Overlays.Discord
             : base(host.Renderer, host.CreateTextureLoaderStore(onlineStore))
         {
             this.onlineStore = onlineStore;
+            DiscordMediaCache.Initialise(host);
         }
 
         private readonly Dictionary<string, PendingLookup> pendingLookups = new Dictionary<string, PendingLookup>();
@@ -348,6 +360,24 @@ namespace osu.Game.Overlays.Discord
         private class DiscordOnlineStore : OnlineStore
         {
             protected override string GetLookupUrl(string url) => DiscordMedia.IsAllowedUrl(url) ? url : string.Empty;
+
+            public override byte[]? Get(string url)
+            {
+                if (!DiscordMedia.IsAllowedUrl(url))
+                    return null;
+
+                byte[]? data = DiscordMediaCache.Get(url);
+
+                if (data != null)
+                    return data;
+
+                data = base.Get(url);
+
+                if (data != null)
+                    DiscordMediaCache.Store(url, data);
+
+                return data;
+            }
         }
     }
 
