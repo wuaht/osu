@@ -126,7 +126,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
         /// The shortest and longest time the cursor rests on an object before hitting it, in milliseconds.
         /// Only kept when the pause before the object is long enough for it.
         /// </summary>
-        private const double arrival_hold_min = 10;
+        private const double arrival_hold_min = 0;
 
         private const double arrival_hold_max = 15;
 
