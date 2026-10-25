@@ -355,6 +355,7 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopBnTrackerToken, string.Empty);
 
             SetDefault(OsuSetting.SlopUnofficialBuildNotifiedVersion, string.Empty);
+            SetDefault(OsuSetting.SlopAutomaticUpdates, true);
             SetDefault(OsuSetting.SlopUnsupportedRealtimeNotifiedVersion, string.Empty);
             SetDefault(OsuSetting.SlopShowGreatJudgements, true);
             SetDefault(OsuSetting.SlopShowSliderEnds, true);
@@ -1076,6 +1077,11 @@ namespace osu.Game.Configuration
         /// The version of the game for which the user was notified that it isn't an official build, such that it is only shown once after installing a version.
         /// </summary>
         SlopUnofficialBuildNotifiedVersion,
+
+        /// <summary>
+        /// Whether the game automatically checks for and downloads updates.
+        /// </summary>
+        SlopAutomaticUpdates,
 
         /// <summary>
         /// The version of the game for which the user was notified that the servers don't support its realtime functionality, such that it is only shown once after installing a version.

@@ -28,6 +28,10 @@ namespace osu.Game.Overlays.Settings.Sections.General
 
         private readonly Bindable<ReleaseStream> configReleaseStream = new Bindable<ReleaseStream>();
 
+        private readonly Bindable<bool> automaticUpdates = new Bindable<bool>();
+
+        private readonly Bindable<SettingsNote.Data?> automaticUpdatesNote = new Bindable<SettingsNote.Data?>();
+
         [Resolved]
         private UpdateManager? updateManager { get; set; }
 
@@ -81,6 +85,25 @@ namespace osu.Game.Overlays.Settings.Sections.General
 
                 releaseStreamDropdown.Current.BindValueChanged(releaseStreamChanged);
             }
+
+            config.BindWith(OsuSetting.SlopAutomaticUpdates, automaticUpdates);
+
+            Add(new SettingsItemV2(new FormCheckBox
+            {
+                Caption = SlopSettingsStrings.AutomaticUpdates,
+                Current = automaticUpdates,
+            })
+            {
+                Keywords = new[] { @"version", @"auto" },
+                Note = { BindTarget = automaticUpdatesNote },
+            });
+
+            automaticUpdates.BindValueChanged(e =>
+            {
+                automaticUpdatesNote.Value = e.NewValue
+                    ? null
+                    : new SettingsNote.Data(SlopSettingsStrings.AutomaticUpdatesDisabledNote, SettingsNote.Type.Informational);
+            }, true);
 
             Add(checkForUpdatesButton = new SettingsButtonV2
             {

@@ -1812,6 +1812,16 @@ namespace osu.Game.Localisation
         /// </summary>
         public static LocalisableString DiscordNotLoggedIn => new TranslatableString(getKey(@"discord_not_logged_in"), @"Not logged in to Discord");
 
+        /// <summary>
+        /// "Automatic updates"
+        /// </summary>
+        public static LocalisableString AutomaticUpdates => new TranslatableString(getKey(@"automatic_updates"), @"Automatic updates");
+
+        /// <summary>
+        /// "Updates are only checked for when using the button below."
+        /// </summary>
+        public static LocalisableString AutomaticUpdatesDisabledNote => new TranslatableString(getKey(@"automatic_updates_disabled_note"), @"Updates are only checked for when using the button below.");
+
         private static string getKey(string key) => $"{prefix}:{key}";
     }
 }

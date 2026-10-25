@@ -50,6 +50,8 @@ namespace osu.Game.Updater
 
         private readonly Bindable<ReleaseStream> releaseStream = new Bindable<ReleaseStream>();
 
+        private readonly Bindable<bool> automaticUpdates = new Bindable<bool>();
+
         private CancellationTokenSource updateCancellationSource = new CancellationTokenSource();
 
         protected override void LoadComplete()
@@ -83,7 +85,19 @@ namespace osu.Game.Updater
             }
 
             config.BindWith(OsuSetting.ReleaseStream, releaseStream);
-            releaseStream.BindValueChanged(_ => CheckForUpdate());
+            releaseStream.BindValueChanged(_ => CheckForUpdateAutomatically());
+
+            config.BindWith(OsuSetting.SlopAutomaticUpdates, automaticUpdates);
+            automaticUpdates.BindValueChanged(_ => CheckForUpdateAutomatically(), true);
+        }
+
+        /// <summary>
+        /// Checks for any available update, unless the user has disabled automatic updates.
+        /// </summary>
+        protected void CheckForUpdateAutomatically()
+        {
+            if (!automaticUpdates.Value)
+                return;
 
             CheckForUpdate();
         }

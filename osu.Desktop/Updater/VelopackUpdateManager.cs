@@ -38,7 +38,7 @@ namespace osu.Desktop.Updater
             scheduledBackgroundCheck = Scheduler.AddDelayed(() =>
             {
                 log("Running scheduled background update check...");
-                CheckForUpdate();
+                CheckForUpdateAutomatically();
             }, 60000 * 30);
         }
 
