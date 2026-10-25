@@ -128,7 +128,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
         /// </summary>
         private const double arrival_hold_min = 10;
 
-        private const double arrival_hold_max = 30;
+        private const double arrival_hold_max = 15;
 
         private static readonly Vector2 playfield_min = new Vector2(-512, -384);
         private static readonly Vector2 playfield_max = new Vector2(1024, 768);
