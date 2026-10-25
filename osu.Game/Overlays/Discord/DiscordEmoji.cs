@@ -141,7 +141,12 @@ namespace osu.Game.Overlays.Discord
         private readonly string fallbackText;
         private readonly bool animated;
 
-        public LocalisableString TooltipText { get; }
+        private readonly string tooltip;
+
+        /// <summary>
+        /// The name of the emoji, where standard emojis are shown by the name they are written with, like ":smile:".
+        /// </summary>
+        public LocalisableString TooltipText => tooltip.Length > 0 && !tooltip.StartsWith(':') && DiscordEmojiData.GetShortcode(tooltip) is string code ? $@":{code}:" : tooltip;
 
         /// <summary>
         /// Places the emoji in the middle of a line of message text, so that it doesn't make the line higher.
@@ -167,7 +172,7 @@ namespace osu.Game.Overlays.Discord
             this.fallbackText = fallbackText;
             this.animated = animated;
 
-            TooltipText = tooltip;
+            this.tooltip = tooltip;
             Size = new Vector2(size);
             Margin = new MarginPadding { Horizontal = 1 };
         }

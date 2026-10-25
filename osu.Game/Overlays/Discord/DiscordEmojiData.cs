@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
+using osu.Framework.Extensions;
 using osu.Framework.Localisation;
 using osu.Game.Localisation;
 
@@ -53,6 +54,40 @@ namespace osu.Game.Overlays.Discord
                 return loadTask;
             }
         }
+
+        private static Dictionary<string, string>? shortcodesByEmoji;
+
+        /// <summary>
+        /// The name an emoji is written with, like "smile", or null if it is unknown or the emojis aren't loaded yet, in which case they start loading.
+        /// </summary>
+        public static string? GetShortcode(string unicode)
+        {
+            var task = Load();
+
+            if (!task.IsCompletedSuccessfully)
+                return null;
+
+            lock (load_lock)
+            {
+                if (shortcodesByEmoji == null)
+                {
+                    shortcodesByEmoji = new Dictionary<string, string>();
+
+                    foreach (var emoji in task.GetResultSafely().SelectMany(c => c.Emojis))
+                    {
+                        if (emoji.Shortcodes.Count > 0)
+                            shortcodesByEmoji.TryAdd(withoutVariationSelector(emoji.Unicode), emoji.Shortcodes[0]);
+                    }
+                }
+
+                return shortcodesByEmoji.GetValueOrDefault(withoutVariationSelector(unicode));
+            }
+        }
+
+        /// <summary>
+        /// Messages contain emojis with or without the selector which chooses the emoji presentation, so it is ignored when looking them up.
+        /// </summary>
+        private static string withoutVariationSelector(string unicode) => unicode.Replace("\uFE0F", string.Empty, StringComparison.Ordinal);
 
         private static async Task<IReadOnlyList<DiscordStandardEmojiCategory>> load()
         {

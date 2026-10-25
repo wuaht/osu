@@ -165,7 +165,7 @@ namespace osu.Game.Overlays.Discord
                 if (url == null)
                     continue;
 
-                body.Add(new DiscordRemoteImage(url, sticker.FormatType == 4)
+                body.Add(new StickerImage(url, sticker.FormatType == 4, sticker.Name)
                 {
                     Size = new Vector2(160),
                     ImageFillMode = FillMode.Fit,
@@ -894,6 +894,20 @@ namespace osu.Game.Overlays.Discord
         /// Loads the preview of a link when clicked.
         /// Previews aren't loaded automatically, as that would reveal the IP address of the user to any site which is linked.
         /// </summary>
+        /// <summary>
+        /// A sticker of a message, which shows its name when hovered.
+        /// </summary>
+        private partial class StickerImage : DiscordRemoteImage, IHasTooltip
+        {
+            public LocalisableString TooltipText { get; }
+
+            public StickerImage(string url, bool animated, string name)
+                : base(url, animated)
+            {
+                TooltipText = name;
+            }
+        }
+
         /// <summary>
         /// Links to the thread of a message, like in Discord.
         /// </summary>
