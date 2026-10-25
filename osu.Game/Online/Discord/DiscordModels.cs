@@ -480,6 +480,12 @@ namespace osu.Game.Online.Discord
         public List<DiscordSticker> Stickers { get; set; } = new List<DiscordSticker>();
 
         /// <summary>
+        /// Which messages notify for members who didn't change the notification settings of the guild.
+        /// </summary>
+        [JsonProperty("default_message_notifications")]
+        public DiscordNotificationLevel DefaultMessageNotifications { get; set; } = DiscordNotificationLevel.OnlyMentions;
+
+        /// <summary>
         /// The role IDs of the local user in this guild, if known.
         /// </summary>
         [JsonIgnore]
@@ -935,5 +941,52 @@ namespace osu.Game.Online.Discord
                     Reactions.Remove(reaction);
             }
         }
+    }
+
+    /// <summary>
+    /// Which messages notify, as chosen in the notification settings of a guild or channel.
+    /// </summary>
+    public enum DiscordNotificationLevel
+    {
+        AllMessages = 0,
+        OnlyMentions = 1,
+        Nothing = 2,
+
+        /// <summary>
+        /// The level of the parent channel, the guild or the default of the guild applies.
+        /// </summary>
+        Inherit = 3,
+    }
+
+    /// <summary>
+    /// The notification settings of the local user for a channel.
+    /// </summary>
+    public class DiscordChannelNotificationSettings
+    {
+        public DiscordNotificationLevel Level { get; set; } = DiscordNotificationLevel.Inherit;
+
+        public bool Muted { get; set; }
+
+        /// <summary>
+        /// When a temporary mute ends, or null if it lasts until it is turned off.
+        /// </summary>
+        public DateTimeOffset? MuteEnd { get; set; }
+
+        public bool IsMuted => Muted && (MuteEnd == null || MuteEnd > DateTimeOffset.UtcNow);
+    }
+
+    /// <summary>
+    /// The notification settings of the local user for a guild, or for direct messages.
+    /// </summary>
+    public class DiscordGuildNotificationSettings : DiscordChannelNotificationSettings
+    {
+        public bool SuppressEveryone { get; set; }
+
+        public bool SuppressRoles { get; set; }
+
+        /// <summary>
+        /// The settings which differ from the guild for single channels and categories.
+        /// </summary>
+        public Dictionary<ulong, DiscordChannelNotificationSettings> Channels { get; } = new Dictionary<ulong, DiscordChannelNotificationSettings>();
     }
 }

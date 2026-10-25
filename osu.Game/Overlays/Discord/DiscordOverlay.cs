@@ -1,8 +1,10 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System.Collections.Generic;
 using System.Linq;
 using osu.Framework.Allocation;
+using osu.Framework.Development;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
@@ -62,6 +64,9 @@ namespace osu.Game.Overlays.Discord
 
         [Resolved]
         private INotificationOverlay? notifications { get; set; }
+
+        [Resolved]
+        private GameHost host { get; set; } = null!;
 
         private readonly BindableFloat overlayHeight = new BindableFloat();
         private readonly BindableFloat backgroundOpacity = new BindableFloat();
@@ -186,8 +191,20 @@ namespace osu.Game.Overlays.Discord
             state.BindValueChanged(_ => updateView());
         }
 
-        private void onMessageCreated(DiscordMessage message) => Schedule(() =>
+        private void onMessageCreated(DiscordMessage message)
         {
+            // The overlay doesn't run scheduled work while it is hidden, which would hold back every notification until it is shown.
+            if (ThreadSafety.IsUpdateThread)
+                handleMessageCreated(message);
+            else
+                host.UpdateThread.Scheduler.Add(() => handleMessageCreated(message));
+        }
+
+        private void handleMessageCreated(DiscordMessage message)
+        {
+            if (IsDisposed)
+                return;
+
             var c = client.Value;
 
             if (c == null)
@@ -203,24 +220,46 @@ namespace osu.Game.Overlays.Discord
             var channel = c.PrivateChannels.FirstOrDefault(ch => ch.Id == message.ChannelId);
             DiscordGuild? guild = null;
 
-            // Like Discord, direct messages and mentions of the local user in guilds notify.
             if (channel == null)
             {
                 guild = message.GuildId is ulong guildId ? c.GetGuild(guildId) : null;
-                channel = guild?.Channels.Concat(guild.Threads).FirstOrDefault(ch => ch.Id == message.ChannelId);
+                channel = guild?.Channels.Concat(guild.Threads).FirstOrDefault(ch => ch.Id == message.ChannelId) ?? c.GetChannel(message.ChannelId);
 
-                if (guild == null || channel == null || !mentionsLocalUser(message, guild, c))
+                if (guild == null || channel == null)
                     return;
             }
+
+            var settings = c.GetNotificationSettings(guild?.Id);
+            bool muted = isMuted(channel, settings, c);
+            var level = getNotificationLevel(channel, guild, settings, c);
+
+            bool mentioned;
+            bool notify;
+
+            // Like Discord, direct messages notify unless they are muted. In guilds, the notification settings decide, where mentions notify even in muted guilds.
+            if (guild == null)
+            {
+                mentioned = !muted;
+                notify = !muted && level != DiscordNotificationLevel.Nothing;
+            }
+            else
+            {
+                mentioned = mentionsLocalUser(message, guild, c, settings);
+                notify = level == DiscordNotificationLevel.AllMessages ? mentioned || !muted : level == DiscordNotificationLevel.OnlyMentions && mentioned;
+            }
+
+            if (!mentioned && !notify)
+                return;
 
             var main = currentView as DiscordMainView;
 
             if (State.Value == Visibility.Visible && main?.Navigation.Channel.Value?.Id == channel.Id)
                 return;
 
-            unread.Add(channel.Id, guild?.Id);
+            if (mentioned)
+                unread.Add(channel.Id, guild?.Id);
 
-            if (notifications == null)
+            if (!notify || notifications == null)
                 return;
 
             LocalisableString text;
@@ -252,18 +291,63 @@ namespace osu.Game.Overlays.Discord
                     return true;
                 },
             });
-        });
+        }
 
-        private static bool mentionsLocalUser(DiscordMessage message, DiscordGuild guild, DiscordClient client)
+        private static bool mentionsLocalUser(DiscordMessage message, DiscordGuild guild, DiscordClient client, DiscordGuildNotificationSettings? settings)
         {
             ulong? localId = client.LocalUser.Value?.Id;
 
             if (localId == null)
                 return false;
 
-            return message.MentionEveryone
-                   || message.Mentions.Any(u => u.Id == localId)
-                   || (guild.LocalUserRoles != null && message.MentionRoles.Any(guild.LocalUserRoles.Contains));
+            return message.Mentions.Any(u => u.Id == localId)
+                   || (message.MentionEveryone && settings?.SuppressEveryone != true)
+                   || (guild.LocalUserRoles != null && settings?.SuppressRoles != true && message.MentionRoles.Any(guild.LocalUserRoles.Contains));
+        }
+
+        /// <summary>
+        /// The channel, then its parents (the channel of a thread and the category), whose notification settings apply in this order.
+        /// </summary>
+        private static IEnumerable<DiscordChannel> channelHierarchy(DiscordChannel channel, DiscordClient client)
+        {
+            DiscordChannel? current = channel;
+
+            for (int depth = 0; depth < 3 && current != null; depth++)
+            {
+                yield return current;
+
+                current = current.ParentId is ulong parentId ? client.GetChannel(parentId) : null;
+            }
+        }
+
+        private static bool isMuted(DiscordChannel channel, DiscordGuildNotificationSettings? settings, DiscordClient client)
+        {
+            if (settings == null)
+                return false;
+
+            if (settings.IsMuted)
+                return true;
+
+            return channelHierarchy(channel, client).Any(c => settings.Channels.GetValueOrDefault(c.Id)?.IsMuted == true);
+        }
+
+        private static DiscordNotificationLevel getNotificationLevel(DiscordChannel channel, DiscordGuild? guild, DiscordGuildNotificationSettings? settings, DiscordClient client)
+        {
+            if (settings != null)
+            {
+                foreach (var c in channelHierarchy(channel, client))
+                {
+                    var level = settings.Channels.GetValueOrDefault(c.Id)?.Level ?? DiscordNotificationLevel.Inherit;
+
+                    if (level != DiscordNotificationLevel.Inherit)
+                        return level;
+                }
+
+                if (settings.Level != DiscordNotificationLevel.Inherit)
+                    return settings.Level;
+            }
+
+            return guild?.DefaultMessageNotifications ?? DiscordNotificationLevel.AllMessages;
         }
 
         protected override void Update()

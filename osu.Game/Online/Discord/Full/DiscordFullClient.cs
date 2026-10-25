@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -90,6 +91,11 @@ namespace osu.Game.Online.Discord.Full
         /// All channels of each guild, before filtering by permissions.
         /// </summary>
         private readonly Dictionary<ulong, List<DiscordChannel>> allGuildChannels = new Dictionary<ulong, List<DiscordChannel>>();
+
+        /// <summary>
+        /// The notification settings of the local user by guild, with the settings of direct messages at 0.
+        /// </summary>
+        private readonly Dictionary<ulong, DiscordGuildNotificationSettings> notificationSettings = new Dictionary<ulong, DiscordGuildNotificationSettings>();
 
         private readonly HashSet<ulong> requestedGuildMembers = new HashSet<ulong>();
         private readonly HashSet<ulong> requestedProfiles = new HashSet<ulong>();
@@ -730,6 +736,7 @@ namespace osu.Game.Online.Discord.Full
             LocalUser.Value = null;
             Users.Clear();
             allGuildChannels.Clear();
+            notificationSettings.Clear();
             requestedGuildMembers.Clear();
             requestedProfiles.Clear();
             subscribedGuilds.Clear();
@@ -1362,6 +1369,13 @@ namespace osu.Game.Online.Discord.Full
                     });
                     break;
 
+                case @"USER_GUILD_SETTINGS_UPDATE":
+                    var updatedSettings = parseNotificationSettings(obj);
+                    ulong settingsGuildId = obj.Value<ulong?>(@"guild_id") ?? 0;
+
+                    Schedule(() => notificationSettings[settingsGuildId] = updatedSettings);
+                    break;
+
                 case @"MESSAGE_DELETE_BULK":
                     ulong bulkChannelId = obj.Value<ulong>(@"channel_id");
                     var messageIds = obj[@"ids"]?.ToObject<List<ulong>>() ?? new List<ulong>();
@@ -1377,7 +1391,65 @@ namespace osu.Game.Online.Discord.Full
 
         private record ParsedGuild(DiscordGuild Guild, List<DiscordChannel> Channels);
 
-        private record ParsedReady(DiscordUser User, List<ParsedGuild> Guilds, List<DiscordChannel> PrivateChannels, List<DiscordUser> Users);
+        private record ParsedReady(DiscordUser User, List<ParsedGuild> Guilds, List<DiscordChannel> PrivateChannels, List<DiscordUser> Users,
+                                   Dictionary<ulong, DiscordGuildNotificationSettings> NotificationSettings);
+
+        public override DiscordGuildNotificationSettings? GetNotificationSettings(ulong? guildId) => notificationSettings.GetValueOrDefault(guildId ?? 0);
+
+        private static Dictionary<ulong, DiscordGuildNotificationSettings> parseAllNotificationSettings(JToken? data)
+        {
+            var result = new Dictionary<ulong, DiscordGuildNotificationSettings>();
+
+            // Depending on the capabilities, the settings are either a list or wrapped in an object.
+            var entries = data as JArray ?? data?[@"entries"] as JArray;
+
+            foreach (var entry in entries?.OfType<JObject>() ?? Enumerable.Empty<JObject>())
+                result[entry.Value<ulong?>(@"guild_id") ?? 0] = parseNotificationSettings(entry);
+
+            return result;
+        }
+
+        private static DiscordGuildNotificationSettings parseNotificationSettings(JObject data)
+        {
+            var settings = new DiscordGuildNotificationSettings
+            {
+                SuppressEveryone = data.Value<bool?>(@"suppress_everyone") ?? false,
+                SuppressRoles = data.Value<bool?>(@"suppress_roles") ?? false,
+            };
+
+            readChannelNotificationSettings(settings, data);
+
+            var overrides = data[@"channel_overrides"];
+            var overrideEntries = overrides is JObject byId ? byId.Properties().Select(p => p.Value) : overrides as JArray ?? Enumerable.Empty<JToken>();
+
+            foreach (var entry in overrideEntries.OfType<JObject>())
+            {
+                ulong? channelId = entry.Value<ulong?>(@"channel_id");
+
+                if (channelId == null)
+                    continue;
+
+                var channelSettings = new DiscordChannelNotificationSettings();
+                readChannelNotificationSettings(channelSettings, entry);
+                settings.Channels[channelId.Value] = channelSettings;
+            }
+
+            return settings;
+        }
+
+        private static void readChannelNotificationSettings(DiscordChannelNotificationSettings settings, JObject data)
+        {
+            int level = data.Value<int?>(@"message_notifications") ?? (int)DiscordNotificationLevel.Inherit;
+            settings.Level = Enum.IsDefined(typeof(DiscordNotificationLevel), level) ? (DiscordNotificationLevel)level : DiscordNotificationLevel.Inherit;
+            settings.Muted = data.Value<bool?>(@"muted") ?? false;
+
+            var endTime = (data[@"mute_config"] as JObject)?[@"end_time"];
+
+            if (endTime?.Type == JTokenType.Date)
+                settings.MuteEnd = new DateTimeOffset(endTime.Value<DateTime>().ToUniversalTime());
+            else if (endTime?.Type == JTokenType.String && DateTimeOffset.TryParse(endTime.Value<string>(), CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var end))
+                settings.MuteEnd = end;
+        }
 
         private static ParsedReady parseReady(JObject data)
         {
@@ -1428,7 +1500,7 @@ namespace osu.Game.Online.Discord.Full
 
             privateChannels.Sort((a, b) => (b.LastMessageId ?? b.Id).CompareTo(a.LastMessageId ?? a.Id));
 
-            return new ParsedReady(user, guilds, privateChannels, users);
+            return new ParsedReady(user, guilds, privateChannels, users, parseAllNotificationSettings(data[@"user_guild_settings"]));
         }
 
         private static ParsedGuild parseGuild(JObject data)
@@ -1507,6 +1579,9 @@ namespace osu.Game.Online.Discord.Full
                 StoreUser(user);
 
             LocalUser.Value = ready.User;
+
+            foreach (var (guildId, settings) in ready.NotificationSettings)
+                notificationSettings[guildId] = settings;
 
             foreach (var guild in ready.Guilds)
             {

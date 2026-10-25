@@ -263,6 +263,12 @@ namespace osu.Game.Online.Discord
 
         public DiscordGuild? GetGuild(ulong id) => Guilds.FirstOrDefault(g => g.Id == id);
 
+        /// <summary>
+        /// The notification settings of the local user for a guild, or for direct messages if <paramref name="guildId"/> is null.
+        /// Null if they are unknown, in which case the defaults of Discord apply.
+        /// </summary>
+        public virtual DiscordGuildNotificationSettings? GetNotificationSettings(ulong? guildId) => null;
+
         public DiscordRole? GetRole(ulong id)
         {
             foreach (var guild in Guilds)
