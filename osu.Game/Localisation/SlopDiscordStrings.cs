@@ -243,6 +243,11 @@ namespace osu.Game.Localisation
         public static LocalisableString MessageNotification(string author, string content) => new TranslatableString(getKey(@"message_notification"), @"{0}: {1}", author, content);
 
         /// <summary>
+        /// "NEW"
+        /// </summary>
+        public static LocalisableString NewMentions => new TranslatableString(getKey(@"new_mentions"), @"NEW");
+
+        /// <summary>
         /// "{0} in #{1}: {2}"
         /// </summary>
         public static LocalisableString GuildMessageNotification(string author, string channel, string content) => new TranslatableString(getKey(@"guild_message_notification"), @"{0} in #{1}: {2}", author, channel, content);

@@ -68,53 +68,60 @@ namespace osu.Game.Overlays.Discord
         {
             base.LoadComplete();
 
-            channel.BindValueChanged(c =>
+            // The chat is replaced from the scheduler of this view, as the channel can be changed from a task scheduled by the chat itself,
+            // which would otherwise be disposed while it is still being updated.
+            channel.BindValueChanged(_ => Scheduler.AddOnce(showChannel));
+            showChannel();
+        }
+
+        private void showChannel()
+        {
+            var newChannel = channel.Value;
+
+            if (newChannel != null && newChannel.Id == shownChannelId)
+                return;
+
+            content.Clear();
+            currentChat = null;
+            shownChannelId = newChannel?.Id;
+
+            if (newChannel == null)
             {
-                if (c.NewValue != null && c.NewValue.Id == shownChannelId)
-                    return;
-
-                content.Clear();
-                currentChat = null;
-                shownChannelId = c.NewValue?.Id;
-
-                if (c.NewValue == null)
+                content.Add(new FillFlowContainer
                 {
-                    content.Add(new FillFlowContainer
+                    Anchor = Anchor.Centre,
+                    Origin = Anchor.Centre,
+                    AutoSizeAxes = Axes.Both,
+                    Direction = FillDirection.Vertical,
+                    Spacing = new Vector2(0, 12),
+                    Children = new Drawable[]
                     {
-                        Anchor = Anchor.Centre,
-                        Origin = Anchor.Centre,
-                        AutoSizeAxes = Axes.Both,
-                        Direction = FillDirection.Vertical,
-                        Spacing = new Vector2(0, 12),
-                        Children = new Drawable[]
+                        new SpriteIcon
                         {
-                            new SpriteIcon
-                            {
-                                Anchor = Anchor.TopCentre,
-                                Origin = Anchor.TopCentre,
-                                Icon = FontAwesome.Regular.Comments,
-                                Size = new Vector2(48),
-                                Colour = colourProvider.Content2,
-                                Alpha = 0.6f,
-                            },
-                            new OsuSpriteText
-                            {
-                                Anchor = Anchor.TopCentre,
-                                Origin = Anchor.TopCentre,
-                                Text = SlopDiscordStrings.SelectConversation,
-                                Font = DiscordStyle.UiFont(16, FontWeight.SemiBold),
-                                Colour = colourProvider.Content2,
-                            },
+                            Anchor = Anchor.TopCentre,
+                            Origin = Anchor.TopCentre,
+                            Icon = FontAwesome.Regular.Comments,
+                            Size = new Vector2(48),
+                            Colour = colourProvider.Content2,
+                            Alpha = 0.6f,
                         },
-                    });
-                    return;
-                }
+                        new OsuSpriteText
+                        {
+                            Anchor = Anchor.TopCentre,
+                            Origin = Anchor.TopCentre,
+                            Text = SlopDiscordStrings.SelectConversation,
+                            Font = DiscordStyle.UiFont(16, FontWeight.SemiBold),
+                            Colour = colourProvider.Content2,
+                        },
+                    },
+                });
+                return;
+            }
 
-                if (c.NewValue.IsForum)
-                    content.Add(new DiscordForumView(c.NewValue));
-                else
-                    content.Add(currentChat = new ChannelChat(c.NewValue));
-            }, true);
+            if (newChannel.IsForum)
+                content.Add(new DiscordForumView(newChannel));
+            else
+                content.Add(currentChat = new ChannelChat(newChannel));
         }
 
         public void TakeTextBoxFocus() => currentChat?.TakeTextBoxFocus();

@@ -14,10 +14,12 @@ using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Cursor;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
+using osu.Framework.Graphics.UserInterface;
 using osu.Framework.Input.Events;
 using osu.Framework.Localisation;
 using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.Sprites;
+using osu.Game.Graphics.UserInterface;
 using osu.Game.Localisation;
 using osu.Game.Online.Chat;
 using osu.Game.Online.Discord;
@@ -280,6 +282,9 @@ namespace osu.Game.Overlays.Discord
                     var mention = new MentionChip($@"@{user?.DisplayName ?? @"unknown-user"}", font, DiscordStyle.MentionText, DiscordStyle.MentionBackground)
                     {
                         Highlighted = inline.Id == context.LocalUserId,
+                        ContextMenuItems = user != null && user.Id != context.LocalUserId && context.OpenDirectMessage is Action<DiscordUser> openDirectMessage
+                            ? new MenuItem[] { new OsuMenuItem(SlopDiscordStrings.OpenInDirectMessages, MenuItemType.Standard, () => openDirectMessage(user)) }
+                            : null,
                     };
                     addDecorated(flow, mention, spoiler);
                     return;
@@ -604,8 +609,10 @@ namespace osu.Game.Overlays.Discord
         /// <summary>
         /// A rounded highlight for mentions and timestamps.
         /// </summary>
-        private partial class MentionChip : OsuClickableContainer, IHasLineBaseHeight
+        private partial class MentionChip : OsuClickableContainer, IHasLineBaseHeight, IHasContextMenu
         {
+            public MenuItem[]? ContextMenuItems { get; init; }
+
             private readonly OsuSpriteText spriteText;
             private readonly Box background;
             private readonly Color4 backgroundColour;

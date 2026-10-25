@@ -42,6 +42,9 @@ namespace osu.Game.Overlays.Discord
 
         private FillFlowContainer guildFlow = null!;
         private FillFlowContainer unreadFlow = null!;
+        private OsuScrollContainer scroll = null!;
+        private NewMentionsPill topPill = null!;
+        private NewMentionsPill bottomPill = null!;
 
         public DiscordGuildRail()
         {
@@ -51,43 +54,61 @@ namespace osu.Game.Overlays.Discord
         [BackgroundDependencyLoader]
         private void load(OverlayColourProvider colourProvider)
         {
-            InternalChild = new OsuScrollContainer
+            InternalChildren = new Drawable[]
             {
-                RelativeSizeAxes = Axes.Both,
-                ScrollbarVisible = false,
-                Child = new FillFlowContainer
+                scroll = new OsuScrollContainer
                 {
-                    RelativeSizeAxes = Axes.X,
-                    AutoSizeAxes = Axes.Y,
-                    Direction = FillDirection.Vertical,
-                    Spacing = new Vector2(0, 8),
-                    Padding = new MarginPadding { Vertical = 12 },
-                    Children = new Drawable[]
+                    RelativeSizeAxes = Axes.Both,
+                    ScrollbarVisible = false,
+                    Child = new FillFlowContainer
                     {
-                        new GuildButton(null, SlopDiscordStrings.DirectMessages),
-                        // Like in Discord, the conversations with unread messages are shown below the direct messages, the newest first.
-                        unreadFlow = new FillFlowContainer
+                        RelativeSizeAxes = Axes.X,
+                        AutoSizeAxes = Axes.Y,
+                        Direction = FillDirection.Vertical,
+                        Spacing = new Vector2(0, 8),
+                        Padding = new MarginPadding { Vertical = 12 },
+                        Children = new Drawable[]
                         {
-                            RelativeSizeAxes = Axes.X,
-                            AutoSizeAxes = Axes.Y,
-                            Direction = FillDirection.Vertical,
-                            Spacing = new Vector2(0, 8),
-                        },
-                        new Box
-                        {
-                            Anchor = Anchor.TopCentre,
-                            Origin = Anchor.TopCentre,
-                            Size = new Vector2(32, 2),
-                            Colour = colourProvider.Background3,
-                        },
-                        guildFlow = new FillFlowContainer
-                        {
-                            RelativeSizeAxes = Axes.X,
-                            AutoSizeAxes = Axes.Y,
-                            Direction = FillDirection.Vertical,
-                            Spacing = new Vector2(0, 8),
+                            new GuildButton(null, SlopDiscordStrings.DirectMessages),
+                            // Like in Discord, the conversations with unread messages are shown below the direct messages, the newest first.
+                            unreadFlow = new FillFlowContainer
+                            {
+                                RelativeSizeAxes = Axes.X,
+                                AutoSizeAxes = Axes.Y,
+                                Direction = FillDirection.Vertical,
+                                Spacing = new Vector2(0, 8),
+                            },
+                            new Box
+                            {
+                                Anchor = Anchor.TopCentre,
+                                Origin = Anchor.TopCentre,
+                                Size = new Vector2(32, 2),
+                                Colour = colourProvider.Background3,
+                            },
+                            guildFlow = new FillFlowContainer
+                            {
+                                RelativeSizeAxes = Axes.X,
+                                AutoSizeAxes = Axes.Y,
+                                Direction = FillDirection.Vertical,
+                                Spacing = new Vector2(0, 8),
+                            },
                         },
                     },
+                },
+                // Like in Discord, guilds with mentions which are scrolled out of view are pointed at by a pill, which jumps to them.
+                topPill = new NewMentionsPill
+                {
+                    Anchor = Anchor.TopCentre,
+                    Origin = Anchor.TopCentre,
+                    Margin = new MarginPadding { Top = 8 },
+                    Action = () => jumpTo(topPill.Target),
+                },
+                bottomPill = new NewMentionsPill
+                {
+                    Anchor = Anchor.BottomCentre,
+                    Origin = Anchor.BottomCentre,
+                    Margin = new MarginPadding { Bottom = 8 },
+                    Action = () => jumpTo(bottomPill.Target),
                 },
             };
 
@@ -107,6 +128,149 @@ namespace osu.Game.Overlays.Discord
         }
 
         private void onUnreadChanged() => Scheduler.AddOnce(updateUnread);
+
+        protected override void UpdateAfterChildren()
+        {
+            base.UpdateAfterChildren();
+
+            GuildButton? above = null;
+            GuildButton? below = null;
+
+            foreach (var button in guildFlow.OfType<GuildButton>())
+            {
+                if (!button.HasMentions)
+                    continue;
+
+                double top = scroll.GetChildPosInContent(button);
+
+                if (top < scroll.Current)
+                    above = button;
+                else if (top + button.DrawHeight > scroll.Current + scroll.DrawHeight && below == null)
+                    below = button;
+            }
+
+            topPill.Target = above;
+            bottomPill.Target = below;
+        }
+
+        private void jumpTo(GuildButton? button)
+        {
+            if (button == null)
+                return;
+
+            scroll.ScrollIntoView(button);
+            navigation.Guild.Value = button.Guild;
+        }
+
+        /// <summary>
+        /// The red "NEW" pill of Discord, which jumps to a guild with mentions that isn't in view.
+        /// </summary>
+        private partial class NewMentionsPill : OsuClickableContainer
+        {
+            private GuildButton? target;
+
+            public GuildButton? Target
+            {
+                get => target;
+                set
+                {
+                    if (target == value)
+                        return;
+
+                    target = value;
+                    this.FadeTo(value != null ? 1 : 0, 150, Easing.OutQuint);
+                }
+            }
+
+            public NewMentionsPill()
+            {
+                AutoSizeAxes = Axes.Both;
+                Alpha = 0;
+                Masking = true;
+                CornerRadius = 8;
+
+                Children = new Drawable[]
+                {
+                    new Box
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Colour = DiscordStyle.Error,
+                    },
+                    new OsuSpriteText
+                    {
+                        Text = SlopDiscordStrings.NewMentions,
+                        Font = DiscordStyle.UiFont(11, FontWeight.Bold),
+                        Colour = Color4.White,
+                        Margin = new MarginPadding { Horizontal = 8, Vertical = 2 },
+                    },
+                };
+            }
+
+            public override bool PropagatePositionalInputSubTree => target != null && base.PropagatePositionalInputSubTree;
+        }
+
+        /// <summary>
+        /// The red count of unread messages or mentions in the corner of an icon, which is cut out of the icon by a ring in the colour of the rail like in Discord.
+        /// </summary>
+        private partial class MentionBadge : CircularContainer
+        {
+            private const float size = 16;
+
+            private readonly CircularContainer fill;
+            private readonly OsuSpriteText text;
+
+            public int Count
+            {
+                set
+                {
+                    Alpha = value > 0 ? 1 : 0;
+                    text.Text = value > 99 ? @"99+" : value.ToString();
+
+                    // Single digits stay a circle, longer counts become a pill.
+                    fill.Width = value < 10 ? size : value < 100 ? size + 6 : size + 13;
+                }
+            }
+
+            public MentionBadge(Color4 ringColour)
+            {
+                Anchor = Anchor.BottomRight;
+                Origin = Anchor.BottomRight;
+                AutoSizeAxes = Axes.Both;
+                Margin = new MarginPadding { Right = -4, Bottom = -4 };
+                Masking = true;
+                Alpha = 0;
+
+                InternalChildren = new Drawable[]
+                {
+                    new Box
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Colour = ringColour,
+                    },
+                    fill = new CircularContainer
+                    {
+                        Size = new Vector2(size),
+                        Margin = new MarginPadding(3),
+                        Masking = true,
+                        Children = new Drawable[]
+                        {
+                            new Box
+                            {
+                                RelativeSizeAxes = Axes.Both,
+                                Colour = DiscordStyle.Error,
+                            },
+                            text = new OsuSpriteText
+                            {
+                                Anchor = Anchor.Centre,
+                                Origin = Anchor.Centre,
+                                Font = DiscordStyle.UiFont(11, FontWeight.Bold),
+                                Colour = Color4.White,
+                            },
+                        },
+                    },
+                };
+            }
+        }
 
         private void updateUnread()
         {
@@ -195,34 +359,7 @@ namespace osu.Game.Overlays.Discord
                                 },
                             },
                             // The number of unread messages, which is cut out of the icon like in Discord.
-                            new CircularContainer
-                            {
-                                Anchor = Anchor.BottomRight,
-                                Origin = Anchor.BottomRight,
-                                AutoSizeAxes = Axes.X,
-                                Height = 22,
-                                Margin = new MarginPadding { Right = -4, Bottom = -4 },
-                                Masking = true,
-                                BorderThickness = 4,
-                                BorderColour = colourProvider.Background6,
-                                Children = new Drawable[]
-                                {
-                                    new Box
-                                    {
-                                        RelativeSizeAxes = Axes.Both,
-                                        Colour = DiscordStyle.Error,
-                                    },
-                                    new OsuSpriteText
-                                    {
-                                        Anchor = Anchor.Centre,
-                                        Origin = Anchor.Centre,
-                                        Text = count > 99 ? @"99+" : count.ToString(),
-                                        Font = DiscordStyle.UiFont(12, FontWeight.Bold),
-                                        Colour = Color4.White,
-                                        Margin = new MarginPadding { Horizontal = 7 },
-                                    },
-                                },
-                            },
+                            new MentionBadge(colourProvider.Background6) { Count = count },
                         },
                     },
                 };
@@ -270,8 +407,14 @@ namespace osu.Game.Overlays.Discord
             [Resolved]
             private DiscordUnreadMessages? unread { get; set; }
 
-            private Container badge = null!;
-            private OsuSpriteText badgeText = null!;
+            private MentionBadge badge = null!;
+
+            public DiscordGuild? Guild => guild;
+
+            /// <summary>
+            /// Whether the guild has unread mentions of the local user.
+            /// </summary>
+            public bool HasMentions => guild != null && unread?.GetGuild(guild.Id) > 0;
 
             private readonly Bindable<DiscordGuild?> selectedGuild = new Bindable<DiscordGuild?>();
 
@@ -355,34 +498,7 @@ namespace osu.Game.Overlays.Discord
                         Anchor = Anchor.Centre,
                         Origin = Anchor.Centre,
                         Size = new Vector2(icon_size),
-                        Child = badge = new CircularContainer
-                        {
-                            Anchor = Anchor.BottomRight,
-                            Origin = Anchor.BottomRight,
-                            AutoSizeAxes = Axes.X,
-                            Height = 22,
-                            Margin = new MarginPadding { Right = -4, Bottom = -4 },
-                            Masking = true,
-                            BorderThickness = 4,
-                            BorderColour = colourProvider.Background6,
-                            Alpha = 0,
-                            Children = new Drawable[]
-                            {
-                                new Box
-                                {
-                                    RelativeSizeAxes = Axes.Both,
-                                    Colour = DiscordStyle.Error,
-                                },
-                                badgeText = new OsuSpriteText
-                                {
-                                    Anchor = Anchor.Centre,
-                                    Origin = Anchor.Centre,
-                                    Font = DiscordStyle.UiFont(12, FontWeight.Bold),
-                                    Colour = Color4.White,
-                                    Margin = new MarginPadding { Horizontal = 7 },
-                                },
-                            },
-                        },
+                        Child = badge = new MentionBadge(colourProvider.Background6),
                     },
                 };
 
@@ -410,8 +526,7 @@ namespace osu.Game.Overlays.Discord
             {
                 int count = guild != null ? unread?.GetGuild(guild.Id) ?? 0 : 0;
 
-                badge.Alpha = count > 0 ? 1 : 0;
-                badgeText.Text = count > 99 ? @"99+" : count.ToString();
+                badge.Count = count;
 
                 updateState();
             }

@@ -78,9 +78,11 @@ namespace osu.Game.Overlays.Discord
                         {
                             RelativeSizeAxes = Axes.X,
                             Height = 32,
+                            // The text box sizes its text by its absolute height, so it isn't sized relatively.
                             Child = SearchBox = new BasicSearchTextBox
                             {
-                                RelativeSizeAxes = Axes.Both,
+                                RelativeSizeAxes = Axes.X,
+                                Height = 32,
                                 PlaceholderText = SearchPlaceholder,
                             },
                         },
@@ -388,6 +390,7 @@ namespace osu.Game.Overlays.Discord
             else
                 favourites.Remove(url);
 
+            DiscordChatGif.SetCachedFavourite(url, favourite);
             updateFavouriteStates();
         }
 
@@ -472,7 +475,7 @@ namespace osu.Game.Overlays.Discord
         /// <summary>
         /// The star in the corner of a GIF, which is always shown for favourites and otherwise only when the GIF is hovered.
         /// </summary>
-        private partial class FavouriteToggle : OsuClickableContainer
+        internal partial class FavouriteToggle : OsuClickableContainer
         {
             private readonly SpriteIcon icon;
 
@@ -692,4 +695,115 @@ namespace osu.Game.Overlays.Discord
     /// The stickers of a guild which can be used in the picker.
     /// </summary>
     public record DiscordStickerGroup(string GuildName, IReadOnlyList<DiscordSticker> Stickers);
+
+    /// <summary>
+    /// A GIF sent in a chat, which can be added to the favourite GIFs with the star in its corner like in Discord.
+    /// </summary>
+    public partial class DiscordChatGif : Container
+    {
+        // The favourite GIFs are only fetched once for all GIFs in the chats, as they are part of the settings of the user.
+        private static Task<HashSet<string>>? favouriteUrls;
+        private static DiscordClient? favouritesClient;
+
+        private static event Action? favouritesChanged;
+
+        private readonly DiscordGif gif;
+        private readonly DiscordGifPicker.FavouriteToggle toggle;
+
+        [Resolved]
+        private DiscordClient client { get; set; } = null!;
+
+        public DiscordChatGif(DiscordGif gif, Drawable media)
+        {
+            this.gif = gif;
+
+            AutoSizeAxes = Axes.Both;
+
+            Children = new[]
+            {
+                media,
+                toggle = new DiscordGifPicker.FavouriteToggle
+                {
+                    Anchor = Anchor.TopRight,
+                    Origin = Anchor.TopRight,
+                    Margin = new MarginPadding(6),
+                    Action = toggleFavourite,
+                },
+            };
+        }
+
+        /// <summary>
+        /// Updates the cached favourite state of a GIF after it was changed, such as in the GIF picker.
+        /// </summary>
+        internal static void SetCachedFavourite(string url, bool favourite)
+        {
+            if (favouriteUrls?.IsCompletedSuccessfully != true)
+                return;
+
+            var urls = favouriteUrls.GetResultSafely();
+
+            if (favourite)
+                urls.Add(url);
+            else
+                urls.Remove(url);
+
+            favouritesChanged?.Invoke();
+        }
+
+        protected override void LoadComplete()
+        {
+            base.LoadComplete();
+
+            if (favouriteUrls == null || favouritesClient != client || favouriteUrls.IsFaulted)
+            {
+                favouritesClient = client;
+                favouriteUrls = client.GetFavouriteGifs().ContinueWith(t => t.GetResultSafely().Select(g => g.Url).ToHashSet(), TaskScheduler.Default);
+            }
+
+            favouritesChanged += onFavouritesChanged;
+            favouriteUrls.ContinueWith(_ => onFavouritesChanged(), TaskScheduler.Default);
+        }
+
+        private void onFavouritesChanged() => Scheduler.AddOnce(updateState);
+
+        private bool isFavourite => favouriteUrls?.IsCompletedSuccessfully == true && favouriteUrls.GetResultSafely().Contains(gif.Url);
+
+        private void updateState() => toggle.Favourite = isFavourite;
+
+        private void toggleFavourite()
+        {
+            if (favouriteUrls?.IsCompletedSuccessfully != true)
+                return;
+
+            bool favourite = !isFavourite;
+
+            SetCachedFavourite(gif.Url, favourite);
+
+            client.SetGifFavourite(gif, favourite).ContinueWith(t =>
+            {
+                if (t.IsCompletedSuccessfully)
+                    return;
+
+                Logger.Log($@"Failed to change the favourite GIFs: {t.Exception?.GetBaseException().Message}", LoggingTarget.Network, LogLevel.Important);
+                Schedule(() => SetCachedFavourite(gif.Url, !favourite));
+            }, TaskScheduler.Default);
+        }
+
+        protected override bool OnHover(HoverEvent e)
+        {
+            toggle.FadeIn(100);
+            return false;
+        }
+
+        protected override void OnHoverLost(HoverLostEvent e)
+        {
+            toggle.FadeTo(toggle.IsFavourite ? 1 : 0, 100);
+        }
+
+        protected override void Dispose(bool isDisposing)
+        {
+            base.Dispose(isDisposing);
+            favouritesChanged -= onFavouritesChanged;
+        }
+    }
 }

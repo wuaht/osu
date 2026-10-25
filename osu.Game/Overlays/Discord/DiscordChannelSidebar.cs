@@ -35,7 +35,8 @@ namespace osu.Game.Overlays.Discord
         /// <summary>
         /// The height of the header with the banner of a guild, which has the aspect ratio of guild banners like in Discord.
         /// </summary>
-        private const float banner_height = DiscordStyle.SIDEBAR_WIDTH * 9 / 16;
+        // Lower than the banner itself, which is cropped around its centre to fill the header.
+        private const float banner_height = DiscordStyle.SIDEBAR_WIDTH * 0.4f;
 
         [Resolved]
         private DiscordClient client { get; set; } = null!;
@@ -113,6 +114,7 @@ namespace osu.Game.Overlays.Discord
                                 bannerContainer = new Container
                                 {
                                     RelativeSizeAxes = Axes.Both,
+                                    Masking = true,
                                 },
                                 // The name stays at the top when the banner of a guild is shown below it.
                                 headerText = new TruncatingSpriteText

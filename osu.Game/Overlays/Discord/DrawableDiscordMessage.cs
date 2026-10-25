@@ -57,6 +57,7 @@ namespace osu.Game.Overlays.Discord
         private Box hoverBackground = null!;
         private Container mainContent = null!;
         private Container messageRow = null!;
+        private Container highlightContainer = null!;
         private FillFlowContainer reactionFlow = null!;
         private DiscordMessageToolbar? toolbar;
 
@@ -211,8 +212,8 @@ namespace osu.Game.Overlays.Discord
                 Direction = FillDirection.Vertical,
             };
 
-            // Like in Discord, the mention highlight covers the reply preview too.
-            rows.Add(new Container
+            // Like in Discord, the mention highlight covers the reply preview too, but not the space between message groups above it.
+            rows.Add(highlightContainer = new Container
             {
                 RelativeSizeAxes = Axes.X,
                 AutoSizeAxes = Axes.Y,
@@ -373,11 +374,11 @@ namespace osu.Game.Overlays.Discord
 
             header.Alpha = isContinuation ? 0 : 1;
             avatarContainer.Alpha = isContinuation ? 0 : 1;
-            mainContent.Padding = new MarginPadding { Left = DiscordStyle.MESSAGE_GUTTER, Right = 16, Top = isContinuation ? 2 : 14, Bottom = 2 };
+            mainContent.Padding = new MarginPadding { Left = DiscordStyle.MESSAGE_GUTTER, Right = 16, Vertical = 2 };
 
+            // The space between message groups is outside of the highlight and hover background, like in Discord.
             // The reply preview belongs to the first message of a group.
-            if (Message.IsReply)
-                mainContent.Padding = new MarginPadding { Left = DiscordStyle.MESSAGE_GUTTER, Right = 16, Top = 2, Bottom = 2 };
+            highlightContainer.Margin = new MarginPadding { Top = isContinuation && !Message.IsReply ? 0 : 12 };
         }
 
         protected override void Update()
@@ -661,8 +662,7 @@ namespace osu.Game.Overlays.Discord
             {
                 RelativeSizeAxes = Axes.X,
                 Height = height,
-                // Like the header of a message, the preview is preceded by the space between message groups.
-                Margin = new MarginPadding { Top = 14 },
+                Margin = new MarginPadding { Top = 2 },
                 Padding = new MarginPadding { Left = DiscordStyle.MESSAGE_GUTTER, Right = 16 },
                 Children = new Drawable[]
                 {
@@ -745,8 +745,13 @@ namespace osu.Game.Overlays.Discord
         {
             if (attachment.IsImage)
             {
-                return new DiscordMediaImage(attachment.Url, attachment.ProxyUrl, DiscordMedia.FitSize(attachment.Width, attachment.Height), attachment.IsAnimatedImage,
+                var image = new DiscordMediaImage(attachment.Url, attachment.ProxyUrl, DiscordMedia.FitSize(attachment.Width, attachment.Height), attachment.IsAnimatedImage,
                     attachment.Width, attachment.Height);
+
+                if (!attachment.IsAnimatedImage)
+                    return image;
+
+                return new DiscordChatGif(new DiscordGif { Url = attachment.Url, Src = attachment.Url, Width = attachment.Width ?? 0, Height = attachment.Height ?? 0 }, image);
             }
 
             if (attachment.IsVideo)
@@ -768,8 +773,17 @@ namespace osu.Game.Overlays.Discord
                     if (embed.Video?.Url == null)
                         return null;
 
-                    return new DiscordMediaVideo(embed.Video.ProxyUrl ?? embed.Video.Url, embed.Thumbnail?.ProxyUrl ?? embed.Thumbnail?.Url,
+                    var gifv = new DiscordMediaVideo(embed.Video.ProxyUrl ?? embed.Video.Url, embed.Thumbnail?.ProxyUrl ?? embed.Thumbnail?.Url,
                         DiscordMedia.FitSize(embed.Video.Width, embed.Video.Height), true);
+
+                    return new DiscordChatGif(new DiscordGif
+                    {
+                        Url = embed.Url ?? embed.Video.Url,
+                        Src = embed.Video.Url,
+                        Width = embed.Video.Width ?? 0,
+                        Height = embed.Video.Height ?? 0,
+                        IsVideo = true,
+                    }, gifv);
 
                 case @"image":
                     var image = embed.Thumbnail ?? embed.Image;
