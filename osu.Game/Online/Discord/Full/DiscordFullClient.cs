@@ -175,6 +175,9 @@ namespace osu.Game.Online.Discord.Full
         {
             disposeRemoteAuth();
 
+            // A new fingerprint for every login, as Discord ties the ticket of the second factor to the fingerprint of the login.
+            loginFingerprint = null;
+
             sendPasswordLogin(@"auth/login", new JObject
             {
                 [@"login"] = login,
@@ -220,7 +223,8 @@ namespace osu.Game.Online.Discord.Full
             Error.Value = null;
             PasswordLoginInProgress.Value = true;
 
-            SendRequest(null, HttpMethod.Post, @"auth/mfa/sms/send", new JObject { [@"ticket"] = challenge.Ticket }, CancellationToken.None).ContinueWith(t => Schedule(() =>
+            SendRequest(null, HttpMethod.Post, @"auth/mfa/sms/send", new JObject { [@"ticket"] = challenge.Ticket }, CancellationToken.None, fingerprint: loginFingerprint)
+                .ContinueWith(t => Schedule(() =>
             {
                 PasswordLoginInProgress.Value = false;
 
@@ -239,7 +243,7 @@ namespace osu.Game.Online.Discord.Full
             Error.Value = null;
             PasswordLoginInProgress.Value = true;
 
-            SendRequest(null, HttpMethod.Post, path, body, CancellationToken.None).ContinueWith(t => Schedule(() =>
+            sendWithFingerprint(path, body).ContinueWith(t => Schedule(() =>
             {
                 PasswordLoginInProgress.Value = false;
 
@@ -279,6 +283,29 @@ namespace osu.Game.Online.Discord.Full
 
                 Error.Value = @"Discord didn't accept the login.";
             }));
+        }
+
+        /// <summary>
+        /// The fingerprint of the current login with a password, which Discord's website requests before logging in and sends with every request of the login.
+        /// </summary>
+        private string? loginFingerprint;
+
+        private async Task<JToken> sendWithFingerprint(string path, JObject body)
+        {
+            if (loginFingerprint == null)
+            {
+                try
+                {
+                    var experiments = await SendRequest(null, HttpMethod.Get, @"experiments", null, CancellationToken.None).ConfigureAwait(false);
+                    loginFingerprint = experiments.Value<string>(@"fingerprint");
+                }
+                catch (Exception e)
+                {
+                    Logger.Log($@"Failed to retrieve a Discord fingerprint: {e.Message}", LoggingTarget.Network);
+                }
+            }
+
+            return await SendRequest(null, HttpMethod.Post, path, body, CancellationToken.None, fingerprint: loginFingerprint).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -1725,7 +1752,7 @@ namespace osu.Game.Online.Discord.Full
         /// <param name="cancellation">Cancels the request.</param>
         /// <param name="files">Files which are uploaded along with the body, which is then sent as form data.</param>
         public static async Task<JToken> SendRequest(string? token, HttpMethod method, string path, JToken? body, CancellationToken cancellation,
-                                                     IReadOnlyList<DiscordUpload>? files = null)
+                                                     IReadOnlyList<DiscordUpload>? files = null, string? fingerprint = null)
         {
             for (int attempt = 0;; attempt++)
             {
@@ -1737,6 +1764,9 @@ namespace osu.Game.Online.Discord.Full
                 request.Headers.TryAddWithoutValidation(@"User-Agent", USER_AGENT);
                 request.Headers.TryAddWithoutValidation(@"X-Super-Properties", encoded_super_properties);
                 request.Headers.TryAddWithoutValidation(@"X-Discord-Locale", @"en-US");
+
+                if (!string.IsNullOrEmpty(fingerprint))
+                    request.Headers.TryAddWithoutValidation(@"X-Fingerprint", fingerprint);
 
                 if (files?.Count > 0)
                 {
