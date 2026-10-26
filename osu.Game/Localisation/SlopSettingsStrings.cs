@@ -1843,6 +1843,26 @@ namespace osu.Game.Localisation
         /// </summary>
         public static LocalisableString WebsiteNotSignedIn => new TranslatableString(getKey(@"website_not_signed_in"), @"Not signed into the website");
 
+        /// <summary>
+        /// "Also sign into the website?"
+        /// </summary>
+        public static LocalisableString WebsiteLoginPrompt => new TranslatableString(getKey(@"website_login_prompt"), @"Also sign into the website?");
+
+        /// <summary>
+        /// "Sign in"
+        /// </summary>
+        public static LocalisableString WebsiteLoginPromptConfirm => new TranslatableString(getKey(@"website_login_prompt_confirm"), @"Sign in");
+
+        /// <summary>
+        /// "Not now"
+        /// </summary>
+        public static LocalisableString WebsiteLoginPromptCancel => new TranslatableString(getKey(@"website_login_prompt_cancel"), @"Not now");
+
+        /// <summary>
+        /// "Signing into the website failed: {0}"
+        /// </summary>
+        public static LocalisableString WebsiteLoginFailed(string message) => new TranslatableString(getKey(@"website_login_failed"), @"Signing into the website failed: {0}", message);
+
         private static string getKey(string key) => $"{prefix}:{key}";
     }
 }

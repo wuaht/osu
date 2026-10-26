@@ -389,13 +389,14 @@ namespace osu.Game.Online.API
                     var verificationRequest = new VerifySessionRequest(SecondFactorCode);
 
                     string code = SecondFactorCode;
+                    bool fromEmail = SessionVerificationMethod == Requests.Responses.SessionVerificationMethod.EmailMessage;
 
                     verificationRequest.Success += () =>
                     {
                         state.Value = APIState.Online;
 
                         // the website session may have to be verified as well.
-                        WebSession.Verify(code);
+                        WebSession.Verify(code, fromEmail);
                     };
                     verificationRequest.Failure += ex =>
                     {

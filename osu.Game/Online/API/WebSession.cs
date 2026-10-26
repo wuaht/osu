@@ -258,25 +258,37 @@ namespace osu.Game.Online.API
         }
 
         /// <summary>
+        /// Invoked on the update thread when the website should be signed into in the <see cref="Browser"/>,
+        /// as the game was verified with a code from the email which the website session couldn't be verified with.
+        /// </summary>
+        public event Action? BrowserLoginSuggested;
+
+        /// <summary>
         /// Verifies the session in the background with the code used for verifying the game, for when logging into the game.
         /// This works with the authenticator app, while a code from the email may only belong to the game, in which case the website asks for its own one when it's needed.
         /// </summary>
-        public void Verify(string key) => Task.Run(async () =>
+        /// <param name="key">The code used for verifying the game.</param>
+        /// <param name="fromEmail">Whether the code is from the email, for suggesting to sign into the website in the <see cref="Browser"/> when it's not signed into afterwards.</param>
+        public void Verify(string key, bool fromEmail = false) => Task.Run(async () =>
         {
             try
             {
                 await currentLogin.ConfigureAwait(false);
 
-                if (!isSignedIn)
+                if (isSignedIn)
+                {
+                    await VerifyAsync(key).ConfigureAwait(false);
+                    Logger.Log(@"Verified the website session.", LoggingTarget.Network);
                     return;
-
-                await VerifyAsync(key).ConfigureAwait(false);
-                Logger.Log(@"Verified the website session.", LoggingTarget.Network);
+                }
             }
             catch (Exception e)
             {
                 Logger.Log($@"Verifying the website session failed: {e.Message}", LoggingTarget.Network);
             }
+
+            if (fromEmail && Browser != null)
+                Schedule(() => BrowserLoginSuggested?.Invoke());
         });
 
         private bool isSignedIn
