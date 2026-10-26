@@ -14,11 +14,11 @@ using osu.Game.Graphics;
 using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.Sprites;
 using osu.Game.Graphics.UserInterface;
+using osu.Game.Localisation;
 using osu.Game.Online.API;
 using osu.Game.Overlays.Settings;
 using osu.Game.Resources.Localisation.Web;
 using osuTK;
-using osu.Game.Localisation;
 
 namespace osu.Game.Overlays.Login
 {
@@ -93,6 +93,12 @@ namespace osu.Game.Overlays.Login
                 {
                     LabelText = LoginPanelStrings.StaySignedIn,
                     Current = config.GetBindable<bool>(OsuSetting.SavePassword),
+                },
+                new SettingsCheckbox
+                {
+                    LabelText = SlopSettingsStrings.WebsiteLogin,
+                    TooltipText = SlopSettingsStrings.WebsiteLoginDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopWebsiteLogin),
                 },
                 forgottenPasswordLink = new LinkFlowContainer
                 {

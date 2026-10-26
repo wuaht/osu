@@ -333,6 +333,9 @@ namespace osu.Game
 
             dependencies.CacheAs(API ??= new APIAccess(this, LocalConfig, endpoints, VersionHash));
 
+            if (API is APIAccess apiWithWebSession)
+                dependencies.Cache(apiWithWebSession.WebSession);
+
             var defaultBeatmap = new DummyWorkingBeatmap(Audio, Textures);
 
             dependencies.Cache(difficultyCache = new BeatmapDifficultyCache());

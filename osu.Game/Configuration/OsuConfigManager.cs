@@ -86,7 +86,10 @@ namespace osu.Game.Configuration
                 if (enabled.NewValue)
                     SetValue(OsuSetting.SaveUsername, true);
                 else
+                {
                     GetBindable<string>(OsuSetting.Token).SetDefault();
+                    GetBindable<string>(OsuSetting.SlopWebSession).SetDefault();
+                }
             };
 
             SetDefault(OsuSetting.SaveUsername, true).ValueChanged += enabled =>
@@ -467,6 +470,8 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopDiscordBackgroundOpacity, 0.6f, 0.2f, 1f, 0.01f);
             SetDefault(OsuSetting.SlopDiscordOverlayHeight, 0.5f, 0.2f, 1f, 0.01f);
             SetDefault(OsuSetting.SlopDiscordEmojiUsage, string.Empty);
+            SetDefault(OsuSetting.SlopWebSession, string.Empty);
+            SetDefault(OsuSetting.SlopWebsiteLogin, false);
         }
 
         protected override bool CheckLookupContainsPrivateInformation(OsuSetting lookup)
@@ -477,6 +482,7 @@ namespace osu.Game.Configuration
                 case OsuSetting.SlopBnTrackerToken:
                 case OsuSetting.SlopDiscordRefreshToken:
                 case OsuSetting.SlopDiscordUserToken:
+                case OsuSetting.SlopWebSession:
                     return true;
             }
 
@@ -1712,5 +1718,15 @@ namespace osu.Game.Configuration
         /// How often each emoji was used in the Discord overlay, for the quick reactions.
         /// </summary>
         SlopDiscordEmojiUsage,
+
+        /// <summary>
+        /// The session on the website (cookies and CSRF token), for beatmap discussion actions.
+        /// </summary>
+        SlopWebSession,
+
+        /// <summary>
+        /// Whether logging into the game also signs into the website, for online features which are only available there, such as posting in beatmap discussions.
+        /// </summary>
+        SlopWebsiteLogin,
     }
 }

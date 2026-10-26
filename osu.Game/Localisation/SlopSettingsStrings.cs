@@ -1822,6 +1822,27 @@ namespace osu.Game.Localisation
         /// </summary>
         public static LocalisableString AutomaticUpdatesDisabledNote => new TranslatableString(getKey(@"automatic_updates_disabled_note"), @"Updates are only checked for when using the button below.");
 
+        /// <summary>
+        /// "Also sign into the website"
+        /// </summary>
+        public static LocalisableString WebsiteLogin => new TranslatableString(getKey(@"website_login"), @"Also sign into the website");
+
+        /// <summary>
+        /// "Signs into the website when logging in, for online features which are only available there, such as posting in beatmap discussions."
+        /// </summary>
+        public static LocalisableString WebsiteLoginDescription => new TranslatableString(getKey(@"website_login_description"),
+            @"Signs into the website when logging in, for online features which are only available there, such as posting in beatmap discussions.");
+
+        /// <summary>
+        /// "Sign out of the website ({0})"
+        /// </summary>
+        public static LocalisableString WebsiteSignOut(string username) => new TranslatableString(getKey(@"website_sign_out"), @"Sign out of the website ({0})", username);
+
+        /// <summary>
+        /// "Not signed into the website"
+        /// </summary>
+        public static LocalisableString WebsiteNotSignedIn => new TranslatableString(getKey(@"website_not_signed_in"), @"Not signed into the website");
+
         private static string getKey(string key) => $"{prefix}:{key}";
     }
 }

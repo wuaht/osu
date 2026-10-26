@@ -47,6 +47,8 @@ namespace osu.Game.Screens.Edit.Discussion
         private OsuSpriteText unresolvedCount = null!;
         private LinkFlowContainer guestBy = null!;
         private FillFlowContainer stats = null!;
+        private HeaderButton watchButton = null!;
+        private HeaderButton changeOwnersButton = null!;
 
         private string? displayedCover;
         private bool updatingDropdown;
@@ -123,11 +125,12 @@ namespace osu.Game.Screens.Edit.Discussion
                                         Margin = new MarginPadding { Horizontal = horizontal_padding, Vertical = 15 },
                                         Children = new Drawable[]
                                         {
-                                            new HeaderButton(FontAwesome.Solid.Eye, SlopDiscussionStrings.Watch, () =>
+                                            changeOwnersButton = new HeaderButton(FontAwesome.Solid.UserEdit, SlopDiscussionStrings.ChangeOwnersButton, () =>
                                             {
-                                                if (State != null)
-                                                    Screen.OpenOnWebsite(DiscussionDisplay.DiscussionPageUrl(Screen.WebsiteUrl, State.BeatmapSet.Id));
+                                                if (State?.CurrentBeatmap is DiscussionBeatmap beatmap)
+                                                    Screen.ChangeOwners(beatmap);
                                             }),
+                                            watchButton = new HeaderButton(FontAwesome.Solid.Eye, SlopDiscussionStrings.Watch, () => Screen.ToggleWatch()),
                                             new HeaderButton(FontAwesome.Solid.Info, SlopDiscussionStrings.BeatmapPage, () =>
                                             {
                                                 if (State != null)
@@ -377,6 +380,14 @@ namespace osu.Game.Screens.Edit.Discussion
         protected override void UpdateDisplay(DiscussionsState state)
         {
             var current = state.CurrentBeatmap;
+            var attributes = state.BeatmapSet.CurrentUserAttributes;
+
+            bool watching = attributes?.IsWatching == true;
+            watchButton.Icon = watching ? FontAwesome.Solid.EyeSlash : FontAwesome.Solid.Eye;
+            watchButton.Text = watching ? SlopDiscussionStrings.Unwatch : SlopDiscussionStrings.Watch;
+            watchButton.Alpha = Screen.IsSignedIn ? 1 : 0;
+
+            changeOwnersButton.Alpha = attributes?.CanBeatmapUpdateOwner == true && current != null && current.DeletedAt == null ? 1 : 0;
 
             rulesetTabs.Clear();
 
@@ -403,7 +414,7 @@ namespace osu.Game.Screens.Edit.Discussion
 
             int unresolved = current != null ? state.UnresolvedCountOfBeatmap(current.Id) : 0;
             unresolvedCount.Text = unresolved == 0
-                ? default
+                ? default(LocalisableString)
                 : unresolved == 1
                     ? SlopDiscussionStrings.UnresolvedCountOne(DiscussionDisplay.FormatNumber(unresolved))
                     : SlopDiscussionStrings.UnresolvedCountMany(DiscussionDisplay.FormatNumber(unresolved));
@@ -667,10 +678,34 @@ namespace osu.Game.Screens.Edit.Discussion
 
         private partial class HeaderButton : OsuClickableContainer
         {
-            private readonly IconUsage icon;
-            private readonly LocalisableString text;
+            private IconUsage icon;
+            private LocalisableString text;
 
             private Box background = null!;
+            private SpriteIcon iconSprite = null!;
+            private OsuSpriteText textSprite = null!;
+
+            public IconUsage Icon
+            {
+                set
+                {
+                    icon = value;
+
+                    if (IsLoaded)
+                        iconSprite.Icon = value;
+                }
+            }
+
+            public LocalisableString Text
+            {
+                set
+                {
+                    text = value;
+
+                    if (IsLoaded)
+                        textSprite.Text = value;
+                }
+            }
 
             [Resolved]
             private OverlayColourProvider colourProvider { get; set; } = null!;
@@ -704,14 +739,14 @@ namespace osu.Game.Screens.Edit.Discussion
                         Padding = new MarginPadding { Horizontal = 10, Vertical = 6 },
                         Children = new Drawable[]
                         {
-                            new SpriteIcon
+                            iconSprite = new SpriteIcon
                             {
                                 Anchor = Anchor.CentreLeft,
                                 Origin = Anchor.CentreLeft,
                                 Icon = icon,
                                 Size = new Vector2(12),
                             },
-                            new OsuSpriteText
+                            textSprite = new OsuSpriteText
                             {
                                 Anchor = Anchor.CentreLeft,
                                 Origin = Anchor.CentreLeft,

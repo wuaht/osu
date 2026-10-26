@@ -13,6 +13,7 @@ using osu.Game.Configuration;
 using osu.Game.Database;
 using osu.Game.Graphics.UserInterfaceV2;
 using osu.Game.Localisation;
+using osu.Game.Online.API;
 using osu.Game.Online.BeatmapMirrors;
 using osu.Game.Online.BnTracker;
 using osu.Game.Overlays.Notifications;
@@ -23,7 +24,7 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
     {
         protected override LocalisableString Header => SlopSettingsStrings.OnlineHeader;
 
-        public override IEnumerable<LocalisableString> FilterTerms => base.FilterTerms.Concat(new LocalisableString[] { "mirror", "download", "beatmap", "update", "bn", "nominator", "tracker", "request", "backup" });
+        public override IEnumerable<LocalisableString> FilterTerms => base.FilterTerms.Concat(new LocalisableString[] { "mirror", "download", "beatmap", "update", "bn", "nominator", "tracker", "request", "backup", "website", "session", "cookie", "discussion" });
 
         [Resolved]
         private BeatmapOwnerStore ownerStore { get; set; } = null!;
@@ -33,6 +34,13 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
 
         [Resolved]
         private BnTrackerClient bnTracker { get; set; } = null!;
+
+        [Resolved(canBeNull: true)]
+        private WebSession? webSession { get; set; }
+
+        private SettingsButtonV2 websiteSignOutButton = null!;
+
+        private readonly IBindable<WebSessionState> websiteState = new Bindable<WebSessionState>();
 
         private SettingsButtonV2 clearMappersButton = null!;
         private SettingsButtonV2 bnTrackerSignOutButton = null!;
@@ -62,6 +70,16 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                     HintText = SlopSettingsStrings.BeatmapMirrorDescription,
                     Current = config.GetBindable<BeatmapMirror>(OsuSetting.SlopBeatmapMirror),
                 }),
+                new SettingsItemV2(new FormCheckBox
+                {
+                    Caption = SlopSettingsStrings.WebsiteLogin,
+                    HintText = SlopSettingsStrings.WebsiteLoginDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopWebsiteLogin),
+                }),
+                websiteSignOutButton = new SettingsButtonV2
+                {
+                    Action = () => webSession?.Logout(),
+                },
                 new SettingsItemV2(new FormCheckBox
                 {
                     Caption = SlopSettingsStrings.BackupOnUpdate,
@@ -106,6 +124,11 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
 
             bnTrackerServer.BindValueChanged(s => bnTrackerServerText.Value = s.NewValue, true);
 
+            if (webSession != null)
+                websiteState.BindTo(webSession.State);
+
+            websiteState.BindValueChanged(_ => updateWebsiteAccount(), true);
+
             bnTrackerUser.BindTo(bnTracker.User);
             bnTrackerSignedIn.BindTo(bnTracker.IsSignedIn);
 
@@ -121,6 +144,16 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
         }
 
         private static void logFailure(Task task) => task.ContinueWith(t => Logger.Log($@"BN Tracker request failed: {t.Exception?.GetBaseException().Message}"), TaskContinuationOptions.OnlyOnFaulted);
+
+        private void updateWebsiteAccount()
+        {
+            bool signedIn = websiteState.Value == WebSessionState.LoggedIn;
+
+            websiteSignOutButton.Enabled.Value = signedIn;
+            websiteSignOutButton.Text = signedIn
+                ? SlopSettingsStrings.WebsiteSignOut(webSession?.Username ?? @"?")
+                : SlopSettingsStrings.WebsiteNotSignedIn;
+        }
 
         private void updateBnTrackerAccount()
         {

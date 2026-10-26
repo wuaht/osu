@@ -138,6 +138,24 @@ namespace osu.Game.Screens.Edit.Discussion
 
         [JsonProperty(@"is_watching")]
         public bool IsWatching { get; set; }
+
+        [JsonProperty(@"can_beatmap_update_owner")]
+        public bool CanBeatmapUpdateOwner { get; set; }
+
+        [JsonProperty(@"can_delete")]
+        public bool CanDelete { get; set; }
+
+        /// <summary>
+        /// The rulesets the user can nominate for, e.g. <c>{"osu": "full"}</c>.
+        /// </summary>
+        [JsonProperty(@"nomination_modes")]
+        public JToken? NominationModes { get; set; }
+
+        [JsonProperty(@"remaining_hype")]
+        public int? RemainingHype { get; set; }
+
+        [JsonProperty(@"new_hype_time")]
+        public DateTimeOffset? NewHypeTime { get; set; }
     }
 
     public class DiscussionNominations
@@ -314,6 +332,18 @@ namespace osu.Game.Screens.Edit.Discussion
         /// </summary>
         [JsonProperty(@"vote_score")]
         public int VoteScore { get; set; }
+
+        [JsonProperty(@"can_moderate_kudosu")]
+        public bool CanModerateKudosu { get; set; }
+
+        [JsonProperty(@"can_resolve")]
+        public bool CanResolve { get; set; }
+
+        [JsonProperty(@"can_reopen")]
+        public bool CanReopen { get; set; }
+
+        [JsonProperty(@"can_destroy")]
+        public bool CanDestroy { get; set; }
     }
 
     public class BeatmapDiscussionVotes

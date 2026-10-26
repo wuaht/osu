@@ -18,11 +18,14 @@ using osu.Framework.Platform;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.Sprites;
+using osu.Game.Graphics.UserInterface;
+using osu.Game.Graphics.UserInterfaceV2;
 using osu.Game.Localisation;
 using osu.Game.Overlays;
 using osu.Game.Users.Drawables;
 using osuTK;
 using osuTK.Graphics;
+using WebCommonStrings = osu.Game.Resources.Localisation.Web.CommonStrings;
 
 namespace osu.Game.Screens.Edit.Discussion
 {
@@ -99,19 +102,7 @@ namespace osu.Game.Screens.Edit.Discussion
 
             if (!state.BeatmapSet.DiscussionLocked)
             {
-                replyFlow.Add(new Container
-                {
-                    RelativeSizeAxes = Axes.X,
-                    AutoSizeAxes = Axes.Y,
-                    Padding = new MarginPadding { Horizontal = 20, Vertical = 10 },
-                    Child = new DiscussionTextButton(SlopDiscussionStrings.Respond, FontAwesome.Solid.Reply)
-                    {
-                        Anchor = Anchor.CentreRight,
-                        Origin = Anchor.CentreRight,
-                        TooltipText = SlopDiscussionStrings.OpenOnWebsite,
-                        Action = () => screen.OpenOnWebsite(DiscussionDisplay.DiscussionUrl(screen.WebsiteUrl, Discussion)),
-                    },
-                });
+                replyFlow.Add(new ReplyBox(Discussion));
             }
 
             Masking = true;
@@ -247,26 +238,25 @@ namespace osu.Game.Screens.Edit.Discussion
                 Spacing = new Vector2(15, 0),
             };
 
-            // hype and praise can't be voted on, like on the website.
-            if (Discussion.MessageType != @"hype" && Discussion.MessageType != @"praise" && Discussion.MessageType != @"mapper_note")
-            {
-                right.Add(new VoteButton(state, Discussion, true)
-                {
-                    Anchor = Anchor.CentreLeft,
-                    Origin = Anchor.CentreLeft,
-                    Action = openVote,
-                });
+            // like the website, every discussion can be voted on, except the own one and deleted or locked ones.
+            bool locked = Discussion.DeletedAt != null || (state.BeatmapSet.DiscussionLocked && !screen.IsCurrentUserModerator);
+            bool canVote = screen.IsSignedIn && Discussion.UserId != state.CurrentUserId && !locked;
 
-                if (Discussion.MessageType != @"review" && (Discussion.Votes?.Down ?? 0) > 0)
-                {
-                    right.Add(new VoteButton(state, Discussion, false)
-                    {
-                        Anchor = Anchor.CentreLeft,
-                        Origin = Anchor.CentreLeft,
-                        Action = openVote,
-                    });
-                }
-            }
+            right.Add(new VoteButton(state, Discussion, true)
+            {
+                Anchor = Anchor.CentreLeft,
+                Origin = Anchor.CentreLeft,
+                Action = () => vote(true),
+                Enabled = { Value = canVote },
+            });
+
+            right.Add(new VoteButton(state, Discussion, false)
+            {
+                Anchor = Anchor.CentreLeft,
+                Origin = Anchor.CentreLeft,
+                Action = () => vote(false),
+                Enabled = { Value = canVote },
+            });
 
             right.Add(new OsuClickableContainer
             {
@@ -293,7 +283,16 @@ namespace osu.Game.Screens.Edit.Discussion
             };
         }
 
-        private void openVote() => screen.OpenOnWebsite(DiscussionDisplay.DiscussionUrl(screen.WebsiteUrl, Discussion));
+        private void vote(bool up)
+        {
+            int score = Discussion.CurrentUserAttributes?.VoteScore ?? 0;
+
+            // voting the same way again takes back the vote.
+            if (up)
+                screen.Vote(Discussion, score > 0 ? 0 : 1);
+            else
+                screen.Vote(Discussion, score < 0 ? 0 : -1);
+        }
 
         private void toggleCollapsed()
         {
@@ -367,6 +366,117 @@ namespace osu.Game.Screens.Edit.Discussion
         /// <summary>
         /// The votes of a discussion, with the latest voters as tooltip. Voting is done on the website.
         /// </summary>
+        private partial class ReplyBox : CompositeDrawable
+        {
+            private readonly BeatmapDiscussion discussion;
+
+            private DiscussionTextButton respondButton = null!;
+            private FillFlowContainer form = null!;
+            private DiscussionTextEditor textBox = null!;
+
+            [Resolved]
+            private DiscussionScreen screen { get; set; } = null!;
+
+            public ReplyBox(BeatmapDiscussion discussion)
+            {
+                this.discussion = discussion;
+
+                RelativeSizeAxes = Axes.X;
+                AutoSizeAxes = Axes.Y;
+                Padding = new MarginPadding { Horizontal = 20, Vertical = 10 };
+            }
+
+            [BackgroundDependencyLoader]
+            private void load()
+            {
+                var buttons = new FillFlowContainer
+                {
+                    Anchor = Anchor.TopRight,
+                    Origin = Anchor.TopRight,
+                    AutoSizeAxes = Axes.Both,
+                    Direction = FillDirection.Horizontal,
+                    Spacing = new Vector2(8, 0),
+                    Children = new Drawable[]
+                    {
+                        new RoundedButton
+                        {
+                            Width = 120,
+                            Height = 30,
+                            Text = WebCommonStrings.ButtonsCancel,
+                            Action = () => setExpanded(false),
+                        },
+                    }
+                };
+
+                var attributes = discussion.CurrentUserAttributes;
+
+                // like the website, replying can resolve or reopen the discussion at the same time.
+                if (discussion.CanBeResolved && !discussion.Resolved && attributes?.CanResolve == true)
+                    buttons.Add(createButton(SlopDiscussionStrings.ReplyAndResolve, true));
+                else if (discussion.CanBeResolved && discussion.Resolved && attributes?.CanReopen == true)
+                    buttons.Add(createButton(SlopDiscussionStrings.ReplyAndReopen, false));
+
+                buttons.Add(createButton(SlopDiscussionStrings.Reply, null));
+
+                InternalChildren = new Drawable[]
+                {
+                    respondButton = new DiscussionTextButton(SlopDiscussionStrings.Respond, FontAwesome.Solid.Reply)
+                    {
+                        Anchor = Anchor.CentreRight,
+                        Origin = Anchor.CentreRight,
+                        Action = () => setExpanded(true),
+                    },
+                    form = new FillFlowContainer
+                    {
+                        RelativeSizeAxes = Axes.X,
+                        AutoSizeAxes = Axes.Y,
+                        Direction = FillDirection.Vertical,
+                        Spacing = new Vector2(0, 8),
+                        Alpha = 0,
+                        Children = new Drawable[]
+                        {
+                            textBox = new DiscussionTextEditor(SlopDiscussionStrings.ReplyPlaceholder),
+                            buttons,
+                        }
+                    },
+                };
+
+                textBox.Committed += () => reply(null);
+            }
+
+            private RoundedButton createButton(LocalisableString text, bool? resolved) => new RoundedButton
+            {
+                Width = 150,
+                Height = 30,
+                Text = text,
+                BackgroundColour = DiscussionDisplay.BLUE_DARKER,
+                Action = () => reply(resolved),
+            };
+
+            private void setExpanded(bool expanded)
+            {
+                respondButton.Alpha = expanded ? 0 : 1;
+                form.Alpha = expanded ? 1 : 0;
+
+                if (expanded)
+                    Schedule(textBox.TakeFocus);
+            }
+
+            private void reply(bool? resolved)
+            {
+                string message = textBox.Text.Trim();
+
+                if (message.Length == 0)
+                    return;
+
+                screen.Reply(discussion, message, resolved, () =>
+                {
+                    textBox.Text = string.Empty;
+                    setExpanded(false);
+                });
+            }
+        }
+
         private partial class VoteButton : OsuClickableContainer
         {
             private const int max_voters = 15;
@@ -449,7 +559,8 @@ namespace osu.Game.Screens.Edit.Discussion
             private void updateColour()
             {
                 Color4 colour = voted ? (up ? DiscussionDisplay.GREEN : DiscussionDisplay.RED_1) : colourProvider.Content2;
-                content.FadeColour(IsHovered ? colour.Lighten(0.3f) : colour, 100, Easing.OutQuint);
+                content.FadeColour(IsHovered && Enabled.Value ? colour.Lighten(0.3f) : colour, 100, Easing.OutQuint);
+                content.FadeTo(Enabled.Value || voted ? 1 : 0.5f, 100, Easing.OutQuint);
             }
         }
     }
@@ -707,25 +818,58 @@ namespace osu.Game.Screens.Edit.Discussion
                 permalink.Delay(2000).Schedule(() => permalink.Text = SlopDiscussionStrings.Permalink);
             };
 
-            // own posts can be edited and deleted on the website.
-            if (state.CurrentUserId != null && post.UserId == state.CurrentUserId && post.DeletedAt == null && !state.BeatmapSet.DiscussionLocked)
+            bool isOwnPost = state.CurrentUserId != null && post.UserId == state.CurrentUserId;
+            bool isModerator = screen.IsCurrentUserModerator;
+
+            // like the website, own posts can be edited and deleted, and moderators can do so with every post.
+            if (post.DeletedAt == null && (isModerator || (isOwnPost && !state.BeatmapSet.DiscussionLocked)))
             {
-                string url = DiscussionDisplay.DiscussionUrl(screen.WebsiteUrl, discussion, isStartingPost ? null : post);
+                // reviews are edited as a document, which only the website can do.
+                if (!(isStartingPost && discussion.MessageType == @"review"))
+                {
+                    flow.Add(new DiscussionTextButton(SlopDiscussionStrings.PostEdit, null, 12)
+                    {
+                        Anchor = Anchor.CentreLeft,
+                        Origin = Anchor.CentreLeft,
+                        Action = editPost,
+                    });
+                }
 
-                flow.Add(new DiscussionTextButton(SlopDiscussionStrings.PostEdit, null, 12)
+                // starting posts can only be deleted until the discussion got replies, unless being a moderator.
+                if (!isStartingPost || isModerator || discussion.CurrentUserAttributes?.CanDestroy == true)
+                {
+                    flow.Add(new DiscussionTextButton(SlopDiscussionStrings.PostDelete, null, 12)
+                    {
+                        Anchor = Anchor.CentreLeft,
+                        Origin = Anchor.CentreLeft,
+                        Action = () => screen.DeletePost(discussion, post),
+                    });
+                }
+            }
+
+            if (post.DeletedAt != null && isModerator)
+            {
+                flow.Add(new DiscussionTextButton(SlopDiscussionStrings.PostRestore, null, 12)
                 {
                     Anchor = Anchor.CentreLeft,
                     Origin = Anchor.CentreLeft,
-                    TooltipText = SlopDiscussionStrings.OpenOnWebsite,
-                    Action = () => screen.OpenOnWebsite(url),
+                    Action = () => screen.RestorePost(discussion, post),
                 });
+            }
 
-                flow.Add(new DiscussionTextButton(SlopDiscussionStrings.PostDelete, null, 12)
+            if (isStartingPost && discussion.CanGrantKudosu && discussion.CurrentUserAttributes?.CanModerateKudosu == true)
+            {
+                flow.Add(new DiscussionTextButton(discussion.KudosuDenied ? SlopDiscussionStrings.AllowKudosu : SlopDiscussionStrings.DenyKudosu, null, 12)
                 {
                     Anchor = Anchor.CentreLeft,
                     Origin = Anchor.CentreLeft,
-                    TooltipText = SlopDiscussionStrings.OpenOnWebsite,
-                    Action = () => screen.OpenOnWebsite(url),
+                    Action = () =>
+                    {
+                        if (discussion.KudosuDenied)
+                            screen.AllowKudosu(discussion);
+                        else
+                            screen.DenyKudosu(discussion);
+                    },
                 });
             }
 
@@ -752,6 +896,12 @@ namespace osu.Game.Screens.Edit.Discussion
             });
 
             return flow;
+        }
+
+        private void editPost()
+        {
+            screen.ShowPrompt(new DiscussionTextPrompt(SlopDiscussionStrings.EditTitle, default, SlopDiscussionStrings.ReplyPlaceholder, SlopDiscussionStrings.EditButton,
+                text => screen.RunInPrompt(session => screen.EditPost(session, post, text)), post.MessageText, multiline: true));
         }
 
         private void showDiscussion(int discussionId)

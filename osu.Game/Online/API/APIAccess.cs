@@ -61,6 +61,11 @@ namespace osu.Game.Online.API
 
         private string password;
 
+        /// <summary>
+        /// The session on the website, which is signed into together with the game.
+        /// </summary>
+        public WebSession WebSession { get; }
+
         public IBindable<APIUser> LocalUser => localUserState.User;
 
         public ILocalUserState LocalUserState => localUserState;
@@ -107,6 +112,7 @@ namespace osu.Game.Online.API
             authentication.Token.ValueChanged += onTokenChanged;
 
             AddInternal(localUserState = new LocalUserState(this, config));
+            AddInternal(WebSession = new WebSession(config, endpoints.WebsiteUrl));
 
             if (HasLogin)
             {
@@ -350,6 +356,10 @@ namespace osu.Game.Online.API
                 try
                 {
                     authentication.AuthenticateWithLogin(ProvidedUsername, password);
+
+                    // sign into the website as well when enabled, for everything which can only be done there.
+                    if (!string.IsNullOrEmpty(password) && config.Get<bool>(OsuSetting.SlopWebsiteLogin))
+                        WebSession.Login(ProvidedUsername, password);
                 }
                 catch (WebRequestFlushedException)
                 {
@@ -378,7 +388,15 @@ namespace osu.Game.Online.API
 
                     var verificationRequest = new VerifySessionRequest(SecondFactorCode);
 
-                    verificationRequest.Success += () => state.Value = APIState.Online;
+                    string code = SecondFactorCode;
+
+                    verificationRequest.Success += () =>
+                    {
+                        state.Value = APIState.Online;
+
+                        // the website session may have to be verified as well.
+                        WebSession.Verify(code);
+                    };
                     verificationRequest.Failure += ex =>
                     {
                         state.Value = APIState.RequiresSecondFactorAuth;
@@ -691,6 +709,7 @@ namespace osu.Game.Online.API
             password = null;
             SecondFactorCode = null;
             authentication.Clear();
+            WebSession.Logout();
 
             localUserState.ClearLocalUser();
 

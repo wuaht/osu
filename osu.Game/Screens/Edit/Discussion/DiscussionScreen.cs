@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
@@ -49,6 +50,7 @@ namespace osu.Game.Screens.Edit.Discussion
         private IAPIProvider api { get; set; } = null!;
 
         private readonly IBindable<DiscussionSessionState> sessionState = new Bindable<DiscussionSessionState>();
+        private readonly IBindable<WebSessionState> webSessionState = new Bindable<WebSessionState>();
 
         private OsuScrollContainer scroll = null!;
         private Container mainContent = null!;
@@ -108,6 +110,7 @@ namespace osu.Game.Screens.Edit.Discussion
                     }
                 },
                 stateDisplay = new DiscussionStateDisplay(),
+                promptOverlay = new DiscussionPromptOverlay(),
             };
         }
 
@@ -125,6 +128,18 @@ namespace osu.Game.Screens.Edit.Discussion
             }, true);
 
             session.BeatmapSet.BindValueChanged(b => updateState(b.NewValue), true);
+
+            if (webSession != null)
+            {
+                webSessionState.BindTo(webSession.State);
+
+                // once signed into the website, the discussion is loaded again with what the user is allowed to do in it.
+                webSessionState.BindValueChanged(s =>
+                {
+                    if (s.NewValue == WebSessionState.LoggedIn && session.BeatmapSet.Value != null)
+                        session.Refresh();
+                });
+            }
         }
 
         private void updateState(DiscussionBeatmapSet? beatmapSet)
@@ -208,6 +223,29 @@ namespace osu.Game.Screens.Edit.Discussion
         /// Scrolls to a drawable in the discussion.
         /// </summary>
         public void ScrollIntoView(Drawable drawable) => scroll.ScrollIntoView(drawable, true);
+
+        /// <summary>
+        /// Invoked when the box for posting a new discussion should be focused, with the type of the discussion to post.
+        /// </summary>
+        public event Action<string?>? NewDiscussionRequested;
+
+        /// <summary>
+        /// Focuses the box for posting a new discussion, like the hype and feedback buttons of the website.
+        /// </summary>
+        /// <param name="messageType">The type of the discussion to post, or null to keep the selected one.</param>
+        public void FocusNewDiscussion(string? messageType)
+        {
+            var state = CurrentState.Value;
+
+            if (state == null)
+                return;
+
+            // hypes are only about all difficulties, and neither events nor reviews have the box.
+            if (messageType == @"hype" || state.View.Page is DiscussionPage.Events or DiscussionPage.Reviews)
+                state.ChangeDiscussionPage(DiscussionPage.GeneralAll);
+
+            NewDiscussionRequested?.Invoke(messageType);
+        }
 
         /// <summary>
         /// Opens a page of the website, for everything which can only be done there.

@@ -30,6 +30,7 @@ namespace osu.Game.Screens.Edit.Discussion
     {
         private FillFlowContainer progress = null!;
         private FillFlowContainer messages = null!;
+        private FillFlowContainer actions = null!;
 
         [BackgroundDependencyLoader]
         private void load()
@@ -59,6 +60,13 @@ namespace osu.Game.Screens.Edit.Discussion
                             AutoSizeAxes = Axes.Y,
                             Direction = FillDirection.Vertical,
                             Spacing = new Vector2(0, 6),
+                        },
+                        actions = new FillFlowContainer
+                        {
+                            RelativeSizeAxes = Axes.X,
+                            AutoSizeAxes = Axes.Y,
+                            Direction = FillDirection.Full,
+                            Spacing = new Vector2(8),
                         },
                     }
                 }
@@ -132,7 +140,12 @@ namespace osu.Game.Screens.Edit.Discussion
             addMessages(state);
 
             messages.Alpha = messages.Count > 0 ? 1 : 0;
-            Alpha = showProgress || messages.Count > 0 ? 1 : 0;
+
+            actions.Clear();
+            addActions(state);
+            actions.Alpha = actions.Count > 0 ? 1 : 0;
+
+            Alpha = showProgress || messages.Count > 0 || actions.Count > 0 ? 1 : 0;
         }
 
         private Drawable createHype(DiscussionsState state)
@@ -165,15 +178,16 @@ namespace osu.Game.Screens.Edit.Discussion
                                 Height = 30,
                                 Text = hyped ? SlopDiscussionStrings.HypeButtonDone : SlopDiscussionStrings.HypeButton,
                                 BackgroundColour = DiscussionDisplay.PINK_DARKER,
-                                Enabled = { Value = !hyped },
-                                Action = () => Screen.OpenOnWebsite(DiscussionDisplay.DiscussionPageUrl(Screen.WebsiteUrl, state.BeatmapSet.Id)),
+                                Enabled = { Value = !hyped && state.BeatmapSet.CurrentUserAttributes?.CanHype != false },
+                                TooltipText = state.BeatmapSet.CurrentUserAttributes?.CanHypeReason ?? default(LocalisableString),
+                                Action = () => Screen.FocusNewDiscussion(@"hype"),
                             },
                             new RoundedButton
                             {
                                 Width = 170,
                                 Height = 30,
                                 Text = SlopDiscussionStrings.LeaveFeedback,
-                                Action = () => Screen.OpenOnWebsite(DiscussionDisplay.DiscussionPageUrl(Screen.WebsiteUrl, state.BeatmapSet.Id)),
+                                Action = () => Screen.FocusNewDiscussion(null),
                             },
                         }
                     },
@@ -341,6 +355,63 @@ namespace osu.Game.Screens.Edit.Discussion
 
                 addMessage(SlopDiscussionStrings.DiscussionLocked(reason), FontAwesome.Solid.Lock, DiscussionDisplay.ORANGE_1);
             }
+        }
+
+        /// <summary>
+        /// The buttons of the website for nominators, moderators and the mapper.
+        /// </summary>
+        private void addActions(DiscussionsState state)
+        {
+            var beatmapSet = state.BeatmapSet;
+            var attributes = beatmapSet.CurrentUserAttributes;
+
+            if (beatmapSet.DeletedAt != null)
+                return;
+
+            if (beatmapSet.Status == @"pending" && Screen.IsCurrentUserNominator)
+            {
+                bool nominated = beatmapSet.Nominations?.Nominated == true;
+                bool ownMap = state.CurrentUserId == beatmapSet.UserId;
+
+                if (!nominated && !ownMap)
+                    addAction(SlopDiscussionStrings.NominateButton, DiscussionDisplay.BLUE_DARKER, () => Screen.Nominate(), state.FirstUnresolvedDiscussion == null);
+
+                if (state.NominationsCurrent > 0)
+                    addAction(SlopDiscussionStrings.ResetNominationsButton, DiscussionDisplay.YELLOW_DARKER, () => Screen.FocusNewDiscussion(@"problem"));
+            }
+
+            if (beatmapSet.Status == @"qualified" && Screen.IsCurrentUserModerator)
+                addAction(SlopDiscussionStrings.DisqualifyButton, DiscussionDisplay.RED_3, () => Screen.FocusNewDiscussion(@"problem"));
+
+            if (attributes?.CanLove == true)
+                addAction(SlopDiscussionStrings.LoveButton, DiscussionDisplay.PINK_DARKER, () => Screen.Love());
+
+            if (attributes?.CanRemoveFromLoved == true)
+                addAction(SlopDiscussionStrings.RemoveFromLovedButton, DiscussionDisplay.PINK_DARKER, () => Screen.RemoveFromLoved());
+
+            if (Screen.IsCurrentUserModerator)
+            {
+                if (beatmapSet.DiscussionLocked)
+                    addAction(SlopDiscussionStrings.UnlockButton, DiscussionDisplay.ORANGE_3, () => Screen.UnlockDiscussion());
+                else
+                    addAction(SlopDiscussionStrings.LockButton, DiscussionDisplay.ORANGE_3, () => Screen.LockDiscussion());
+            }
+
+            if (attributes?.CanDelete == true)
+                addAction(SlopDiscussionStrings.DeleteBeatmapSetButton, DiscussionDisplay.RED_3, () => Screen.DeleteBeatmapSet());
+        }
+
+        private void addAction(LocalisableString text, Color4 colour, Action action, bool enabled = true)
+        {
+            actions.Add(new RoundedButton
+            {
+                Width = 170,
+                Height = 30,
+                Text = text,
+                BackgroundColour = colour,
+                Enabled = { Value = enabled },
+                Action = action,
+            });
         }
 
         private void addResetMessage(DiscussionsState state, DiscussionNominations nominations)

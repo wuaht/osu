@@ -665,6 +665,381 @@ namespace osu.Game.Localisation
         public static LocalisableString PostOnWebsite => new TranslatableString(getKey(@"post_on_website"), @"Post on website");
 
         /// <summary>
+        /// "Please enter something."
+        /// </summary>
+        public static LocalisableString PromptEmpty => new TranslatableString(getKey(@"prompt_empty"), @"Please enter something.");
+
+        /// <summary>
+        /// "Please select at least one."
+        /// </summary>
+        public static LocalisableString PromptNothingSelected => new TranslatableString(getKey(@"prompt_nothing_selected"), @"Please select at least one.");
+
+        /// <summary>
+        /// "This isn't available here."
+        /// </summary>
+        public static LocalisableString ActionUnavailable => new TranslatableString(getKey(@"action_unavailable"), @"This isn't available here.");
+
+        /// <summary>
+        /// "The action failed: {0}"
+        /// </summary>
+        public static TranslatableString ActionFailed(string message) => new TranslatableString(getKey(@"action_failed"), @"The action failed: {0}", message);
+
+        /// <summary>
+        /// "The website session has to be verified first."
+        /// </summary>
+        public static LocalisableString VerificationRequired => new TranslatableString(getKey(@"verification_required"), @"The website session has to be verified first.");
+
+        /// <summary>
+        /// "You have to sign into the website first."
+        /// </summary>
+        public static LocalisableString LoginRequired => new TranslatableString(getKey(@"login_required"), @"You have to sign into the website first.");
+
+        /// <summary>
+        /// "Sign into the website"
+        /// </summary>
+        public static LocalisableString LoginTitle => new TranslatableString(getKey(@"login_title"), @"Sign into the website");
+
+        /// <summary>
+        /// "Posting and everything else in the discussion is done on the website, which needs its own session. Your password is only sent to the website."
+        /// </summary>
+        public static LocalisableString LoginDescription => new TranslatableString(getKey(@"login_description"), @"Posting and everything else in the discussion is done on the website, which needs its own session. Your password is only sent to the website.");
+
+        /// <summary>
+        /// "Username"
+        /// </summary>
+        public static LocalisableString LoginUsername => new TranslatableString(getKey(@"login_username"), @"Username");
+
+        /// <summary>
+        /// "Password"
+        /// </summary>
+        public static LocalisableString LoginPassword => new TranslatableString(getKey(@"login_password"), @"Password");
+
+        /// <summary>
+        /// "Sign in"
+        /// </summary>
+        public static LocalisableString LoginButton => new TranslatableString(getKey(@"login_button"), @"Sign in");
+
+        /// <summary>
+        /// "Verify the website session"
+        /// </summary>
+        public static LocalisableString VerificationTitle => new TranslatableString(getKey(@"verification_title"), @"Verify the website session");
+
+        /// <summary>
+        /// "The website sent a verification code to your email address. Enter it to verify this session."
+        /// </summary>
+        public static LocalisableString VerificationDescription => new TranslatableString(getKey(@"verification_description"), @"The website sent a verification code to your email address. Enter it to verify this session.");
+
+        /// <summary>
+        /// "Verification code"
+        /// </summary>
+        public static LocalisableString VerificationPlaceholder => new TranslatableString(getKey(@"verification_placeholder"), @"Verification code");
+
+        /// <summary>
+        /// "Send a new code"
+        /// </summary>
+        public static LocalisableString VerificationResend => new TranslatableString(getKey(@"verification_resend"), @"Send a new code");
+
+        /// <summary>
+        /// "Verify"
+        /// </summary>
+        public static LocalisableString VerificationButton => new TranslatableString(getKey(@"verification_button"), @"Verify");
+
+        /// <summary>
+        /// "Hype this beatmap? You have {0} hypes left."
+        /// </summary>
+        public static TranslatableString HypeConfirm(int remaining) => new TranslatableString(getKey(@"hype_confirm"), @"Hype this beatmap? You have {0} hypes left.", remaining);
+
+        /// <summary>
+        /// "Posting this problem will disqualify the beatmap. Continue?"
+        /// </summary>
+        public static LocalisableString DisqualifyConfirm => new TranslatableString(getKey(@"disqualify_confirm"), @"Posting this problem will disqualify the beatmap. Continue?");
+
+        /// <summary>
+        /// "Posting this problem will reset the nominations. Continue?"
+        /// </summary>
+        public static LocalisableString NominationResetConfirm => new TranslatableString(getKey(@"nomination_reset_confirm"), @"Posting this problem will reset the nominations. Continue?");
+
+        /// <summary>
+        /// "Delete this discussion?"
+        /// </summary>
+        public static LocalisableString DeleteDiscussionConfirm => new TranslatableString(getKey(@"delete_discussion_confirm"), @"Delete this discussion?");
+
+        /// <summary>
+        /// "Delete this reply?"
+        /// </summary>
+        public static LocalisableString DeletePostConfirm => new TranslatableString(getKey(@"delete_post_confirm"), @"Delete this reply?");
+
+        /// <summary>
+        /// "Allow this discussion to receive kudosu?"
+        /// </summary>
+        public static LocalisableString AllowKudosuConfirm => new TranslatableString(getKey(@"allow_kudosu_confirm"), @"Allow this discussion to receive kudosu?");
+
+        /// <summary>
+        /// "Deny this discussion from receiving kudosu?"
+        /// </summary>
+        public static LocalisableString DenyKudosuConfirm => new TranslatableString(getKey(@"deny_kudosu_confirm"), @"Deny this discussion from receiving kudosu?");
+
+        /// <summary>
+        /// "Unlock the discussion?"
+        /// </summary>
+        public static LocalisableString UnlockConfirm => new TranslatableString(getKey(@"unlock_confirm"), @"Unlock the discussion?");
+
+        /// <summary>
+        /// "Delete this beatmap? This can't be undone."
+        /// </summary>
+        public static LocalisableString DeleteBeatmapSetConfirm => new TranslatableString(getKey(@"delete_beatmap_set_confirm"), @"Delete this beatmap? This can't be undone.");
+
+        /// <summary>
+        /// "Nominate this beatmap?"
+        /// </summary>
+        public static LocalisableString NominateConfirm => new TranslatableString(getKey(@"nominate_confirm"), @"Nominate this beatmap?");
+
+        /// <summary>
+        /// "Nominate"
+        /// </summary>
+        public static LocalisableString NominateTitle => new TranslatableString(getKey(@"nominate_title"), @"Nominate");
+
+        /// <summary>
+        /// "Select the rulesets to nominate for."
+        /// </summary>
+        public static LocalisableString NominateDescription => new TranslatableString(getKey(@"nominate_description"), @"Select the rulesets to nominate for.");
+
+        /// <summary>
+        /// "Nominate"
+        /// </summary>
+        public static LocalisableString NominateButton => new TranslatableString(getKey(@"nominate_button"), @"Nominate");
+
+        /// <summary>
+        /// "Reset nominations"
+        /// </summary>
+        public static LocalisableString ResetNominationsButton => new TranslatableString(getKey(@"reset_nominations_button"), @"Reset nominations");
+
+        /// <summary>
+        /// "Disqualify"
+        /// </summary>
+        public static LocalisableString DisqualifyButton => new TranslatableString(getKey(@"disqualify_button"), @"Disqualify");
+
+        /// <summary>
+        /// "Love"
+        /// </summary>
+        public static LocalisableString LoveTitle => new TranslatableString(getKey(@"love_title"), @"Love");
+
+        /// <summary>
+        /// "Select the difficulties to love."
+        /// </summary>
+        public static LocalisableString LoveDescription => new TranslatableString(getKey(@"love_description"), @"Select the difficulties to love.");
+
+        /// <summary>
+        /// "Love"
+        /// </summary>
+        public static LocalisableString LoveButton => new TranslatableString(getKey(@"love_button"), @"Love");
+
+        /// <summary>
+        /// "Remove from Loved"
+        /// </summary>
+        public static LocalisableString RemoveFromLovedTitle => new TranslatableString(getKey(@"remove_from_loved_title"), @"Remove from Loved");
+
+        /// <summary>
+        /// "Enter why the beatmap is removed from Loved."
+        /// </summary>
+        public static LocalisableString RemoveFromLovedDescription => new TranslatableString(getKey(@"remove_from_loved_description"), @"Enter why the beatmap is removed from Loved.");
+
+        /// <summary>
+        /// "Remove from Loved"
+        /// </summary>
+        public static LocalisableString RemoveFromLovedButton => new TranslatableString(getKey(@"remove_from_loved_button"), @"Remove from Loved");
+
+        /// <summary>
+        /// "Reason"
+        /// </summary>
+        public static LocalisableString ReasonPlaceholder => new TranslatableString(getKey(@"reason_placeholder"), @"Reason");
+
+        /// <summary>
+        /// "Lock discussion"
+        /// </summary>
+        public static LocalisableString LockTitle => new TranslatableString(getKey(@"lock_title"), @"Lock discussion");
+
+        /// <summary>
+        /// "Enter why the discussion is locked."
+        /// </summary>
+        public static LocalisableString LockDescription => new TranslatableString(getKey(@"lock_description"), @"Enter why the discussion is locked.");
+
+        /// <summary>
+        /// "Lock discussion"
+        /// </summary>
+        public static LocalisableString LockButton => new TranslatableString(getKey(@"lock_button"), @"Lock discussion");
+
+        /// <summary>
+        /// "Unlock discussion"
+        /// </summary>
+        public static LocalisableString UnlockButton => new TranslatableString(getKey(@"unlock_button"), @"Unlock discussion");
+
+        /// <summary>
+        /// "Delete"
+        /// </summary>
+        public static LocalisableString DeleteBeatmapSetButton => new TranslatableString(getKey(@"delete_beatmap_set_button"), @"Delete");
+
+        /// <summary>
+        /// "Change the mappers of {0}"
+        /// </summary>
+        public static TranslatableString ChangeOwnersTitle(string version) => new TranslatableString(getKey(@"change_owners_title"), @"Change the mappers of {0}", version);
+
+        /// <summary>
+        /// "Enter the usernames of the mappers, separated by commas."
+        /// </summary>
+        public static LocalisableString ChangeOwnersDescription => new TranslatableString(getKey(@"change_owners_description"), @"Enter the usernames of the mappers, separated by commas.");
+
+        /// <summary>
+        /// "Usernames"
+        /// </summary>
+        public static LocalisableString ChangeOwnersPlaceholder => new TranslatableString(getKey(@"change_owners_placeholder"), @"Usernames");
+
+        /// <summary>
+        /// "Save"
+        /// </summary>
+        public static LocalisableString ChangeOwnersButton => new TranslatableString(getKey(@"change_owners_button"), @"Save");
+
+        /// <summary>
+        /// "There is no user named "{0}"."
+        /// </summary>
+        public static TranslatableString UserNotFound(string name) => new TranslatableString(getKey(@"user_not_found"), @"There is no user named ""{0}"".", name);
+
+        /// <summary>
+        /// "Type here to post..."
+        /// </summary>
+        public static LocalisableString ComposerPlaceholder => new TranslatableString(getKey(@"composer_placeholder"), @"Type here to post...");
+
+        /// <summary>
+        /// "Post"
+        /// </summary>
+        public static LocalisableString ComposerPost => new TranslatableString(getKey(@"composer_post"), @"Post");
+
+        /// <summary>
+        /// "Start the message with a timestamp, or the current time of the editor is used."
+        /// </summary>
+        public static LocalisableString ComposerTimestampHint => new TranslatableString(getKey(@"composer_timestamp_hint"), @"Start the message with a timestamp, or the current time of the editor is used.");
+
+        /// <summary>
+        /// "Write a review of paragraphs and discussions. Discussions starting with a timestamp are about the current difficulty."
+        /// </summary>
+        public static LocalisableString ReviewHint => new TranslatableString(getKey(@"review_hint"), @"Write a review of paragraphs and discussions. Discussions starting with a timestamp are about the current difficulty.");
+
+        /// <summary>
+        /// "Paragraph"
+        /// </summary>
+        public static LocalisableString ReviewAddParagraph => new TranslatableString(getKey(@"review_add_paragraph"), @"Paragraph");
+
+        /// <summary>
+        /// "Paragraph..."
+        /// </summary>
+        public static LocalisableString ReviewParagraphPlaceholder => new TranslatableString(getKey(@"review_paragraph_placeholder"), @"Paragraph...");
+
+        /// <summary>
+        /// "Discussion..."
+        /// </summary>
+        public static LocalisableString ReviewEmbedPlaceholder => new TranslatableString(getKey(@"review_embed_placeholder"), @"Discussion...");
+
+        /// <summary>
+        /// "Post review"
+        /// </summary>
+        public static LocalisableString ReviewPost => new TranslatableString(getKey(@"review_post"), @"Post review");
+
+        /// <summary>
+        /// "Reply"
+        /// </summary>
+        public static LocalisableString Reply => new TranslatableString(getKey(@"reply"), @"Reply");
+
+        /// <summary>
+        /// "Reply and resolve"
+        /// </summary>
+        public static LocalisableString ReplyAndResolve => new TranslatableString(getKey(@"reply_and_resolve"), @"Reply and resolve");
+
+        /// <summary>
+        /// "Reply and reopen"
+        /// </summary>
+        public static LocalisableString ReplyAndReopen => new TranslatableString(getKey(@"reply_and_reopen"), @"Reply and reopen");
+
+        /// <summary>
+        /// "Type your response here"
+        /// </summary>
+        public static LocalisableString ReplyPlaceholder => new TranslatableString(getKey(@"reply_placeholder"), @"Type your response here");
+
+        /// <summary>
+        /// "restore"
+        /// </summary>
+        public static LocalisableString PostRestore => new TranslatableString(getKey(@"post_restore"), @"restore");
+
+        /// <summary>
+        /// "allow kudosu"
+        /// </summary>
+        public static LocalisableString AllowKudosu => new TranslatableString(getKey(@"allow_kudosu"), @"allow kudosu");
+
+        /// <summary>
+        /// "deny kudosu"
+        /// </summary>
+        public static LocalisableString DenyKudosu => new TranslatableString(getKey(@"deny_kudosu"), @"deny kudosu");
+
+        /// <summary>
+        /// "Edit post"
+        /// </summary>
+        public static LocalisableString EditTitle => new TranslatableString(getKey(@"edit_title"), @"Edit post");
+
+        /// <summary>
+        /// "Save"
+        /// </summary>
+        public static LocalisableString EditButton => new TranslatableString(getKey(@"edit_button"), @"Save");
+
+        /// <summary>
+        /// "Bold (Ctrl+B)"
+        /// </summary>
+        public static LocalisableString FormatBold => new TranslatableString(getKey(@"format_bold"), @"Bold (Ctrl+B)");
+
+        /// <summary>
+        /// "Italic (Ctrl+I)"
+        /// </summary>
+        public static LocalisableString FormatItalic => new TranslatableString(getKey(@"format_italic"), @"Italic (Ctrl+I)");
+
+        /// <summary>
+        /// "Link (Ctrl+K)"
+        /// </summary>
+        public static LocalisableString FormatLink => new TranslatableString(getKey(@"format_link"), @"Link (Ctrl+K)");
+
+        /// <summary>
+        /// "List"
+        /// </summary>
+        public static LocalisableString FormatList => new TranslatableString(getKey(@"format_list"), @"List");
+
+        /// <summary>
+        /// "Quote"
+        /// </summary>
+        public static LocalisableString FormatQuote => new TranslatableString(getKey(@"format_quote"), @"Quote");
+
+        /// <summary>
+        /// "Code"
+        /// </summary>
+        public static LocalisableString FormatCode => new TranslatableString(getKey(@"format_code"), @"Code");
+
+        /// <summary>
+        /// "Insert the current time of the editor"
+        /// </summary>
+        public static LocalisableString FormatTimestamp => new TranslatableString(getKey(@"format_timestamp"), @"Insert the current time of the editor");
+
+        /// <summary>
+        /// "Markdown is supported. Ctrl+Enter to post."
+        /// </summary>
+        public static LocalisableString FormatHint => new TranslatableString(getKey(@"format_hint"), @"Markdown is supported. Ctrl+Enter to post.");
+
+        /// <summary>
+        /// "Sign into the website to post, vote and reply."
+        /// </summary>
+        public static LocalisableString SignInHint => new TranslatableString(getKey(@"sign_in_hint"), @"Sign into the website to post, vote and reply.");
+
+        /// <summary>
+        /// "Sign in"
+        /// </summary>
+        public static LocalisableString SignInButton => new TranslatableString(getKey(@"sign_in_button"), @"Sign in");
+
+        /// <summary>
         /// The text of a beatmap set event of the given type, with named placeholders (e.g. "{user}") for the parts which are linked.
         /// </summary>
         public static TranslatableString Event(string type) => type switch

@@ -63,6 +63,9 @@ namespace osu.Game.Screens.Edit.Discussion
         [Resolved]
         private Editor? editor { get; set; }
 
+        [Resolved(canBeNull: true)]
+        private WebSession? webSession { get; set; }
+
         /// <summary>
         /// Incremented whenever the beatmap set is loaded again, such that results of earlier loads are dropped.
         /// </summary>
@@ -137,6 +140,17 @@ namespace osu.Game.Screens.Edit.Discussion
             load(true);
         }
 
+        /// <summary>
+        /// Loads the discussion again right away, even while it's being loaded, such as after something was changed in it.
+        /// </summary>
+        public void RefreshNow()
+        {
+            if (BeatmapSet.Value == null)
+                Reload();
+            else
+                load(true);
+        }
+
         private void load(bool isRefresh)
         {
             int currentGeneration = ++generation;
@@ -156,11 +170,21 @@ namespace osu.Game.Screens.Edit.Discussion
             {
                 try
                 {
-                    string json = await getString($@"{api.Endpoints.WebsiteUrl}/beatmapsets/{id}/discussion", token).ConfigureAwait(false);
+                    bool withinSession = webSession?.IsLoggedIn == true;
+                    string json = await getString($@"/beatmapsets/{id}/discussion", token).ConfigureAwait(false);
                     var response = JsonConvert.DeserializeObject<DiscussionResponse>(json);
 
                     if (response?.BeatmapSet == null)
                         throw new InvalidOperationException(@"The discussion has no beatmap set.");
+
+                    // without the website session, the website only tells what a guest is allowed to do, which isn't what the user is allowed to do.
+                    if (!withinSession || webSession?.IsLoggedIn != true)
+                    {
+                        response.BeatmapSet.CurrentUserAttributes = null;
+
+                        foreach (var discussion in response.BeatmapSet.Discussions)
+                            discussion.CurrentUserAttributes = null;
+                    }
 
                     Schedule(() =>
                     {
@@ -236,7 +260,7 @@ namespace osu.Game.Screens.Edit.Discussion
 
                 try
                 {
-                    string json = await getString($@"{api.Endpoints.WebsiteUrl}/beatmapsets/{id}/discussion-last-update", token).ConfigureAwait(false);
+                    string json = await getString($@"/beatmapsets/{id}/discussion-last-update", token).ConfigureAwait(false);
                     lastUpdate = JsonConvert.DeserializeObject<LastUpdateResponse>(json)?.LastUpdate;
                 }
                 catch (Exception e)
@@ -274,9 +298,22 @@ namespace osu.Game.Screens.Edit.Discussion
             return times.Max();
         }
 
-        private static async Task<string> getString(string url, CancellationToken token)
+        private async Task<string> getString(string path, CancellationToken token)
         {
-            using var request = new OsuWebRequest(url)
+            // within the session, the discussion carries what the user is allowed to do in it.
+            if (webSession?.IsLoggedIn == true)
+            {
+                try
+                {
+                    return await webSession.SendAsync(HttpMethod.Get, path, null, token).ConfigureAwait(false);
+                }
+                catch (WebSessionException e)
+                {
+                    Logger.Log($@"Loading {path} within the website session failed, loading it without: {e.Message}", LoggingTarget.Network);
+                }
+            }
+
+            using var request = new OsuWebRequest(api.Endpoints.WebsiteUrl + path)
             {
                 Method = HttpMethod.Get,
                 Timeout = request_timeout,

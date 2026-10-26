@@ -20,6 +20,7 @@ using osu.Framework.Allocation;
 using osu.Game.Configuration;
 using osu.Game.IO;
 using osu.Game.IPC;
+using osu.Game.Online.API;
 using osu.Game.Performance;
 using osu.Game.Utils;
 using osu.Game.MapsetVerifier.UI;
@@ -152,6 +153,9 @@ namespace osu.Desktop
             {
                 case RuntimeInfo.Platform.Windows:
                     LoadComponentAsync(new GameplayWinKeyBlocker(), Add);
+
+                    if (OperatingSystem.IsWindows() && API is APIAccess apiAccess)
+                        apiAccess.WebSession.Browser = new WebView2SessionBrowser(Storage.GetFullPath(@"webview", true));
                     break;
 
                 case RuntimeInfo.Platform.macOS when !IsPackageManaged && IsDeployedBuild:
