@@ -93,4 +93,5 @@ upstream ([they don't accept AI](https://github.com/ppy/osu/blob/master/README.m
 - [Mapping Tools](https://github.com/olibomby/mapping_tools) <img width="17" alt="Mapping Tools" src="assets/credit-mt.png">
 - [osucad](https://github.com/minetoblend/osucad) <img width="17" alt="osucad" src="assets/credit-osucad.png"> & his [osu! fork](https://github.com/minetoblend/osu)
 - [Slider Painter](https://osu.ppy.sh/community/forums/topics/1842546)
+- [Timing Analyzer](https://osu.ppy.sh/users/126198)
 - claude
