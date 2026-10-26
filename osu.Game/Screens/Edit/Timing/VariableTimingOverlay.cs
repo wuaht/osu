@@ -28,6 +28,7 @@ namespace osu.Game.Screens.Edit.Timing
 {
     /// <summary>
     /// Allows placing, moving and removing timing points on the timeline of the timing screen while holding Ctrl,
+    /// either onto a tick between two beats, keeping the tempo, or onto a beat,
     /// recalculating the BPMs of the surrounding timing points such that they stay on whole beats.
     /// Holding the right mouse button previews the audio at the cursor.
     /// </summary>
@@ -75,6 +76,9 @@ namespace osu.Game.Screens.Edit.Timing
 
         [Resolved]
         private EditorClock editorClock { get; set; } = null!;
+
+        [Resolved]
+        private BindableBeatDivisor beatDivisor { get; set; } = null!;
 
         [Resolved]
         private BeatmapManager beatmapManager { get; set; } = null!;
@@ -332,6 +336,8 @@ namespace osu.Game.Screens.Edit.Timing
 
             if (hoveredPoint != null)
                 showHover(hoveredPoint);
+            else if (findDivisionTick(cursorTime) is var (tickTime, point))
+                showDivisionPlacement(tickTime, point);
             else
             {
                 var (preview, snapped) = calculatePlacement(cursorTime);
@@ -339,6 +345,88 @@ namespace osu.Game.Screens.Edit.Timing
             }
         }
 
+        /// <summary>
+        /// How far from the cursor a tick between the beats is snapped to, in pixels.
+        /// </summary>
+        private const float division_snap_distance = 6;
+
+        /// <summary>
+        /// Finds a tick of the beat divisor between two beats close to the cursor, unless Shift is held.
+        /// A timing point can be placed onto such a tick without changing any tempo (see <see cref="placeOnDivisionTick"/>), whereas placing one on a beat refits the tempo.
+        /// </summary>
+        /// <returns>The time of the tick and the timing point it belongs to.</returns>
+        private (double time, TimingControlPoint point)? findDivisionTick(double cursorTime)
+        {
+            int divisor = beatDivisor.Value;
+
+            if (shiftPressed || divisor <= 1)
+                return null;
+
+            var point = VariableTiming.TimingPointBefore(beatmap.ControlPointInfo, cursorTime);
+
+            if (point == null)
+                return null;
+
+            double tickLength = point.BeatLength / divisor;
+            long tick = (long)Math.Round((cursorTime - point.Time) / tickLength);
+
+            if (tick <= 0 || tick % divisor == 0)
+                return null;
+
+            double time = point.Time + tick * tickLength;
+
+            // the tick may lie past the next timing point, which starts its own grid.
+            if (beatmap.ControlPointInfo.TimingPointAfter(point.Time) is TimingControlPoint next && time >= next.Time - 0.5)
+                return null;
+
+            if (Math.Abs(time - cursorTime) > division_snap_distance * millisecondsPerPixel)
+                return null;
+
+            return (time, point);
+        }
+
+        private void showDivisionPlacement(double time, TimingControlPoint point)
+        {
+            showCursorLine(time, colours.Yellow);
+            showPointLine(time);
+
+            int divisor = beatDivisor.Value;
+            long tick = (long)Math.Round((time - point.Time) / (point.BeatLength / divisor));
+            int gcd = (int)greatestCommonDivisor(tick % divisor, divisor);
+
+            titleText.Text = $"New timing point on this {tick % divisor / gcd}/{divisor / gcd} beat: {bpm(point.BeatLength)} (hold Shift to disable)";
+            detailText.Text = "The tempo stays the same, the bars start anew from here";
+            warningText.Text = string.Empty;
+
+            showBeatLines(new List<(double start, double end, double beatLength, int meter)>
+            {
+                (point.Time, time, point.BeatLength, point.TimeSignature.Numerator),
+                (time, beatmap.ControlPointInfo.TimingPointAfter(time)?.Time ?? double.PositiveInfinity, point.BeatLength, point.TimeSignature.Numerator),
+            });
+            showLabel(time);
+
+            static long greatestCommonDivisor(long a, long b) => b == 0 ? a : greatestCommonDivisor(b, a % b);
+        }
+
+        /// <summary>
+        /// Places a timing point onto a tick between two beats, continuing the tempo of <paramref name="point"/>.
+        /// As no tempo changes, the hit objects keep their times.
+        /// </summary>
+        private void placeOnDivisionTick(double time, TimingControlPoint point)
+        {
+            beatmap.BeginChange();
+
+            var group = beatmap.ControlPointInfo.GroupAt(time, true);
+
+            group.Add(new TimingControlPoint
+            {
+                BeatLength = point.BeatLength,
+                TimeSignature = point.TimeSignature,
+            });
+
+            beatmap.EndChange();
+            selectedGroup.Value = group;
+        }
         private Func<double, double, double?>? estimateBeatLength => analyser?.Envelope != null ? analyser.Envelope.EstimateBeatLength : null;
 
         private void showPlacement(VariableTiming.PlacementPreview preview, bool snapped)
@@ -579,6 +667,12 @@ namespace osu.Game.Screens.Edit.Timing
             {
                 case MouseButton.Left:
                     VariableTiming.PlacementPreview? placement = null;
+
+                    if (point == null && findDivisionTick(cursorTime) is var (tickTime, tickPoint))
+                    {
+                        placeOnDivisionTick(tickTime, tickPoint);
+                        return true;
+                    }
 
                     if (point == null)
                     {
