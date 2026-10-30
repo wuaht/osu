@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using osu.Framework.Localisation;
+using osu.Game.Graphics.Containers.BBCode;
 using osu.Game.Resources.Localisation.Web;
 
 namespace osu.Game.Overlays.Profile.Sections
@@ -11,5 +12,20 @@ namespace osu.Game.Overlays.Profile.Sections
         public override LocalisableString Title => UsersStrings.ShowExtraMeTitle;
 
         public override string Identifier => @"me";
+
+        protected override void LoadComplete()
+        {
+            base.LoadComplete();
+
+            User.BindValueChanged(u =>
+            {
+                Clear();
+
+                var page = u.NewValue?.User.Page;
+
+                if (!string.IsNullOrWhiteSpace(page?.Raw))
+                    LoadComponentAsync(new DrawableBBCode(page.Raw, page.Html), Add);
+            }, true);
+        }
     }
 }

@@ -151,6 +151,13 @@ namespace osu.Game.Online.API.Requests.Responses
         [JsonProperty(@"website")]
         public string Website;
 
+        /// <summary>
+        /// The "me!" page of the user.
+        /// </summary>
+        [JsonProperty(@"page")]
+        [CanBeNull]
+        public APIBBCode Page;
+
         [JsonProperty(@"post_count")]
         public int PostCount;
 

@@ -137,7 +137,7 @@ namespace osu.Game.Overlays
             sections = !user.IsBot
                 ? new ProfileSection[]
                 {
-                    //new AboutSection(),
+                    new AboutSection(),
                     new RecentSection(),
                     new RanksSection(),
                     //new MedalsSection(),
@@ -182,6 +182,10 @@ namespace osu.Game.Overlays
                 foreach (string id in loadedUser.ProfileOrder)
                 {
                     var sec = sections.FirstOrDefault(s => s.Identifier == id);
+
+                    // the "me!" section is only shown if the user has written something.
+                    if (sec is AboutSection && string.IsNullOrWhiteSpace(loadedUser.Page?.Raw))
+                        continue;
 
                     if (sec != null)
                     {

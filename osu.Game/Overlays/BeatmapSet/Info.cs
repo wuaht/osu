@@ -30,6 +30,7 @@ namespace osu.Game.Overlays.BeatmapSet
 
         public Info()
         {
+            MetadataSectionDescription description;
             MetadataSectionNominators nominators;
             MetadataSectionSource source;
             MetadataSectionGenre genre;
@@ -56,11 +57,7 @@ namespace osu.Game.Overlays.BeatmapSet
                         {
                             RelativeSizeAxes = Axes.Both,
                             Padding = new MarginPadding { Right = metadata_width + BeatmapSetOverlay.RIGHT_WIDTH + spacing * 2 },
-                            Child = new Container
-                            {
-                                RelativeSizeAxes = Axes.Both,
-                                Child = new MetadataSectionDescription(),
-                            },
+                            Child = description = new MetadataSectionDescription(),
                         },
                         new OsuScrollContainer
                         {
@@ -114,6 +111,7 @@ namespace osu.Game.Overlays.BeatmapSet
 
             BeatmapSet.BindValueChanged(b =>
             {
+                description.BeatmapSet.Value = b.NewValue;
                 nominators.Metadata = (b.NewValue?.CurrentNominations ?? Array.Empty<BeatmapSetOnlineNomination>(), b.NewValue?.RelatedUsers ?? Array.Empty<APIUser>());
                 source.Metadata = b.NewValue?.Source ?? string.Empty;
                 genre.Metadata = b.NewValue?.Genre ?? new BeatmapSetOnlineGenre { Id = (int)SearchGenre.Unspecified };
