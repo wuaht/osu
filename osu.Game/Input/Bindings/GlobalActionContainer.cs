@@ -27,6 +27,11 @@ namespace osu.Game.Input.Bindings
         }
 
         /// <summary>
+        /// The key bindings currently in use, for matching input which can't be handled through key binding events.
+        /// </summary>
+        public IEnumerable<IKeyBinding> CurrentKeyBindings => KeyBindings;
+
+        /// <summary>
         /// All default key bindings across all categories, ordered with highest priority first.
         /// </summary>
         /// <remarks>
@@ -228,6 +233,9 @@ namespace osu.Game.Input.Bindings
             new KeyBinding(new[] { InputKey.Control, InputKey.Alt, InputKey.Period }, GlobalAction.EditorRotateByCustomAngleClockwise),
             new KeyBinding(new[] { InputKey.Control, InputKey.Alt, InputKey.Comma }, GlobalAction.EditorRotateByCustomAngleCounterclockwise),
             new KeyBinding(new[] { InputKey.Control, InputKey.Shift, InputKey.C }, GlobalAction.EditorCopyAsOsuFormat),
+            // non-precise scroll arrives as horizontal scroll while shift is held, with scrolling up arriving as positive x.
+            new KeyBinding(new[] { InputKey.Control, InputKey.Shift, InputKey.MouseWheelRight }, GlobalAction.EditorTimelineZoomIn),
+            new KeyBinding(new[] { InputKey.Control, InputKey.Shift, InputKey.MouseWheelLeft }, GlobalAction.EditorTimelineZoomOut),
         }.Concat(editorUndoRedoKeyBindings);
 
         /// <summary>
@@ -786,6 +794,12 @@ namespace osu.Game.Input.Bindings
 
         [LocalisableDescription(typeof(SlopDiscussionStrings), nameof(SlopDiscussionStrings.DiscussionEditorMode))]
         EditorDiscussionMode,
+
+        [LocalisableDescription(typeof(SlopEditorStrings), nameof(SlopEditorStrings.TimelineZoomIn))]
+        EditorTimelineZoomIn,
+
+        [LocalisableDescription(typeof(SlopEditorStrings), nameof(SlopEditorStrings.TimelineZoomOut))]
+        EditorTimelineZoomOut,
     }
 
     public enum GlobalActionCategory

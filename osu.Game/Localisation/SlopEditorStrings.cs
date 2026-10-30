@@ -145,6 +145,16 @@ namespace osu.Game.Localisation
         public static LocalisableString ToggleRotationHotkeyOrigin => new TranslatableString(getKey(@"toggle_rotation_hotkey_origin"), @"Toggle rotation hotkey origin");
 
         /// <summary>
+        /// "Zoom timeline in"
+        /// </summary>
+        public static LocalisableString TimelineZoomIn => new TranslatableString(getKey(@"timeline_zoom_in"), @"Zoom timeline in");
+
+        /// <summary>
+        /// "Zoom timeline out"
+        /// </summary>
+        public static LocalisableString TimelineZoomOut => new TranslatableString(getKey(@"timeline_zoom_out"), @"Zoom timeline out");
+
+        /// <summary>
         /// "Rotation hotkey origin"
         /// </summary>
         public static LocalisableString RotationHotkeyOrigin => new TranslatableString(getKey(@"rotation_hotkey_origin"), @"Rotation hotkey origin");

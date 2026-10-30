@@ -2,16 +2,19 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Transforms;
+using osu.Framework.Input.Bindings;
 using osu.Framework.Input.Events;
 using osu.Framework.Layout;
 using osu.Framework.Timing;
 using osu.Framework.Utils;
 using osu.Game.Graphics.Containers;
+using osu.Game.Input.Bindings;
 using osuTK;
 
 namespace osu.Game.Screens.Edit.Compose.Components.Timeline
@@ -152,16 +155,34 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
             return base.OnScroll(e);
         }
 
+        [Resolved]
+        private GlobalActionContainer? globalActions { get; set; }
+
         /// <summary>
-        /// Returns the amount to zoom by if the given scroll event should zoom the timeline (when holding ctrl+shift), or null otherwise.
+        /// Returns the amount to zoom by if the given scroll event matches a timeline zoom key binding (ctrl+shift+scroll by default), or null otherwise.
         /// </summary>
-        public static float? GetZoomScrollAmount(ScrollEvent e)
+        /// <remarks>
+        /// The bindings are matched here rather than handled as key binding events, so that zooming takes precedence over
+        /// parent scroll handling (e.g. unsnapped seeking on the timing screen) like other scroll input on the timeline.
+        /// </remarks>
+        protected float? GetZoomScrollAmount(ScrollEvent e) => GetZoomScrollAmount(e, globalActions);
+
+        /// <inheritdoc cref="GetZoomScrollAmount(ScrollEvent)"/>
+        public static float? GetZoomScrollAmount(ScrollEvent e, GlobalActionContainer? globalActions)
         {
-            if (!e.ControlPressed || !e.ShiftPressed || e.AltPressed || e.SuperPressed)
+            if (globalActions == null)
                 return null;
 
-            // non-precise scroll is converted to horizontal scroll while shift is held, with scrolling up arriving as positive x.
-            return e.ScrollDelta.Y != 0 ? e.ScrollDelta.Y : e.ScrollDelta.X;
+            var pressed = KeyCombination.FromInputState(e.CurrentState, e.ScrollDelta);
+
+            var binding = globalActions.CurrentKeyBindings.FirstOrDefault(b => b.GetAction<GlobalAction>() is GlobalAction.EditorTimelineZoomIn or GlobalAction.EditorTimelineZoomOut
+                                                                        && b.KeyCombination.IsPressed(pressed, e.CurrentState, KeyCombinationMatchingMode.Modifiers));
+
+            if (binding == null)
+                return null;
+
+            float amount = Math.Abs(e.ScrollDelta.Y != 0 ? e.ScrollDelta.Y : e.ScrollDelta.X);
+            return binding.GetAction<GlobalAction>() == GlobalAction.EditorTimelineZoomIn ? amount : -amount;
         }
 
         private void updateZoomedContentWidth()

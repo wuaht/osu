@@ -5,6 +5,7 @@ using osu.Framework.Allocation;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Input.Events;
+using osu.Game.Input.Bindings;
 using osu.Game.Screens.Edit.Compose.Components.Timeline;
 using osuTK;
 
@@ -31,6 +32,9 @@ namespace osu.Game.Screens.Edit.Hitsounding
 
         [Resolved]
         protected EditorClock EditorClock { get; private set; } = null!;
+
+        [Resolved]
+        private GlobalActionContainer? globalActions { get; set; }
 
         [Resolved]
         protected EditorBeatmap EditorBeatmap { get; private set; } = null!;
@@ -66,7 +70,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
         protected override bool OnScroll(ScrollEvent e)
         {
             // scrolling without modifiers seeks (handled by the editor), with ctrl+shift it zooms like in the timeline.
-            if (ZoomableScrollContainer.GetZoomScrollAmount(e) is not float zoomAmount)
+            if (ZoomableScrollContainer.GetZoomScrollAmount(e, globalActions) is not float zoomAmount)
                 return false;
 
             Timeline.AdjustZoom(zoomAmount);
