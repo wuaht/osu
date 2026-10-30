@@ -836,11 +836,39 @@ namespace osu.Game.Graphics.Containers.BBCode
                 if (string.IsNullOrEmpty(url))
                     return;
 
-                textures.GetAsync(url, cancellation.Token).ContinueWith(t => Schedule(() =>
+                lookup(textures, url).ContinueWith(t => Schedule(() =>
                 {
                     sprite.Texture = t.GetResultSafely();
                     sprite.FadeInFromZero(200);
                 }), cancellation.Token, TaskContinuationOptions.OnlyOnRanToCompletion, TaskScheduler.Default);
+            }
+
+            private static readonly Dictionary<string, Task<Texture?>> pending_lookups = new Dictionary<string, Task<Texture?>>();
+
+            /// <summary>
+            /// Shares lookups of the same image, as the texture store fails concurrent lookups of the same texture.
+            /// </summary>
+            private static Task<Texture?> lookup(LargeTextureStore textures, string url)
+            {
+                lock (pending_lookups)
+                {
+                    if (pending_lookups.TryGetValue(url, out var pending))
+                        return pending;
+
+                    var task = textures.GetAsync(url, CancellationToken.None).ContinueWith(t =>
+                    {
+                        lock (pending_lookups)
+                            pending_lookups.Remove(url);
+
+                        return t.IsCompletedSuccessfully ? (Texture?)t.GetResultSafely() : null;
+                    }, TaskScheduler.Default);
+
+                    // the continuation may already have run.
+                    if (!task.IsCompleted)
+                        pending_lookups[url] = task;
+
+                    return task;
+                }
             }
 
             protected override void Update()
@@ -849,10 +877,13 @@ namespace osu.Game.Graphics.Containers.BBCode
 
                 Texture? texture = sprite.Texture;
 
-                if (texture == null || Parent == null)
+                // inline images are wrapped by the text flow, which is what limits their width.
+                var flow = this.FindClosestParent<TextFlowContainer>();
+
+                if (texture == null || flow == null)
                     return;
 
-                float displayWidth = Math.Min(width ?? texture.DisplayWidth, Parent.ChildSize.X);
+                float displayWidth = Math.Min(width ?? texture.DisplayWidth, flow.ChildSize.X);
                 Size = new Vector2(displayWidth, displayWidth * texture.DisplayHeight / texture.DisplayWidth);
             }
 
