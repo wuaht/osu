@@ -36,11 +36,16 @@ namespace osu.Game.Overlays.BeatmapSet
                     Text = MetadataType.Description.GetLocalisableDescription(),
                     Font = OsuFont.GetFont(weight: FontWeight.Bold, size: 14),
                 },
-                scroll = new OsuScrollContainer
+                // padded outside the scroll container, so scrolled text is masked below the title.
+                new Container
                 {
                     RelativeSizeAxes = Axes.Both,
                     Padding = new MarginPadding { Top = 34, Bottom = 15 },
-                    ScrollbarOverlapsContent = false,
+                    Child = scroll = new OsuScrollContainer
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        ScrollbarOverlapsContent = false,
+                    },
                 },
             };
         }
