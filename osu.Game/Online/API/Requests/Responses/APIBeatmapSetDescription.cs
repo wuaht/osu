@@ -12,11 +12,5 @@ namespace osu.Game.Online.API.Requests.Responses
         /// </summary>
         [JsonProperty(@"description")]
         public string Description { get; set; } = string.Empty;
-
-        /// <summary>
-        /// The description as it was written, which is only included for users who can edit it.
-        /// </summary>
-        [JsonProperty(@"bbcode")]
-        public string? BBCode { get; set; }
     }
 }

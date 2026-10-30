@@ -6,9 +6,11 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Net;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using HtmlAgilityPack;
 using osu.Framework.Allocation;
 using osu.Framework.Extensions;
 using osu.Framework.Extensions.Color4Extensions;
@@ -23,29 +25,27 @@ using osu.Game.Graphics.Sprites;
 using osu.Game.Online;
 using osu.Game.Online.Chat;
 using osu.Game.Overlays;
+using osu.Game.Overlays.Discord;
 using osuTK;
 using osuTK.Graphics;
 
 namespace osu.Game.Graphics.Containers.BBCode
 {
     /// <summary>
-    /// BBCode as the osu! website renders it (user pages and beatmap descriptions, see osu-web's <c>BBCodeFromDB</c>).
+    /// BBCode as the osu! website renders it (user pages and beatmap descriptions).
+    /// This shows the HTML which the website creates from the BBCode (see osu-web's <c>BBCodeFromDB</c>),
+    /// so that tags which are nested wrongly or never closed look the same as on the website, and images are loaded through the website's proxy.
     /// </summary>
     public partial class DrawableBBCode : FillFlowContainer
     {
-        private static readonly Regex url_regex = new Regex(@"(?<=^|[\s(])https?://[^\s<>\[\]""]+", RegexOptions.IgnoreCase | RegexOptions.Compiled);
         private static readonly Regex word_regex = new Regex(@"\S+\s*|\s+", RegexOptions.Compiled);
-        private static readonly Regex html_image_regex = new Regex(@"<img\b[^>]*>", RegexOptions.IgnoreCase | RegexOptions.Compiled);
-        private static readonly Regex html_src_regex = new Regex(@"\bsrc=""(?<src>[^""]*)""", RegexOptions.IgnoreCase | RegexOptions.Compiled);
-        private static readonly Regex imagemap_area_regex = new Regex(@"^(?<x>[0-9.]+) (?<y>[0-9.]+) (?<w>[0-9.]+) (?<h>[0-9.]+) (?<url>#|https?://\S+|mailto:\S+)(?: (?<title>.*))?$", RegexOptions.Compiled);
+        private static readonly Regex whitespace_regex = new Regex(@"\s+", RegexOptions.Compiled);
+        private static readonly Regex youtube_embed_regex = new Regex(@"youtube\.com/embed/(?<id>[^?/]+)", RegexOptions.Compiled);
 
-        private readonly List<BBCodeNode> nodes;
+        private readonly HtmlNode document;
         private readonly float textSize;
 
-        /// <summary>
-        /// The image URLs as proxied by the website, in the order of the images. External images can't be loaded directly (see <see cref="TrustedDomainOnlineStore"/>).
-        /// </summary>
-        private readonly Queue<string>? proxiedImages;
+        private DiscordTextureStore? ownEmojiTextures;
 
         [Resolved]
         private OverlayColourProvider colourProvider { get; set; } = null!;
@@ -56,10 +56,9 @@ namespace osu.Game.Graphics.Containers.BBCode
         [Resolved]
         private GameHost host { get; set; } = null!;
 
-        /// <param name="bbcode">The BBCode as it was written.</param>
-        /// <param name="html">The BBCode as rendered by the website, which contains the proxied URLs of images.</param>
+        /// <param name="html">The BBCode as rendered by the website.</param>
         /// <param name="textSize">The size of regular text.</param>
-        public DrawableBBCode(string bbcode, string? html = null, float textSize = 14)
+        public DrawableBBCode(string html, float textSize = 14)
         {
             this.textSize = textSize;
 
@@ -67,56 +66,93 @@ namespace osu.Game.Graphics.Containers.BBCode
             AutoSizeAxes = Axes.Y;
             Direction = FillDirection.Vertical;
 
-            nodes = BBCodeParser.Parse(bbcode);
+            var html_document = new HtmlDocument();
+            html_document.LoadHtml(html);
+            document = html_document.DocumentNode;
+        }
 
-            if (html != null)
-            {
-                var images = html_image_regex.Matches(html)
-                                             .Where(m => !m.Value.Contains(@"class=""smiley""", StringComparison.Ordinal))
-                                             .Select(m => html_src_regex.Match(m.Value))
-                                             .Where(m => m.Success)
-                                             .Select(m => WebUtility.HtmlDecode(m.Groups[@"src"].Value))
-                                             .ToList();
+        protected override IReadOnlyDependencyContainer CreateChildDependencies(IReadOnlyDependencyContainer parent)
+        {
+            var dependencies = new DependencyContainer(base.CreateChildDependencies(parent));
 
-                // the images are only matched by their order, which is wrong if the website parsed the BBCode differently.
-                if (images.Count == countImages(nodes))
-                    proxiedImages = new Queue<string>(images);
-            }
+            // emojis are shown as images from the emoji CDN, which the game's texture store doesn't allow.
+            if (parent.Get<DiscordTextureStore>() == null)
+                dependencies.Cache(ownEmojiTextures = new DiscordTextureStore(parent.Get<GameHost>()));
+
+            return dependencies;
         }
 
         [BackgroundDependencyLoader]
         private void load()
         {
-            render(nodes, new Block(this, Anchor.TopLeft), new Style { Size = textSize });
+            render(document.ChildNodes, new Block(this, Anchor.TopLeft), new Style { Size = textSize });
         }
 
-        private void render(IEnumerable<BBCodeNode> content, Block block, Style style)
+        private void render(IEnumerable<HtmlNode> nodes, Block block, Style style)
         {
-            foreach (var node in content)
+            foreach (var node in nodes)
             {
-                switch (node)
+                switch (node.NodeType)
                 {
-                    case BBCodeText text:
-                        addText(text.Text, block, style);
+                    case HtmlNodeType.Text:
+                        string text = WebUtility.HtmlDecode(((HtmlTextNode)node).Text);
+
+                        if (style.Preformatted)
+                        {
+                            string[] lines = text.Split('\n');
+
+                            for (int i = 0; i < lines.Length; i++)
+                            {
+                                if (i > 0)
+                                    newLine(block, style);
+
+                                if (lines[i].Length > 0)
+                                {
+                                    addText(ensureFlow(block), lines[i], style);
+                                    block.LineOpen = true;
+                                }
+                            }
+
+                            break;
+                        }
+
+                        // like in a browser, whitespace is collapsed and doesn't start a line.
+                        text = whitespace_regex.Replace(text, " ");
+
+                        if (!block.LineOpen)
+                            text = text.TrimStart();
+
+                        if (text.Length > 0)
+                        {
+                            addText(ensureFlow(block), text, style);
+                            block.LineOpen = true;
+                        }
+
                         break;
 
-                    case BBCodeTag tag:
-                        renderTag(tag, block, style);
+                    case HtmlNodeType.Element:
+                        renderElement(node, block, style);
                         break;
                 }
             }
         }
 
-        private void renderTag(BBCodeTag tag, Block block, Style style)
+        private void renderElement(HtmlNode element, Block block, Style style)
         {
-            var children = tag.Children;
+            var children = element.ChildNodes;
 
-            switch (tag.Name)
+            switch (element.Name)
             {
+                case @"br":
+                    newLine(block, style);
+                    break;
+
+                case @"strong":
                 case @"b":
                     render(children, block, style with { Bold = true });
                     break;
 
+                case @"em":
                 case @"i":
                     render(children, block, style with { Italic = true });
                     break;
@@ -125,192 +161,86 @@ namespace osu.Game.Graphics.Containers.BBCode
                     render(children, block, style with { Underline = true });
                     break;
 
+                case @"del":
                 case @"s":
                 case @"strike":
                     render(children, block, style with { Strike = true });
                     break;
 
-                case @"spoiler":
-                    render(children, block, style with { Spoiler = true });
+                case @"code":
+                    render(children, block, style with { Code = true });
                     break;
 
-                case @"color":
+                case @"span":
+                    render(children, block, element.HasClass(@"spoiler") ? style with { Spoiler = true } : applyCss(element, style));
+                    break;
+
+                case @"a":
                 {
-                    var colour = parseColour(tag.Argument!.Trim());
-
-                    if (colour == null)
-                        renderLiteral(tag, block, style);
-                    else
-                        render(children, block, style with { Colour = colour });
-                    break;
-                }
-
-                case @"size":
-                {
-                    if (!int.TryParse(tag.Argument, NumberStyles.None, CultureInfo.InvariantCulture, out int percentage))
-                        renderLiteral(tag, block, style);
-                    else
-                        render(children, block, style with { Size = textSize * Math.Clamp(percentage, 30, 200) / 100f });
-                    break;
-                }
-
-                case @"c":
-                    addText(plainText(children), block, style with { Code = true }, false);
-                    break;
-
-                case @"url":
-                    render(children, block, style with { Link = normaliseUrl(tag.Argument ?? plainText(children)) });
-                    break;
-
-                case @"email":
-                    render(children, block, style with { Link = @"mailto:" + (tag.Argument ?? plainText(children)) });
-                    break;
-
-                case @"profile":
-                {
-                    string name = plainText(children);
-                    addText(name, block, style with { Link = $@"https://osu.ppy.sh/users/{Uri.EscapeDataString(tag.Argument ?? name)}" }, false);
-                    break;
-                }
-
-                case @"audio":
-                case @"youtube":
-                {
-                    string url = tag.Name == @"youtube" ? $@"https://www.youtube.com/watch?v={plainText(children).Trim()}" : plainText(children).Trim();
-                    addText(url, block, style with { Link = url }, false);
+                    string href = WebUtility.HtmlDecode(element.GetAttributeValue(@"href", string.Empty));
+                    render(children, block, href.Length > 0 && href != @"#" ? style with { Link = href } : style);
                     break;
                 }
 
                 case @"img":
-                    addInline(block, new BBCodeImage(nextImageUrl(plainText(children).Trim())) { Action = linkAction(style.Link) });
+                    addInline(block, new BBCodeImage(attribute(element, @"src"), cssPixels(element, @"width")) { Action = linkAction(style.Link) });
                     break;
 
-                case @"centre":
-                case @"left":
-                case @"right":
+                case @"iframe":
                 {
-                    var anchor = tag.Name == @"centre" ? Anchor.TopCentre : tag.Name == @"right" ? Anchor.TopRight : Anchor.TopLeft;
-                    var inner = new Block(createBlockFlow(), anchor);
-                    startBlock(block, inner.Target);
-                    render(trimNewlines(children, 1), inner, style);
-                    endBlock(block, 1);
+                    string src = attribute(element, @"src");
+                    var youtube = youtube_embed_regex.Match(src);
+                    string url = youtube.Success ? $@"https://www.youtube.com/watch?v={youtube.Groups[@"id"].Value}" : src;
+                    addText(ensureFlow(block), url, style with { Link = url });
+                    block.LineOpen = true;
                     break;
                 }
 
-                case @"heading":
+                case @"audio":
                 {
-                    var inner = new Block(createBlockFlow(), block.TextAnchor);
-                    startBlock(block, inner.Target);
-                    render(children, inner, style with { Bold = true, Size = style.Size * 1.5f });
-                    endBlock(block, 1);
+                    string src = attribute(element, @"src");
+                    addText(ensureFlow(block), src, style with { Link = src });
+                    block.LineOpen = true;
                     break;
                 }
 
-                case @"box":
-                case @"spoilerbox":
-                    startBlock(block, createBox(tag.Argument ?? @"SPOILER", children, block, style));
-                    endBlock(block, 1);
+                case @"h2":
+                    renderBlock(children, block, style with { Bold = true, Size = style.Size * 1.5f });
                     break;
 
-                case @"code":
-                    startBlock(block, createCode(plainText(children).Trim('\n'), style));
-                    endBlock(block, 1);
+                case @"h4":
+                    renderBlock(children, block, style with { Bold = true });
                     break;
 
-                case @"notice":
-                {
-                    var inner = new Block(createBlockFlow(), block.TextAnchor);
-
-                    startBlock(block, new Container
-                    {
-                        RelativeSizeAxes = Axes.X,
-                        AutoSizeAxes = Axes.Y,
-                        Masking = true,
-                        CornerRadius = 4,
-                        Margin = new MarginPadding { Vertical = 5 },
-                        Children = new Drawable[]
-                        {
-                            new Box
-                            {
-                                RelativeSizeAxes = Axes.Both,
-                                Colour = colourProvider.Background3,
-                            },
-                            new Container
-                            {
-                                RelativeSizeAxes = Axes.X,
-                                AutoSizeAxes = Axes.Y,
-                                Padding = new MarginPadding(10),
-                                Child = inner.Target,
-                            },
-                        },
-                    });
-
-                    render(trimNewlines(children), inner, style);
-                    endBlock(block, 1);
-                    break;
-                }
-
-                case @"quote":
-                {
-                    var inner = new Block(createBlockFlow(), block.TextAnchor);
-
-                    if (tag.Argument != null)
-                    {
-                        inner.Target.Add(new OsuSpriteText
-                        {
-                            Text = $@"{tag.Argument.Trim('"')} wrote:",
-                            Font = font(style with { Bold = true }),
-                            Margin = new MarginPadding { Bottom = 5 },
-                        });
-                    }
-
-                    startBlock(block, new Container
-                    {
-                        RelativeSizeAxes = Axes.X,
-                        AutoSizeAxes = Axes.Y,
-                        Margin = new MarginPadding { Vertical = 5 },
-                        Children = new Drawable[]
-                        {
-                            new Box
-                            {
-                                RelativeSizeAxes = Axes.Y,
-                                Width = 3,
-                                Colour = colourProvider.Light4,
-                            },
-                            new Container
-                            {
-                                RelativeSizeAxes = Axes.X,
-                                AutoSizeAxes = Axes.Y,
-                                Padding = new MarginPadding { Left = 13 },
-                                Child = inner.Target,
-                            },
-                        },
-                    });
-
-                    render(trimNewlines(children), inner, style);
-                    endBlock(block, 2);
-                    break;
-                }
-
-                case @"list":
-                    startBlock(block, createList(tag, block, style));
-                    endBlock(block, 2);
+                case @"pre":
+                    startBlock(block, createCode(children, block, style));
                     break;
 
-                case @"imagemap":
-                {
-                    var imagemap = createImagemap(plainText(children));
-
-                    if (imagemap == null)
-                    {
-                        renderLiteral(tag, block, style);
-                        break;
-                    }
-
-                    startBlock(block, imagemap);
-                    endBlock(block, 1);
+                case @"blockquote":
+                    startBlock(block, createQuote(children, block, style));
                     break;
-                }
+
+                case @"ol":
+                case @"ul":
+                    startBlock(block, createList(element, block, style));
+                    break;
+
+                case @"div":
+                    if (element.HasClass(@"well"))
+                        startBlock(block, createNotice(children, block, style));
+                    else if (element.HasClass(@"bbcode-spoilerbox"))
+                        startBlock(block, createBox(element, block, style));
+                    else if (element.HasClass(@"imagemap"))
+                        addImagemap(block, element);
+                    else if (element.HasClass(@"bbcode__align-centre"))
+                        renderBlock(children, block, style, Anchor.TopCentre);
+                    else if (element.HasClass(@"bbcode__align-right"))
+                        renderBlock(children, block, style, Anchor.TopRight);
+                    else if (element.HasClass(@"bbcode__align-left"))
+                        renderBlock(children, block, style, Anchor.TopLeft);
+                    else
+                        renderBlock(children, block, style);
+                    break;
 
                 default:
                     render(children, block, style);
@@ -319,40 +249,33 @@ namespace osu.Game.Graphics.Containers.BBCode
         }
 
         /// <summary>
-        /// Shows a tag as it was written, for tags which the website doesn't render (such as a colour which doesn't exist).
+        /// Applies the inline styles which the website uses for <c>[color]</c> and <c>[size]</c>.
         /// </summary>
-        private void renderLiteral(BBCodeTag tag, Block block, Style style)
+        private static Style applyCss(HtmlNode element, Style style)
         {
-            addText(tag.Opening, block, style);
-            render(tag.Children, block, style);
-            addText($@"[/{tag.Name}]", block, style);
+            foreach (var (property, value) in css(element))
+            {
+                switch (property)
+                {
+                    case @"color":
+                        if (parseColour(value) is Color4 colour)
+                            style = style with { Colour = colour };
+                        break;
+
+                    case @"font-size":
+                        if (value.EndsWith('%') && float.TryParse(value[..^1], NumberStyles.Float, CultureInfo.InvariantCulture, out float percentage))
+                            style = style with { Size = style.Size * percentage / 100 };
+                        break;
+                }
+            }
+
+            return style;
         }
 
         #region Text
 
-        private void addText(string text, Block block, Style style, bool autolink = true)
-        {
-            string[] lines = text.Split('\n');
-
-            for (int i = 0; i < lines.Length; i++)
-            {
-                if (i > 0)
-                    newLine(block, style);
-
-                if (lines[i].Length > 0)
-                    addLine(lines[i], block, style, autolink);
-            }
-        }
-
         private void newLine(Block block, Style style)
         {
-            // block elements swallow some of the line breaks after them.
-            if (block.SkipNewlines > 0)
-            {
-                block.SkipNewlines--;
-                return;
-            }
-
             if (block.LineOpen)
             {
                 block.Flow!.NewLine();
@@ -362,16 +285,47 @@ namespace osu.Game.Graphics.Containers.BBCode
 
             // an empty line needs some content to have a height.
             var flow = ensureFlow(block);
-            flow.AddText(@" ", s => s.Font = font(style));
+            flow.AddText(@"|", s =>
+            {
+                s.Font = font(style);
+                s.Colour = Color4.Transparent;
+            });
             flow.NewLine();
         }
 
-        private void addLine(string text, Block block, Style style, bool autolink)
+        /// <summary>
+        /// Adds text to a flow, showing emojis as images (the game's fonts don't contain them).
+        /// </summary>
+        private void addText(LinkFlowContainer flow, string text, Style style)
         {
-            var flow = ensureFlow(block);
-            block.LineOpen = true;
-            block.SkipNewlines = 0;
+            var run = new StringBuilder();
 
+            foreach (string element in DiscordMarkdown.GetTextElements(text))
+            {
+                string? emojiUrl = DiscordEmoji.GetUnicodeEmojiUrl(element);
+
+                if (emojiUrl == null)
+                {
+                    run.Append(element);
+                    continue;
+                }
+
+                flushRun();
+                flow.AddArbitraryDrawable(new DrawableDiscordEmoji(emojiUrl, element, element, style.Size * 1.2f));
+            }
+
+            flushRun();
+
+            void flushRun()
+            {
+                if (run.Length > 0)
+                    addRun(flow, run.ToString(), style);
+                run.Clear();
+            }
+        }
+
+        private void addRun(LinkFlowContainer flow, string text, Style style)
+        {
             if (style.Link != null)
             {
                 var link = MessageFormatter.GetLinkDetails(style.Link);
@@ -386,32 +340,13 @@ namespace osu.Game.Graphics.Containers.BBCode
                 return;
             }
 
-            int position = 0;
-
-            if (autolink)
-            {
-                foreach (Match match in url_regex.Matches(text))
-                {
-                    // trailing punctuation usually ends the sentence rather than belonging to the link.
-                    string url = match.Value.TrimEnd('.', ',', ')', '!', '?', ':', ';');
-
-                    if (match.Index > position)
-                        flow.AddText(text[position..match.Index], s => applyStyle(s, style));
-
-                    addLine(url, block, style with { Link = url }, false);
-                    position = match.Index + url.Length;
-                }
-            }
-
-            if (position < text.Length)
-                flow.AddText(text[position..], s => applyStyle(s, style));
+            flow.AddText(text, s => applyStyle(s, style));
         }
 
         private void addInline(Block block, Drawable drawable)
         {
             ensureFlow(block).AddArbitraryDrawable(drawable);
             block.LineOpen = true;
-            block.SkipNewlines = 0;
         }
 
         private LinkFlowContainer ensureFlow(Block block)
@@ -459,26 +394,107 @@ namespace osu.Game.Graphics.Containers.BBCode
         {
             block.Flow = null;
             block.LineOpen = false;
-            block.SkipNewlines = 0;
             block.Target.Add(drawable);
         }
 
-        private static void endBlock(Block block, int swallowedNewlines)
+        private void renderBlock(IEnumerable<HtmlNode> children, Block block, Style style, Anchor? textAnchor = null)
         {
+            var inner = new Block(createBlockFlow(), textAnchor ?? block.TextAnchor);
+            startBlock(block, inner.Target);
+            render(children, inner, style);
+
+            // content after the block starts on a new line.
             block.Flow = null;
             block.LineOpen = false;
-            block.SkipNewlines = swallowedNewlines;
         }
 
-        private Drawable createBox(string title, List<BBCodeNode> children, Block block, Style style)
+        private Drawable createNotice(IEnumerable<HtmlNode> children, Block block, Style style)
         {
+            var inner = new Block(createBlockFlow(), block.TextAnchor);
+            render(children, inner, style);
+
+            return new Container
+            {
+                RelativeSizeAxes = Axes.X,
+                AutoSizeAxes = Axes.Y,
+                Masking = true,
+                CornerRadius = 4,
+                Margin = new MarginPadding { Vertical = 5 },
+                Children = new Drawable[]
+                {
+                    new Box
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Colour = colourProvider.Background3,
+                    },
+                    new Container
+                    {
+                        RelativeSizeAxes = Axes.X,
+                        AutoSizeAxes = Axes.Y,
+                        Padding = new MarginPadding(10),
+                        Child = inner.Target,
+                    },
+                },
+            };
+        }
+
+        private Drawable createQuote(IEnumerable<HtmlNode> children, Block block, Style style)
+        {
+            var inner = new Block(createBlockFlow(), block.TextAnchor);
+            render(children, inner, style);
+
+            return new Container
+            {
+                RelativeSizeAxes = Axes.X,
+                AutoSizeAxes = Axes.Y,
+                Margin = new MarginPadding { Vertical = 5 },
+                Children = new Drawable[]
+                {
+                    new Box
+                    {
+                        RelativeSizeAxes = Axes.Y,
+                        Width = 3,
+                        Colour = colourProvider.Light4,
+                    },
+                    new Container
+                    {
+                        RelativeSizeAxes = Axes.X,
+                        AutoSizeAxes = Axes.Y,
+                        Padding = new MarginPadding { Left = 13 },
+                        Child = inner.Target,
+                    },
+                },
+            };
+        }
+
+        private Drawable createBox(HtmlNode element, Block block, Style style)
+        {
+            var titleContent = element.Descendants(@"span").FirstOrDefault(s => s.HasClass(@"bbcode-spoilerbox__link-text"))?.ChildNodes;
+            var bodyContent = element.ChildNodes.FirstOrDefault(c => c.HasClass(@"bbcode-spoilerbox__body"))?.ChildNodes;
+
             var body = new Block(createBlockFlow(), block.TextAnchor);
             body.Target.Alpha = 0;
             body.Target.Padding = new MarginPadding { Left = style.Size + 6 };
 
+            if (bodyContent != null)
+                render(bodyContent, body, style);
+
+            var title = new Block(new FillFlowContainer
+            {
+                Anchor = Anchor.CentreLeft,
+                Origin = Anchor.CentreLeft,
+                AutoSizeAxes = Axes.Both,
+            }, Anchor.TopLeft);
+
+            title.Flow = new LinkFlowContainer { AutoSizeAxes = Axes.Both };
+            title.Target.Add(title.Flow);
+
+            if (titleContent != null)
+                render(titleContent, title, style with { Bold = true });
+
             SpriteIcon icon;
 
-            var box = new FillFlowContainer
+            return new FillFlowContainer
             {
                 RelativeSizeAxes = Axes.X,
                 AutoSizeAxes = Axes.Y,
@@ -503,13 +519,7 @@ namespace osu.Game.Graphics.Containers.BBCode
                                     Icon = FontAwesome.Solid.ChevronRight,
                                     Size = new Vector2(style.Size * 0.7f),
                                 },
-                                new OsuSpriteText
-                                {
-                                    Anchor = Anchor.CentreLeft,
-                                    Origin = Anchor.CentreLeft,
-                                    Text = title,
-                                    Font = font(style with { Bold = true }),
-                                },
+                                title.Target,
                             },
                         },
                         Action = () =>
@@ -522,25 +532,13 @@ namespace osu.Game.Graphics.Containers.BBCode
                     body.Target,
                 },
             };
-
-            render(trimNewlines(children), body, style);
-            return box;
         }
 
-        private Drawable createCode(string code, Style style)
+        private Drawable createCode(IEnumerable<HtmlNode> children, Block block, Style style)
         {
-            var flow = new OsuTextFlowContainer(s => s.Font = font(style with { Code = true }))
-            {
-                RelativeSizeAxes = Axes.X,
-                AutoSizeAxes = Axes.Y,
-                Padding = new MarginPadding(10),
-            };
-
-            foreach (string line in code.Split('\n'))
-            {
-                flow.AddText(line.Length > 0 ? line : @" ");
-                flow.NewLine();
-            }
+            var inner = new Block(createBlockFlow(), block.TextAnchor);
+            inner.Target.Padding = new MarginPadding(10);
+            render(children, inner, style with { Code = true, Preformatted = true });
 
             return new Container
             {
@@ -556,24 +554,29 @@ namespace osu.Game.Graphics.Containers.BBCode
                         RelativeSizeAxes = Axes.Both,
                         Colour = colourProvider.Background6,
                     },
-                    flow,
+                    inner.Target,
                 },
             };
         }
 
-        private Drawable createList(BBCodeTag list, Block block, Style style)
+        private Drawable createList(HtmlNode list, Block block, Style style)
         {
             var target = createBlockFlow();
+            var items = list.ChildNodes.Where(c => c.Name == @"li");
 
-            // text before the first item is the title of the list.
-            var title = list.Children.TakeWhile(n => n is not BBCodeTag { Name: @"*" }).ToList();
+            // text before the first item of a list is its title.
+            if (list.HasClass(@"bbcode__list-title"))
+            {
+                foreach (var item in items)
+                    render(item.ChildNodes, new Block(target, block.TextAnchor), style);
 
-            if (title.Any(n => n is not BBCodeText text || !string.IsNullOrWhiteSpace(text.Text)))
-                render(trimNewlines(title), new Block(target, block.TextAnchor), style);
+                return target;
+            }
 
+            bool numbered = list.Name == @"ol" && !list.HasClass(@"unordered");
             int number = 0;
 
-            foreach (var item in list.Children.OfType<BBCodeTag>().Where(t => t.Name == @"*"))
+            foreach (var item in items)
             {
                 var body = new Block(createBlockFlow(), block.TextAnchor);
                 body.Target.Padding = new MarginPadding { Left = style.Size * 1.75f };
@@ -586,53 +589,59 @@ namespace osu.Game.Graphics.Containers.BBCode
                     {
                         new OsuSpriteText
                         {
-                            Text = list.Argument != null ? $@"{++number}." : @"•",
+                            Text = numbered ? $@"{++number}." : @"•",
                             Font = font(style),
                         },
                         body.Target,
                     },
                 });
 
-                render(trimNewlines(item.Children), body, style);
+                render(item.ChildNodes, body, style);
             }
 
             return target;
         }
 
-        private Drawable? createImagemap(string content)
+        /// <summary>
+        /// Adds an imagemap on its own line, aligned like text (as the website shows it).
+        /// </summary>
+        private void addImagemap(Block block, HtmlNode element)
         {
-            string[] lines = content.Split('\n').Select(l => l.Trim()).Where(l => l.Length > 0).ToArray();
+            var image = element.ChildNodes.FirstOrDefault(c => c.Name == @"img");
 
-            if (lines.Length < 2 || !lines[0].StartsWith(@"http", StringComparison.OrdinalIgnoreCase))
-                return null;
+            if (image == null)
+                return;
 
-            var areas = new List<Drawable>();
+            var imagemap = new BBCodeImage(attribute(image, @"src"), int.TryParse(attribute(image, @"width"), out int width) ? width : null);
 
-            foreach (string line in lines.Skip(1))
+            imagemap.AddAreas(element.ChildNodes.Where(c => c.HasClass(@"imagemap__link")).Select(area =>
             {
-                var match = imagemap_area_regex.Match(line);
+                var position = css(area).ToDictionary(p => p.property, p => p.value);
+                string href = attribute(area, @"href");
 
-                if (!match.Success)
-                    return null;
-
-                string url = match.Groups[@"url"].Value;
-
-                areas.Add(new OsuClickableContainer
+                return new OsuClickableContainer
                 {
                     RelativePositionAxes = Axes.Both,
                     RelativeSizeAxes = Axes.Both,
-                    Position = new Vector2(percentage(match, @"x"), percentage(match, @"y")),
-                    Size = new Vector2(percentage(match, @"w"), percentage(match, @"h")),
-                    TooltipText = match.Groups[@"title"].Value,
-                    Action = url == @"#" ? null : linkAction(url),
-                });
-            }
+                    Position = new Vector2(percentage(@"left"), percentage(@"top")),
+                    Size = new Vector2(percentage(@"width"), percentage(@"height")),
+                    TooltipText = attribute(area, @"title"),
+                    Action = href.Length > 0 && href != @"#" ? linkAction(href) : null,
+                };
 
-            var image = new BBCodeImage(nextImageUrl(lines[0]));
-            image.AddAreas(areas);
-            return image;
+                float percentage(string property) =>
+                    position.TryGetValue(property, out string? value) && float.TryParse(value.TrimEnd('%'), NumberStyles.Float, CultureInfo.InvariantCulture, out float result)
+                        ? result / 100
+                        : 0;
+            }));
 
-            static float percentage(Match match, string group) => float.Parse(match.Groups[group].Value, CultureInfo.InvariantCulture) / 100;
+            if (block.LineOpen)
+                block.Flow!.NewLine();
+
+            var flow = ensureFlow(block);
+            flow.AddArbitraryDrawable(imagemap);
+            flow.NewLine();
+            block.LineOpen = false;
         }
 
         #endregion
@@ -651,47 +660,22 @@ namespace osu.Game.Graphics.Containers.BBCode
             };
         }
 
-        private string nextImageUrl(string url) => proxiedImages?.Count > 0 ? proxiedImages.Dequeue() : url;
+        private static string attribute(HtmlNode element, string name) => WebUtility.HtmlDecode(element.GetAttributeValue(name, string.Empty));
 
-        private static int countImages(IEnumerable<BBCodeNode> content) =>
-            content.OfType<BBCodeTag>().Sum(t => t.Name is @"img" or @"imagemap" ? 1 : countImages(t.Children));
+        private static IEnumerable<(string property, string value)> css(HtmlNode element) =>
+            attribute(element, @"style").Split(';')
+                                       .Select(d => d.Split(':', 2))
+                                       .Where(d => d.Length == 2)
+                                       .Select(d => (d[0].Trim().ToLowerInvariant(), d[1].Trim()));
 
-        private static string plainText(IEnumerable<BBCodeNode> content) =>
-            string.Concat(content.Select(n => n switch
-            {
-                BBCodeText text => text.Text,
-                BBCodeTag tag => tag.Opening + plainText(tag.Children) + $@"[/{tag.Name}]",
-                _ => string.Empty,
-            }));
-
-        /// <summary>
-        /// Removes line breaks at the start and end of a block's content, which the website doesn't show.
-        /// </summary>
-        private static List<BBCodeNode> trimNewlines(List<BBCodeNode> content, int count = int.MaxValue)
+        private static float? cssPixels(HtmlNode element, string property)
         {
-            var trimmed = content.ToList();
+            string? value = css(element).FirstOrDefault(p => p.property == property).value;
 
-            if (trimmed.Count > 0 && trimmed[0] is BBCodeText first)
-                trimmed[0] = new BBCodeText(trimStart(first.Text, count));
+            if (value == null || !value.EndsWith(@"px", StringComparison.Ordinal))
+                return null;
 
-            if (trimmed.Count > 0 && trimmed[^1] is BBCodeText last)
-                trimmed[^1] = new BBCodeText(count == int.MaxValue ? last.Text.TrimEnd('\n') : last.Text);
-
-            return trimmed;
-
-            static string trimStart(string text, int count)
-            {
-                int start = 0;
-                while (start < text.Length && start < count && text[start] == '\n')
-                    start++;
-                return text[start..];
-            }
-        }
-
-        private static string normaliseUrl(string url)
-        {
-            url = url.Trim();
-            return url.Contains(@"://", StringComparison.Ordinal) || url.StartsWith(@"mailto:", StringComparison.OrdinalIgnoreCase) ? url : @"http://" + url;
+            return float.TryParse(value[..^2], NumberStyles.Float, CultureInfo.InvariantCulture, out float result) ? result : null;
         }
 
         private static Color4? parseColour(string colour)
@@ -707,6 +691,12 @@ namespace osu.Game.Graphics.Containers.BBCode
             }
         }
 
+        protected override void Dispose(bool isDisposing)
+        {
+            base.Dispose(isDisposing);
+            ownEmojiTextures?.Dispose();
+        }
+
         private record struct Style
         {
             public bool Bold { get; init; }
@@ -715,6 +705,7 @@ namespace osu.Game.Graphics.Containers.BBCode
             public bool Strike { get; init; }
             public bool Spoiler { get; init; }
             public bool Code { get; init; }
+            public bool Preformatted { get; init; }
             public Color4? Colour { get; init; }
             public float Size { get; init; }
             public string? Link { get; init; }
@@ -737,8 +728,6 @@ namespace osu.Game.Graphics.Containers.BBCode
             /// Whether the current line of <see cref="Flow"/> has content, so that a line break ends it instead of adding an empty line.
             /// </summary>
             public bool LineOpen;
-
-            public int SkipNewlines;
 
             public Block(FillFlowContainer target, Anchor textAnchor)
             {
@@ -808,13 +797,15 @@ namespace osu.Game.Graphics.Containers.BBCode
         }
 
         /// <summary>
-        /// An image which is as wide as its texture, but no wider than the text.
+        /// An image which is as wide as the website shows it (or its texture), but no wider than the text.
+        /// Images which can't be loaded aren't shown, like on the website.
         /// </summary>
         private partial class BBCodeImage : CompositeDrawable
         {
             public Action? Action { get; init; }
 
             private readonly string url;
+            private readonly float? width;
             private readonly Sprite sprite;
             private readonly Container areas;
             private readonly CancellationTokenSource cancellation = new CancellationTokenSource();
@@ -822,9 +813,12 @@ namespace osu.Game.Graphics.Containers.BBCode
             [Resolved]
             private LargeTextureStore textures { get; set; } = null!;
 
-            public BBCodeImage(string url)
+            /// <param name="url">The URL of the image.</param>
+            /// <param name="width">The width which the website shows the image with.</param>
+            public BBCodeImage(string url, float? width)
             {
                 this.url = url;
+                this.width = width;
 
                 InternalChildren = new Drawable[]
                 {
@@ -839,16 +833,11 @@ namespace osu.Game.Graphics.Containers.BBCode
             {
                 base.LoadComplete();
 
+                if (string.IsNullOrEmpty(url))
+                    return;
+
                 textures.GetAsync(url, cancellation.Token).ContinueWith(t => Schedule(() =>
                 {
-                    if (t.GetResultSafely() == null)
-                    {
-                        // images which can't be loaded (like from external websites when not proxied) are shown as links.
-                        AutoSizeAxes = Axes.Both;
-                        AddInternal(new OsuSpriteText { Text = url, Colour = Color4.LightBlue });
-                        return;
-                    }
-
                     sprite.Texture = t.GetResultSafely();
                     sprite.FadeInFromZero(200);
                 }), cancellation.Token, TaskContinuationOptions.OnlyOnRanToCompletion, TaskScheduler.Default);
@@ -863,8 +852,8 @@ namespace osu.Game.Graphics.Containers.BBCode
                 if (texture == null || Parent == null)
                     return;
 
-                float width = Math.Min(texture.DisplayWidth, Parent.ChildSize.X);
-                Size = new Vector2(width, width * texture.DisplayHeight / texture.DisplayWidth);
+                float displayWidth = Math.Min(width ?? texture.DisplayWidth, Parent.ChildSize.X);
+                Size = new Vector2(displayWidth, displayWidth * texture.DisplayHeight / texture.DisplayWidth);
             }
 
             protected override bool OnClick(ClickEvent e)

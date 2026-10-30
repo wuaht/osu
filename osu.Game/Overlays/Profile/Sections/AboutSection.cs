@@ -23,8 +23,8 @@ namespace osu.Game.Overlays.Profile.Sections
 
                 var page = u.NewValue?.User.Page;
 
-                if (!string.IsNullOrWhiteSpace(page?.Raw))
-                    LoadComponentAsync(new DrawableBBCode(page.Raw, page.Html), Add);
+                if (!string.IsNullOrWhiteSpace(page?.Html))
+                    LoadComponentAsync(new DrawableBBCode(page.Html), Add);
             }, true);
         }
     }

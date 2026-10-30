@@ -184,7 +184,7 @@ namespace osu.Game.Overlays
                     var sec = sections.FirstOrDefault(s => s.Identifier == id);
 
                     // the "me!" section is only shown if the user has written something.
-                    if (sec is AboutSection && string.IsNullOrWhiteSpace(loadedUser.Page?.Raw))
+                    if (sec is AboutSection && string.IsNullOrWhiteSpace(loadedUser.Page?.Html))
                         continue;
 
                     if (sec != null)

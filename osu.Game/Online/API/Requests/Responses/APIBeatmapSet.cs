@@ -140,12 +140,6 @@ namespace osu.Game.Online.API.Requests.Responses
         [JsonProperty(@"description")]
         public APIBeatmapSetDescription? Description { get; set; }
 
-        /// <summary>
-        /// The forum topic of the beatmap set, whose first post contains the description.
-        /// </summary>
-        [JsonProperty(@"legacy_thread_url")]
-        public string? LegacyThreadUrl { get; set; }
-
         [JsonProperty(@"language")]
         public BeatmapSetOnlineLanguage Language { get; set; }
 
