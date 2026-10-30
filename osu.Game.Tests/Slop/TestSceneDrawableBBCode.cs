@@ -9,7 +9,9 @@ using osu.Framework.Graphics.Sprites;
 using osu.Framework.Testing;
 using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.Containers.BBCode;
+using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Overlays;
+using osu.Game.Overlays.BeatmapSet;
 using osu.Game.Overlays.Discord;
 using osu.Game.Tests.Visual;
 using osuTK.Graphics;
@@ -51,6 +53,16 @@ namespace osu.Game.Tests.Slop
 
             AddStep("open box", () => bbcode.ChildrenOfType<OsuClickableContainer>().First().TriggerClick());
             AddAssert("box body shown", () => isVisible("hidden"));
+        }
+
+        [Test]
+        public void TestBeatmapSetDescription()
+        {
+            MetadataSectionDescription description = null!;
+
+            AddStep("show description", () => Child = description = new MetadataSectionDescription());
+            AddStep("set beatmap set", () => description.BeatmapSet.Value = new APIBeatmapSet { Description = new APIBeatmapSetDescription { Description = html } });
+            AddUntilStep("description shown", () => description.Alpha == 1 && description.ChildrenOfType<DrawableBBCode>().Any());
         }
 
         private string allText() => string.Concat(bbcode.ChildrenOfType<SpriteText>().Select(s => s.Text.ToString()));

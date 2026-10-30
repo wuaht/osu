@@ -25,6 +25,8 @@ namespace osu.Game.Overlays.BeatmapSet
         {
             RelativeSizeAxes = Axes.Both;
             Alpha = 0;
+            // the loaded description is only added by scheduled callbacks, which don't run while hidden.
+            AlwaysPresent = true;
 
             Children = new Drawable[]
             {
