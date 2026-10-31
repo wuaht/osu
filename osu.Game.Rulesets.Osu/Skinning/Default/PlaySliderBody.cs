@@ -75,22 +75,11 @@ namespace osu.Game.Rulesets.Osu.Skinning.Default
 
         private void updateBorderColour()
         {
+            // same as argon: the border takes the combo colour as is.
             BorderColour = borderComboColour.Value
-                ? getComboBorderColour(AccentColourBindable.Value)
+                ? AccentColourBindable.Value
                 : GetBorderColour(skin);
         }
-
-        /// <summary>
-        /// The amount the combo colour is blended towards white for the border.
-        /// The edge of the body uses the combo colour as well, so the border would otherwise barely stand out.
-        /// </summary>
-        private const float combo_border_whiteness = 0.5f;
-
-        private static Color4 getComboBorderColour(Color4 comboColour) => new Color4(
-            comboColour.R + (1 - comboColour.R) * combo_border_whiteness,
-            comboColour.G + (1 - comboColour.G) * combo_border_whiteness,
-            comboColour.B + (1 - comboColour.B) * combo_border_whiteness,
-            1);
 
         // the slider colours of a beatmap override the skin (like osu!stable), non-legacy skins don't provide any themselves.
         protected virtual Color4 GetBorderColour(ISkinSource skin) => GetSkinBorderColour() ?? Color4.White;
