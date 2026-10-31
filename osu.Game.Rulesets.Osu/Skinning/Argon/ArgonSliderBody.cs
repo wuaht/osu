@@ -49,7 +49,7 @@ namespace osu.Game.Rulesets.Osu.Skinning.Argon
         {
             public DrawableSliderPath()
             {
-                BackdropTintStrength = 0.6f;
+                FrostedTintStrength = 0.6f;
             }
 
             public bool DarkenBody { get; set; } = true;

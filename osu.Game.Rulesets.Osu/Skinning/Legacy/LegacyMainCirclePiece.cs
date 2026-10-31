@@ -305,6 +305,7 @@ namespace osu.Game.Rulesets.Osu.Skinning.Legacy
                     // the settings can't change during gameplay, so they don't have to be followed.
                     liquidGlass = new LiquidGlassConfig(config, () => { });
                     BlurSigma = liquidGlass.BlurSigma;
+                    BackdropTintStrength = liquidGlass.TintStrength;
                 }
                 else
                     BlurSigma = new Vector2(FrostedDrawableSliderPath.GetBlurSigma(config.Get<float>(OsuSetting.SlopFrostedSlidersBlur)));

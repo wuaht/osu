@@ -1918,15 +1918,15 @@ namespace osu.Game.Localisation
             @"How strongly the edge of liquid glass splits up the colours of the content behind it.");
 
         /// <summary>
-        /// "Highlight"
+        /// "Tint"
         /// </summary>
-        public static LocalisableString LiquidGlassHighlight => new TranslatableString(getKey(@"liquid_glass_highlight"), @"Highlight");
+        public static LocalisableString LiquidGlassTint => new TranslatableString(getKey(@"liquid_glass_tint"), @"Tint");
 
         /// <summary>
-        /// "How bright the light reflections on the edge of liquid glass are."
+        /// "How strongly liquid glass slider bodies and hit circles tint the content behind them with their colour."
         /// </summary>
-        public static LocalisableString LiquidGlassHighlightDescription => new TranslatableString(getKey(@"liquid_glass_highlight_description"),
-            @"How bright the light reflections on the edge of liquid glass are.");
+        public static LocalisableString LiquidGlassTintDescription => new TranslatableString(getKey(@"liquid_glass_tint_description"),
+            @"How strongly liquid glass slider bodies and hit circles tint the content behind them with their colour.");
 
         /// <summary>
         /// "Blur"

@@ -34,6 +34,11 @@ namespace osu.Game.Rulesets.Osu.Skinning.Default
         private LiquidGlassConfig? liquidGlass;
 
         /// <summary>
+        /// How strongly frosted bodies tint the backdrop with their colour. Liquid glass uses its tint setting instead.
+        /// </summary>
+        protected float FrostedTintStrength { get; init; }
+
+        /// <summary>
         /// Whether the border of the body is left out, as it would cover the refracting edge of liquid glass.
         /// </summary>
         protected bool HideBorder => glassStyle.Value == GlassStyle.LiquidGlass;
@@ -78,6 +83,7 @@ namespace osu.Game.Rulesets.Osu.Skinning.Default
                 _ => Vector2.Zero,
             };
 
+            BackdropTintStrength = glassStyle.Value == GlassStyle.LiquidGlass ? liquidGlass!.TintStrength : FrostedTintStrength;
             LiquidGlass = glassStyle.Value == GlassStyle.LiquidGlass ? liquidGlass!.CreateParameters(PathRadius * max_liquid_glass_thickness) : default;
         }
 
