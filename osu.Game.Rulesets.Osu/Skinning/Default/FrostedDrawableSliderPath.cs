@@ -33,6 +33,11 @@ namespace osu.Game.Rulesets.Osu.Skinning.Default
 
         private LiquidGlassConfig? liquidGlass;
 
+        /// <summary>
+        /// Whether the border of the body is left out, as it would cover the refracting edge of liquid glass.
+        /// </summary>
+        protected bool HideBorder => glassStyle.Value == GlassStyle.LiquidGlass;
+
         public override float PathRadius
         {
             get => base.PathRadius;
@@ -54,7 +59,11 @@ namespace osu.Game.Rulesets.Osu.Skinning.Default
 
             liquidGlass = new LiquidGlassConfig(config, updateGlass);
 
-            glassStyle.BindValueChanged(_ => updateGlass());
+            glassStyle.BindValueChanged(_ =>
+            {
+                updateGlass();
+                InvalidateTexture();
+            });
             blur.BindValueChanged(_ => updateGlass());
 
             updateGlass();

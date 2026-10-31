@@ -56,7 +56,7 @@ namespace osu.Game.Rulesets.Osu.Skinning.Argon
 
             protected override Color4 ColourAt(float position)
             {
-                if (CalculatedBorderPortion != 0f && position <= CalculatedBorderPortion)
+                if (!HideBorder && CalculatedBorderPortion != 0f && position <= CalculatedBorderPortion)
                     return BorderColour;
 
                 return DarkenBody ? AccentColour.Darken(4) : AccentColour;

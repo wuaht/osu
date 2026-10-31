@@ -75,6 +75,10 @@ namespace osu.Game.Rulesets.Osu.Skinning.Legacy
                 if (position <= shadow_portion)
                     return LegacyUtils.InterpolateNonLinear(position, Color4.Black.Opacity(0f), shadow, 0, shadow_portion);
 
+                // without a border, the body starts right after the shadow.
+                if (HideBorder)
+                    return LegacyUtils.InterpolateNonLinear(position, outerColour, innerColour, shadow_portion, 1);
+
                 if (position <= border_portion)
                     return BorderColour;
 
