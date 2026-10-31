@@ -20,8 +20,8 @@ namespace osu.Game.Rulesets.Osu.Skinning.Legacy
 
         protected override Color4 GetBodyAccentColour(ISkinSource skin, Color4 hitObjectAccentColour)
         {
-            // frosted slider bodies may always use the combo colour, regardless of the skin's slider track colour.
-            Color4? trackOverride = FrostedSliders.Value && AlwaysColoured.Value ? null : skin.GetConfig<OsuSkinColour, Color4>(OsuSkinColour.SliderTrackOverride)?.Value;
+            // glass slider bodies may always use the combo colour, regardless of the skin's slider track colour.
+            Color4? trackOverride = IsGlass && AlwaysColoured.Value ? null : skin.GetConfig<OsuSkinColour, Color4>(OsuSkinColour.SliderTrackOverride)?.Value;
 
             // legacy skins use a constant value for slider track alpha, regardless of the source colour.
             return (trackOverride ?? hitObjectAccentColour).Opacity(getBodyAlpha());
@@ -31,11 +31,11 @@ namespace osu.Game.Rulesets.Osu.Skinning.Legacy
 
         private float getBodyAlpha()
         {
-            if (!FrostedSliders.Value)
+            if (!IsGlass)
                 return default_body_alpha;
 
-            // frosted slider bodies are more transparent to let the blurred backdrop show through.
-            return default_body_alpha - 0.6f * Frostiness.Value;
+            // glass slider bodies are more transparent to let the backdrop show through.
+            return default_body_alpha - 0.6f * Transparency;
         }
 
         private partial class LegacyDrawableSliderPath : FrostedDrawableSliderPath

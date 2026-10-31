@@ -1260,10 +1260,15 @@ namespace osu.Game.Tests.Slop
         {
             AddAssert("opaque by default", () => frostedBackground.Alpha, () => Is.EqualTo(0));
 
-            AddStep("enable frosted lanes", () => config.SetValue(OsuSetting.SlopHitsoundEditorFrostedLanes, true));
+            AddStep("enable frosted lanes", () => config.SetValue(OsuSetting.SlopHitsoundEditorLanesGlassStyle, GlassStyle.Frosted));
             AddAssert("frosted background shown", () => frostedBackground.Alpha, () => Is.EqualTo(1));
+            AddAssert("no liquid glass", () => frostedBackground.LiquidGlass.Enabled, () => Is.False);
 
-            AddStep("disable frosted lanes", () => config.SetValue(OsuSetting.SlopHitsoundEditorFrostedLanes, false));
+            AddStep("enable liquid glass lanes", () => config.SetValue(OsuSetting.SlopHitsoundEditorLanesGlassStyle, GlassStyle.LiquidGlass));
+            AddAssert("glass background shown", () => frostedBackground.Alpha, () => Is.EqualTo(1));
+            AddAssert("liquid glass", () => frostedBackground.LiquidGlass.Enabled);
+
+            AddStep("disable glass lanes", () => config.SetValue(OsuSetting.SlopHitsoundEditorLanesGlassStyle, GlassStyle.Standard));
             AddAssert("frosted background hidden", () => frostedBackground.Alpha, () => Is.EqualTo(0));
         }
 

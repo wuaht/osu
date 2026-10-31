@@ -31,7 +31,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
             };
         }
 
-        private readonly BindableBool frosted = new BindableBool();
+        private readonly Bindable<GlassStyle> glassStyle = new Bindable<GlassStyle>();
 
         [BackgroundDependencyLoader]
         private void load(OverlayColourProvider colourProvider, OsuConfigManager config)
@@ -45,9 +45,9 @@ namespace osu.Game.Screens.Edit.Hitsounding
                 Colour = colourProvider.Background4,
             });
 
-            // the frosted background of the lanes shows through the headers as well.
-            config.BindWith(OsuSetting.SlopHitsoundEditorFrostedLanes, frosted);
-            frosted.BindValueChanged(f => background.Alpha = f.NewValue ? HitsoundLaneHeaders.FROSTED_HEADER_ALPHA : 1, true);
+            // the glass background of the lanes shows through the headers as well.
+            config.BindWith(OsuSetting.SlopHitsoundEditorLanesGlassStyle, glassStyle);
+            glassStyle.BindValueChanged(s => background.Alpha = s.NewValue != GlassStyle.Standard ? HitsoundLaneHeaders.FROSTED_HEADER_ALPHA : 1, true);
         }
     }
 }

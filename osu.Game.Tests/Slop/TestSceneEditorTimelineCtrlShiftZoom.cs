@@ -40,7 +40,7 @@ namespace osu.Game.Tests.Slop
                 Game.LocalConfig.SetValue(OsuSetting.SlopEditorShowOffscreenObjects, true);
                 Game.LocalConfig.SetValue(OsuSetting.SlopEditorWaveformStyle, EditorWaveformStyle.ThreeBand);
                 Game.LocalConfig.SetValue(OsuSetting.SlopEditorLoopMusic, true);
-                Game.LocalConfig.SetValue(OsuSetting.SlopFrostedSliders, true);
+                Game.LocalConfig.SetValue(OsuSetting.SlopSliderGlassStyle, GlassStyle.Frosted);
                 Game.LocalConfig.SetValue(OsuSetting.SlopEditorAutoApplyHitsoundDifficulty, true);
                 Game.LocalConfig.SetValue(OsuSetting.EditorContractSidebars, false);
                 Game.LocalConfig.SetValue(OsuSetting.SlopEditorShowSelectionBox, false);

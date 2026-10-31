@@ -37,12 +37,13 @@ namespace osu.Game.Rulesets.Osu.Tests.Slop
 
         private LegacySliderBody sliderBody = null!;
 
-        [TestCase(true, true, false)]
-        [TestCase(true, false, true)]
-        [TestCase(false, true, true)]
-        public void TestSliderTrackColour(bool frostedSliders, bool alwaysColoured, bool expectTrackColour)
+        [TestCase(GlassStyle.Frosted, true, false)]
+        [TestCase(GlassStyle.LiquidGlass, true, false)]
+        [TestCase(GlassStyle.Frosted, false, true)]
+        [TestCase(GlassStyle.Standard, true, true)]
+        public void TestSliderTrackColour(GlassStyle glassStyle, bool alwaysColoured, bool expectTrackColour)
         {
-            AddStep("set frosted sliders", () => config.SetValue(OsuSetting.SlopFrostedSliders, frostedSliders));
+            AddStep("set slider glass style", () => config.SetValue(OsuSetting.SlopSliderGlassStyle, glassStyle));
             AddStep("set always coloured", () => config.SetValue(OsuSetting.SlopFrostedSlidersAlwaysColoured, alwaysColoured));
 
             AddStep("load slider body", () =>
@@ -72,20 +73,21 @@ namespace osu.Game.Rulesets.Osu.Tests.Slop
 
             AddStep("reset settings", () =>
             {
-                config.SetValue(OsuSetting.SlopFrostedSliders, false);
+                config.SetValue(OsuSetting.SlopSliderGlassStyle, GlassStyle.Standard);
                 config.SetValue(OsuSetting.SlopFrostedSlidersAlwaysColoured, true);
             });
         }
 
-        [TestCase(true, true, null, true)]
-        [TestCase(true, false, null, false)]
-        [TestCase(false, true, null, false)]
-        [TestCase(true, true, "sliderstartcircle", false)]
-        public void TestFrostedHitCircles(bool frostedSliders, bool frostedHitCircles, string? lookupPrefix, bool expectFrosted)
+        [TestCase(GlassStyle.Frosted, true, null, true)]
+        [TestCase(GlassStyle.LiquidGlass, true, null, true)]
+        [TestCase(GlassStyle.Frosted, false, null, false)]
+        [TestCase(GlassStyle.Standard, true, null, false)]
+        [TestCase(GlassStyle.Frosted, true, "sliderstartcircle", false)]
+        public void TestGlassHitCircles(GlassStyle glassStyle, bool frostedHitCircles, string? lookupPrefix, bool expectGlass)
         {
             LegacyMainCirclePiece piece = null!;
 
-            AddStep("set frosted sliders", () => config.SetValue(OsuSetting.SlopFrostedSliders, frostedSliders));
+            AddStep("set slider glass style", () => config.SetValue(OsuSetting.SlopSliderGlassStyle, glassStyle));
             AddStep("set frosted hit circles", () => config.SetValue(OsuSetting.SlopFrostedHitCircles, frostedHitCircles));
 
             AddStep("load circle", () => Child = new SkinProvidingContainer(new TrackOverrideSkin())
@@ -95,11 +97,11 @@ namespace osu.Game.Rulesets.Osu.Tests.Slop
             });
 
             AddUntilStep("loaded", () => piece.IsLoaded);
-            AddAssert("backdrop blurred", () => piece.ChildrenOfType<BackdropBlurContainer>().Any(), () => Is.EqualTo(expectFrosted));
+            AddAssert("backdrop shown", () => piece.ChildrenOfType<BackdropBlurContainer>().Any(), () => Is.EqualTo(expectGlass));
 
             AddStep("reset settings", () =>
             {
-                config.SetValue(OsuSetting.SlopFrostedSliders, false);
+                config.SetValue(OsuSetting.SlopSliderGlassStyle, GlassStyle.Standard);
                 config.SetValue(OsuSetting.SlopFrostedHitCircles, true);
             });
         }

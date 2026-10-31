@@ -48,11 +48,11 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                 {
                     Note = { BindTarget = modeNote },
                 },
-                new SettingsItemV2(new FormCheckBox
+                new SettingsItemV2(new FormEnumDropdown<GlassStyle>
                 {
-                    Caption = SlopSettingsStrings.DiscordFrosted,
-                    HintText = SlopSettingsStrings.DiscordFrostedDescription,
-                    Current = config.GetBindable<bool>(OsuSetting.SlopDiscordFrosted),
+                    Caption = SlopSettingsStrings.DiscordGlassStyle,
+                    HintText = SlopSettingsStrings.DiscordGlassStyleDescription,
+                    Current = config.GetBindable<GlassStyle>(OsuSetting.SlopDiscordGlassStyle),
                 }),
                 new SettingsItemV2(new FormSliderBar<float>
                 {

@@ -4,6 +4,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using osu.Framework.Allocation;
+using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Localisation;
 using osu.Game.Configuration;
@@ -17,20 +18,24 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
     {
         protected override LocalisableString Header => SlopSettingsStrings.GraphicsHeader;
 
-        public override IEnumerable<LocalisableString> FilterTerms => base.FilterTerms.Concat(new LocalisableString[] { "frosted", "frostiness", "blur", "slider", "cursor", "system", "skin", "trail", "argon", "border", "combo", "colour", "color" });
+        public override IEnumerable<LocalisableString> FilterTerms => base.FilterTerms.Concat(new LocalisableString[] { "frosted", "frostiness", "blur", "glass", "liquid", "slider", "cursor", "system", "skin", "trail", "argon", "border", "combo", "colour", "color" });
+
+        private Bindable<GlassStyle> sliderGlassStyle = null!;
 
         [BackgroundDependencyLoader]
         private void load(OsuConfigManager config)
         {
+            SettingsItemV2 frostiness, frostBlur, alwaysColoured, hitCircles;
+
             Children = new Drawable[]
             {
-                new SettingsItemV2(new FormCheckBox
+                new SettingsItemV2(new FormEnumDropdown<GlassStyle>
                 {
-                    Caption = SlopSettingsStrings.FrostedSliders,
-                    HintText = SlopSettingsStrings.FrostedSlidersDescription,
-                    Current = config.GetBindable<bool>(OsuSetting.SlopFrostedSliders),
+                    Caption = SlopSettingsStrings.SliderGlassStyle,
+                    HintText = SlopSettingsStrings.SliderGlassStyleDescription,
+                    Current = sliderGlassStyle = config.GetBindable<GlassStyle>(OsuSetting.SlopSliderGlassStyle),
                 }),
-                new SettingsItemV2(new FormSliderBar<float>
+                frostiness = new SettingsItemV2(new FormSliderBar<float>
                 {
                     Caption = SlopSettingsStrings.Frostiness,
                     HintText = SlopSettingsStrings.FrostinessDescription,
@@ -38,7 +43,7 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                     KeyboardStep = 0.01f,
                     DisplayAsPercentage = true,
                 }),
-                new SettingsItemV2(new FormSliderBar<float>
+                frostBlur = new SettingsItemV2(new FormSliderBar<float>
                 {
                     Caption = SlopSettingsStrings.FrostBlur,
                     HintText = SlopSettingsStrings.FrostBlurDescription,
@@ -46,16 +51,16 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                     KeyboardStep = 0.01f,
                     DisplayAsPercentage = true,
                 }),
-                new SettingsItemV2(new FormCheckBox
+                alwaysColoured = new SettingsItemV2(new FormCheckBox
                 {
-                    Caption = SlopSettingsStrings.FrostedSlidersAlwaysColoured,
-                    HintText = SlopSettingsStrings.FrostedSlidersAlwaysColouredDescription,
+                    Caption = SlopSettingsStrings.GlassSlidersAlwaysColoured,
+                    HintText = SlopSettingsStrings.GlassSlidersAlwaysColouredDescription,
                     Current = config.GetBindable<bool>(OsuSetting.SlopFrostedSlidersAlwaysColoured),
                 }),
-                new SettingsItemV2(new FormCheckBox
+                hitCircles = new SettingsItemV2(new FormCheckBox
                 {
-                    Caption = SlopSettingsStrings.FrostedHitCircles,
-                    HintText = SlopSettingsStrings.FrostedHitCirclesDescription,
+                    Caption = SlopSettingsStrings.GlassHitCircles,
+                    HintText = SlopSettingsStrings.GlassHitCirclesDescription,
                     Current = config.GetBindable<bool>(OsuSetting.SlopFrostedHitCircles),
                 }),
                 new SettingsItemV2(new FormCheckBox
@@ -88,6 +93,13 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                     Current = config.GetBindable<bool>(OsuSetting.SlopSmootherCursorTrail),
                 }),
             };
+
+            // the settings of frosted glass only apply to it, the others to any glass style.
+            sliderGlassStyle.BindValueChanged(s =>
+            {
+                frostiness.CanBeShown.Value = frostBlur.CanBeShown.Value = s.NewValue == GlassStyle.Frosted;
+                alwaysColoured.CanBeShown.Value = hitCircles.CanBeShown.Value = s.NewValue != GlassStyle.Standard;
+            }, true);
         }
     }
 }

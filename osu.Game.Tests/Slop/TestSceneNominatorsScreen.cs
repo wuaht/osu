@@ -76,12 +76,12 @@ namespace osu.Game.Tests.Slop
             AddAssert("details closed", () => !screen.DetailsShown);
             AddAssert("still in editor", () => Editor.IsCurrentScreen());
 
-            AddStep("enable frosted panels", () => config.SetValue(OsuSetting.SlopBnTrackerFrostedPanels, true));
+            AddStep("enable liquid glass panels", () => config.SetValue(OsuSetting.SlopBnTrackerPanelsGlassStyle, GlassStyle.LiquidGlass));
             AddStep("show details of removed nominator", () => screen.ShowDetails(4));
             AddUntilStep("details shown", () => screen.ChildrenOfType<NominatorDetails>().SingleOrDefault()?.IsLoaded == true);
             AddAssert("status locked", () => !screen.ChildrenOfType<NominatorDetails>().Single().ChildrenOfType<StatusButton>().Single().Enabled.Value);
             AddStep("close details", () => screen.CloseDetails());
-            AddStep("disable frosted panels", () => config.SetValue(OsuSetting.SlopBnTrackerFrostedPanels, false));
+            AddStep("disable glass panels", () => config.SetValue(OsuSetting.SlopBnTrackerPanelsGlassStyle, GlassStyle.Standard));
 
             AddStep("enter selection mode", () => screen.SelectionMode.Value = true);
             AddStep("click two cards", () =>

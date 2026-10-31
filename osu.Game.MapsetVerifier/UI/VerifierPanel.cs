@@ -13,7 +13,7 @@ using osu.Game.Screens.Edit.Components;
 namespace osu.Game.MapsetVerifier.UI
 {
     /// <summary>
-    /// A panel of the verify screen, with an opaque or frosted glass background depending on the setting.
+    /// A panel of the verify screen, with an opaque or glass background depending on the setting.
     /// </summary>
     public partial class VerifierPanel : Container
     {
@@ -21,7 +21,7 @@ namespace osu.Game.MapsetVerifier.UI
 
         protected override Container<Drawable> Content { get; }
 
-        private readonly BindableBool frosted = new BindableBool();
+        private readonly Bindable<GlassStyle> glassStyle = new Bindable<GlassStyle>();
 
         private Box opaqueBackground = null!;
         private FrostedPanelBackground frostedBackground = null!;
@@ -44,7 +44,7 @@ namespace osu.Game.MapsetVerifier.UI
         [BackgroundDependencyLoader]
         private void load(OverlayColourProvider colourProvider, OsuConfigManager config)
         {
-            config.BindWith(OsuSetting.SlopMapsetVerifierFrostedPanels, frosted);
+            config.BindWith(OsuSetting.SlopMapsetVerifierPanelsGlassStyle, glassStyle);
 
             InternalChildren = new Drawable[]
             {
@@ -53,7 +53,7 @@ namespace osu.Game.MapsetVerifier.UI
                     RelativeSizeAxes = Axes.Both,
                     Colour = colourProvider.Background5,
                 },
-                frostedBackground = new FrostedPanelBackground(),
+                frostedBackground = new FrostedPanelBackground { GlassCornerRadius = CORNER_RADIUS },
                 Content,
             };
         }
@@ -62,10 +62,11 @@ namespace osu.Game.MapsetVerifier.UI
         {
             base.LoadComplete();
 
-            frosted.BindValueChanged(f =>
+            frostedBackground.Style.BindTo(glassStyle);
+            glassStyle.BindValueChanged(s =>
             {
-                opaqueBackground.Alpha = f.NewValue ? 0 : 1;
-                frostedBackground.Alpha = f.NewValue ? 1 : 0;
+                opaqueBackground.Alpha = s.NewValue == GlassStyle.Standard ? 1 : 0;
+                frostedBackground.Alpha = s.NewValue == GlassStyle.Standard ? 0 : 1;
             }, true);
         }
     }

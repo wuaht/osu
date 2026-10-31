@@ -41,6 +41,11 @@ namespace osu.Game.Overlays
         private const float frosted_blur_sigma = 15;
 
         /// <summary>
+        /// The width of the refracting edge of liquid glass at the highest thickness setting.
+        /// </summary>
+        private const float max_liquid_glass_thickness = 30;
+
+        /// <summary>
         /// The width of the settings panel content, excluding the sidebar.
         /// </summary>
         public const float PANEL_WIDTH = 400;
@@ -86,12 +91,19 @@ namespace osu.Game.Overlays
 
         private BackdropBlurContainer frostedBackground;
 
-        private readonly Bindable<bool> frosted = new Bindable<bool>();
+        private readonly Bindable<GlassStyle> glassStyle = new Bindable<GlassStyle>();
+
+        private LiquidGlassConfig liquidGlass;
 
         [BackgroundDependencyLoader]
         private void load(OsuConfigManager config)
         {
-            config.BindWith(OsuSetting.SlopFrostedSettings, frosted);
+            config.BindWith(OsuSetting.SlopSettingsGlassStyle, glassStyle);
+            liquidGlass = new LiquidGlassConfig(config, () =>
+            {
+                if (IsLoaded)
+                    updateGlass();
+            });
 
             InternalChild = ContentContainer = new NonMaskedContent
             {
@@ -187,8 +199,16 @@ namespace osu.Game.Overlays
         {
             base.LoadComplete();
 
-            // a zero blur skips the backdrop entirely, so it costs nothing while disabled.
-            frosted.BindValueChanged(f => frostedBackground.BlurSigma = f.NewValue ? new Vector2(frosted_blur_sigma) : Vector2.Zero, true);
+            glassStyle.BindValueChanged(_ => updateGlass(), true);
+        }
+
+        private void updateGlass()
+        {
+            // the refraction of liquid glass needs a sharper backdrop than the blur.
+            frostedBackground.EffectBufferScale = new Vector2(glassStyle.Value == GlassStyle.LiquidGlass ? 0.5f : 0.25f);
+
+            // the left edge of the glass is off-screen (see the scale of the background), so only the edge towards the game is visible.
+            liquidGlass.ApplyTo(frostedBackground, glassStyle.Value, frosted_blur_sigma, max_liquid_glass_thickness);
         }
 
         protected override void PopIn()

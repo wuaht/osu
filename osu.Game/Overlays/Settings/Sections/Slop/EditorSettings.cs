@@ -129,11 +129,11 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                     HintText = SlopSettingsStrings.UnsnapDivisorsDescription,
                     Current = config.GetBindable<string>(OsuSetting.SlopEditorUnsnapDivisors),
                 }),
-                new SettingsItemV2(new FormCheckBox
+                new SettingsItemV2(new FormEnumDropdown<GlassStyle>
                 {
-                    Caption = SlopSettingsStrings.FrostedHitsoundLanes,
-                    HintText = SlopSettingsStrings.FrostedHitsoundLanesDescription,
-                    Current = config.GetBindable<bool>(OsuSetting.SlopHitsoundEditorFrostedLanes),
+                    Caption = SlopSettingsStrings.HitsoundLanesGlassStyle,
+                    HintText = SlopSettingsStrings.HitsoundLanesGlassStyleDescription,
+                    Current = config.GetBindable<GlassStyle>(OsuSetting.SlopHitsoundEditorLanesGlassStyle),
                 }),
                 new SettingsItemV2(new FormCheckBox
                 {
@@ -147,11 +147,11 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                     HintText = SlopSettingsStrings.AutoApplyHitsoundDifficultyDescription,
                     Current = config.GetBindable<bool>(OsuSetting.SlopEditorAutoApplyHitsoundDifficulty),
                 }),
-                new SettingsItemV2(new FormCheckBox
+                new SettingsItemV2(new FormEnumDropdown<GlassStyle>
                 {
-                    Caption = SlopSettingsStrings.FrostedBnTrackerPanels,
-                    HintText = SlopSettingsStrings.FrostedBnTrackerPanelsDescription,
-                    Current = config.GetBindable<bool>(OsuSetting.SlopBnTrackerFrostedPanels),
+                    Caption = SlopSettingsStrings.BnTrackerPanelsGlassStyle,
+                    HintText = SlopSettingsStrings.BnTrackerPanelsGlassStyleDescription,
+                    Current = config.GetBindable<GlassStyle>(OsuSetting.SlopBnTrackerPanelsGlassStyle),
                 }),
                 new SettingsItemV2(new FormCheckBox
                 {

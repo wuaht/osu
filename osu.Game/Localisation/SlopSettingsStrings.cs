@@ -20,15 +20,15 @@ namespace osu.Game.Localisation
         public static LocalisableString GraphicsHeader => new TranslatableString(getKey(@"graphics_header"), @"Graphics");
 
         /// <summary>
-        /// "Frosted sliders"
+        /// "Slider glass style"
         /// </summary>
-        public static LocalisableString FrostedSliders => new TranslatableString(getKey(@"frosted_sliders"), @"Frosted sliders");
+        public static LocalisableString SliderGlassStyle => new TranslatableString(getKey(@"slider_glass_style"), @"Slider glass style");
 
         /// <summary>
-        /// "Slider bodies of legacy and argon skins blur the content behind them, like frosted glass. Hit circles of legacy skins become slightly translucent to match."
+        /// "How slider bodies of legacy and argon skins show the content behind them. Hit circles of legacy skins become slightly translucent to match."
         /// </summary>
-        public static LocalisableString FrostedSlidersDescription => new TranslatableString(getKey(@"frosted_sliders_description"),
-            @"Slider bodies of legacy and argon skins blur the content behind them, like frosted glass. Hit circles of legacy skins become slightly translucent to match.");
+        public static LocalisableString SliderGlassStyleDescription => new TranslatableString(getKey(@"slider_glass_style_description"),
+            @"How slider bodies of legacy and argon skins show the content behind them. Hit circles of legacy skins become slightly translucent to match.");
 
         /// <summary>
         /// "Frostiness"
@@ -53,26 +53,27 @@ namespace osu.Game.Localisation
             @"How strongly frosted slider bodies blur the content behind them. Lower values keep the content more recognisable.");
 
         /// <summary>
-        /// "Always colour frosted slider bodies"
+        /// "Always colour glass slider bodies"
         /// </summary>
-        public static LocalisableString FrostedSlidersAlwaysColoured => new TranslatableString(getKey(@"frosted_sliders_always_coloured"), @"Always colour frosted slider bodies");
+        public static LocalisableString GlassSlidersAlwaysColoured => new TranslatableString(getKey(@"glass_sliders_always_coloured"),
+            @"Always colour glass slider bodies");
 
         /// <summary>
-        /// "Frosted slider bodies use the combo colour, even if the skin specifies a slider track colour."
+        /// "Glass slider bodies use the combo colour, even if the skin specifies a slider track colour."
         /// </summary>
-        public static LocalisableString FrostedSlidersAlwaysColouredDescription => new TranslatableString(getKey(@"frosted_sliders_always_coloured_description"),
-            @"Frosted slider bodies use the combo colour, even if the skin specifies a slider track colour.");
+        public static LocalisableString GlassSlidersAlwaysColouredDescription => new TranslatableString(getKey(@"glass_sliders_always_coloured_description"),
+            @"Glass slider bodies use the combo colour, even if the skin specifies a slider track colour.");
 
         /// <summary>
-        /// "Frosted hit circles"
+        /// "Glass hit circles"
         /// </summary>
-        public static LocalisableString FrostedHitCircles => new TranslatableString(getKey(@"frosted_hit_circles"), @"Frosted hit circles");
+        public static LocalisableString GlassHitCircles => new TranslatableString(getKey(@"glass_hit_circles"), @"Glass hit circles");
 
         /// <summary>
-        /// "Blurs the content behind hit circles which are translucent with frosted sliders. Has no effect on opaque hit circles."
+        /// "Hit circles which are translucent with glass sliders show the content behind them like slider bodies. Has no effect on opaque hit circles."
         /// </summary>
-        public static LocalisableString FrostedHitCirclesDescription => new TranslatableString(getKey(@"frosted_hit_circles_description"),
-            @"Blurs the content behind hit circles which are translucent with frosted sliders. Has no effect on opaque hit circles.");
+        public static LocalisableString GlassHitCirclesDescription => new TranslatableString(getKey(@"glass_hit_circles_description"),
+            @"Hit circles which are translucent with glass sliders show the content behind them like slider bodies. Has no effect on opaque hit circles.");
 
         /// <summary>
         /// "Menu cursor"
@@ -389,15 +390,15 @@ namespace osu.Game.Localisation
             @"When disabled, the rotation hotkeys and ctrl+shift+scroll rotate the selection around the centre of the playfield.");
 
         /// <summary>
-        /// "Frosted hitsound editor lanes"
+        /// "Hitsound editor lanes"
         /// </summary>
-        public static LocalisableString FrostedHitsoundLanes => new TranslatableString(getKey(@"frosted_hitsound_lanes"), @"Frosted hitsound editor lanes");
+        public static LocalisableString HitsoundLanesGlassStyle => new TranslatableString(getKey(@"hitsound_lanes_glass_style"), @"Hitsound editor lanes");
 
         /// <summary>
-        /// "The lanes of the hitsound editor have a frosted glass background, through which the background of the beatmap shows."
+        /// "The background of the lanes of the hitsound editor. Frosted and liquid glass let the background of the beatmap show through."
         /// </summary>
-        public static LocalisableString FrostedHitsoundLanesDescription => new TranslatableString(getKey(@"frosted_hitsound_lanes_description"),
-            @"The lanes of the hitsound editor have a frosted glass background, through which the background of the beatmap shows.");
+        public static LocalisableString HitsoundLanesGlassStyleDescription => new TranslatableString(getKey(@"hitsound_lanes_glass_style_description"),
+            @"The background of the lanes of the hitsound editor. Frosted and liquid glass let the background of the beatmap show through.");
 
         /// <summary>
         /// "Expand hitsound toolbox on hover"
@@ -586,15 +587,15 @@ namespace osu.Game.Localisation
         public static LocalisableString BnTrackerNotSignedIn => new TranslatableString(getKey(@"bn_tracker_not_signed_in"), @"Not signed in to the BN Tracker");
 
         /// <summary>
-        /// "Frosted BN Tracker panels"
+        /// "BN Tracker panels"
         /// </summary>
-        public static LocalisableString FrostedBnTrackerPanels => new TranslatableString(getKey(@"frosted_bn_tracker_panels"), @"Frosted BN Tracker panels");
+        public static LocalisableString BnTrackerPanelsGlassStyle => new TranslatableString(getKey(@"bn_tracker_panels_glass_style"), @"BN Tracker panels");
 
         /// <summary>
-        /// "The panels of the "request" screen have a frosted glass background, through which the background of the beatmap shows."
+        /// "The background of the panels of the "request" screen. Frosted and liquid glass let the background of the beatmap show through."
         /// </summary>
-        public static LocalisableString FrostedBnTrackerPanelsDescription => new TranslatableString(getKey(@"frosted_bn_tracker_panels_description"),
-            @"The panels of the ""request"" screen have a frosted glass background, through which the background of the beatmap shows.");
+        public static LocalisableString BnTrackerPanelsGlassStyleDescription => new TranslatableString(getKey(@"bn_tracker_panels_glass_style_description"),
+            @"The background of the panels of the ""request"" screen. Frosted and liquid glass let the background of the beatmap show through.");
 
         /// <summary>
         /// "Colour effects"
@@ -1629,14 +1630,15 @@ namespace osu.Game.Localisation
         public static LocalisableString AllowOverlaysDuringGameplayDescription => new TranslatableString(getKey(@"allow_overlays_during_gameplay_description"), @"The settings, chat and other overlays can be opened with their hotkeys while playing, without pausing first.");
 
         /// <summary>
-        /// "Frosted settings"
+        /// "Settings background"
         /// </summary>
-        public static LocalisableString FrostedSettings => new TranslatableString(getKey(@"frosted_settings"), @"Frosted settings");
+        public static LocalisableString SettingsGlassStyle => new TranslatableString(getKey(@"settings_glass_style"), @"Settings background");
 
         /// <summary>
-        /// "Blurs the background behind the settings like frosted glass, which keeps them readable on busy backgrounds."
+        /// "How the background behind the settings shows through them. Frosted glass keeps them readable on busy backgrounds."
         /// </summary>
-        public static LocalisableString FrostedSettingsDescription => new TranslatableString(getKey(@"frosted_settings_description"), @"Blurs the background behind the settings like frosted glass, which keeps them readable on busy backgrounds.");
+        public static LocalisableString SettingsGlassStyleDescription => new TranslatableString(getKey(@"settings_glass_style_description"),
+            @"How the background behind the settings shows through them. Frosted glass keeps them readable on busy backgrounds.");
 
         /// <summary>
         /// "Miku Takeover"
@@ -1774,14 +1776,15 @@ namespace osu.Game.Localisation
         public static LocalisableString MapsetVerifierCheckSpeedDescription => new TranslatableString(getKey(@"mapset_verifier_check_speed_description"), @"Shows how long each check took after a check run.");
 
         /// <summary>
-        /// "Frosted panels"
+        /// "Panels"
         /// </summary>
-        public static LocalisableString MapsetVerifierFrostedPanels => new TranslatableString(getKey(@"mapset_verifier_frosted_panels"), @"Frosted panels");
+        public static LocalisableString MapsetVerifierPanelsGlassStyle => new TranslatableString(getKey(@"mapset_verifier_panels_glass_style"), @"Panels");
 
         /// <summary>
-        /// "Blurs the beatmap background behind the panels of the verify screen like frosted glass, instead of covering it."
+        /// "The background of the panels of the verify screen. Frosted and liquid glass let the beatmap background show through instead of covering it."
         /// </summary>
-        public static LocalisableString MapsetVerifierFrostedPanelsDescription => new TranslatableString(getKey(@"mapset_verifier_frosted_panels_description"), @"Blurs the beatmap background behind the panels of the verify screen like frosted glass, instead of covering it.");
+        public static LocalisableString MapsetVerifierPanelsGlassStyleDescription => new TranslatableString(getKey(@"mapset_verifier_panels_glass_style_description"),
+            @"The background of the panels of the verify screen. Frosted and liquid glass let the beatmap background show through instead of covering it.");
 
         /// <summary>
         /// "Discord"
@@ -1799,14 +1802,15 @@ namespace osu.Game.Localisation
         public static LocalisableString DiscordModeDescription => new TranslatableString(getKey(@"discord_mode_description"), @"The official SDK only provides direct messages with friends. The full client also shows your servers, but logs in with your user account, which is against the Discord Terms of Service and can get your account banned.");
 
         /// <summary>
-        /// "Frosted Discord background"
+        /// "Discord background"
         /// </summary>
-        public static LocalisableString DiscordFrosted => new TranslatableString(getKey(@"discord_frosted"), @"Frosted Discord background");
+        public static LocalisableString DiscordGlassStyle => new TranslatableString(getKey(@"discord_glass_style"), @"Discord background");
 
         /// <summary>
-        /// "Blurs what is behind the Discord overlay like frosted glass."
+        /// "How what is behind the Discord overlay shows through it."
         /// </summary>
-        public static LocalisableString DiscordFrostedDescription => new TranslatableString(getKey(@"discord_frosted_description"), @"Blurs what is behind the Discord overlay like frosted glass.");
+        public static LocalisableString DiscordGlassStyleDescription => new TranslatableString(getKey(@"discord_glass_style_description"),
+            @"How what is behind the Discord overlay shows through it.");
 
         /// <summary>
         /// "Discord background opacity"
@@ -1873,6 +1877,78 @@ namespace osu.Game.Localisation
         /// "Signing into the website failed: {0}"
         /// </summary>
         public static LocalisableString WebsiteLoginFailed(string message) => new TranslatableString(getKey(@"website_login_failed"), @"Signing into the website failed: {0}", message);
+
+        /// <summary>
+        /// "Liquid glass"
+        /// </summary>
+        public static LocalisableString LiquidGlassHeader => new TranslatableString(getKey(@"liquid_glass_header"), @"Liquid glass");
+
+        /// <summary>
+        /// "Thickness"
+        /// </summary>
+        public static LocalisableString LiquidGlassThickness => new TranslatableString(getKey(@"liquid_glass_thickness"), @"Thickness");
+
+        /// <summary>
+        /// "How wide the curved edge of liquid glass is."
+        /// </summary>
+        public static LocalisableString LiquidGlassThicknessDescription => new TranslatableString(getKey(@"liquid_glass_thickness_description"),
+            @"How wide the curved edge of liquid glass is.");
+
+        /// <summary>
+        /// "Refraction"
+        /// </summary>
+        public static LocalisableString LiquidGlassRefraction => new TranslatableString(getKey(@"liquid_glass_refraction"), @"Refraction");
+
+        /// <summary>
+        /// "How strongly the edge of liquid glass bends the content behind it."
+        /// </summary>
+        public static LocalisableString LiquidGlassRefractionDescription => new TranslatableString(getKey(@"liquid_glass_refraction_description"),
+            @"How strongly the edge of liquid glass bends the content behind it.");
+
+        /// <summary>
+        /// "Chromatic aberration"
+        /// </summary>
+        public static LocalisableString LiquidGlassChromaticAberration => new TranslatableString(getKey(@"liquid_glass_chromatic_aberration"),
+            @"Chromatic aberration");
+
+        /// <summary>
+        /// "How strongly the edge of liquid glass splits up the colours of the content behind it."
+        /// </summary>
+        public static LocalisableString LiquidGlassChromaticAberrationDescription => new TranslatableString(getKey(@"liquid_glass_chromatic_aberration_description"),
+            @"How strongly the edge of liquid glass splits up the colours of the content behind it.");
+
+        /// <summary>
+        /// "Highlight"
+        /// </summary>
+        public static LocalisableString LiquidGlassHighlight => new TranslatableString(getKey(@"liquid_glass_highlight"), @"Highlight");
+
+        /// <summary>
+        /// "How bright the light reflections on the edge of liquid glass are."
+        /// </summary>
+        public static LocalisableString LiquidGlassHighlightDescription => new TranslatableString(getKey(@"liquid_glass_highlight_description"),
+            @"How bright the light reflections on the edge of liquid glass are.");
+
+        /// <summary>
+        /// "Blur"
+        /// </summary>
+        public static LocalisableString LiquidGlassBlur => new TranslatableString(getKey(@"liquid_glass_blur"), @"Blur");
+
+        /// <summary>
+        /// "How strongly liquid glass blurs the content behind it. Without any blur, it looks like clear glass."
+        /// </summary>
+        public static LocalisableString LiquidGlassBlurDescription => new TranslatableString(getKey(@"liquid_glass_blur_description"),
+            @"How strongly liquid glass blurs the content behind it. Without any blur, it looks like clear glass.");
+
+        /// <summary>
+        /// "Darkness"
+        /// </summary>
+        public static LocalisableString LiquidGlassDarkness => new TranslatableString(getKey(@"liquid_glass_darkness"), @"Darkness");
+
+        /// <summary>
+        /// "How much liquid glass darkens the content behind it, which keeps text on top of it readable."
+        /// </summary>
+        public static LocalisableString LiquidGlassDarknessDescription => new TranslatableString(getKey(@"liquid_glass_darkness_description"),
+            @"How much liquid glass darkens the content behind it, which keeps text on top of it readable.");
 
         private static string getKey(string key) => $"{prefix}:{key}";
     }

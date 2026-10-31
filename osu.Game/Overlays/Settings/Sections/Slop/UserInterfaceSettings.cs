@@ -41,11 +41,11 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                     HintText = SlopSettingsStrings.InstantScreenTransitionsDescription,
                     Current = config.GetBindable<bool>(OsuSetting.SlopInstantScreenTransitions),
                 }),
-                new SettingsItemV2(new FormCheckBox
+                new SettingsItemV2(new FormEnumDropdown<GlassStyle>
                 {
-                    Caption = SlopSettingsStrings.FrostedSettings,
-                    HintText = SlopSettingsStrings.FrostedSettingsDescription,
-                    Current = config.GetBindable<bool>(OsuSetting.SlopFrostedSettings),
+                    Caption = SlopSettingsStrings.SettingsGlassStyle,
+                    HintText = SlopSettingsStrings.SettingsGlassStyleDescription,
+                    Current = config.GetBindable<GlassStyle>(OsuSetting.SlopSettingsGlassStyle),
                 }),
                 new SettingsItemV2(new FormEnumDropdown<SongSelectSortDirection>
                 {

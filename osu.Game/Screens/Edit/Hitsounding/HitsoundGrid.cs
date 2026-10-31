@@ -49,7 +49,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
         private Box opaqueBackground = null!;
         private FrostedPanelBackground frostedBackground = null!;
 
-        private readonly BindableBool frosted = new BindableBool();
+        private readonly Bindable<GlassStyle> glassStyle = new Bindable<GlassStyle>();
         private GridContainer grid = null!;
         private HitsoundVolumeArea volumeArea = null!;
         private Container sampleDropArea = null!;
@@ -61,7 +61,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
         {
             RelativeSizeAxes = Axes.Both;
 
-            config.BindWith(OsuSetting.SlopHitsoundEditorFrostedLanes, frosted);
+            config.BindWith(OsuSetting.SlopHitsoundEditorLanesGlassStyle, glassStyle);
 
             InternalChild = lanes = new Container
             {
@@ -190,13 +190,16 @@ namespace osu.Game.Screens.Edit.Hitsounding
         {
             base.LoadComplete();
 
-            frosted.BindValueChanged(f =>
+            frostedBackground.Style.BindTo(glassStyle);
+            glassStyle.BindValueChanged(s =>
             {
-                opaqueBackground.Alpha = f.NewValue ? 0 : 1;
-                frostedBackground.Alpha = f.NewValue ? 1 : 0;
+                bool glass = s.NewValue != GlassStyle.Standard;
+
+                opaqueBackground.Alpha = glass ? 0 : 1;
+                frostedBackground.Alpha = glass ? 1 : 0;
 
                 // rounded corners set the lanes apart from the background which shows through them.
-                lanes.CornerRadius = f.NewValue ? 8 : 0;
+                lanes.CornerRadius = frostedBackground.GlassCornerRadius = glass ? 8 : 0;
             }, true);
         }
 

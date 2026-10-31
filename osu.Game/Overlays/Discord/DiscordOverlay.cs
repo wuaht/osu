@@ -71,7 +71,7 @@ namespace osu.Game.Overlays.Discord
 
         private readonly BindableFloat overlayHeight = new BindableFloat();
         private readonly BindableFloat backgroundOpacity = new BindableFloat();
-        private readonly BindableBool frosted = new BindableBool();
+        private readonly Bindable<GlassStyle> glassStyle = new Bindable<GlassStyle>();
 
         private readonly IBindable<DiscordClient?> client = new Bindable<DiscordClient?>();
         private readonly Bindable<DiscordConnectionState> state = new Bindable<DiscordConnectionState>();
@@ -88,13 +88,13 @@ namespace osu.Game.Overlays.Discord
         private bool isDraggingTopBar;
         private float dragStartHeight;
 
+        private const float corner_radius = 7f;
+
         public DiscordOverlay()
         {
             Height = 0.5f;
 
             Masking = true;
-
-            const float corner_radius = 7f;
 
             CornerRadius = corner_radius;
 
@@ -129,6 +129,7 @@ namespace osu.Game.Overlays.Discord
                 frostedBackground = new FrostedPanelBackground
                 {
                     Alpha = 0,
+                    GlassCornerRadius = corner_radius,
                 },
                 background = new Box
                 {
@@ -165,7 +166,7 @@ namespace osu.Game.Overlays.Discord
 
             config.BindWith(OsuSetting.SlopDiscordOverlayHeight, overlayHeight);
             config.BindWith(OsuSetting.SlopDiscordBackgroundOpacity, backgroundOpacity);
-            config.BindWith(OsuSetting.SlopDiscordFrosted, frosted);
+            config.BindWith(OsuSetting.SlopDiscordGlassStyle, glassStyle);
         }
 
         protected override void LoadComplete()
@@ -174,7 +175,8 @@ namespace osu.Game.Overlays.Discord
 
             overlayHeight.BindValueChanged(h => Height = h.NewValue, true);
             backgroundOpacity.BindValueChanged(_ => updateBackground());
-            frosted.BindValueChanged(_ => updateBackground(), true);
+            frostedBackground.Style.BindTo(glassStyle);
+            glassStyle.BindValueChanged(_ => updateBackground(), true);
 
             if (discordManager != null)
                 client.BindTo(discordManager.Client);
@@ -429,10 +431,12 @@ namespace osu.Game.Overlays.Discord
 
         private void updateBackground()
         {
-            frostedBackground.Alpha = frosted.Value ? 1 : 0;
+            bool glass = glassStyle.Value != GlassStyle.Standard;
 
-            // The frosted backdrop is darkened by itself already, so the black layer can be lighter on top of it.
-            background.Alpha = frosted.Value ? backgroundOpacity.Value * 0.5f : backgroundOpacity.Value;
+            frostedBackground.Alpha = glass ? 1 : 0;
+
+            // The glass backdrop is darkened by itself already, so the black layer can be lighter on top of it.
+            background.Alpha = glass ? backgroundOpacity.Value * 0.5f : backgroundOpacity.Value;
         }
 
         private void updateView()

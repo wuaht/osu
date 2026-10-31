@@ -9,39 +9,59 @@ using osu.Game.Skinning;
 namespace osu.Game.Rulesets.Osu.Skinning.Default
 {
     /// <summary>
-    /// A <see cref="PlaySliderBody"/> which supports frosted slider bodies.
-    /// The body accent colour is re-evaluated whenever the frosted slider settings change,
-    /// such that derived classes can lower the opacity of the body to let the blurred backdrop show through.
+    /// A <see cref="PlaySliderBody"/> which supports glass slider bodies.
+    /// The body accent colour is re-evaluated whenever the glass settings change,
+    /// such that derived classes can lower the opacity of the body to let the backdrop show through.
     /// </summary>
     /// <remarks>
-    /// The path should derive from <see cref="FrostedDrawableSliderPath"/>, which handles the blurring itself.
+    /// The path should derive from <see cref="FrostedDrawableSliderPath"/>, which handles the backdrop itself.
     /// </remarks>
     public abstract partial class FrostedPlaySliderBody : PlaySliderBody
     {
         /// <summary>
-        /// Whether slider bodies are frosted.
+        /// How transparent liquid glass slider bodies are, from 0 to 1 (see <see cref="Transparency"/>).
         /// </summary>
-        protected readonly Bindable<bool> FrostedSliders = new Bindable<bool>();
+        private const float liquid_glass_transparency = 0.8f;
+
+        /// <summary>
+        /// The glass style of slider bodies.
+        /// </summary>
+        protected readonly Bindable<GlassStyle> GlassStyle = new Bindable<GlassStyle>();
 
         /// <summary>
         /// How frosted slider bodies are, from 0 to 1.
         /// </summary>
-        protected readonly BindableFloat Frostiness = new BindableFloat();
+        private readonly BindableFloat frostiness = new BindableFloat();
 
         /// <summary>
-        /// Whether frosted slider bodies are always coloured with the combo colour, ignoring the slider track colour of the skin.
+        /// Whether glass slider bodies are always coloured with the combo colour, ignoring the slider track colour of the skin.
         /// </summary>
         protected readonly Bindable<bool> AlwaysColoured = new Bindable<bool>();
+
+        /// <summary>
+        /// Whether slider bodies show the content behind them in any way.
+        /// </summary>
+        protected bool IsGlass => GlassStyle.Value != osu.Game.Configuration.GlassStyle.Standard;
+
+        /// <summary>
+        /// How much more transparent than usual slider bodies are to let the backdrop show through, from 0 to 1.
+        /// </summary>
+        protected float Transparency => GlassStyle.Value switch
+        {
+            osu.Game.Configuration.GlassStyle.Frosted => frostiness.Value,
+            osu.Game.Configuration.GlassStyle.LiquidGlass => liquid_glass_transparency,
+            _ => 0,
+        };
 
         [BackgroundDependencyLoader(permitNulls: true)]
         private void load(ISkinSource skin, OsuConfigManager? config)
         {
-            config?.BindWith(OsuSetting.SlopFrostedSliders, FrostedSliders);
-            config?.BindWith(OsuSetting.SlopFrostedSlidersFrostiness, Frostiness);
+            config?.BindWith(OsuSetting.SlopSliderGlassStyle, GlassStyle);
+            config?.BindWith(OsuSetting.SlopFrostedSlidersFrostiness, frostiness);
             config?.BindWith(OsuSetting.SlopFrostedSlidersAlwaysColoured, AlwaysColoured);
 
-            FrostedSliders.BindValueChanged(_ => updateAccentColour(skin));
-            Frostiness.BindValueChanged(_ => updateAccentColour(skin));
+            GlassStyle.BindValueChanged(_ => updateAccentColour(skin));
+            frostiness.BindValueChanged(_ => updateAccentColour(skin));
             AlwaysColoured.BindValueChanged(_ => updateAccentColour(skin));
 
             updateAccentColour(skin);

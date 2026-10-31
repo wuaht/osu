@@ -104,11 +104,11 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                     HintText = SlopSettingsStrings.MapsetVerifierCheckSpeedDescription,
                     Current = config.GetBindable<bool>(OsuSetting.SlopMapsetVerifierShowCheckSpeedStats),
                 }),
-                new SettingsItemV2(new FormCheckBox
+                new SettingsItemV2(new FormEnumDropdown<GlassStyle>
                 {
-                    Caption = SlopSettingsStrings.MapsetVerifierFrostedPanels,
-                    HintText = SlopSettingsStrings.MapsetVerifierFrostedPanelsDescription,
-                    Current = config.GetBindable<bool>(OsuSetting.SlopMapsetVerifierFrostedPanels),
+                    Caption = SlopSettingsStrings.MapsetVerifierPanelsGlassStyle,
+                    HintText = SlopSettingsStrings.MapsetVerifierPanelsGlassStyleDescription,
+                    Current = config.GetBindable<GlassStyle>(OsuSetting.SlopMapsetVerifierPanelsGlassStyle),
                 }),
             };
 

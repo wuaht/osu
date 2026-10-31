@@ -7,6 +7,7 @@ using osu.Framework.Bindables;
 using osu.Framework.Extensions.ObjectExtensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
+using osu.Framework.Graphics.Primitives;
 using osu.Framework.Graphics.Sprites;
 using osu.Game.Configuration;
 using osu.Game.Graphics;
@@ -96,23 +97,24 @@ namespace osu.Game.Rulesets.Osu.Skinning.Legacy
             // at this point, any further texture fetches should be correctly using the priority source if the base texture was retrieved using it.
             // the conditional above handles the case where a sliderendcircle.png is retrieved from the skin, but sliderendcircleoverlay.png doesn't exist.
             // expected behaviour in this scenario is not showing the overlay, rather than using hitcircleoverlay.png.
-            bool frostedSliders = gameConfig?.Get<bool>(OsuSetting.SlopFrostedSliders) == true;
+            GlassStyle glassStyle = gameConfig?.Get<GlassStyle>(OsuSetting.SlopSliderGlassStyle) ?? GlassStyle.Standard;
+            bool glassSliders = glassStyle != GlassStyle.Standard;
 
             CircleSprite = new LegacyKiaiFlashingDrawable(() => new Sprite { Texture = skin.GetTexture(circleName)?.WithMaximumSize(maxSize) })
             {
                 Anchor = Anchor.Centre,
                 Origin = Anchor.Centre,
-                // With frosted sliders, circles are made translucent to match the slider bodies.
-                // Circles which are part of a slider are more translucent, as the frosted body is visible behind them.
-                Alpha = frostedSliders ? (priorityLookupPrefix == null ? 0.75f : 0.5f) : 1,
+                // With glass sliders, circles are made translucent to match the slider bodies.
+                // Circles which are part of a slider are more translucent, as the glass body is visible behind them.
+                Alpha = glassSliders ? (priorityLookupPrefix == null ? 0.75f : 0.5f) : 1,
             };
 
             Drawable circle = CircleSprite;
 
-            // The content behind translucent hit circles is blurred like behind frosted slider bodies.
-            // Circles which are part of a slider aren't, as the frosted body is already behind them.
-            if (frostedSliders && priorityLookupPrefix == null && gameConfig?.Get<bool>(OsuSetting.SlopFrostedHitCircles) == true)
-                circle = new FrostedCircleBackdrop(CircleSprite, gameConfig.Get<float>(OsuSetting.SlopFrostedSlidersBlur));
+            // The content behind translucent hit circles is shown like behind glass slider bodies.
+            // Circles which are part of a slider aren't, as the glass body is already behind them.
+            if (glassSliders && priorityLookupPrefix == null && gameConfig?.Get<bool>(OsuSetting.SlopFrostedHitCircles) == true)
+                circle = new GlassCircleBackdrop(CircleSprite, glassStyle, gameConfig);
 
             InternalChildren = new[]
             {
@@ -262,16 +264,32 @@ namespace osu.Game.Rulesets.Osu.Skinning.Legacy
         }
 
         /// <summary>
-        /// Blurs the content behind a translucent circle, like behind frosted slider bodies.
+        /// Shows the content behind a translucent circle like behind glass slider bodies.
         /// </summary>
-        private partial class FrostedCircleBackdrop : BackdropBlurContainer
+        private partial class GlassCircleBackdrop : BackdropBlurContainer
         {
+            /// <summary>
+            /// The radius of the visible part of legacy circle textures, relative to half of their size.
+            /// </summary>
+            private const float visible_radius = OsuLegacySkinTransformer.LEGACY_CIRCLE_RADIUS / OsuHitObject.OBJECT_RADIUS;
+
+            /// <summary>
+            /// The width of the refracting edge of liquid glass at the highest thickness setting, relative to the radius of the circle.
+            /// </summary>
+            private const float max_liquid_glass_thickness = 0.8f;
+
             private readonly Drawable circle;
             private readonly float baseAlpha;
 
-            /// <param name="circle">The circle, which is displayed in this container and determines the area which is blurred behind it.</param>
-            /// <param name="blur">The blur setting of frosted slider bodies (see <see cref="FrostedDrawableSliderPath"/>).</param>
-            public FrostedCircleBackdrop(Drawable circle, float blur)
+            /// <summary>
+            /// The liquid glass settings, or null if the circle isn't liquid glass.
+            /// </summary>
+            private readonly LiquidGlassConfig? liquidGlass;
+
+            /// <param name="circle">The circle, which is displayed in this container and determines the area of the backdrop behind it.</param>
+            /// <param name="style">The glass style of slider bodies.</param>
+            /// <param name="config">The config to read the glass settings from.</param>
+            public GlassCircleBackdrop(Drawable circle, GlassStyle style, OsuConfigManager config)
             {
                 this.circle = circle;
                 baseAlpha = circle.Alpha;
@@ -282,7 +300,14 @@ namespace osu.Game.Rulesets.Osu.Skinning.Legacy
                 // large enough for the largest circle textures (see the maximum size of the circle sprite) while scaled up by the hit animation.
                 Size = OsuHitObject.OBJECT_DIMENSIONS * 2 * 1.4f;
 
-                BlurSigma = new Vector2(FrostedDrawableSliderPath.GetBlurSigma(blur));
+                if (style == GlassStyle.LiquidGlass)
+                {
+                    // the settings can't change during gameplay, so they don't have to be followed.
+                    liquidGlass = new LiquidGlassConfig(config, () => { });
+                    BlurSigma = liquidGlass.BlurSigma;
+                }
+                else
+                    BlurSigma = new Vector2(FrostedDrawableSliderPath.GetBlurSigma(config.Get<float>(OsuSetting.SlopFrostedSlidersBlur)));
 
                 // excludes the soft shadow around legacy circles, which would otherwise blur the backdrop beyond the circle.
                 MaskCutoff = 0.3f;
@@ -295,6 +320,20 @@ namespace osu.Game.Rulesets.Osu.Skinning.Legacy
 
             // fades out along with the circle (e.g. when hit), rather than disappearing once the circle is too transparent to be masked.
             public override float BackdropOpacity => base.BackdropOpacity * Math.Clamp(circle.Alpha / baseAlpha, 0, 1);
+
+            protected override void Update()
+            {
+                base.Update();
+
+                if (liquidGlass == null)
+                    return;
+
+                // follows the circle as it is scaled up by the hit animation.
+                float radius = Math.Min(circle.DrawWidth * circle.Scale.X, circle.DrawHeight * circle.Scale.Y) / 2 * visible_radius;
+                var shape = new RectangleF(DrawSize / 2 - new Vector2(radius), new Vector2(radius * 2));
+
+                LiquidGlass = liquidGlass.CreateParameters(radius * max_liquid_glass_thickness, radius, shape);
+            }
         }
     }
 }

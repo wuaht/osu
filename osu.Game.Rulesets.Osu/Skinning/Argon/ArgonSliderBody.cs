@@ -35,8 +35,8 @@ namespace osu.Game.Rulesets.Osu.Skinning.Argon
 
         protected override Color4 GetBodyAccentColour(ISkinSource skin, Color4 hitObjectAccentColour)
         {
-            // frosted slider bodies are more transparent to let the blurred backdrop show through.
-            float alpha = FrostedSliders.Value ? BodyAlpha * (0.85f - 0.75f * Frostiness.Value) : BodyAlpha;
+            // glass slider bodies are more transparent to let the backdrop show through.
+            float alpha = IsGlass ? BodyAlpha * (0.85f - 0.75f * Transparency) : BodyAlpha;
 
             // a custom track colour is shown as is, it would be barely distinguishable from black if it was darkened like the combo colour.
             darkenBody = GetSkinTrackColour() == null;

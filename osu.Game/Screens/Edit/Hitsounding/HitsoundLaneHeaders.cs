@@ -34,7 +34,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
     public partial class HitsoundLaneHeaders : CompositeDrawable
     {
         /// <summary>
-        /// The opacity of the backgrounds of headers while the lanes are frosted, such that the frosted background shows through them.
+        /// The opacity of the backgrounds of headers while the lanes have a glass background, such that it shows through them.
         /// </summary>
         public const float FROSTED_HEADER_ALPHA = 0.45f;
 
@@ -148,7 +148,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
 
             private readonly BindableList<HitsoundLane> mutedLanes = new BindableList<HitsoundLane>();
 
-            private readonly BindableBool frosted = new BindableBool();
+            private readonly Bindable<GlassStyle> glassStyle = new Bindable<GlassStyle>();
 
             private Box background = null!;
 
@@ -182,7 +182,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
             {
                 var colour = HitsoundLane.GetBankColour(lane.Bank);
 
-                config.BindWith(OsuSetting.SlopHitsoundEditorFrostedLanes, frosted);
+                config.BindWith(OsuSetting.SlopHitsoundEditorLanesGlassStyle, glassStyle);
 
                 Drawable name;
 
@@ -292,7 +292,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
                 mutedLanes.BindTo(hitsoundEditor.MutedLanes);
                 mutedLanes.BindCollectionChanged((_, _) => updateMuteState(), true);
 
-                frosted.BindValueChanged(f => background.Alpha = f.NewValue ? FROSTED_HEADER_ALPHA : 1, true);
+                glassStyle.BindValueChanged(s => background.Alpha = s.NewValue != GlassStyle.Standard ? FROSTED_HEADER_ALPHA : 1, true);
 
                 if (expandButton != null)
                 {

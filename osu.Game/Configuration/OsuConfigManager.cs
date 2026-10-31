@@ -258,11 +258,17 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.PMFriendsOnly, false);
 
             // slop! settings
-            SetDefault(OsuSetting.SlopFrostedSliders, false);
+            SetDefault(OsuSetting.SlopSliderGlassStyle, GlassStyle.Standard);
             SetDefault(OsuSetting.SlopFrostedSlidersFrostiness, 1f, 0f, 1f, 0.01f);
             SetDefault(OsuSetting.SlopFrostedSlidersBlur, 0.25f, 0f, 1f, 0.01f);
             SetDefault(OsuSetting.SlopFrostedSlidersAlwaysColoured, true);
             SetDefault(OsuSetting.SlopFrostedHitCircles, true);
+            SetDefault(OsuSetting.SlopLiquidGlassThickness, 0.5f, 0.1f, 1f, 0.01f);
+            SetDefault(OsuSetting.SlopLiquidGlassRefraction, 0.5f, 0f, 1f, 0.01f);
+            SetDefault(OsuSetting.SlopLiquidGlassChromaticAberration, 0.3f, 0f, 1f, 0.01f);
+            SetDefault(OsuSetting.SlopLiquidGlassHighlight, 0.6f, 0f, 1f, 0.01f);
+            SetDefault(OsuSetting.SlopLiquidGlassBlur, 0.15f, 0f, 1f, 0.01f);
+            SetDefault(OsuSetting.SlopLiquidGlassDarkness, 0.1f, 0f, 1f, 0.01f);
             SetDefault(OsuSetting.SlopMenuCursorStyle, MenuCursorStyle.Default);
             SetDefault(OsuSetting.SlopForceArgonCursorTrail, false);
             SetDefault(OsuSetting.SlopSliderBorderComboColour, false);
@@ -308,13 +314,13 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopEditorRotateAroundSelection, true);
             SetDefault(OsuSetting.SlopEditorToolKeysSwapped, false);
             SetDefault(OsuSetting.SlopAngledFlipKeyMoved, false);
-            SetDefault(OsuSetting.SlopHitsoundEditorFrostedLanes, false);
+            SetDefault(OsuSetting.SlopHitsoundEditorLanesGlassStyle, GlassStyle.Standard);
             SetDefault(OsuSetting.SlopHitsoundEditorToolboxExpandOnHover, true);
             SetDefault(OsuSetting.SlopEditorAutoApplyHitsoundDifficulty, false);
             SetDefault(OsuSetting.SlopHitsoundDifficultyModes, string.Empty);
             SetDefault(OsuSetting.SlopHitsoundSyncExcludedDifficulties, string.Empty);
             SetDefault(OsuSetting.SlopHitsoundDefaultNormalBanks, string.Empty);
-            SetDefault(OsuSetting.SlopBnTrackerFrostedPanels, false);
+            SetDefault(OsuSetting.SlopBnTrackerPanelsGlassStyle, GlassStyle.Standard);
 
             SetDefault(OsuSetting.SlopMapsetVerifierShowMinor, false);
             SetDefault(OsuSetting.SlopMapsetVerifierHiddenMinorChecks, string.Empty);
@@ -327,7 +333,7 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopMapsetVerifierShowAdvancedAudioAnalysis, false);
             SetDefault(OsuSetting.SlopMapsetVerifierShowCheckSpeedStats, false);
             SetDefault(OsuSetting.SlopMapsetVerifierRecheckOnSave, true);
-            SetDefault(OsuSetting.SlopMapsetVerifierFrostedPanels, false);
+            SetDefault(OsuSetting.SlopMapsetVerifierPanelsGlassStyle, GlassStyle.Standard);
 
             // defaults of McOsu's FPoSu.
             SetDefault(OsuSetting.SlopFposuMouseDpi, 400, 50, 32000);
@@ -422,7 +428,7 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopMinimalReplayFrames, false);
             SetDefault(OsuSetting.SlopSkipIntro, false);
             SetDefault(OsuSetting.SlopInstantScreenTransitions, false);
-            SetDefault(OsuSetting.SlopFrostedSettings, true);
+            SetDefault(OsuSetting.SlopSettingsGlassStyle, GlassStyle.Frosted);
             SetDefault(OsuSetting.SlopSongSelectSortDirection, SongSelectSortDirection.BottomToTop);
             SetDefault(OsuSetting.SlopBackupOnUpdate, true);
             SetDefault(OsuSetting.SlopStrainGraphLowColour, @"#FFFFFF");
@@ -467,7 +473,7 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopDiscordMode, DiscordClientMode.Official);
             SetDefault(OsuSetting.SlopDiscordRefreshToken, string.Empty);
             SetDefault(OsuSetting.SlopDiscordUserToken, string.Empty);
-            SetDefault(OsuSetting.SlopDiscordFrosted, false);
+            SetDefault(OsuSetting.SlopDiscordGlassStyle, GlassStyle.Standard);
             SetDefault(OsuSetting.SlopDiscordBackgroundOpacity, 0.6f, 0.2f, 1f, 0.01f);
             SetDefault(OsuSetting.SlopDiscordOverlayHeight, 0.5f, 0.2f, 1f, 0.01f);
             SetDefault(OsuSetting.SlopDiscordEmojiUsage, string.Empty);
@@ -721,9 +727,9 @@ namespace osu.Game.Configuration
         HitsoundVolume,
 
         /// <summary>
-        /// Whether slider bodies of legacy and argon skins blur the content behind them (frosted glass).
+        /// The glass style of slider bodies (and hit circles) of legacy and argon skins.
         /// </summary>
-        SlopFrostedSliders,
+        SlopSliderGlassStyle,
 
         /// <summary>
         /// How transparent frosted slider bodies are, from 0 to 1.
@@ -741,9 +747,39 @@ namespace osu.Game.Configuration
         SlopFrostedSlidersAlwaysColoured,
 
         /// <summary>
-        /// Whether the content behind translucent hit circles is blurred like behind frosted slider bodies.
+        /// Whether translucent hit circles use the glass style of slider bodies as well.
         /// </summary>
         SlopFrostedHitCircles,
+
+        /// <summary>
+        /// The width of the refracting edge of liquid glass, from 0 to 1.
+        /// </summary>
+        SlopLiquidGlassThickness,
+
+        /// <summary>
+        /// How strongly liquid glass refracts the content behind it, from 0 to 1.
+        /// </summary>
+        SlopLiquidGlassRefraction,
+
+        /// <summary>
+        /// How strongly liquid glass splits up the colours at its edge, from 0 to 1.
+        /// </summary>
+        SlopLiquidGlassChromaticAberration,
+
+        /// <summary>
+        /// The strength of the light reflections on the edge of liquid glass, from 0 to 1.
+        /// </summary>
+        SlopLiquidGlassHighlight,
+
+        /// <summary>
+        /// How strongly liquid glass blurs the content behind it, from 0 to 1.
+        /// </summary>
+        SlopLiquidGlassBlur,
+
+        /// <summary>
+        /// How much liquid glass darkens the content behind it, from 0 to 1.
+        /// </summary>
+        SlopLiquidGlassDarkness,
 
         /// <summary>
         /// The cursor used in menus and the editor.
@@ -915,9 +951,9 @@ namespace osu.Game.Configuration
         SlopAngledFlipKeyMoved,
 
         /// <summary>
-        /// Whether the lanes of the hitsound editor have a frosted glass background, instead of an opaque one.
+        /// The glass style of the background of the lanes of the hitsound editor.
         /// </summary>
-        SlopHitsoundEditorFrostedLanes,
+        SlopHitsoundEditorLanesGlassStyle,
 
         /// <summary>
         /// Whether the contracted toolbox of the hitsound editor expands while hovering it, like the toolboxes of the compose screen.
@@ -1106,9 +1142,9 @@ namespace osu.Game.Configuration
         SlopBnTrackerToken,
 
         /// <summary>
-        /// Whether the panels of the "request" screen of the beatmap editor have a frosted glass background, instead of an opaque one.
+        /// The glass style of the background of the panels of the "request" screen of the beatmap editor.
         /// </summary>
-        SlopBnTrackerFrostedPanels,
+        SlopBnTrackerPanelsGlassStyle,
 
         /// <summary>
         /// Whether negligible (minor) issues are included on the checks page of the mapset verifier.
@@ -1166,9 +1202,9 @@ namespace osu.Game.Configuration
         SlopMapsetVerifierRecheckOnSave,
 
         /// <summary>
-        /// Whether the panels of the mapset verifier have a frosted glass background, instead of an opaque one.
+        /// The glass style of the background of the panels of the mapset verifier.
         /// </summary>
-        SlopMapsetVerifierFrostedPanels,
+        SlopMapsetVerifierPanelsGlassStyle,
 
         /// <summary>
         /// Whether judgements of the highest hit result (300s) are displayed.
@@ -1481,9 +1517,9 @@ namespace osu.Game.Configuration
         SlopInstantScreenTransitions,
 
         /// <summary>
-        /// Whether the background of the settings is blurred behind them (frosted glass).
+        /// The glass style of the background of the settings.
         /// </summary>
-        SlopFrostedSettings,
+        SlopSettingsGlassStyle,
 
         /// <summary>
         /// The direction in which the song select carousel is sorted.
@@ -1706,9 +1742,9 @@ namespace osu.Game.Configuration
         SlopDiscordUserToken,
 
         /// <summary>
-        /// Whether the Discord overlay blurs what is behind it.
+        /// The glass style of the background of the Discord overlay.
         /// </summary>
-        SlopDiscordFrosted,
+        SlopDiscordGlassStyle,
 
         /// <summary>
         /// The opacity of the Discord overlay background.

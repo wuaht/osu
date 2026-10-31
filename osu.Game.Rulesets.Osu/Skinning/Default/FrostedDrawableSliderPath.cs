@@ -9,7 +9,7 @@ using osuTK;
 namespace osu.Game.Rulesets.Osu.Skinning.Default
 {
     /// <summary>
-    /// A <see cref="DrawableSliderPath"/> which blurs the content behind it while frosted slider bodies are enabled.
+    /// A <see cref="DrawableSliderPath"/> which shows the content behind it according to the glass style of slider bodies.
     /// </summary>
     public abstract partial class FrostedDrawableSliderPath : DrawableSliderPath
     {
@@ -23,26 +23,53 @@ namespace osu.Game.Rulesets.Osu.Skinning.Default
         /// </summary>
         private const float max_blur_sigma = 24;
 
-        private readonly Bindable<bool> frostedSliders = new Bindable<bool>();
+        /// <summary>
+        /// The width of the refracting edge of liquid glass at the highest thickness setting, relative to the path radius.
+        /// </summary>
+        private const float max_liquid_glass_thickness = 0.8f;
+
+        private readonly Bindable<GlassStyle> glassStyle = new Bindable<GlassStyle>();
         private readonly BindableFloat blur = new BindableFloat();
+
+        private LiquidGlassConfig? liquidGlass;
+
+        public override float PathRadius
+        {
+            get => base.PathRadius;
+            set
+            {
+                base.PathRadius = value;
+
+                // the thickness of liquid glass is relative to the path radius.
+                if (liquidGlass != null && glassStyle.Value == GlassStyle.LiquidGlass)
+                    updateGlass();
+            }
+        }
 
         [BackgroundDependencyLoader(permitNulls: true)]
         private void load(OsuConfigManager? config)
         {
-            config?.BindWith(OsuSetting.SlopFrostedSliders, frostedSliders);
+            config?.BindWith(OsuSetting.SlopSliderGlassStyle, glassStyle);
             config?.BindWith(OsuSetting.SlopFrostedSlidersBlur, blur);
 
-            frostedSliders.BindValueChanged(_ => updateBlur());
-            blur.BindValueChanged(_ => updateBlur());
+            liquidGlass = new LiquidGlassConfig(config, updateGlass);
 
-            updateBlur();
+            glassStyle.BindValueChanged(_ => updateGlass());
+            blur.BindValueChanged(_ => updateGlass());
+
+            updateGlass();
         }
 
-        private void updateBlur()
+        private void updateGlass()
         {
-            BlurSigma = frostedSliders.Value
-                ? new Vector2(GetBlurSigma(blur.Value))
-                : Vector2.Zero;
+            BlurSigma = glassStyle.Value switch
+            {
+                GlassStyle.Frosted => new Vector2(GetBlurSigma(blur.Value)),
+                GlassStyle.LiquidGlass => liquidGlass!.BlurSigma,
+                _ => Vector2.Zero,
+            };
+
+            LiquidGlass = glassStyle.Value == GlassStyle.LiquidGlass ? liquidGlass!.CreateParameters(PathRadius * max_liquid_glass_thickness) : default;
         }
 
         /// <summary>
