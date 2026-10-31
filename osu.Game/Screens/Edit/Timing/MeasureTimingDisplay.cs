@@ -41,9 +41,12 @@ namespace osu.Game.Screens.Edit.Timing
     /// </summary>
     public partial class MeasureTimingDisplay : CompositeDrawable
     {
-        private const int default_visible_rows = 6;
-        private const int min_visible_rows = 2;
-        private const int max_visible_rows = 16;
+        private const int visible_rows = 6;
+
+        /// <summary>
+        /// The narrowest part of a bar which can be zoomed into.
+        /// </summary>
+        private const double min_view_width = 0.1;
         private const float gutter_width = 52;
         private const float status_height = 34;
 
@@ -249,11 +252,13 @@ namespace osu.Game.Screens.Edit.Timing
         private GlobalActionContainer? globalActions { get; set; }
 
         /// <summary>
-        /// How many rows fit into the height of the view, changed by zooming.
+        /// The part of the bars shown in the rows, as fractions of a bar. Zooming in narrows it, such that the beats get further apart.
         /// </summary>
-        private int visibleRowCount = default_visible_rows;
+        private double viewStart = -overlap;
 
-        private float rowHeight => Math.Max(1, rowContainer.DrawHeight) / visibleRowCount;
+        private double viewWidth = 1 + 2 * overlap;
+
+        private float rowHeight => Math.Max(1, rowContainer.DrawHeight) / visible_rows;
 
         private bool shiftPressed => inputManager.CurrentState.Keyboard.ShiftPressed;
         private bool controlPressed => inputManager.CurrentState.Keyboard.ControlPressed;
@@ -264,9 +269,14 @@ namespace osu.Game.Screens.Edit.Timing
         /// <summary>
         /// The position of a fraction of a bar within the area of a row, in pixels.
         /// </summary>
-        private float pixelAt(double fraction) => (float)((fraction + overlap) / (1 + 2 * overlap) * areaWidth);
+        private float pixelAt(double fraction) => (float)((fraction - viewStart) / viewWidth * areaWidth);
 
-        private double millisecondsPerPixel(MeasureRow row) => (1 + 2 * overlap) * row.Duration / areaWidth;
+        private double millisecondsPerPixel(MeasureRow row) => viewWidth * row.Duration / areaWidth;
+
+        /// <summary>
+        /// The fraction of a bar at a position within the area of a row, in pixels.
+        /// </summary>
+        private double fractionAt(float x) => x / areaWidth * viewWidth + viewStart;
 
         #region Layout
 
@@ -373,7 +383,7 @@ namespace osu.Game.Screens.Edit.Timing
         {
             Vector2 local = rowContainer.ToLocalSpace(screenSpacePosition);
             int index = (int)Math.Floor(local.Y / rowHeight + scroll);
-            double fraction = (local.X - gutter_width) / areaWidth * (1 + 2 * overlap) - overlap;
+            double fraction = fractionAt(local.X - gutter_width);
 
             if (index < 0 || index >= rows.Count || local.Y < 0 || local.Y > rowContainer.DrawHeight || fraction < -overlap || fraction > 1 + overlap)
                 return null;
@@ -422,7 +432,7 @@ namespace osu.Game.Screens.Edit.Timing
                 pixelWidth = rowContainer.DrawWidth / screenWidth;
 
             int firstIndex = (int)Math.Floor(scroll);
-            int count = visibleRowCount + 1;
+            int count = visible_rows + 1;
 
             while (rowDisplays.Count < count)
                 createRowDisplay();
@@ -456,7 +466,11 @@ namespace osu.Game.Screens.Edit.Timing
             // follow the playback and seeks, but keep the position scrolled to by the user otherwise.
             if (activeMove == null && rows.Count > 0 && (editorClock.IsRunning || time != lastClockTime))
             {
-                targetScroll = rowIndexAt(time) - visibleRowCount / 3;
+                targetScroll = rowIndexAt(time) - visible_rows / 3;
+
+                // while zoomed in, the view glides along such that the playback stays centred.
+                double fraction = rows[rowIndexAt(time)].FractionAt(time);
+                setViewStart(Interpolation.DampContinuously(viewStart, fraction - viewWidth / 2, 40, Time.Elapsed));
             }
 
             lastClockTime = time;
@@ -578,6 +592,9 @@ namespace osu.Game.Screens.Edit.Timing
             else
                 display.WaveformBuffer.Alpha = 0;
 
+            display.Grid.RelativeChildOffset = new Vector2((float)viewStart, 0);
+            display.Grid.RelativeChildSize = new Vector2((float)viewWidth, 1);
+
             double cut = row.FractionAt(row.End);
             display.CutShade.X = (float)cut;
             display.CutShade.Width = (float)(1 + overlap - cut);
@@ -667,6 +684,11 @@ namespace osu.Game.Screens.Edit.Timing
             public readonly Box CutShade;
             public readonly Box PlaybackLine;
             public readonly Box HoverLine;
+
+            /// <summary>
+            /// The container in which positions are fractions of the bar.
+            /// </summary>
+            public readonly Container Grid;
             public readonly OsuSpriteText IndexText;
             public readonly OsuSpriteText BpmText;
 
@@ -728,11 +750,9 @@ namespace osu.Game.Screens.Edit.Timing
                                     }
                                 },
                                 // positions within the grid are fractions of the bar.
-                                new Container
+                                Grid = new Container
                                 {
                                     RelativeSizeAxes = Axes.Both,
-                                    RelativeChildOffset = new Vector2(-overlap, 0),
-                                    RelativeChildSize = new Vector2(1 + 2 * overlap, 1),
                                     Children = new Drawable[]
                                     {
                                         // the overlapping parts of the neighbouring bars, and the part of the bar after the next timing point.
@@ -1110,7 +1130,7 @@ namespace osu.Game.Screens.Edit.Timing
             if (row < 0 || row >= rowList.Count)
                 return null;
 
-            double fraction = (local.X - gutter_width) / areaWidth * (1 + 2 * overlap) - overlap;
+            double fraction = fractionAt(local.X - gutter_width);
             int beat = (int)Math.Round(fraction * rowList[row].Meter);
 
             // beats in the overlapping parts belong to the neighbouring rows.
@@ -1157,12 +1177,12 @@ namespace osu.Game.Screens.Edit.Timing
         {
             if (ZoomableScrollContainer.GetZoomScrollAmount(e, globalActions) is float zoom)
             {
-                // zooming in shows fewer, bigger rows, keeping the row under the cursor in place.
-                float localY = Math.Clamp(rowContainer.ToLocalSpace(e.ScreenSpaceMousePosition).Y, 0, rowContainer.DrawHeight);
-                double anchor = localY / rowHeight + scroll;
+                // zooming keeps the fraction of the bar under the cursor in place.
+                float x = Math.Clamp(rowContainer.ToLocalSpace(e.ScreenSpaceMousePosition).X - gutter_width, 0, areaWidth);
+                double anchor = fractionAt(x);
 
-                visibleRowCount = Math.Clamp(visibleRowCount - Math.Sign(zoom), min_visible_rows, max_visible_rows);
-                scroll = targetScroll = Math.Max(0, anchor - localY / rowHeight);
+                viewWidth = Math.Clamp(viewWidth * Math.Pow(1.25, -zoom), min_view_width, 1 + 2 * overlap);
+                setViewStart(anchor - x / areaWidth * viewWidth);
                 return true;
             }
 
@@ -1176,9 +1196,19 @@ namespace osu.Game.Screens.Edit.Timing
                 return true;
             }
 
+            // shift + scroll and horizontal scrolling move sideways while zoomed in.
+            if (viewWidth < 1 + 2 * overlap && (shiftPressed || e.ScrollDelta.Y == 0))
+            {
+                setViewStart(viewStart - delta * 0.1 * viewWidth);
+                return true;
+            }
+
             targetScroll -= delta;
             return true;
         }
+
+        // not Math.Clamp, since float rounding of the overlap can put the upper bound just below the lower one when fully zoomed out.
+        private void setViewStart(double start) => viewStart = Math.Max(-overlap, Math.Min(start, 1 + overlap - viewWidth));
 
         private void endMove()
         {
