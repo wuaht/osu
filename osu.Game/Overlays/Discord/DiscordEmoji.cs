@@ -80,6 +80,36 @@ namespace osu.Game.Overlays.Discord
             emoji.Id is ulong id ? $@"<{(emoji.Animated ? @"a" : string.Empty)}:{emoji.Name}:{id}>" : emoji.Name ?? string.Empty;
 
         /// <summary>
+        /// Splits text into runs of text and single unicode emoji, where emoji have the URL of their image.
+        /// </summary>
+        public static IEnumerable<(string Text, string? EmojiUrl)> Split(string text)
+        {
+            var run = new StringBuilder();
+
+            foreach (string element in DiscordMarkdown.GetTextElements(text))
+            {
+                string? emojiUrl = GetUnicodeEmojiUrl(element);
+
+                if (emojiUrl == null)
+                {
+                    run.Append(element);
+                    continue;
+                }
+
+                if (run.Length > 0)
+                {
+                    yield return (run.ToString(), null);
+                    run.Clear();
+                }
+
+                yield return (element, emojiUrl);
+            }
+
+            if (run.Length > 0)
+                yield return (run.ToString(), null);
+        }
+
+        /// <summary>
         /// Whether a text element (a user-perceived character) is an emoji.
         /// </summary>
         public static bool IsEmoji(string textElement)

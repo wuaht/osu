@@ -407,18 +407,16 @@ namespace osu.Game.Overlays.Discord
                 }
             }
 
-            foreach (string element in DiscordMarkdown.GetTextElements(text))
+            foreach (var (part, emojiUrl) in DiscordEmoji.Split(text))
             {
-                string? emojiUrl = DiscordEmoji.GetUnicodeEmojiUrl(element);
-
                 if (emojiUrl == null)
                 {
-                    run.Append(element);
+                    run.Append(part);
                     continue;
                 }
 
                 flushRun();
-                addDecorated(flow, new DrawableDiscordEmoji(emojiUrl, element, element, emojiSize), spoiler);
+                addDecorated(flow, new DrawableDiscordEmoji(emojiUrl, part, part, emojiSize), spoiler);
             }
 
             flushRun();

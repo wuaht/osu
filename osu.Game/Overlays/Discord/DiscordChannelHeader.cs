@@ -94,13 +94,13 @@ namespace osu.Game.Overlays.Discord
                 });
             }
 
-            flow.Add(new OsuSpriteText
+            flow.Add(new DiscordEmojiText
             {
                 Anchor = Anchor.CentreLeft,
                 Origin = Anchor.CentreLeft,
                 Text = channel.DisplayName,
                 Font = DiscordStyle.UiFont(16, FontWeight.Bold),
-                Colour = colourProvider.Content1,
+                TextColour = colourProvider.Content1,
             });
 
             if (!string.IsNullOrWhiteSpace(channel.Topic))
@@ -114,7 +114,7 @@ namespace osu.Game.Overlays.Discord
                     Margin = new MarginPadding { Horizontal = 4 },
                 });
 
-                flow.Add(new TruncatingSpriteText
+                flow.Add(new DiscordEmojiText
                 {
                     Anchor = Anchor.CentreLeft,
                     Origin = Anchor.CentreLeft,
@@ -122,7 +122,7 @@ namespace osu.Game.Overlays.Discord
                     MaxWidth = 600,
                     Text = channel.Topic.ReplaceLineEndings(@" "),
                     Font = DiscordStyle.UiFont(14),
-                    Colour = colourProvider.Content2,
+                    TextColour = colourProvider.Content2,
                 });
             }
 
@@ -175,7 +175,7 @@ namespace osu.Game.Overlays.Discord
                             Icon = DiscordChannelSidebar.GetIcon(parent),
                             Size = new Vector2(18),
                         },
-                        new OsuSpriteText
+                        new DiscordEmojiText
                         {
                             Anchor = Anchor.CentreLeft,
                             Origin = Anchor.CentreLeft,

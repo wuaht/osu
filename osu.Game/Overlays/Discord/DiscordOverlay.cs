@@ -114,6 +114,9 @@ namespace osu.Game.Overlays.Discord
             return dependencies;
         }
 
+        [Resolved]
+        private GlobalCursorDisplay? cursorDisplay { get; set; }
+
         [BackgroundDependencyLoader]
         private void load()
         {
@@ -136,15 +139,19 @@ namespace osu.Game.Overlays.Discord
                 {
                     RelativeSizeAxes = Axes.Both,
                     Padding = new MarginPadding { Top = TOP_BAR_HEIGHT },
-                    Child = new PopoverContainer
+                    Child = new DiscordTooltipContainer(cursorDisplay?.MenuCursor)
                     {
                         RelativeSizeAxes = Axes.Both,
-                        Child = new OsuContextMenuContainer
+                        Child = new PopoverContainer
                         {
                             RelativeSizeAxes = Axes.Both,
-                            Child = viewContainer = new Container<Drawable>
+                            Child = new OsuContextMenuContainer
                             {
                                 RelativeSizeAxes = Axes.Both,
+                                Child = viewContainer = new Container<Drawable>
+                                {
+                                    RelativeSizeAxes = Axes.Both,
+                                },
                             },
                         },
                     },

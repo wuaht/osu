@@ -170,6 +170,16 @@ namespace osu.Game.Overlays.Discord
             private bool loadingOlder;
             private bool reachedStart;
 
+            /// <summary>
+            /// The message which is scrolled to once it is shown, see <see cref="JumpToMessage"/>.
+            /// </summary>
+            private ulong? jumpTarget;
+
+            /// <summary>
+            /// How many more pages of older messages are loaded to find <see cref="jumpTarget"/>, so a message far back doesn't load the whole history.
+            /// </summary>
+            private int jumpPagesLeft;
+
             public ChannelChat(DiscordChannel channel)
             {
                 Channel = channel;
@@ -477,7 +487,7 @@ namespace osu.Game.Overlays.Discord
                     if (i > 0)
                         typingText.AddText(i == names.Count - 1 ? SlopDiscordStrings.TypingAnd : @", ");
 
-                    typingText.AddText(names[i], t => t.Font = DiscordStyle.UiFont(12, FontWeight.Bold));
+                    typingText.AddTextWithEmoji(names[i], 12, t => t.Font = DiscordStyle.UiFont(12, FontWeight.Bold));
                 }
 
                 typingText.AddText(names.Count == 1 ? SlopDiscordStrings.IsTyping : SlopDiscordStrings.AreTyping);
@@ -578,6 +588,45 @@ namespace osu.Game.Overlays.Discord
             public void Reply(DiscordMessage message) => composer.SetReply(message);
 
             public void StartEdit(DiscordMessage message) => composer.SetEdit(message);
+
+            public void JumpToMessage(ulong messageId)
+            {
+                jumpTarget = messageId;
+                jumpPagesLeft = 20;
+            }
+
+            protected override void UpdateAfterChildren()
+            {
+                base.UpdateAfterChildren();
+
+                if (jumpTarget is not ulong id)
+                    return;
+
+                // This runs after the messages were laid out, so their position is known in the same frame they were loaded in.
+                var drawable = messageFlow.FirstOrDefault(m => m.Message.Id == id && !m.Message.Pending);
+
+                if (drawable != null)
+                {
+                    jumpTarget = null;
+                    scroll.ScrollTo(scroll.GetChildPosInContent(drawable) - (scroll.DisplayableContent - drawable.DrawHeight) / 2);
+                    drawable.FlashHighlight();
+                    return;
+                }
+
+                if (loadingOlder)
+                    return;
+
+                // Message IDs increase over time, so a message newer than the oldest loaded one which isn't shown was deleted.
+                ulong? oldest = orderedMessages.FirstOrDefault(m => !m.Message.Pending)?.Message.Id;
+
+                if (reachedStart || oldest == null || id > oldest || jumpPagesLeft-- <= 0)
+                {
+                    jumpTarget = null;
+                    return;
+                }
+
+                loadOlder();
+            }
 
             public void Delete(DiscordMessage message) =>
                 client.DeleteMessage(message).ContinueWith(t => logFailure(t, @"delete"), TaskContinuationOptions.OnlyOnFaulted);
@@ -761,11 +810,11 @@ namespace osu.Game.Overlays.Discord
                                 },
                             },
                         },
-                        new OsuSpriteText
+                        new DiscordEmojiText
                         {
                             Text = isPrivate ? Channel.DisplayName : SlopDiscordStrings.ChannelStart(Channel.DisplayName),
                             Font = DiscordStyle.UiFont(26, FontWeight.Bold),
-                            Colour = colourProvider.Content1,
+                            TextColour = colourProvider.Content1,
                         },
                     },
                 };

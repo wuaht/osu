@@ -58,6 +58,7 @@ namespace osu.Game.Overlays.Discord
         private Container mainContent = null!;
         private Container messageRow = null!;
         private Container highlightContainer = null!;
+        private Box jumpHighlight = null!;
         private FillFlowContainer reactionFlow = null!;
         private DiscordMessageToolbar? toolbar;
 
@@ -225,6 +226,12 @@ namespace osu.Game.Overlays.Discord
                         Colour = DiscordStyle.MentionedMessage,
                         Alpha = mentioned ? 1 : 0,
                     },
+                    jumpHighlight = new Box
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Colour = colourProvider.Highlight1,
+                        Alpha = 0,
+                    },
                     messageRows,
                     new Box
                     {
@@ -381,6 +388,11 @@ namespace osu.Game.Overlays.Discord
             highlightContainer.Margin = new MarginPadding { Top = isContinuation && !Message.IsReply ? 0 : 12 };
         }
 
+        /// <summary>
+        /// Briefly highlights the message, after the chat jumped to it.
+        /// </summary>
+        public void FlashHighlight() => jumpHighlight.FadeTo(0.15f, 100).Then().Delay(1000).FadeOut(1000, Easing.OutQuint);
+
         protected override void Update()
         {
             base.Update();
@@ -500,13 +512,13 @@ namespace osu.Game.Overlays.Discord
                 Spacing = new Vector2(8, 0),
                 Children = new Drawable[]
                 {
-                    new OsuSpriteText
+                    new DiscordEmojiText
                     {
                         Anchor = Anchor.BottomLeft,
                         Origin = Anchor.BottomLeft,
                         Text = Message.Author.DisplayName,
                         Font = DiscordStyle.UiFont(16, FontWeight.SemiBold),
-                        Colour = nameColour,
+                        TextColour = nameColour,
                     },
                 },
             };
@@ -658,11 +670,15 @@ namespace osu.Game.Overlays.Discord
             // The spine starts in the middle of the avatar and ends just before the preview.
             const float spine_x = -DiscordStyle.MESSAGE_GUTTER + 16 + DiscordStyle.AVATAR_SIZE / 2 - spine_thickness / 2;
 
-            return new Container
+            // Like in Discord, clicking the preview jumps to the message it replies to, if it is in the same chat.
+            ulong? jumpTarget = Message.MessageReference?.ChannelId is ulong channelId && channelId != Message.ChannelId ? null : Message.MessageReference?.MessageId;
+
+            return new OsuClickableContainer
             {
                 RelativeSizeAxes = Axes.X,
                 Height = height,
                 Margin = new MarginPadding { Top = 2 },
+                Action = jumpTarget is ulong target ? () => actions?.JumpToMessage(target) : null,
                 Padding = new MarginPadding { Left = DiscordStyle.MESSAGE_GUTTER, Right = 16 },
                 Children = new Drawable[]
                 {
@@ -712,22 +728,22 @@ namespace osu.Game.Overlays.Discord
                     Anchor = Anchor.CentreLeft,
                     Origin = Anchor.CentreLeft,
                 },
-                new OsuSpriteText
+                new DiscordEmojiText
                 {
                     Anchor = Anchor.CentreLeft,
                     Origin = Anchor.CentreLeft,
                     Text = referenced.Author.DisplayName,
                     Font = DiscordStyle.UiFont(13, FontWeight.SemiBold),
-                    Colour = colourProvider.Content1,
+                    TextColour = colourProvider.Content1,
                 },
-                new TruncatingSpriteText
+                new DiscordEmojiText
                 {
                     Anchor = Anchor.CentreLeft,
                     Origin = Anchor.CentreLeft,
                     MaxWidth = 500,
                     Text = preview,
                     Font = DiscordStyle.UiFont(13),
-                    Colour = colourProvider.Content2,
+                    TextColour = colourProvider.Content2,
                 },
             });
         }
@@ -965,12 +981,12 @@ namespace osu.Game.Overlays.Discord
                         Padding = new MarginPadding { Left = 50, Right = 12 },
                         Children = new Drawable[]
                         {
-                            new TruncatingSpriteText
+                            new DiscordEmojiText
                             {
                                 RelativeSizeAxes = Axes.X,
                                 Text = thread.DisplayName,
                                 Font = DiscordStyle.UiFont(15, FontWeight.SemiBold),
-                                Colour = colourProvider.Content1,
+                                TextColour = colourProvider.Content1,
                             },
                             new OsuSpriteText
                             {

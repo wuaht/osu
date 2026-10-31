@@ -53,7 +53,7 @@ namespace osu.Game.Overlays.Discord
 
         private Container header = null!;
         private Container bannerContainer = null!;
-        private OsuSpriteText headerText = null!;
+        private DiscordEmojiText headerText = null!;
         private string? bannerUrl;
         private FillFlowContainer channelFlow = null!;
 
@@ -117,14 +117,14 @@ namespace osu.Game.Overlays.Discord
                                     Masking = true,
                                 },
                                 // The name stays at the top when the banner of a guild is shown below it.
-                                headerText = new TruncatingSpriteText
+                                headerText = new DiscordEmojiText
                                 {
                                     Origin = Anchor.CentreLeft,
                                     Y = DiscordStyle.HEADER_HEIGHT / 2,
                                     RelativeSizeAxes = Axes.X,
                                     Padding = new MarginPadding { Horizontal = 16 },
                                     Font = DiscordStyle.UiFont(16, FontWeight.Bold),
-                                    Colour = colourProvider.Content1,
+                                    TextColour = colourProvider.Content1,
                                 },
                                 new Box
                                 {
@@ -342,7 +342,7 @@ namespace osu.Game.Overlays.Discord
             private readonly bool collapsed;
             private readonly bool collapsible;
 
-            private OsuSpriteText spriteText = null!;
+            private DiscordEmojiText spriteText = null!;
             private SpriteIcon? chevron;
 
             [Resolved]
@@ -386,7 +386,7 @@ namespace osu.Game.Overlays.Discord
                     });
                 }
 
-                flow.Add(spriteText = new OsuSpriteText
+                flow.Add(spriteText = new DiscordEmojiText
                 {
                     Anchor = Anchor.CentreLeft,
                     Origin = Anchor.CentreLeft,
@@ -585,7 +585,7 @@ namespace osu.Game.Overlays.Discord
             [Resolved]
             private DiscordClient client { get; set; } = null!;
 
-            private TruncatingSpriteText name = null!;
+            private DiscordEmojiText name = null!;
             private TypingDots typingDots = null!;
             private Container badge = null!;
             private OsuSpriteText badgeText = null!;
@@ -666,7 +666,7 @@ namespace osu.Game.Overlays.Discord
                             Size = new Vector2(14),
                             Colour = ColourProvider.Content2,
                         },
-                        name = new TruncatingSpriteText
+                        name = new DiscordEmojiText
                         {
                             Anchor = Anchor.CentreLeft,
                             Origin = Anchor.CentreLeft,
@@ -841,7 +841,7 @@ namespace osu.Game.Overlays.Discord
             {
             }
 
-            protected override Drawable CreateContent() => new TruncatingSpriteText
+            protected override Drawable CreateContent() => new DiscordEmojiText
             {
                 Anchor = Anchor.CentreLeft,
                 Origin = Anchor.CentreLeft,
@@ -856,7 +856,7 @@ namespace osu.Game.Overlays.Discord
             [Resolved]
             private DiscordUnreadMessages? unread { get; set; }
 
-            private TruncatingSpriteText name = null!;
+            private DiscordEmojiText name = null!;
             private Container badge = null!;
             private OsuSpriteText badgeText = null!;
 
@@ -956,7 +956,7 @@ namespace osu.Game.Overlays.Discord
                         new[]
                         {
                             avatar,
-                            name = new TruncatingSpriteText
+                            name = new DiscordEmojiText
                             {
                                 Anchor = Anchor.CentreLeft,
                                 Origin = Anchor.CentreLeft,
@@ -1042,7 +1042,7 @@ namespace osu.Game.Overlays.Discord
             private readonly Bindable<DiscordUser?> user = new Bindable<DiscordUser?>();
 
             private Container avatarContainer = null!;
-            private OsuSpriteText displayName = null!;
+            private DiscordEmojiText displayName = null!;
             private OsuSpriteText username = null!;
 
             public UserPanel()
@@ -1090,11 +1090,11 @@ namespace osu.Game.Overlays.Discord
                                     Direction = FillDirection.Vertical,
                                     Children = new Drawable[]
                                     {
-                                        displayName = new TruncatingSpriteText
+                                        displayName = new DiscordEmojiText
                                         {
                                             RelativeSizeAxes = Axes.X,
                                             Font = DiscordStyle.UiFont(14, FontWeight.SemiBold),
-                                            Colour = colourProvider.Content1,
+                                            TextColour = colourProvider.Content1,
                                         },
                                         username = new TruncatingSpriteText
                                         {

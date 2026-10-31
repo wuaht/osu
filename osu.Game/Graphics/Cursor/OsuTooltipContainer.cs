@@ -10,8 +10,8 @@ using osu.Framework.Graphics.Cursor;
 using osu.Framework.Graphics.Effects;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Localisation;
-using osu.Framework.Graphics.Containers;
 using osu.Framework.Utils;
+using osu.Game.Graphics.Containers;
 
 namespace osu.Game.Graphics.Cursor
 {
@@ -31,7 +31,7 @@ namespace osu.Game.Graphics.Cursor
             private const float max_width = 500;
 
             private readonly Box background;
-            private readonly TextFlowContainer text;
+            private readonly OsuTextFlowContainer text;
             private bool instantMovement = true;
 
             private LocalisableString lastContent;
@@ -41,7 +41,7 @@ namespace osu.Game.Graphics.Cursor
                 if (content.Equals(lastContent))
                     return;
 
-                text.Text = content;
+                SetText(text, content);
 
                 if (IsPresent)
                 {
@@ -53,6 +53,11 @@ namespace osu.Game.Graphics.Cursor
 
                 lastContent = content;
             }
+
+            /// <summary>
+            /// Shows the content of the tooltip in its text flow.
+            /// </summary>
+            protected virtual void SetText(OsuTextFlowContainer text, LocalisableString content) => text.Text = content;
 
             public OsuTooltip()
             {
@@ -73,7 +78,7 @@ namespace osu.Game.Graphics.Cursor
                         RelativeSizeAxes = Axes.Both,
                         Alpha = 0.9f,
                     },
-                    text = new TextFlowContainer(f =>
+                    text = new OsuTextFlowContainer(f =>
                     {
                         f.Font = OsuFont.GetFont(weight: FontWeight.Regular);
                     })

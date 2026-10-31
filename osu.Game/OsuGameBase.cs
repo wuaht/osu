@@ -469,6 +469,8 @@ namespace osu.Game
                 })
             });
 
+            dependencies.Cache(GlobalCursorDisplay);
+
             base.Content.Add(new TouchInputInterceptor());
             base.Content.Add(hitErrorTracker);
 

@@ -44,6 +44,11 @@ namespace osu.Game.Overlays.Discord
         void Delete(DiscordMessage message);
 
         /// <summary>
+        /// Scrolls to a message of the chat and highlights it, loading older messages until it is found.
+        /// </summary>
+        void JumpToMessage(ulong messageId);
+
+        /// <summary>
         /// Adds the reaction of the local user, or removes it if it was added already.
         /// </summary>
         void ToggleReaction(DiscordMessage message, DiscordReactionEmoji emoji);

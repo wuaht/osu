@@ -121,7 +121,7 @@ namespace osu.Game.Overlays.Discord
 
         private Container contextBar = null!;
         private DiscordPopoverButton emojiButton = null!;
-        private OsuSpriteText contextText = null!;
+        private DiscordEmojiText contextText = null!;
         private FillFlowContainer<AttachmentChip> attachmentFlow = null!;
         private FillFlowContainer<Suggestion> suggestionFlow = null!;
         private Container suggestionContainer = null!;
@@ -214,13 +214,13 @@ namespace osu.Game.Overlays.Discord
                                 RelativeSizeAxes = Axes.Both,
                                 Colour = colourProvider.Background5,
                             },
-                            contextText = new OsuSpriteText
+                            contextText = new DiscordEmojiText
                             {
                                 Anchor = Anchor.CentreLeft,
                                 Origin = Anchor.CentreLeft,
                                 X = 12,
                                 Font = DiscordStyle.UiFont(13),
-                                Colour = colourProvider.Content2,
+                                TextColour = colourProvider.Content2,
                             },
                             new DiscordIconButton(FontAwesome.Solid.TimesCircle, SlopDiscordStrings.Cancel, ClearContext)
                             {
@@ -1002,13 +1002,13 @@ namespace osu.Game.Overlays.Discord
                         Anchor = Anchor.CentreLeft,
                         Origin = Anchor.CentreLeft,
                     },
-                    new OsuSpriteText
+                    new DiscordEmojiText
                     {
                         Anchor = Anchor.CentreLeft,
                         Origin = Anchor.CentreLeft,
                         Text = User.DisplayName,
                         Font = DiscordStyle.UiFont(14, FontWeight.SemiBold),
-                        Colour = colourProvider.Content1,
+                        TextColour = colourProvider.Content1,
                     },
                     new OsuSpriteText
                     {

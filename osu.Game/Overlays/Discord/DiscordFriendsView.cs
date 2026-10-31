@@ -334,7 +334,7 @@ namespace osu.Game.Overlays.Discord
             private Container avatarContainer = null!;
             private Box hover = null!;
             private Box statusStrip = null!;
-            private OsuSpriteText nameText = null!;
+            private DiscordEmojiText nameText = null!;
             private OsuSpriteText usernameText = null!;
             private FillFlowContainer tags = null!;
 
@@ -426,7 +426,7 @@ namespace osu.Game.Overlays.Discord
                                             Spacing = new Vector2(0, 2),
                                             Children = new Drawable[]
                                             {
-                                                nameText = new TruncatingSpriteText
+                                                nameText = new DiscordEmojiText
                                                 {
                                                     RelativeSizeAxes = Axes.X,
                                                     Font = DiscordStyle.UiFont(15, FontWeight.Bold),

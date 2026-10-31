@@ -271,12 +271,12 @@ namespace osu.Game.Overlays.Discord
                     });
                 }
 
-                content.Add(new TruncatingSpriteText
+                content.Add(new DiscordEmojiText
                 {
                     RelativeSizeAxes = Axes.X,
                     Text = post.DisplayName,
                     Font = DiscordStyle.UiFont(16, FontWeight.Bold),
-                    Colour = colourProvider.Content1,
+                    TextColour = colourProvider.Content1,
                 });
 
                 var author = firstMessage?.Author ?? (post.OwnerId is ulong ownerId ? client.GetUser(ownerId) : null);
@@ -298,18 +298,18 @@ namespace osu.Game.Overlays.Discord
                         {
                             new Drawable[]
                             {
-                                new OsuSpriteText
+                                new DiscordEmojiText
                                 {
                                     Text = author == null ? string.Empty : string.IsNullOrEmpty(preview) ? author.DisplayName : $@"{author.DisplayName}: ",
                                     Font = DiscordStyle.UiFont(14, FontWeight.SemiBold),
                                     Colour = colourProvider.Content1,
                                 },
-                                new TruncatingSpriteText
+                                new DiscordEmojiText
                                 {
                                     RelativeSizeAxes = Axes.X,
                                     Text = preview ?? string.Empty,
                                     Font = DiscordStyle.UiFont(14),
-                                    Colour = colourProvider.Content2,
+                                    TextColour = colourProvider.Content2,
                                 },
                             },
                         },
@@ -407,11 +407,11 @@ namespace osu.Game.Overlays.Discord
                         RelativeSizeAxes = Axes.Both,
                         Colour = colourProvider.Background3,
                     },
-                    new OsuSpriteText
+                    new DiscordEmojiText
                     {
                         Text = tag.Name,
                         Font = DiscordStyle.UiFont(12, FontWeight.SemiBold),
-                        Colour = colourProvider.Content1,
+                        TextColour = colourProvider.Content1,
                         Padding = new MarginPadding { Horizontal = 6, Vertical = 2 },
                     },
                 },
