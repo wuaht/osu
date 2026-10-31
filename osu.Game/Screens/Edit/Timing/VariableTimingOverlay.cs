@@ -47,12 +47,12 @@ namespace osu.Game.Screens.Edit.Timing
 
         /// <summary>
         /// How far from the cursor onsets are snapped to, in pixels.
-        /// The distance is limited in milliseconds (see <see cref="min_onset_snap_radius"/> and <see cref="max_onset_snap_radius"/>), such that other notes aren't snapped to when zoomed out.
+        /// The distance is limited in milliseconds (see <see cref="MIN_ONSET_SNAP_RADIUS"/> and <see cref="MAX_ONSET_SNAP_RADIUS"/>), such that other notes aren't snapped to when zoomed out.
         /// </summary>
-        private const float onset_snap_distance = 6;
+        internal const float ONSET_SNAP_DISTANCE = 6;
 
-        private const double min_onset_snap_radius = 8;
-        private const double max_onset_snap_radius = 30;
+        internal const double MIN_ONSET_SNAP_RADIUS = 8;
+        internal const double MAX_ONSET_SNAP_RADIUS = 30;
 
         /// <summary>
         /// The deviation of the onsets from the fitted beats above which the placement is shown as doubtful, in milliseconds.
@@ -241,15 +241,14 @@ namespace osu.Game.Screens.Edit.Timing
             if (envelope == null || shiftPressed)
                 return (Math.Round(time), false);
 
-            double radius = Math.Clamp(onset_snap_distance * millisecondsPerPixel, min_onset_snap_radius, max_onset_snap_radius);
+            double radius = Math.Clamp(ONSET_SNAP_DISTANCE * millisecondsPerPixel, MIN_ONSET_SNAP_RADIUS, MAX_ONSET_SNAP_RADIUS);
             double? onset = envelope.FindOnset(time, radius);
 
             return onset == null ? (Math.Round(time), false) : (onset.Value, true);
         }
 
         /// <summary>
-        /// Fits a beat which was snapped to an onset to the onsets of all beats since <paramref name="start"/> (see <see cref="OnsetEnvelope.FitBeats"/>),
-        /// such that the BPM doesn't only depend on the single onset.
+        /// Fits a beat which was snapped to an onset to the onsets of all beats since <paramref name="start"/> (see <see cref="OnsetEnvelope.FitAnchor"/>).
         /// </summary>
         /// <param name="anchorTime">The time of the beat.</param>
         /// <param name="start">The time of the timing point the beats are counted from, which stays fixed.</param>
@@ -262,16 +261,10 @@ namespace osu.Game.Screens.Edit.Timing
 
             var envelope = analyser?.Envelope;
 
-            if (envelope == null || !snapped || start == null || beats < 2)
+            if (envelope == null || !snapped || start == null)
                 return anchorTime;
 
-            var fit = envelope.FitBeats(start.Value, beats, anchorTime);
-
-            if (fit.Deviation == null)
-                return anchorTime;
-
-            currentFit = fit;
-            return start.Value + beats * fit.BeatLength;
+            return envelope.FitAnchor(start.Value, beats, anchorTime, out currentFit);
         }
 
         /// <summary>

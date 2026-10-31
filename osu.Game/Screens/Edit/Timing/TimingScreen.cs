@@ -62,9 +62,25 @@ namespace osu.Game.Screens.Edit.Timing
             {
                 new Drawable[]
                 {
-                    new ControlPointList
+                    new GridContainer
                     {
-                        SelectClosestTimingPoint = selectClosestTimingPoint,
+                        RelativeSizeAxes = Axes.Both,
+                        RowDimensions = new[]
+                        {
+                            new Dimension(GridSizeMode.Relative, 0.6f),
+                            new Dimension(),
+                        },
+                        Content = new[]
+                        {
+                            new Drawable[] { new MeasureTimingDisplay { RelativeSizeAxes = Axes.Both } },
+                            new Drawable[]
+                            {
+                                new ControlPointList
+                                {
+                                    SelectClosestTimingPoint = selectClosestTimingPoint,
+                                },
+                            },
+                        }
                     },
                     new ControlPointSettings(),
                 },

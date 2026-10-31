@@ -246,6 +246,31 @@ namespace osu.Game.Screens.Edit.Timing
         }
 
         /// <summary>
+        /// Fits the beat at <paramref name="anchorTime"/> to the onsets of all beats since <paramref name="start"/> (see <see cref="FitBeats"/>),
+        /// such that the BPM doesn't only depend on the single onset.
+        /// </summary>
+        /// <param name="start">The time the beats are counted from, which stays fixed.</param>
+        /// <param name="beats">The number of beats from <paramref name="start"/> to the beat.</param>
+        /// <param name="anchorTime">The time of the beat, snapped to an onset.</param>
+        /// <param name="fit">The fit, if enough onsets were found.</param>
+        /// <returns>The fitted time of the beat, or <paramref name="anchorTime"/> if there are not enough onsets.</returns>
+        public double FitAnchor(double start, int beats, double anchorTime, out BeatFit? fit)
+        {
+            fit = null;
+
+            if (beats < 2)
+                return anchorTime;
+
+            var result = FitBeats(start, beats, anchorTime);
+
+            if (result.Deviation == null)
+                return anchorTime;
+
+            fit = result;
+            return start + beats * result.BeatLength;
+        }
+
+        /// <summary>
         /// Estimates the beat length of the audio between <paramref name="start"/> and <paramref name="end"/> (see <see cref="TimingDetection.DetectBeatLength"/>).
         /// </summary>
         /// <returns>The beat length in milliseconds, or <see langword="null"/> if there's not enough audio or no clear beat.</returns>

@@ -424,17 +424,17 @@ namespace osu.Game.Screens.Edit.Timing
             /// <summary>
             /// The number of beats between <see cref="Previous"/> and <see cref="Point"/>, which is kept while moving.
             /// </summary>
-            public readonly int PreviousBeats;
+            public int PreviousBeats { get; private set; }
 
             /// <summary>
             /// The number of beats between <see cref="Point"/> and <see cref="Next"/>, which is kept while moving.
             /// </summary>
-            public readonly int NextBeats;
+            public int NextBeats { get; private set; }
 
             /// <summary>
             /// The beat of <see cref="Point"/> which is moved. Zero moves the timing point itself.
             /// </summary>
-            public readonly int AnchorBeat;
+            public int AnchorBeat { get; private set; }
 
             private readonly EditorBeatmap beatmap;
             private readonly ControlPoint[] movingPoints;
@@ -530,6 +530,24 @@ namespace osu.Game.Screens.Edit.Timing
                 this.snapshot = snapshot ?? new HitObjectSnapshot(beatmap, createLayout(), previous?.Time ?? double.NegativeInfinity, next?.Time ?? double.PositiveInfinity, adjustHitObjects);
 
                 MoveTo(anchorTime);
+            }
+
+            /// <summary>
+            /// Changes which beat the moved beat is, counted from <see cref="Previous"/>, and the number of beats until <see cref="Next"/>.
+            /// <see cref="Point"/> is at the start of the bar containing the beat, <paramref name="anchorBeat"/> beats before it.
+            /// Takes effect on the next <see cref="MoveTo"/>.
+            /// </summary>
+            public void SetBeats(int previousBeats, int anchorBeat, int nextBeats)
+            {
+                if (Previous != null && previousBeats < 1)
+                    throw new ArgumentOutOfRangeException(nameof(previousBeats));
+
+                if (anchorBeat < 0 || (Next != null && nextBeats <= anchorBeat))
+                    throw new ArgumentOutOfRangeException(nameof(anchorBeat));
+
+                PreviousBeats = previousBeats;
+                AnchorBeat = anchorBeat;
+                NextBeats = nextBeats;
             }
 
             /// <summary>
