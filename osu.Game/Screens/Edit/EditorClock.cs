@@ -291,6 +291,8 @@ namespace osu.Game.Screens.Edit
             if (playbackFinished && IsRunning && LoopPlayback.Value)
             {
                 underlyingClock.Seek(0);
+                // the track stops itself on completion, so seeking alone doesn't resume playback.
+                underlyingClock.Start();
                 playbackFinished = false;
             }
 
