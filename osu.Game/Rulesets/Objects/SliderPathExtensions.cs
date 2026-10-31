@@ -67,6 +67,43 @@ namespace osu.Game.Rulesets.Objects
         }
 
         /// <summary>
+        /// Extends this path by a mirrored copy of itself, attached at its end.
+        /// </summary>
+        /// <param name="sliderPath">The <see cref="SliderPath"/>.</param>
+        /// <param name="axis">
+        /// The direction of the mirror axis, which passes through the path end.
+        /// If <c>null</c>, the copy is rotated by 180° around the path end instead (point symmetry).
+        /// </param>
+        public static void Mirror(this SliderPath sliderPath, Vector2? axis)
+        {
+            double distance = sliderPath.Distance;
+
+            if (distance <= 0 || axis?.LengthSquared == 0)
+                return;
+
+            // reflection across the axis is a reflection along its normal.
+            Vector2 normal = axis is Vector2 a ? new Vector2(-a.Y, a.X).Normalized() : Vector2.Zero;
+
+            // reversing twice trims the path to its actual end, the reversed state is the mirrored copy before transformation.
+            var path = new SliderPath(sliderPath.ControlPoints.Select(p => new PathControlPoint(p.Position, p.Type)).ToArray(), sliderPath.ExpectedDistance.Value);
+            path.Reverse(out Vector2 end);
+
+            var copy = path.ControlPoints.Select(p => new PathControlPoint(end + transform(p.Position), p.Type)).ToArray();
+
+            path.Reverse(out _);
+
+            var points = path.ControlPoints.ToList();
+            points[^1].Type = copy[0].Type;
+            points.AddRange(copy.Skip(1));
+
+            sliderPath.ControlPoints.Clear();
+            sliderPath.ControlPoints.AddRange(points);
+            sliderPath.ExpectedDistance.Value = distance * 2;
+
+            Vector2 transform(Vector2 v) => axis == null ? -v : v - 2 * Vector2.Dot(v, normal) * normal;
+        }
+
+        /// <summary>
         /// Reverses the order of the provided <see cref="SliderPath"/>'s <see cref="PathControlPoint"/>s.
         /// </summary>
         /// <param name="sliderPath">The <see cref="SliderPath"/>.</param>

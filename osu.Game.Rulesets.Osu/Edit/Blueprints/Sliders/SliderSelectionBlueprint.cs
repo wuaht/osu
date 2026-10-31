@@ -133,6 +133,18 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
                         Colour = new Color4(0.6f, 0.6f, 0.6f, 0.6f),
                     },
                 },
+                mirrorAxisPreview = new Container
+                {
+                    Origin = Anchor.Centre,
+                    Width = 2,
+                    Height = 2000,
+                    Alpha = 0,
+                    Child = new Box
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Colour = new Color4(0.6f, 0.6f, 0.6f, 0.6f),
+                    },
+                },
                 HeadOverlay = CreateCircleOverlay(HitObject, SliderPosition.Start),
                 TailOverlay = CreateCircleOverlay(HitObject, SliderPosition.End),
             };
@@ -200,6 +212,7 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
             updateInsertionPreview();
             updateSplitPreview();
             updateCurveDrag();
+            updateMirror();
         }
 
         private void updateInsertionPreview()
@@ -351,6 +364,9 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
             if (placementControlPoint != null)
                 endControlPointPlacement();
 
+            if (mirrorOriginal != null)
+                endMirror(false);
+
             updateVisualDefinition();
             BodyPiece.RecyclePath();
         }
@@ -379,6 +395,12 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
 
         protected override bool OnMouseDown(MouseDownEvent e)
         {
+            if (mirrorOriginal != null)
+            {
+                endMirror(e.Button == MouseButton.Left);
+                return true;
+            }
+
             // this runs before the blueprint container handles the selection, so reflects the state before this click.
             wasSoleSelectionOnMouseDown = e.Button == MouseButton.Left && IsSelected && selectedObjects.Count == 1
                                           && !e.ControlPressed && !e.ShiftPressed && !e.AltPressed && !isControlPointHovered;
@@ -779,6 +801,12 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
             if (!IsSelected)
                 return false;
 
+            if (e.Key == Key.Escape && mirrorOriginal != null)
+            {
+                endMirror(false);
+                return true;
+            }
+
             if (e.Key == Key.F && e.ControlPressed && e.ShiftPressed)
             {
                 showStreamConversion();
@@ -1086,6 +1114,92 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
             return closest;
         }
 
+        #region Mirroring
+
+        private Container mirrorAxisPreview = null!;
+
+        /// <summary>
+        /// The path before mirroring, while the mirror axis is being chosen with the mouse.
+        /// </summary>
+        private SliderPath? mirrorOriginal;
+
+        private Vector2 mirrorEnd;
+        private Vector2 lastMirrorAxis;
+
+        private void mirrorPointSymmetric()
+        {
+            changeHandler?.BeginChange();
+            HitObject.Path.Mirror(null);
+            changeHandler?.EndChange();
+        }
+
+        private void startMirror()
+        {
+            changeHandler?.BeginChange();
+            mirrorOriginal = new SliderPath(cloneControlPoints(HitObject.Path), HitObject.Path.ExpectedDistance.Value);
+            mirrorEnd = HitObject.StackedPosition + HitObject.Path.PositionAt(1);
+            lastMirrorAxis = Vector2.Zero;
+        }
+
+        private void updateMirror()
+        {
+            var inputState = GetContainingInputManager()?.CurrentState;
+
+            if (mirrorOriginal == null || inputState == null)
+            {
+                mirrorAxisPreview.Alpha = 0;
+                return;
+            }
+
+            // the axis passes through the slider end and points towards the mouse.
+            Vector2 axis = ToLocalSpace(inputState.Mouse.Position) - mirrorEnd;
+
+            if (axis.LengthSquared < 1)
+                return;
+
+            // shift snaps the axis to 15° steps, e.g. for an exactly vertical axis.
+            if (inputState.Keyboard.ShiftPressed)
+            {
+                float angle = MathF.Round(MathF.Atan2(axis.Y, axis.X) / (MathF.PI / 12)) * (MathF.PI / 12);
+                axis = new Vector2(MathF.Cos(angle), MathF.Sin(angle));
+            }
+
+            axis.Normalize();
+
+            mirrorAxisPreview.Position = mirrorEnd;
+            mirrorAxisPreview.Rotation = MathHelper.RadiansToDegrees(MathF.Atan2(axis.Y, axis.X)) - 90;
+            mirrorAxisPreview.Alpha = 1;
+
+            if (axis == lastMirrorAxis)
+                return;
+
+            lastMirrorAxis = axis;
+            restoreMirrorOriginal();
+            HitObject.Path.Mirror(axis);
+        }
+
+        private void endMirror(bool confirm)
+        {
+            if (!confirm)
+                restoreMirrorOriginal();
+
+            mirrorOriginal = null;
+            changeHandler?.EndChange();
+        }
+
+        private void restoreMirrorOriginal()
+        {
+            Debug.Assert(mirrorOriginal != null);
+
+            HitObject.Path.ControlPoints.Clear();
+            HitObject.Path.ControlPoints.AddRange(cloneControlPoints(mirrorOriginal));
+            HitObject.Path.ExpectedDistance.Value = mirrorOriginal.ExpectedDistance.Value;
+        }
+
+        private static PathControlPoint[] cloneControlPoints(SliderPath path) => path.ControlPoints.Select(p => new PathControlPoint(p.Position, p.Type)).ToArray();
+
+        #endregion
+
         private void showStreamConversion()
         {
             // the popover handles a single slider at a time, so fall back to a plain conversion for multiple.
@@ -1150,6 +1264,8 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
             {
                 Hotkey = new Hotkey(new KeyCombination(InputKey.Control, InputKey.MouseLeft))
             },
+            new OsuMenuItem("Mirror (click to set axis)", MenuItemType.Standard, startMirror),
+            new OsuMenuItem("Mirror (point symmetric)", MenuItemType.Standard, mirrorPointSymmetric),
             new OsuMenuItem("Convert to stream", MenuItemType.Destructive, showStreamConversion)
             {
                 Hotkey = new Hotkey(new KeyCombination(InputKey.Control, InputKey.Shift, InputKey.F))
@@ -1199,7 +1315,8 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
                 return true;
 
             // ctrl+shift+click extends the path at its closer end, which is possible anywhere rather than only on the slider itself.
-            if (isExtendingAtEnd)
+            // the same applies to the click confirming the mirror axis.
+            if (isExtendingAtEnd || mirrorOriginal != null)
                 return true;
 
             if (ControlPointVisualiser == null)
