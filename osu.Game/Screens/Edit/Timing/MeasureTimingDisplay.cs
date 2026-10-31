@@ -468,9 +468,9 @@ namespace osu.Game.Screens.Edit.Timing
             {
                 targetScroll = rowIndexAt(time) - visible_rows / 3;
 
-                // while zoomed in, the view glides along such that the playback stays centred.
+                // while zoomed in, the view glides along such that the playback stays at a quarter of its width, leaving room to see what's ahead.
                 double fraction = rows[rowIndexAt(time)].FractionAt(time);
-                setViewStart(Interpolation.DampContinuously(viewStart, fraction - viewWidth / 2, 40, Time.Elapsed));
+                setViewStart(Interpolation.DampContinuously(viewStart, fraction - viewWidth / 4, 40, Time.Elapsed));
             }
 
             lastClockTime = time;
