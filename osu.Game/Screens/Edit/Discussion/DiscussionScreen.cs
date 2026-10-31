@@ -26,9 +26,9 @@ namespace osu.Game.Screens.Edit.Discussion
         public const float SPACING = 10;
 
         /// <summary>
-        /// The width of the content, like the maximum width of the website.
+        /// The maximum width of the content, a bit narrower than the website to keep the focus in the middle.
         /// </summary>
-        public const float CONTENT_WIDTH = 1000;
+        public const float CONTENT_WIDTH = 860;
 
         [Cached]
         private readonly DiscussionSession session = new DiscussionSession();
@@ -53,6 +53,7 @@ namespace osu.Game.Screens.Edit.Discussion
         private readonly IBindable<WebSessionState> webSessionState = new Bindable<WebSessionState>();
 
         private OsuScrollContainer scroll = null!;
+        private FillFlowContainer contentFlow = null!;
         private Container mainContent = null!;
         private DiscussionStateDisplay stateDisplay = null!;
 
@@ -80,11 +81,10 @@ namespace osu.Game.Screens.Edit.Discussion
                         scroll = new OsuScrollContainer
                         {
                             RelativeSizeAxes = Axes.Both,
-                            Child = new FillFlowContainer
+                            Child = contentFlow = new FillFlowContainer
                             {
                                 Anchor = Anchor.TopCentre,
                                 Origin = Anchor.TopCentre,
-                                RelativeSizeAxes = Axes.X,
                                 AutoSizeAxes = Axes.Y,
                                 Direction = FillDirection.Vertical,
                                 Padding = new MarginPadding { Horizontal = SPACING * 2, Vertical = SPACING },
@@ -140,6 +140,14 @@ namespace osu.Game.Screens.Edit.Discussion
                         session.Refresh();
                 });
             }
+        }
+
+        protected override void Update()
+        {
+            base.Update();
+
+            // centred column with a maximum width like the website, using the full width on narrow windows.
+            contentFlow.Width = Math.Min(CONTENT_WIDTH + contentFlow.Padding.TotalHorizontal, scroll.ScrollContent.DrawWidth);
         }
 
         private void updateState(DiscussionBeatmapSet? beatmapSet)
