@@ -158,6 +158,17 @@ namespace osu.Game.Overlays.Discord
             private Container topContainer = null!;
             private LoadingSpinner topSpinner = null!;
             private DiscordMessageComposer composer = null!;
+            private OsuTextFlowContainer typingText = null!;
+
+            /// <summary>
+            /// The users who are typing in the channel, with the time at which they stop being shown as typing.
+            /// </summary>
+            private readonly Dictionary<ulong, (DiscordUser user, double expiry)> typingUsers = new Dictionary<ulong, (DiscordUser, double)>();
+
+            /// <summary>
+            /// When the local user was last shown as typing to others, which Discord shows for ten seconds.
+            /// </summary>
+            private double? lastTypingSent;
 
             private DiscordMarkdownContext markdownContext = null!;
 
@@ -229,12 +240,15 @@ namespace osu.Game.Overlays.Discord
                         },
                         new Drawable[]
                         {
-                            new Container
+                            new FillFlowContainer
                             {
                                 RelativeSizeAxes = Axes.X,
                                 AutoSizeAxes = Axes.Y,
-                                Padding = new MarginPadding { Horizontal = 16, Bottom = 16, Top = 4 },
-                                Child = composer = new DiscordMessageComposer(Channel, client.SupportsMessageActions, GetCustomEmojis, getMentionCandidates,
+                                Direction = FillDirection.Vertical,
+                                Padding = new MarginPadding { Horizontal = 16, Top = 4 },
+                                Children = new Drawable[]
+                                {
+                                composer = new DiscordMessageComposer(Channel, client.SupportsMessageActions, GetCustomEmojis, getMentionCandidates,
                                     Channel.GuildId is ulong guildId ? query => client.SearchMembers(guildId, query) : null)
                                 {
                                     GifClient = client,
@@ -242,6 +256,16 @@ namespace osu.Game.Overlays.Discord
                                     // Like in Discord, a picked GIF or sticker is sent right away, while the text which was written stays.
                                     GifPicked = gif => send(gif.Url, Array.Empty<DiscordUpload>(), takeReply(), null),
                                     StickerPicked = sticker => send(string.Empty, Array.Empty<DiscordUpload>(), takeReply(), sticker),
+                                    EditLastMessage = editLastMessage,
+                                },
+                                // Like in Discord, who is typing is shown in the space below the text box.
+                                typingText = new OsuTextFlowContainer(t => t.Font = DiscordStyle.UiFont(12))
+                                {
+                                    RelativeSizeAxes = Axes.X,
+                                    Height = 16,
+                                    Padding = new MarginPadding { Left = 4 },
+                                    Colour = colourProvider.Content2,
+                                },
                                 },
                             },
                         },
@@ -249,6 +273,7 @@ namespace osu.Game.Overlays.Discord
                 };
 
                 composer.TextBox.OnCommit += (_, _) => sendMessage();
+                composer.TextBox.Current.BindValueChanged(e => onTextChanged(e.NewValue));
             }
 
             protected override void LoadComplete()
@@ -259,6 +284,7 @@ namespace osu.Game.Overlays.Discord
                 client.MessageUpdated += onMessageUpdated;
                 client.MessageDeleted += onMessageDeleted;
                 client.ReactionChanged += onReactionChanged;
+                client.TypingStarted += onTypingStarted;
 
                 loadOlder();
             }
@@ -404,6 +430,73 @@ namespace osu.Game.Overlays.Discord
                 }
             }
 
+            private void editLastMessage()
+            {
+                ulong localUserId = client.LocalUser.Value?.Id ?? 0;
+
+                // Only default messages and replies can be edited.
+                var last = orderedMessages.Select(d => d.Message)
+                                          .LastOrDefault(m => m.Author.Id == localUserId && !m.Pending && !m.Failed && m.Id != 0 && m.Type is 0 or 19);
+
+                if (last != null)
+                    StartEdit(last);
+            }
+
+            private void onTextChanged(string text)
+            {
+                if (string.IsNullOrEmpty(text) || composer.Editing != null)
+                    return;
+
+                // Discord shows the user as typing for ten seconds, so it is renewed a bit before that.
+                if (lastTypingSent != null && Time.Current - lastTypingSent < 8000)
+                    return;
+
+                lastTypingSent = Time.Current;
+                client.SendTyping(Channel);
+            }
+
+            private void onTypingStarted(ulong channelId, DiscordUser user) => Schedule(() =>
+            {
+                if (channelId != Channel.Id)
+                    return;
+
+                typingUsers[user.Id] = (user, Time.Current + 10000);
+                updateTyping();
+                Scheduler.AddDelayed(updateTyping, 10000);
+            });
+
+            private void updateTyping()
+            {
+                foreach (var (id, (_, expiry)) in typingUsers.ToList())
+                {
+                    if (expiry <= Time.Current)
+                        typingUsers.Remove(id);
+                }
+
+                var names = typingUsers.Values.Select(t => t.user.DisplayName).ToList();
+
+                typingText.Clear();
+
+                if (names.Count == 0)
+                    return;
+
+                if (names.Count > 3)
+                {
+                    typingText.AddText(SlopDiscordStrings.SeveralPeopleTyping);
+                    return;
+                }
+
+                for (int i = 0; i < names.Count; i++)
+                {
+                    if (i > 0)
+                        typingText.AddText(i == names.Count - 1 ? SlopDiscordStrings.TypingAnd : @", ");
+
+                    typingText.AddText(names[i], t => t.Font = DiscordStyle.UiFont(12, FontWeight.Bold));
+                }
+
+                typingText.AddText(names.Count == 1 ? SlopDiscordStrings.IsTyping : SlopDiscordStrings.AreTyping);
+            }
+
             private void sendMessage()
             {
                 string text = composer.GetMessageText();
@@ -424,6 +517,7 @@ namespace osu.Game.Overlays.Discord
                     return;
 
                 composer.Reset();
+                lastTypingSent = null;
 
                 send(text, uploads, replyTo, null);
             }
@@ -603,6 +697,9 @@ namespace osu.Game.Overlays.Discord
                 if (messageFlow.Any(m => m.Message.Id == message.Id && !m.Message.Pending))
                     return;
 
+                if (typingUsers.Remove(message.Author.Id))
+                    updateTyping();
+
                 var pending = message.Nonce == null ? null : messageFlow.FirstOrDefault(m => m.Message.Pending && m.Message.Nonce == message.Nonce);
 
                 if (pending != null)
@@ -743,6 +840,7 @@ namespace osu.Game.Overlays.Discord
                     client.MessageUpdated -= onMessageUpdated;
                     client.MessageDeleted -= onMessageDeleted;
                     client.ReactionChanged -= onReactionChanged;
+                    client.TypingStarted -= onTypingStarted;
                 }
             }
         }

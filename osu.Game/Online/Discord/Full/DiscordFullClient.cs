@@ -612,6 +612,9 @@ namespace osu.Game.Online.Discord.Full
         public override Task EditMessage(DiscordMessage message, string content) =>
             request(HttpMethod.Patch, $@"channels/{message.ChannelId}/messages/{message.Id}", new JObject { [@"content"] = content });
 
+        public override void SendTyping(DiscordChannel channel) =>
+            request(HttpMethod.Post, $@"channels/{channel.Id}/typing", null).ContinueWith(_ => { }, TaskContinuationOptions.OnlyOnFaulted);
+
         public override Task DeleteMessage(DiscordMessage message) =>
             request(HttpMethod.Delete, $@"channels/{message.ChannelId}/messages/{message.Id}", null);
 
@@ -1321,6 +1324,26 @@ namespace osu.Game.Online.Discord.Full
                             StoreUser(updated.Author);
 
                         TriggerMessageUpdated(updated);
+                    });
+                    break;
+
+                case @"TYPING_START":
+                    ulong typingChannelId = obj.Value<ulong>(@"channel_id");
+                    ulong typingUserId = obj.Value<ulong>(@"user_id");
+
+                    // In guilds, the member is included with the nickname which is shown instead of the name.
+                    var typingUser = obj[@"member"]?[@"user"]?.ToObject<DiscordUser>();
+                    string? typingNick = obj[@"member"]?.Value<string>(@"nick");
+
+                    if (typingUser != null && !string.IsNullOrEmpty(typingNick))
+                        typingUser.GlobalName = typingNick;
+
+                    Schedule(() =>
+                    {
+                        var user = typingUser ?? GetUser(typingUserId);
+
+                        if (user != null && typingUserId != LocalUser.Value?.Id)
+                            TriggerTypingStarted(typingChannelId, user);
                     });
                     break;
 

@@ -114,6 +114,11 @@ namespace osu.Game.Overlays.Discord
         /// </summary>
         public Action<DiscordSticker>? StickerPicked { get; init; }
 
+        /// <summary>
+        /// Starts editing the last message of the local user, which is done with the up arrow while nothing is written if <see cref="supportsActions"/>.
+        /// </summary>
+        public Action? EditLastMessage { get; init; }
+
         private Container contextBar = null!;
         private DiscordPopoverButton emojiButton = null!;
         private OsuSpriteText contextText = null!;
@@ -153,6 +158,7 @@ namespace osu.Game.Overlays.Discord
             {
                 RelativeSizeAxes = Axes.X,
                 Height = 44,
+                FontSize = DiscordStyle.MESSAGE_TEXT_SIZE,
                 LengthLimit = 2000,
                 PlaceholderText = SlopDiscordStrings.MessagePlaceholder(channel.IsPrivate ? channel.DisplayName : $@"#{channel.DisplayName}"),
                 ReleaseFocusOnCommit = false,
@@ -279,6 +285,9 @@ namespace osu.Game.Overlays.Discord
             TextBox.PasteAttachments = pasteAttachments;
             TextBox.AcceptSuggestion = acceptSelectedSuggestion;
             TextBox.MoveSuggestion = moveSuggestion;
+
+            if (supportsActions)
+                TextBox.EditLastMessage = EditLastMessage;
         }
 
         protected override void LoadComplete()
@@ -779,6 +788,11 @@ namespace osu.Game.Overlays.Discord
             /// </summary>
             public Func<int, bool>? MoveSuggestion { get; set; }
 
+            /// <summary>
+            /// Edits the last message of the local user, which replaces going through the sent messages like in Discord.
+            /// </summary>
+            public Action? EditLastMessage { get; set; }
+
             public DiscordMessageTextBox(bool hasButtons)
             {
                 this.hasButtons = hasButtons;
@@ -801,6 +815,9 @@ namespace osu.Game.Overlays.Discord
 
             protected override SpriteText CreatePlaceholder() => base.CreatePlaceholder().With(p => p.Font = DiscordStyle.UiFont(15));
 
+            // The text is written in the same font as the messages.
+            protected override FontUsage Font => DiscordStyle.MessageFont();
+
             /// <summary>
             /// Inserts text at the caret.
             /// </summary>
@@ -822,6 +839,13 @@ namespace osu.Game.Overlays.Discord
                     case Key.Down:
                         if (MoveSuggestion?.Invoke(e.Key == Key.Up ? -1 : 1) == true)
                             return true;
+
+                        // Without a message of the local user, nothing happens.
+                        if (e.Key == Key.Up && EditLastMessage != null && string.IsNullOrEmpty(Text))
+                        {
+                            EditLastMessage();
+                            return true;
+                        }
 
                         break;
 

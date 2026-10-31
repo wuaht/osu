@@ -11,6 +11,7 @@ using osu.Framework.Extensions.LocalisationExtensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
+using osu.Framework.Graphics.Sprites;
 using osu.Framework.Graphics.UserInterface;
 using osu.Framework.Input.Events;
 using osu.Framework.Localisation;
@@ -29,7 +30,7 @@ namespace osu.Game.Overlays.Discord
     /// <summary>
     /// The custom emojis of a guild which can be used in the picker.
     /// </summary>
-    public record DiscordCustomEmojiGroup(string GuildName, IReadOnlyList<DiscordCustomEmoji> Emojis);
+    public record DiscordCustomEmojiGroup(DiscordGuild Guild, IReadOnlyList<DiscordCustomEmoji> Emojis);
 
     /// <summary>
     /// A popover to pick a standard or custom emoji, for writing it into a message or reacting with it.
@@ -38,6 +39,8 @@ namespace osu.Game.Overlays.Discord
     public partial class DiscordEmojiPicker : OsuPopover
     {
         private const float button_size = 40;
+
+        private const float tab_rail_width = 48;
 
         private readonly IReadOnlyList<DiscordCustomEmojiGroup> customGroups;
         private readonly Action<DiscordReactionEmoji> onPicked;
@@ -50,6 +53,8 @@ namespace osu.Game.Overlays.Discord
 
         private BasicSearchTextBox searchBox = null!;
         private FillFlowContainer<Section> sections = null!;
+        private FillFlowContainer<SectionTab> tabs = null!;
+        private OsuScrollContainer scroll = null!;
         private LoadingSpinner spinner = null!;
         private OsuSpriteText status = null!;
 
@@ -65,7 +70,7 @@ namespace osu.Game.Overlays.Discord
             return client.Guilds
                          .Where(g => nitro || g.Id == currentGuildId)
                          .OrderByDescending(g => g.Id == currentGuildId)
-                         .Select(g => new DiscordCustomEmojiGroup(g.Name, g.Emojis.Where(e => e.Available && (nitro || !e.Animated)).ToList()))
+                         .Select(g => new DiscordCustomEmojiGroup(g, g.Emojis.Where(e => e.Available && (nitro || !e.Animated)).ToList()))
                          .Where(g => g.Emojis.Count > 0)
                          .ToList();
         }
@@ -89,7 +94,7 @@ namespace osu.Game.Overlays.Discord
         {
             Child = new Container
             {
-                Size = new Vector2(button_size * 9 + 28, Math.Clamp(MaxHeight, 200, 420)),
+                Size = new Vector2(tab_rail_width + button_size * 9 + 28, Math.Clamp(MaxHeight, 200, 420)),
                 Children = new Drawable[]
                 {
                     new Container
@@ -104,12 +109,32 @@ namespace osu.Game.Overlays.Discord
                             PlaceholderText = SlopDiscordStrings.EmojiSearchPlaceholder,
                         },
                     },
+                    // Like in Discord, the sections can be jumped to with the tabs on the left.
+                    new Container
+                    {
+                        RelativeSizeAxes = Axes.Y,
+                        Width = tab_rail_width,
+                        Padding = new MarginPadding { Top = 52 },
+                        Child = new OsuScrollContainer
+                        {
+                            RelativeSizeAxes = Axes.Both,
+                            ScrollbarVisible = false,
+                            Child = tabs = new FillFlowContainer<SectionTab>
+                            {
+                                RelativeSizeAxes = Axes.X,
+                                AutoSizeAxes = Axes.Y,
+                                Direction = FillDirection.Vertical,
+                                Spacing = new Vector2(0, 4),
+                                Padding = new MarginPadding { Left = 10, Bottom = 10 },
+                            },
+                        },
+                    },
                     // The results are masked below the search box, which they would otherwise scroll over.
                     new Container
                     {
                         RelativeSizeAxes = Axes.Both,
-                        Padding = new MarginPadding { Top = 52 },
-                        Child = new OsuScrollContainer
+                        Padding = new MarginPadding { Top = 52, Left = tab_rail_width },
+                        Child = scroll = new OsuScrollContainer
                         {
                             RelativeSizeAxes = Axes.Both,
                             Child = new FillFlowContainer
@@ -150,17 +175,70 @@ namespace osu.Game.Overlays.Discord
                 },
             };
 
-            if (usage != null)
-                sections.Add(new Section(SlopDiscordStrings.EmojiFrequentlyUsed, usage.GetMostUsed(18).Select(e => new EmojiButton(e, e.Id == null ? e.Name ?? string.Empty : $@":{e.Name}:", null)), true));
+            var mostUsed = usage?.GetMostUsed(18) ?? Array.Empty<DiscordReactionEmoji>();
+
+            if (mostUsed.Count > 0)
+            {
+                addSection(new Section(SlopDiscordStrings.EmojiFrequentlyUsed, mostUsed.Select(e => new EmojiButton(e, e.Id == null ? e.Name ?? string.Empty : $@":{e.Name}:", null)), true),
+                    createIcon(FontAwesome.Regular.Clock));
+            }
 
             foreach (var group in customGroups)
             {
-                sections.Add(new Section(group.GuildName, group.Emojis.Select(e =>
+                var section = new Section(group.Guild.Name, group.Emojis.Select(e =>
                 {
                     var emoji = new DiscordReactionEmoji { Id = e.Id, Name = e.Name, Animated = e.Animated };
                     return new EmojiButton(emoji, $@":{e.Name}:", s => e.Name.Contains(s, StringComparison.OrdinalIgnoreCase));
-                })));
+                }));
+
+                addSection(section, group.Guild.GetIconUrl() is string url
+                    ? new DiscordRemoteImage(url) { RelativeSizeAxes = Axes.Both, ShowPlaceholder = false }
+                    : new OsuSpriteText
+                    {
+                        Anchor = Anchor.Centre,
+                        Origin = Anchor.Centre,
+                        Text = group.Guild.Acronym,
+                        Font = DiscordStyle.UiFont(11, FontWeight.SemiBold),
+                    });
             }
+        }
+
+        private void addSection(Section section, Drawable icon)
+        {
+            sections.Add(section);
+            tabs.Add(new SectionTab(section, icon, () => scrollTo(section)));
+        }
+
+        private static Drawable createIcon(IconUsage icon) => new SpriteIcon
+        {
+            Anchor = Anchor.Centre,
+            Origin = Anchor.Centre,
+            Size = new Vector2(16),
+            Icon = icon,
+        };
+
+        private void scrollTo(Section section)
+        {
+            // The sections which were hidden by the search are shown again, which are only laid out once the children were updated.
+            searchBox.Current.Value = string.Empty;
+            ScheduleAfterChildren(() => scroll.ScrollTo(section));
+        }
+
+        protected override void Update()
+        {
+            base.Update();
+
+            // The tab of the section which is scrolled to is highlighted.
+            Section? current = null;
+
+            foreach (var section in sections)
+            {
+                if (section.IsPresent && (current == null || scroll.GetChildPosInContent(section) <= scroll.Current + 1))
+                    current = section;
+            }
+
+            foreach (var tab in tabs)
+                tab.Active = tab.Section == current;
         }
 
         protected override void LoadComplete()
@@ -183,11 +261,11 @@ namespace osu.Game.Overlays.Discord
 
                 foreach (var category in t.GetResultSafely())
                 {
-                    sections.Add(new Section(category.Name, category.Emojis.Select(e =>
+                    addSection(new Section(category.Name, category.Emojis.Select(e =>
                     {
                         string tooltip = e.Shortcodes.Count > 0 ? $@":{e.Shortcodes[0]}:" : e.Label;
                         return new EmojiButton(new DiscordReactionEmoji { Name = e.Unicode }, tooltip, e.Matches);
-                    })));
+                    })), createIcon(category.Icon));
                 }
 
                 updateFilter();
@@ -220,8 +298,82 @@ namespace osu.Game.Overlays.Discord
             this.HidePopover();
         }
 
+        private partial class SectionTab : OsuClickableContainer
+        {
+            public readonly Section Section;
+
+            private readonly Drawable icon;
+            private Box background = null!;
+
+            private bool active;
+
+            public bool Active
+            {
+                set
+                {
+                    if (active == value)
+                        return;
+
+                    active = value;
+                    updateState();
+                }
+            }
+
+            public SectionTab(Section section, Drawable icon, Action action)
+            {
+                Section = section;
+                this.icon = icon;
+
+                Action = action;
+                TooltipText = section.Name;
+                Size = new Vector2(30);
+                Masking = true;
+                CornerRadius = 8;
+            }
+
+            [BackgroundDependencyLoader]
+            private void load(OverlayColourProvider colourProvider)
+            {
+                icon.Colour = colourProvider.Content2;
+
+                Children = new[]
+                {
+                    background = new Box
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Colour = Color4.White,
+                        Alpha = 0,
+                    },
+                    icon,
+                };
+            }
+
+            protected override bool OnHover(HoverEvent e)
+            {
+                bool handled = base.OnHover(e);
+                updateState();
+                return handled;
+            }
+
+            protected override void OnHoverLost(HoverLostEvent e)
+            {
+                base.OnHoverLost(e);
+                updateState();
+            }
+
+            private void updateState()
+            {
+                if (!IsLoaded)
+                    return;
+
+                background.FadeTo(active ? 0.12f : IsHovered ? 0.06f : 0, 100);
+            }
+        }
+
         private partial class Section : FillFlowContainer
         {
+            public readonly LocalisableString Name;
+
             public readonly FillFlowContainer<EmojiButton> Buttons;
 
             private readonly bool hideWhileSearching;
@@ -230,6 +382,8 @@ namespace osu.Game.Overlays.Discord
             public Section(LocalisableString name, IEnumerable<EmojiButton> buttons, bool hideWhileSearching = false)
             {
                 this.hideWhileSearching = hideWhileSearching;
+
+                Name = name;
 
                 RelativeSizeAxes = Axes.X;
                 AutoSizeAxes = Axes.Y;

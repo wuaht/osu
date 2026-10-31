@@ -91,6 +91,11 @@ namespace osu.Game.Online.Discord
         public event Action<DiscordReactionUpdate>? ReactionChanged;
 
         /// <summary>
+        /// Invoked with the channel ID and the user when another user starts typing, which Discord shows for ten seconds or until their message is sent.
+        /// </summary>
+        public event Action<ulong, DiscordUser>? TypingStarted;
+
+        /// <summary>
         /// Invoked when the channels of a guild change.
         /// </summary>
         public event Action<DiscordGuild>? GuildChannelsChanged;
@@ -179,6 +184,13 @@ namespace osu.Game.Online.Discord
         /// <param name="files">Files which are attached, if <see cref="SupportsMessageActions"/>.</param>
         public abstract Task<DiscordMessage> SendMessage(DiscordChannel channel, string content, string nonce, DiscordMessage? replyTo = null,
                                                          IReadOnlyList<DiscordUpload>? files = null);
+
+        /// <summary>
+        /// Shows the local user as typing in a channel to others for ten seconds. Clients which can't do this do nothing.
+        /// </summary>
+        public virtual void SendTyping(DiscordChannel channel)
+        {
+        }
 
         /// <summary>
         /// Fetches a single message, or null if it doesn't exist anymore or can't be fetched.
@@ -311,6 +323,8 @@ namespace osu.Game.Online.Discord
         }
 
         protected void TriggerMessageCreated(DiscordMessage message) => MessageCreated?.Invoke(message);
+
+        protected void TriggerTypingStarted(ulong channelId, DiscordUser user) => TypingStarted?.Invoke(channelId, user);
 
         protected void TriggerChannelRead(ulong channelId) => ChannelRead?.Invoke(channelId);
 

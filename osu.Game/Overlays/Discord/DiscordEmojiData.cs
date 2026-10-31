@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using osu.Framework.Extensions;
+using osu.Framework.Graphics.Sprites;
 using osu.Framework.Localisation;
 using osu.Game.Localisation;
 
@@ -29,7 +30,7 @@ namespace osu.Game.Overlays.Discord
             || Tags.Any(t => t.StartsWith(search, StringComparison.OrdinalIgnoreCase));
     }
 
-    public record DiscordStandardEmojiCategory(LocalisableString Name, IReadOnlyList<DiscordStandardEmoji> Emojis);
+    public record DiscordStandardEmojiCategory(LocalisableString Name, IconUsage Icon, IReadOnlyList<DiscordStandardEmoji> Emojis);
 
     /// <summary>
     /// The list of standard emojis, which is loaded from the emojibase data set that matches the version of the Twemoji images.
@@ -94,8 +95,15 @@ namespace osu.Game.Overlays.Discord
             var emojiData = DiscordMedia.Download(BASE_URL + @"compact.json", CancellationToken.None);
             var shortcodeData = DiscordMedia.Download(BASE_URL + @"shortcodes/github.json", CancellationToken.None);
 
+            // Discord also accepts aliases like :cigarette: for :smoking:, which the JoyPixels set has as well.
+            var aliasData = DiscordMedia.Download(BASE_URL + @"shortcodes/joypixels.json", CancellationToken.None);
+
             var emojis = JArray.Parse(Encoding.UTF8.GetString(await emojiData.ConfigureAwait(false)));
             var shortcodes = JObject.Parse(Encoding.UTF8.GetString(await shortcodeData.ConfigureAwait(false)));
+            var aliases = JObject.Parse(Encoding.UTF8.GetString(await aliasData.ConfigureAwait(false)));
+
+            // An alias which is the main name of another emoji keeps meaning that emoji.
+            var mainCodes = shortcodes.Properties().SelectMany(p => getCodes(p.Value)).ToHashSet();
 
             var groups = new SortedDictionary<int, List<(int order, DiscordStandardEmoji emoji)>>();
 
@@ -109,12 +117,8 @@ namespace osu.Game.Overlays.Discord
                 if (group == null || group == 2 || unicode == null || hexcode == null)
                     continue;
 
-                string[] codes = shortcodes[hexcode] switch
-                {
-                    JArray array => array.Values<string>().OfType<string>().ToArray(),
-                    JValue value when value.Value is string code => new[] { code },
-                    _ => Array.Empty<string>(),
-                };
+                string[] mainEmojiCodes = getCodes(shortcodes[hexcode]);
+                string[] codes = mainEmojiCodes.Concat(getCodes(aliases[hexcode]).Where(a => !mainCodes.Contains(a))).Distinct().ToArray();
 
                 var emoji = new DiscordStandardEmoji(
                     unicode,
@@ -128,8 +132,30 @@ namespace osu.Game.Overlays.Discord
                 list.Add((entry.Value<int?>(@"order") ?? int.MaxValue, emoji));
             }
 
-            return groups.Select(g => new DiscordStandardEmojiCategory(getCategoryName(g.Key), g.Value.OrderBy(e => e.order).Select(e => e.emoji).ToList())).ToList();
+            return groups.Select(g => new DiscordStandardEmojiCategory(getCategoryName(g.Key), getCategoryIcon(g.Key), g.Value.OrderBy(e => e.order).Select(e => e.emoji).ToList()))
+                         .ToList();
         }
+
+        private static string[] getCodes(JToken? token) => token switch
+        {
+            JArray array => array.Values<string>().OfType<string>().ToArray(),
+            JValue value when value.Value is string code => new[] { code },
+            _ => Array.Empty<string>(),
+        };
+
+        private static IconUsage getCategoryIcon(int group) => group switch
+        {
+            0 => FontAwesome.Regular.Smile,
+            1 => FontAwesome.Solid.User,
+            3 => FontAwesome.Solid.Leaf,
+            4 => FontAwesome.Solid.Utensils,
+            5 => FontAwesome.Solid.Car,
+            6 => FontAwesome.Regular.Futbol,
+            7 => FontAwesome.Regular.Lightbulb,
+            8 => FontAwesome.Solid.Heart,
+            9 => FontAwesome.Solid.Flag,
+            _ => FontAwesome.Solid.Question,
+        };
 
         private static LocalisableString getCategoryName(int group) => group switch
         {

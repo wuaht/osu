@@ -639,6 +639,26 @@ namespace osu.Game.Localisation
         public static LocalisableString ReplyingTo(string name) => new TranslatableString(getKey(@"replying_to"), @"Replying to {0}", name);
 
         /// <summary>
+        /// " is typing..."
+        /// </summary>
+        public static LocalisableString IsTyping => new TranslatableString(getKey(@"is_typing"), @" is typing...");
+
+        /// <summary>
+        /// " are typing..."
+        /// </summary>
+        public static LocalisableString AreTyping => new TranslatableString(getKey(@"are_typing"), @" are typing...");
+
+        /// <summary>
+        /// " and "
+        /// </summary>
+        public static LocalisableString TypingAnd => new TranslatableString(getKey(@"typing_and"), @" and ");
+
+        /// <summary>
+        /// "Several people are typing..."
+        /// </summary>
+        public static LocalisableString SeveralPeopleTyping => new TranslatableString(getKey(@"several_people_typing"), @"Several people are typing...");
+
+        /// <summary>
         /// "Editing message"
         /// </summary>
         public static LocalisableString EditingMessage => new TranslatableString(getKey(@"editing_message"), @"Editing message");
