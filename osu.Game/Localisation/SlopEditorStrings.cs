@@ -505,6 +505,34 @@ namespace osu.Game.Localisation
         /// </summary>
         public static LocalisableString CleanUpMuteUnclickableHitsoundsHint => new TranslatableString(getKey(@"clean_up_mute_unclickable_hitsounds_hint"), @"Mutes slider repeats, slider tails and spinner ends. Ignored when removing muting.");
 
+        /// <summary>
+        /// "Show the timing point list and settings"
+        /// </summary>
+        public static LocalisableString ShowTimingPointPanels => new TranslatableString(getKey(@"show_timing_point_panels"), @"Show the timing point list and settings");
+
+        /// <summary>
+        /// "Hide the timing point list and settings"
+        /// </summary>
+        public static LocalisableString HideTimingPointPanels => new TranslatableString(getKey(@"hide_timing_point_panels"), @"Hide the timing point list and settings");
+
+        /// <summary>
+        /// The controls of the bar view of the timing screen, and how to time a song with a varying tempo.
+        /// </summary>
+        public static LocalisableString TimingGuide => new TranslatableString(getKey(@"timing_guide"), @"Every row is one bar, so the beats of all bars line up. The ends of the neighbouring bars are shown darkened at the sides.
+Click: place a timing point such that the onset under the cursor lies on a beat. The BPM of the previous timing point is recalculated to end on a whole beat.
+Drag: grab an onset and drop it onto the beat line it belongs to. The BPMs of the timing points around it are recalculated.
+Drag a timing point: move it onto another beat. Ctrl + drag it to only change its offset.
+Ctrl + scroll: nudge the timing point of the bar under the cursor by 1 ms (Ctrl + Shift: 10 ms).
+Right click: remove a timing point, or seek anywhere else. Scroll to move through the bars.
+Shift: don't snap to onsets. Alt: allow tempo changes which look like a miscounted beat.
+
+How to time a song with a varying tempo:
+1. Place the first timing point on a clear downbeat, e.g. the first kick or snare of the song, and check it by ear with the metronome.
+2. Play or scroll on until the onsets start drifting away from the beat lines.
+3. Drag a clear onset just before the drift onto its beat line. This places a timing point and fits the tempo before it.
+4. Repeat until the onsets of all bars form straight columns.
+5. Open the timing point list and settings (the button next to this one) to type in exact values or change the meter.");
+
         private static string getKey(string key) => $"{prefix}:{key}";
     }
 }

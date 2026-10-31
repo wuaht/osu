@@ -50,42 +50,66 @@ namespace osu.Game.Screens.Edit.Timing
         {
         }
 
-        protected override Drawable CreateMainContent() => new GridContainer
+        /// <summary>
+        /// Whether the timing point list and settings are shown. Hidden by default, such that the bar view has as much room as possible.
+        /// </summary>
+        private readonly BindableBool showPanels = new BindableBool();
+
+        private GridContainer mainGrid = null!;
+        private GridContainer leftGrid = null!;
+        private ControlPointList controlPointList = null!;
+        private ControlPointSettings controlPointSettings = null!;
+
+        protected override Drawable CreateMainContent()
         {
-            RelativeSizeAxes = Axes.Both,
-            ColumnDimensions = new[]
+            var measureDisplay = new MeasureTimingDisplay { RelativeSizeAxes = Axes.Both };
+            measureDisplay.ShowPanels.BindTo(showPanels);
+
+            return mainGrid = new GridContainer
+            {
+                RelativeSizeAxes = Axes.Both,
+                Content = new[]
+                {
+                    new Drawable[]
+                    {
+                        leftGrid = new GridContainer
+                        {
+                            RelativeSizeAxes = Axes.Both,
+                            Content = new[]
+                            {
+                                new Drawable[] { measureDisplay },
+                                new Drawable[]
+                                {
+                                    controlPointList = new ControlPointList
+                                    {
+                                        SelectClosestTimingPoint = selectClosestTimingPoint,
+                                    },
+                                },
+                            }
+                        },
+                        controlPointSettings = new ControlPointSettings(),
+                    },
+                }
+            };
+        }
+
+        private void updatePanels(bool show)
+        {
+            mainGrid.ColumnDimensions = new[]
             {
                 new Dimension(),
-                new Dimension(GridSizeMode.Absolute, 350),
-            },
-            Content = new[]
+                new Dimension(GridSizeMode.Absolute, show ? 350 : 0),
+            };
+
+            leftGrid.RowDimensions = new[]
             {
-                new Drawable[]
-                {
-                    new GridContainer
-                    {
-                        RelativeSizeAxes = Axes.Both,
-                        RowDimensions = new[]
-                        {
-                            new Dimension(GridSizeMode.Relative, 0.6f),
-                            new Dimension(),
-                        },
-                        Content = new[]
-                        {
-                            new Drawable[] { new MeasureTimingDisplay { RelativeSizeAxes = Axes.Both } },
-                            new Drawable[]
-                            {
-                                new ControlPointList
-                                {
-                                    SelectClosestTimingPoint = selectClosestTimingPoint,
-                                },
-                            },
-                        }
-                    },
-                    new ControlPointSettings(),
-                },
-            }
-        };
+                new Dimension(),
+                new Dimension(GridSizeMode.Relative, show ? 0.35f : 0),
+            };
+
+            // the panels would overflow their collapsed cells otherwise.
+            controlPointList.Alpha = controlPointSettings.Alpha = show ? 1 : 0;
+        }
 
         [BackgroundDependencyLoader]
         private void load(Editor? editor)
@@ -100,6 +124,8 @@ namespace osu.Game.Screens.Edit.Timing
         protected override void LoadComplete()
         {
             base.LoadComplete();
+
+            showPanels.BindValueChanged(show => updatePanels(show.NewValue), true);
 
             // selecting a single group in any other way replaces the selection.
             SelectedGroup.BindValueChanged(group =>

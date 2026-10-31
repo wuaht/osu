@@ -12,16 +12,21 @@ using osu.Framework.Graphics;
 using osu.Framework.Graphics.Audio;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
+using osu.Framework.Graphics.Sprites;
 using osu.Framework.Input;
 using osu.Framework.Input.Events;
+using osu.Framework.Localisation;
 using osu.Framework.Utils;
 using osu.Game.Beatmaps;
 using osu.Game.Beatmaps.ControlPoints;
 using osu.Game.Configuration;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Sprites;
+using osu.Game.Graphics.UserInterface;
+using osu.Game.Localisation;
 using osu.Game.Overlays;
 using osu.Game.Screens.Edit.Compose.Components.Timeline;
+using osu.Game.Screens.Edit.Hitsounding;
 using osuTK;
 using osuTK.Graphics;
 using osuTK.Input;
@@ -35,8 +40,8 @@ namespace osu.Game.Screens.Edit.Timing
     /// </summary>
     public partial class MeasureTimingDisplay : CompositeDrawable
     {
-        private const float row_height = 54;
-        private const float gutter_width = 44;
+        private const float row_height = 72;
+        private const float gutter_width = 52;
         private const float status_height = 34;
 
         /// <summary>
@@ -89,12 +94,24 @@ namespace osu.Game.Screens.Edit.Timing
 
         private Bindable<bool> adjustHitObjects = null!;
         private Bindable<EditorWaveformStyle> waveformStyle = null!;
+        private Bindable<float> waveformOpacity = null!;
+
+        /// <summary>
+        /// Whether the timing point list and the timing point settings are shown next to this display.
+        /// </summary>
+        public readonly BindableBool ShowPanels = new BindableBool();
 
         private InputManager inputManager = null!;
 
         private Container<RowDisplay> rowContainer = null!;
         private readonly List<RowDisplay> rowDisplays = new List<RowDisplay>();
-        private OsuSpriteText statusText = null!;
+        private TruncatingSpriteText statusText = null!;
+        private IconButton panelsButton = null!;
+
+        /// <summary>
+        /// The size of a screen pixel in the space of the rows, such that lines are as thin as the ticks of the timeline.
+        /// </summary>
+        private float pixelWidth = 1;
 
         /// <summary>
         /// The bars of the track, recalculated every frame.
@@ -145,6 +162,7 @@ namespace osu.Game.Screens.Edit.Timing
         {
             adjustHitObjects = config.GetBindable<bool>(OsuSetting.EditorAdjustExistingObjectsOnTimingChanges);
             waveformStyle = config.GetBindable<EditorWaveformStyle>(OsuSetting.SlopEditorWaveformStyle);
+            waveformOpacity = config.GetBindable<float>(OsuSetting.EditorWaveformOpacity);
 
             InternalChildren = new Drawable[]
             {
@@ -163,22 +181,45 @@ namespace osu.Game.Screens.Edit.Timing
                         Masking = true,
                     },
                 },
-                new FillFlowContainer
+                new Container
                 {
                     Anchor = Anchor.BottomLeft,
                     Origin = Anchor.BottomLeft,
                     RelativeSizeAxes = Axes.X,
-                    AutoSizeAxes = Axes.Y,
-                    Direction = FillDirection.Vertical,
-                    Padding = new MarginPadding { Horizontal = 6, Vertical = 2 },
+                    Height = status_height,
+                    Padding = new MarginPadding { Horizontal = 8 },
                     Children = new Drawable[]
                     {
-                        statusText = new OsuSpriteText { Font = OsuFont.Default.With(size: 12, weight: FontWeight.SemiBold) },
-                        new OsuSpriteText
+                        new Container
                         {
-                            Font = OsuFont.Default.With(size: 11),
-                            Colour = colourProvider.Content2,
-                            Text = "Click: place timing point · Drag: move a beat onto the grid · Ctrl+drag point: offset · Ctrl+wheel: nudge · Right-click: remove point / seek · Shift: no onset snap · Alt: allow large tempo changes",
+                            RelativeSizeAxes = Axes.Both,
+                            Padding = new MarginPadding { Right = 64 },
+                            Child = statusText = new TruncatingSpriteText
+                            {
+                                Anchor = Anchor.CentreLeft,
+                                Origin = Anchor.CentreLeft,
+                                RelativeSizeAxes = Axes.X,
+                                Font = OsuFont.Default.With(size: 14, weight: FontWeight.SemiBold),
+                            },
+                        },
+                        new FillFlowContainer
+                        {
+                            Anchor = Anchor.CentreRight,
+                            Origin = Anchor.CentreRight,
+                            AutoSizeAxes = Axes.Both,
+                            Direction = FillDirection.Horizontal,
+                            Spacing = new Vector2(4, 0),
+                            Children = new Drawable[]
+                            {
+                                new GuideIcon(),
+                                panelsButton = new IconButton
+                                {
+                                    Icon = FontAwesome.Solid.SlidersH,
+                                    Size = new Vector2(26),
+                                    IconScale = new Vector2(0.8f),
+                                    Action = () => ShowPanels.Toggle(),
+                                },
+                            }
                         },
                     }
                 },
@@ -197,6 +238,8 @@ namespace osu.Game.Screens.Edit.Timing
                 foreach (var display in rowDisplays)
                     applyWaveformStyle(display);
             });
+
+            ShowPanels.BindValueChanged(show => panelsButton.TooltipText = show.NewValue ? SlopEditorStrings.HideTimingPointPanels : SlopEditorStrings.ShowTimingPointPanels, true);
         }
 
         private bool shiftPressed => inputManager.CurrentState.Keyboard.ShiftPressed;
@@ -360,6 +403,11 @@ namespace osu.Game.Screens.Edit.Timing
             updateScroll();
             updateHover();
 
+            float screenWidth = rowContainer.ScreenSpaceDrawQuad.Width;
+
+            if (screenWidth > 0)
+                pixelWidth = rowContainer.DrawWidth / screenWidth;
+
             int firstIndex = (int)Math.Floor(scroll);
             int count = (int)Math.Ceiling(rowContainer.DrawHeight / row_height) + 1;
 
@@ -369,9 +417,11 @@ namespace osu.Game.Screens.Edit.Timing
             for (int i = 0; i < rowDisplays.Count; i++)
             {
                 var display = rowDisplays[i];
-                int index = firstIndex + i;
 
-                if (i >= count || index < 0 || index >= rows.Count)
+                // every display keeps showing the same row while scrolling, such that its cached waveform only has to be redrawn for newly visible rows.
+                int index = firstIndex + mod(i - firstIndex, rowDisplays.Count);
+
+                if (index >= firstIndex + count || index < 0 || index >= rows.Count)
                 {
                     display.Alpha = 0;
                     continue;
@@ -381,6 +431,8 @@ namespace osu.Game.Screens.Edit.Timing
                 display.Y = (float)((index - scroll) * row_height);
                 updateRowDisplay(display, index, rows[index]);
             }
+
+            static int mod(int value, int divisor) => (value % divisor + divisor) % divisor;
         }
 
         private void updateScroll()
@@ -490,6 +542,7 @@ namespace osu.Game.Screens.Edit.Timing
 
             display.Waveform.Alpha = style == EditorWaveformStyle.Default ? 1 : 0;
             display.StyledWaveform.Alpha = style == EditorWaveformStyle.Default ? 0 : 1;
+            display.WaveformBuffer.ForceRedraw();
         }
 
         private void updateRowDisplay(RowDisplay display, int index, MeasureRow row)
@@ -497,19 +550,20 @@ namespace osu.Game.Screens.Edit.Timing
             display.IndexText.Text = (index - extrapolatedRows).ToString();
             display.IndexText.Colour = row.IsSectionStart ? colours.Red1 : Color4.White.Opacity(0.6f);
 
-            // the waveform holder spans the whole track and is positioned and scaled such that this bar fills the row.
+            // the waveforms span the whole track and are positioned and scaled such that this bar fills the row.
             double trackLength = workingBeatmap.Value.Track.Length;
 
             if (trackLength > 0)
             {
-                display.WaveformHolder.Alpha = 1;
-                display.WaveformHolder.Width = (float)(trackLength * waveform_pixels_per_millisecond);
-                display.WaveformHolder.X = pixelAt(row.FractionAt(-Editor.WAVEFORM_VISUAL_OFFSET));
-                display.WaveformHolder.Scale = new Vector2((float)(1 / (millisecondsPerPixel(row) * waveform_pixels_per_millisecond)), 1);
+                display.WaveformBuffer.Alpha = waveformOpacity.Value;
+                display.SetWaveformLayout(
+                    pixelAt(row.FractionAt(-Editor.WAVEFORM_VISUAL_OFFSET)),
+                    (float)(trackLength * waveform_pixels_per_millisecond),
+                    (float)(1 / (millisecondsPerPixel(row) * waveform_pixels_per_millisecond)));
                 display.StyledWaveform.TrackLength = trackLength;
             }
             else
-                display.WaveformHolder.Alpha = 0;
+                display.WaveformBuffer.Alpha = 0;
 
             double cut = row.FractionAt(row.End);
             display.CutShade.X = (float)cut;
@@ -557,12 +611,14 @@ namespace osu.Game.Screens.Edit.Timing
                 bool isBeat = indexInBar % divisor == 0;
 
                 var line = display.GetTick(used++);
+                int tickDivisor = BindableBeatDivisor.GetDivisorForBeatIndex(indexInBar, divisor);
 
+                // one screen pixel wide, like the ticks of the timeline.
                 line.X = (float)tick / ticksPerBar;
-                line.Width = isBarLine ? 3 : isBeat ? 2 : 1;
-                line.Colour = isBarLine ? Color4.White : BindableBeatDivisor.GetColourFor(BindableBeatDivisor.GetDivisorForBeatIndex(indexInBar, divisor), colours);
-                line.Alpha = isBarLine || isBeat ? 1 : 0.6f;
-                line.Height = isBarLine || isBeat ? 1 : 0.5f;
+                line.Width = pixelWidth;
+                line.Height = isBarLine ? 1 : BindableBeatDivisor.GetSize(tickDivisor).Y;
+                line.Colour = isBarLine ? Color4.White : BindableBeatDivisor.GetColourFor(tickDivisor, colours);
+                line.Alpha = 1;
             }
 
             display.HideTicksFrom(used);
@@ -583,7 +639,7 @@ namespace osu.Game.Screens.Edit.Timing
                 var marker = display.GetMarker(used++);
 
                 marker.X = (float)fraction;
-                marker.Width = isSelected ? 5 : 3;
+                marker.Width = 2 * pixelWidth;
                 marker.Colour = isSelected ? colours.RedLighter : colours.Red1;
             }
 
@@ -592,7 +648,7 @@ namespace osu.Game.Screens.Edit.Timing
 
         private partial class RowDisplay : CompositeDrawable
         {
-            public readonly Container WaveformHolder;
+            public readonly WaveformBuffer WaveformBuffer;
             public readonly WaveformGraph Waveform;
             public readonly EditorWaveformGraph StyledWaveform;
             public readonly Box CutShade;
@@ -620,8 +676,8 @@ namespace osu.Game.Screens.Edit.Timing
                     {
                         Anchor = Anchor.CentreLeft,
                         Origin = Anchor.CentreLeft,
-                        X = 6,
-                        Font = OsuFont.Default.With(size: 13, weight: FontWeight.Bold),
+                        X = 8,
+                        Font = OsuFont.Default.With(size: 16, weight: FontWeight.Bold),
                     },
                     new Container
                     {
@@ -638,16 +694,15 @@ namespace osu.Game.Screens.Edit.Timing
                                     RelativeSizeAxes = Axes.Both,
                                     Colour = Color4.Black.Opacity(0.3f),
                                 },
-                                WaveformHolder = new Container
+                                // faded by the waveform opacity of the timeline, such that the beat lines remain visible on top of loud parts.
+                                WaveformBuffer = new WaveformBuffer
                                 {
-                                    RelativeSizeAxes = Axes.Y,
-                                    // dimmed, such that the beat lines remain visible on top of loud parts.
-                                    Colour = Color4.White.Opacity(0.5f),
+                                    RelativeSizeAxes = Axes.Both,
                                     Children = new Drawable[]
                                     {
                                         Waveform = new WaveformGraph
                                         {
-                                            RelativeSizeAxes = Axes.Both,
+                                            RelativeSizeAxes = Axes.Y,
                                             BaseColour = colours.Blue.Opacity(0.2f),
                                             LowColour = colours.BlueLighter,
                                             MidColour = colours.BlueDark,
@@ -655,7 +710,7 @@ namespace osu.Game.Screens.Edit.Timing
                                         },
                                         StyledWaveform = new EditorWaveformGraph
                                         {
-                                            RelativeSizeAxes = Axes.Both,
+                                            RelativeSizeAxes = Axes.Y,
                                             Alpha = 0,
                                         },
                                     }
@@ -686,13 +741,13 @@ namespace osu.Game.Screens.Edit.Timing
                                         // relatively positioned, such that the overlap offset applies to them.
                                         ticks = new Container<Box> { RelativeSizeAxes = Axes.Both, RelativePositionAxes = Axes.Both },
                                         markers = new Container<Box> { RelativeSizeAxes = Axes.Both, RelativePositionAxes = Axes.Both },
-                                        HoverLine = createLine(colours.Yellow, 2),
-                                        PlaybackLine = createLine(Color4.White, 2),
+                                        HoverLine = createLine(colours.Yellow),
+                                        PlaybackLine = createLine(Color4.White),
                                         BpmText = new OsuSpriteText
                                         {
                                             RelativePositionAxes = Axes.X,
-                                            Margin = new MarginPadding { Left = 6, Top = 1 },
-                                            Font = OsuFont.Default.With(size: 11, weight: FontWeight.Bold),
+                                            Margin = new MarginPadding { Left = 6, Top = 2 },
+                                            Font = OsuFont.Default.With(size: 13, weight: FontWeight.Bold),
                                             Colour = colours.Red1,
                                         },
                                     }
@@ -703,15 +758,37 @@ namespace osu.Game.Screens.Edit.Timing
                 };
             }
 
-            private static Box createLine(Color4 colour, float width) => new Box
+            /// <summary>
+            /// Creates a line as thin as the centre marker of the timeline.
+            /// </summary>
+            private static Box createLine(Color4 colour) => new Box
             {
                 RelativeSizeAxes = Axes.Y,
                 RelativePositionAxes = Axes.X,
                 Origin = Anchor.TopCentre,
-                Width = width,
+                Width = 1.4f,
+                EdgeSmoothness = new Vector2(1, 0),
                 Colour = colour,
                 Alpha = 0,
             };
+
+            /// <summary>
+            /// Positions and scales both waveforms, redrawing them if anything changed.
+            /// </summary>
+            public void SetWaveformLayout(float x, float width, float scale)
+            {
+                if (Waveform.X == x && Waveform.Width == width && Waveform.Scale.X == scale)
+                    return;
+
+                foreach (var waveform in new Drawable[] { Waveform, StyledWaveform })
+                {
+                    waveform.X = x;
+                    waveform.Width = width;
+                    waveform.Scale = new Vector2(scale, 1);
+                }
+
+                WaveformBuffer.ForceRedraw();
+            }
 
             public Box GetTick(int index) => getLine(ticks, index);
 
@@ -746,6 +823,42 @@ namespace osu.Game.Screens.Edit.Timing
             {
                 for (int i = index; i < container.Count; i++)
                     container[i].Alpha = 0;
+            }
+        }
+
+        /// <summary>
+        /// Caches the drawn waveforms of a row, as drawing the waveforms of all rows every frame is too slow.
+        /// Redrawn when the waveforms are moved (see <see cref="RowDisplay.SetWaveformLayout"/>) or invalidate their draw node (e.g. once loaded).
+        /// </summary>
+        private partial class WaveformBuffer : BufferedContainer
+        {
+            public WaveformBuffer()
+                : base(cachedFrameBuffer: true)
+            {
+            }
+
+            // the waveforms load and resample asynchronously, which is finished in their update.
+            protected override bool RequiresChildrenUpdate => true;
+        }
+
+        /// <summary>
+        /// Explains the controls of the display and how to time a song with a varying tempo in its tooltip.
+        /// </summary>
+        private partial class GuideIcon : CompositeDrawable, IHasHitsoundTooltip
+        {
+            public LocalisableString TooltipText => SlopEditorStrings.TimingGuide;
+
+            public GuideIcon()
+            {
+                Size = new Vector2(26);
+
+                InternalChild = new SpriteIcon
+                {
+                    Anchor = Anchor.Centre,
+                    Origin = Anchor.Centre,
+                    Size = new Vector2(14),
+                    Icon = FontAwesome.Solid.QuestionCircle,
+                };
             }
         }
 
