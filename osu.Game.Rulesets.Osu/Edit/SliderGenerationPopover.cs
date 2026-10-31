@@ -12,6 +12,7 @@ using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Input.Events;
 using osu.Framework.Utils;
+using osu.Game.Audio;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Sprites;
 using osu.Game.Graphics.UserInterfaceV2;
@@ -231,9 +232,10 @@ namespace osu.Game.Rulesets.Osu.Edit
 
             foreach (var segment in segments)
             {
-                // every segment starts at a typed control point, so all joins between segments are red anchors.
-                controlPoints.Add(new PathControlPoint(segment.P0 - segments[0].P0, PathType.BEZIER));
-                controlPoints.Add(new PathControlPoint(segment.P1 - segments[0].P0));
+                // every segment is a near-circular arc, so it becomes a perfect curve through its start, its midpoint and its end.
+                // each segment starts at a typed control point, so all joins between segments stay sharp.
+                controlPoints.Add(new PathControlPoint(segment.P0 - segments[0].P0, PathType.PERFECT_CURVE));
+                controlPoints.Add(new PathControlPoint((segment.P0 + 2 * segment.P1 + segment.P2) / 4 - segments[0].P0));
             }
 
             controlPoints.Add(new PathControlPoint(segments[^1].P2 - segments[0].P0));
@@ -241,7 +243,6 @@ namespace osu.Game.Rulesets.Osu.Edit
             if (slider == null)
             {
                 slider = new Slider();
-                slider.Samples.Add(slider.CreateHitSampleInfo());
                 editorBeatmap.Add(slider);
 
                 // selecting the slider shows its control points while it is being generated.
@@ -249,6 +250,13 @@ namespace osu.Game.Rulesets.Osu.Edit
                 editorBeatmap.SelectedHitObjects.Clear();
                 editorBeatmap.SelectedHitObjects.Add(slider);
             }
+
+            // like placing with the auto bank, the hitnormal follows the previous object's bank, volume and sample set.
+            var previousHitNormal = editorBeatmap.HitObjects.LastOrDefault(h => h != slider && h.StartTime < startTime)
+                                                 ?.Samples.FirstOrDefault(s => s.Name == HitSampleInfo.HIT_NORMAL);
+            slider.Samples = new List<HitSampleInfo> { previousHitNormal?.With(newEditorAutoBank: true) ?? slider.CreateHitSampleInfo() };
+            // the node samples are repopulated from the samples above when the slider is updated.
+            slider.NodeSamples.Clear();
 
             slider.StartTime = startTime;
             slider.Position = head;
