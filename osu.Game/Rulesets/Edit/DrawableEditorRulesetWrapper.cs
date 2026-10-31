@@ -3,16 +3,21 @@
 
 using System;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Caching;
+using osu.Framework.Extensions;
 using osu.Framework.Extensions.ObjectExtensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
+using osu.Framework.Logging;
 using osu.Game.Configuration;
 using osu.Game.Rulesets.Mods;
 using osu.Game.Rulesets.Objects;
 using osu.Game.Rulesets.UI;
+using osu.Game.Scoring;
 using osu.Game.Screens.Edit;
 
 namespace osu.Game.Rulesets.Edit
@@ -102,10 +107,52 @@ namespace osu.Game.Rulesets.Edit
             autoplayRegenerated.Validate();
         }
 
+        private CancellationTokenSource? autoplayCancellation;
+
         private void regenerateAutoplay()
         {
+            autoplayCancellation?.Cancel();
+
             var autoplayMod = drawableRuleset.Mods.OfType<ModAutoplay>().Single();
-            drawableRuleset.SetReplayScore(autoplayMod.CreateScoreFromReplayData(drawableRuleset.Beatmap, drawableRuleset.Mods));
+            var playableBeatmap = drawableRuleset.Beatmap;
+            var mods = drawableRuleset.Mods;
+
+            // the first replay is needed right away for the playfield to show hit objects as hit.
+            if (autoplayCancellation == null)
+            {
+                autoplayCancellation = new CancellationTokenSource();
+                applyAutoplay(autoplayMod.CreateScoreFromReplayData(playableBeatmap, mods));
+                return;
+            }
+
+            var source = autoplayCancellation = new CancellationTokenSource();
+
+            // generating takes long for big beatmaps, so it shouldn't block the update thread after every change.
+            // the beatmap may change while generating, in which case a newer generation cancels this one.
+            Task.Run(() => autoplayMod.CreateScoreFromReplayData(playableBeatmap, mods), source.Token).ContinueWith(task =>
+            {
+                if (source.IsCancellationRequested)
+                    return;
+
+                if (task.IsFaulted)
+                {
+                    Logger.Log($"Failed to generate the autoplay replay in the editor: {task.Exception}", level: LogLevel.Debug);
+                    return;
+                }
+
+                var score = task.GetResultSafely();
+
+                Schedule(() =>
+                {
+                    if (!source.IsCancellationRequested)
+                        applyAutoplay(score);
+                });
+            }, CancellationToken.None);
+        }
+
+        private void applyAutoplay(Score score)
+        {
+            drawableRuleset.SetReplayScore(score);
             autoplayRegenerated.Invalidate();
         }
 
@@ -134,6 +181,8 @@ namespace osu.Game.Rulesets.Edit
         protected override void Dispose(bool isDisposing)
         {
             base.Dispose(isDisposing);
+
+            autoplayCancellation?.Cancel();
 
             if (beatmap.IsNotNull())
             {

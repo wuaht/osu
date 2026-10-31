@@ -45,6 +45,11 @@ namespace osu.Game.Screens.Edit
             }
         }
 
+        /// <summary>
+        /// The current visible editor state, as written by <see cref="WriteCurrentStateToStream"/>, or <c>null</c> if none has been saved yet.
+        /// </summary>
+        public byte[]? CurrentState => currentState >= 0 ? savedStates[currentState] : null;
+
         private bool isRestoring;
 
         /// <summary>

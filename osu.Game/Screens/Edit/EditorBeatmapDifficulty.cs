@@ -82,10 +82,13 @@ namespace osu.Game.Screens.Edit
             var source = cancellationSource = new CancellationTokenSource();
 
             // the beatmap is serialised on the update thread, so that the calculation doesn't access objects which may be changed concurrently.
-            byte[] state;
+            // the change handler already serialised it after the change, so it doesn't have to be done again.
+            byte[]? state = (changeHandler as EditorChangeHandler)?.CurrentState;
 
-            using (var stream = new MemoryStream())
+            if (state == null)
             {
+                using var stream = new MemoryStream();
+
                 using (var writer = new StreamWriter(stream, Encoding.UTF8, 1024, true))
                     new LegacyBeatmapEncoder(editorBeatmap, editorBeatmap.BeatmapSkin, null).Encode(writer);
 
