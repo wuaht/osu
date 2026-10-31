@@ -522,8 +522,8 @@ namespace osu.Game.Localisation
 Click: place a timing point such that the onset under the cursor lies on a beat. The BPM of the previous timing point is recalculated to end on a whole beat.
 Drag: grab an onset and drop it onto the beat line it belongs to. The BPMs of the timing points around it are recalculated.
 Drag a timing point: move it onto another beat. Ctrl + drag it to only change its offset.
-Ctrl + scroll: nudge the timing point of the bar under the cursor by 1 ms (Ctrl + Shift: 10 ms).
-Right click: remove a timing point, or seek anywhere else. Scroll to move through the bars.
+Ctrl + scroll: nudge the timing point of the bar under the cursor by 1 ms (Ctrl + Alt: 10 ms).
+Right click: remove a timing point, or seek anywhere else. Scroll to move through the bars, Ctrl + Shift + scroll to zoom.
 Shift: don't snap to onsets. Alt: allow tempo changes which look like a miscounted beat.
 
 How to time a song with a varying tempo:

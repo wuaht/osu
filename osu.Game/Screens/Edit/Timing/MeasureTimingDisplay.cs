@@ -23,6 +23,7 @@ using osu.Game.Configuration;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Sprites;
 using osu.Game.Graphics.UserInterface;
+using osu.Game.Input.Bindings;
 using osu.Game.Localisation;
 using osu.Game.Overlays;
 using osu.Game.Screens.Edit.Compose.Components.Timeline;
@@ -40,7 +41,9 @@ namespace osu.Game.Screens.Edit.Timing
     /// </summary>
     public partial class MeasureTimingDisplay : CompositeDrawable
     {
-        private const float row_height = 72;
+        private const int default_visible_rows = 6;
+        private const int min_visible_rows = 2;
+        private const int max_visible_rows = 16;
         private const float gutter_width = 52;
         private const float status_height = 34;
 
@@ -242,6 +245,16 @@ namespace osu.Game.Screens.Edit.Timing
             ShowPanels.BindValueChanged(show => panelsButton.TooltipText = show.NewValue ? SlopEditorStrings.HideTimingPointPanels : SlopEditorStrings.ShowTimingPointPanels, true);
         }
 
+        [Resolved]
+        private GlobalActionContainer? globalActions { get; set; }
+
+        /// <summary>
+        /// How many rows fit into the height of the view, changed by zooming.
+        /// </summary>
+        private int visibleRowCount = default_visible_rows;
+
+        private float rowHeight => Math.Max(1, rowContainer.DrawHeight) / visibleRowCount;
+
         private bool shiftPressed => inputManager.CurrentState.Keyboard.ShiftPressed;
         private bool controlPressed => inputManager.CurrentState.Keyboard.ControlPressed;
         private bool altPressed => inputManager.CurrentState.Keyboard.AltPressed;
@@ -359,7 +372,7 @@ namespace osu.Game.Screens.Edit.Timing
         private (int index, double fraction)? positionAt(Vector2 screenSpacePosition)
         {
             Vector2 local = rowContainer.ToLocalSpace(screenSpacePosition);
-            int index = (int)Math.Floor(local.Y / row_height + scroll);
+            int index = (int)Math.Floor(local.Y / rowHeight + scroll);
             double fraction = (local.X - gutter_width) / areaWidth * (1 + 2 * overlap) - overlap;
 
             if (index < 0 || index >= rows.Count || local.Y < 0 || local.Y > rowContainer.DrawHeight || fraction < -overlap || fraction > 1 + overlap)
@@ -409,7 +422,7 @@ namespace osu.Game.Screens.Edit.Timing
                 pixelWidth = rowContainer.DrawWidth / screenWidth;
 
             int firstIndex = (int)Math.Floor(scroll);
-            int count = (int)Math.Ceiling(rowContainer.DrawHeight / row_height) + 1;
+            int count = visibleRowCount + 1;
 
             while (rowDisplays.Count < count)
                 createRowDisplay();
@@ -428,7 +441,8 @@ namespace osu.Game.Screens.Edit.Timing
                 }
 
                 display.Alpha = 1;
-                display.Y = (float)((index - scroll) * row_height);
+                display.Y = (float)((index - scroll) * rowHeight);
+                display.Height = rowHeight;
                 updateRowDisplay(display, index, rows[index]);
             }
 
@@ -442,8 +456,7 @@ namespace osu.Game.Screens.Edit.Timing
             // follow the playback and seeks, but keep the position scrolled to by the user otherwise.
             if (activeMove == null && rows.Count > 0 && (editorClock.IsRunning || time != lastClockTime))
             {
-                int visibleRows = Math.Max(1, (int)(rowContainer.DrawHeight / row_height));
-                targetScroll = rowIndexAt(time) - visibleRows / 3;
+                targetScroll = rowIndexAt(time) - visibleRowCount / 3;
             }
 
             lastClockTime = time;
@@ -668,7 +681,6 @@ namespace osu.Game.Screens.Edit.Timing
             public RowDisplay(OsuColour colours)
             {
                 RelativeSizeAxes = Axes.X;
-                Height = row_height;
 
                 InternalChildren = new Drawable[]
                 {
@@ -1093,7 +1105,7 @@ namespace osu.Game.Screens.Edit.Timing
         private (int row, int beat)? beatTargetAt(List<MeasureRow> rowList, Vector2 screenSpacePosition)
         {
             Vector2 local = rowContainer.ToLocalSpace(screenSpacePosition);
-            int row = (int)Math.Floor(local.Y / row_height + scroll);
+            int row = (int)Math.Floor(local.Y / rowHeight + scroll);
 
             if (row < 0 || row >= rowList.Count)
                 return null;
@@ -1143,12 +1155,23 @@ namespace osu.Game.Screens.Edit.Timing
 
         protected override bool OnScroll(ScrollEvent e)
         {
+            if (ZoomableScrollContainer.GetZoomScrollAmount(e, globalActions) is float zoom)
+            {
+                // zooming in shows fewer, bigger rows, keeping the row under the cursor in place.
+                float localY = Math.Clamp(rowContainer.ToLocalSpace(e.ScreenSpaceMousePosition).Y, 0, rowContainer.DrawHeight);
+                double anchor = localY / rowHeight + scroll;
+
+                visibleRowCount = Math.Clamp(visibleRowCount - Math.Sign(zoom), min_visible_rows, max_visible_rows);
+                scroll = targetScroll = Math.Max(0, anchor - localY / rowHeight);
+                return true;
+            }
+
             float delta = e.ScrollDelta.Y != 0 ? e.ScrollDelta.Y : e.ScrollDelta.X;
 
             if (controlPressed)
             {
                 if (activeMove == null && positionAt(e.ScreenSpaceMousePosition) is var (index, _) && rows[index].Point is TimingControlPoint point && delta != 0)
-                    nudge(point, Math.Sign(delta) * (shiftPressed ? 10 : 1));
+                    nudge(point, Math.Sign(delta) * (altPressed ? 10 : 1));
 
                 return true;
             }

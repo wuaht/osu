@@ -7,13 +7,16 @@ using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
+using osu.Framework.Graphics.Shapes;
 using osu.Framework.Input;
 using osu.Framework.Input.Bindings;
 using osu.Framework.Input.Events;
 using osu.Framework.Platform;
 using osu.Game.Beatmaps.ControlPoints;
 using osu.Game.Extensions;
+using osu.Game.Overlays;
 using osu.Game.Screens.Edit.Compose.Components.Timeline;
+using osuTK;
 
 namespace osu.Game.Screens.Edit.Timing
 {
@@ -59,6 +62,12 @@ namespace osu.Game.Screens.Edit.Timing
         private GridContainer leftGrid = null!;
         private ControlPointList controlPointList = null!;
         private ControlPointSettings controlPointSettings = null!;
+        private ListResizeBar listResizeBar = null!;
+
+        /// <summary>
+        /// The fraction of the height taken by the timing point list, changed by dragging the bar above it.
+        /// </summary>
+        private float listHeight = 0.35f;
 
         protected override Drawable CreateMainContent()
         {
@@ -78,6 +87,17 @@ namespace osu.Game.Screens.Edit.Timing
                             Content = new[]
                             {
                                 new Drawable[] { measureDisplay },
+                                new Drawable[]
+                                {
+                                    listResizeBar = new ListResizeBar
+                                    {
+                                        Resized = delta =>
+                                        {
+                                            listHeight = Math.Clamp(listHeight - delta / leftGrid.DrawHeight, 0.1f, 0.8f);
+                                            updatePanels(showPanels.Value);
+                                        },
+                                    },
+                                },
                                 new Drawable[]
                                 {
                                     controlPointList = new ControlPointList
@@ -104,11 +124,12 @@ namespace osu.Game.Screens.Edit.Timing
             leftGrid.RowDimensions = new[]
             {
                 new Dimension(),
-                new Dimension(GridSizeMode.Relative, show ? 0.35f : 0),
+                new Dimension(GridSizeMode.Absolute, show ? ListResizeBar.HEIGHT : 0),
+                new Dimension(GridSizeMode.Relative, show ? listHeight : 0),
             };
 
             // the panels would overflow their collapsed cells otherwise.
-            controlPointList.Alpha = controlPointSettings.Alpha = show ? 1 : 0;
+            controlPointList.Alpha = controlPointSettings.Alpha = listResizeBar.Alpha = show ? 1 : 0;
         }
 
         [BackgroundDependencyLoader]
@@ -214,6 +235,72 @@ namespace osu.Game.Screens.Edit.Timing
 
         public void OnReleased(KeyBindingReleaseEvent<PlatformAction> e)
         {
+        }
+
+        /// <summary>
+        /// A bar which resizes the timing point list below it when dragged up or down.
+        /// </summary>
+        private partial class ListResizeBar : CompositeDrawable
+        {
+            public const float HEIGHT = 8;
+
+            /// <summary>
+            /// Invoked with the distance dragged downwards since the last invocation.
+            /// </summary>
+            public Action<float>? Resized;
+
+            private Box grip = null!;
+
+            [Resolved]
+            private OverlayColourProvider colourProvider { get; set; } = null!;
+
+            [BackgroundDependencyLoader]
+            private void load()
+            {
+                RelativeSizeAxes = Axes.Both;
+
+                InternalChildren = new Drawable[]
+                {
+                    new Box
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Colour = colourProvider.Background4,
+                    },
+                    grip = new Box
+                    {
+                        Anchor = Anchor.Centre,
+                        Origin = Anchor.Centre,
+                        Size = new Vector2(40, 2),
+                        Colour = colourProvider.Background1,
+                    },
+                };
+            }
+
+            protected override bool OnHover(HoverEvent e)
+            {
+                updateState();
+                return true;
+            }
+
+            protected override void OnHoverLost(HoverLostEvent e) => updateState();
+
+            protected override bool OnDragStart(DragStartEvent e)
+            {
+                updateState();
+                return true;
+            }
+
+            protected override void OnDrag(DragEvent e) => Resized?.Invoke(e.Delta.Y);
+
+            protected override void OnDragEnd(DragEndEvent e) => updateState();
+
+            private void updateState()
+            {
+                bool active = IsHovered || IsDragged;
+
+                grip.ResizeWidthTo(active ? 80 : 40, 200, Easing.OutQuint);
+                grip.FadeColour(active ? colourProvider.Highlight1 : colourProvider.Background1, 200, Easing.OutQuint);
+            }
         }
 
         protected override Drawable CreateTimelineContent() => new VariableTimingOverlay();
