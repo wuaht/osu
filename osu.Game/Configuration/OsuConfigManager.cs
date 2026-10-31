@@ -267,6 +267,7 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopLiquidGlassRefraction, 1f, 0f, 1f, 0.01f);
             SetDefault(OsuSetting.SlopLiquidGlassChromaticAberration, 1f, 0f, 1f, 0.01f);
             SetDefault(OsuSetting.SlopLiquidGlassTint, 0.6f, 0f, 1f, 0.01f);
+            SetDefault(OsuSetting.SlopLiquidGlassSliderBorderThickness, 0.5f, 0f, 1f, 0.01f);
             SetDefault(OsuSetting.SlopLiquidGlassBlur, 0.15f, 0f, 1f, 0.01f);
             SetDefault(OsuSetting.SlopLiquidGlassDarkness, 0.1f, 0f, 1f, 0.01f);
             SetDefault(OsuSetting.SlopMenuCursorStyle, MenuCursorStyle.Default);
@@ -770,6 +771,11 @@ namespace osu.Game.Configuration
         /// How strongly liquid glass slider bodies and hit circles tint the content behind them with their colour, from 0 to 1.
         /// </summary>
         SlopLiquidGlassTint,
+
+        /// <summary>
+        /// The thickness of the border of liquid glass slider bodies, relative to the border of the other glass styles, from 0 to 1.
+        /// </summary>
+        SlopLiquidGlassSliderBorderThickness,
 
         /// <summary>
         /// How strongly liquid glass blurs the content behind it, from 0 to 1.

@@ -24,6 +24,7 @@ namespace osu.Game.Configuration
         private readonly BindableFloat refraction = new BindableFloat(1);
         private readonly BindableFloat chromaticAberration = new BindableFloat(1);
         private readonly BindableFloat tint = new BindableFloat(0.6f);
+        private readonly BindableFloat sliderBorderThickness = new BindableFloat(0.5f);
         private readonly BindableFloat blur = new BindableFloat(0.15f);
         private readonly BindableFloat darkness = new BindableFloat(0.1f);
 
@@ -35,6 +36,7 @@ namespace osu.Game.Configuration
             bind(OsuSetting.SlopLiquidGlassRefraction, refraction);
             bind(OsuSetting.SlopLiquidGlassChromaticAberration, chromaticAberration);
             bind(OsuSetting.SlopLiquidGlassTint, tint);
+            bind(OsuSetting.SlopLiquidGlassSliderBorderThickness, sliderBorderThickness);
             bind(OsuSetting.SlopLiquidGlassBlur, blur);
             bind(OsuSetting.SlopLiquidGlassDarkness, darkness);
 
@@ -54,6 +56,11 @@ namespace osu.Game.Configuration
         /// How strongly coloured liquid glass tints the content behind it with its colour (see <see cref="IBackdropBlurDrawable.BackdropTintStrength"/>).
         /// </summary>
         public float TintStrength => tint.Value;
+
+        /// <summary>
+        /// The thickness of the border of slider bodies, relative to the border of the other glass styles.
+        /// </summary>
+        public float SliderBorderThickness => sliderBorderThickness.Value;
 
         /// <summary>
         /// Creates the parameters of liquid glass.

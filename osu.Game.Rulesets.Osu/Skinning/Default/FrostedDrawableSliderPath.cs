@@ -39,9 +39,9 @@ namespace osu.Game.Rulesets.Osu.Skinning.Default
         protected float FrostedTintStrength { get; init; }
 
         /// <summary>
-        /// Whether the border of the body is left out, as it would cover the refracting edge of liquid glass.
+        /// The thickness of the border relative to its usual thickness, as a thick border covers the refracting edge of liquid glass.
         /// </summary>
-        protected bool HideBorder => glassStyle.Value == GlassStyle.LiquidGlass;
+        protected float BorderScale { get; private set; } = 1;
 
         public override float PathRadius
         {
@@ -64,11 +64,7 @@ namespace osu.Game.Rulesets.Osu.Skinning.Default
 
             liquidGlass = new LiquidGlassConfig(config, updateGlass);
 
-            glassStyle.BindValueChanged(_ =>
-            {
-                updateGlass();
-                InvalidateTexture();
-            });
+            glassStyle.BindValueChanged(_ => updateGlass());
             blur.BindValueChanged(_ => updateGlass());
 
             updateGlass();
@@ -85,6 +81,14 @@ namespace osu.Game.Rulesets.Osu.Skinning.Default
 
             BackdropTintStrength = glassStyle.Value == GlassStyle.LiquidGlass ? liquidGlass!.TintStrength : FrostedTintStrength;
             LiquidGlass = glassStyle.Value == GlassStyle.LiquidGlass ? liquidGlass!.CreateParameters(PathRadius * max_liquid_glass_thickness) : default;
+
+            float borderScale = glassStyle.Value == GlassStyle.LiquidGlass ? liquidGlass!.SliderBorderThickness : 1;
+
+            if (borderScale != BorderScale)
+            {
+                BorderScale = borderScale;
+                InvalidateTexture();
+            }
         }
 
         /// <summary>

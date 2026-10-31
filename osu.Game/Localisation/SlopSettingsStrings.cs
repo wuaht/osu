@@ -1929,6 +1929,17 @@ namespace osu.Game.Localisation
             @"How strongly liquid glass slider bodies and hit circles tint the content behind them with their colour.");
 
         /// <summary>
+        /// "Slider border thickness"
+        /// </summary>
+        public static LocalisableString LiquidGlassSliderBorderThickness => new TranslatableString(getKey(@"liquid_glass_slider_border_thickness"), @"Slider border thickness");
+
+        /// <summary>
+        /// "How thick the border of liquid glass slider bodies is, relative to the usual border."
+        /// </summary>
+        public static LocalisableString LiquidGlassSliderBorderThicknessDescription => new TranslatableString(getKey(@"liquid_glass_slider_border_thickness_description"),
+            @"How thick the border of liquid glass slider bodies is, relative to the usual border.");
+
+        /// <summary>
         /// "Blur"
         /// </summary>
         public static LocalisableString LiquidGlassBlur => new TranslatableString(getKey(@"liquid_glass_blur"), @"Blur");

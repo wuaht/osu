@@ -21,7 +21,7 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
     {
         protected override LocalisableString Header => SlopSettingsStrings.LiquidGlassHeader;
 
-        public override IEnumerable<LocalisableString> FilterTerms => base.FilterTerms.Concat(new LocalisableString[] { "liquid", "glass", "refraction", "chromatic", "aberration", "tint", "blur" });
+        public override IEnumerable<LocalisableString> FilterTerms => base.FilterTerms.Concat(new LocalisableString[] { "liquid", "glass", "refraction", "chromatic", "aberration", "tint", "border", "blur" });
 
         public BindableBool CanBeShown { get; } = new BindableBool();
 
@@ -39,6 +39,8 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                 createSlider(config, OsuSetting.SlopLiquidGlassChromaticAberration, SlopSettingsStrings.LiquidGlassChromaticAberration,
                     SlopSettingsStrings.LiquidGlassChromaticAberrationDescription),
                 createSlider(config, OsuSetting.SlopLiquidGlassTint, SlopSettingsStrings.LiquidGlassTint, SlopSettingsStrings.LiquidGlassTintDescription),
+                createSlider(config, OsuSetting.SlopLiquidGlassSliderBorderThickness, SlopSettingsStrings.LiquidGlassSliderBorderThickness,
+                    SlopSettingsStrings.LiquidGlassSliderBorderThicknessDescription),
                 createSlider(config, OsuSetting.SlopLiquidGlassBlur, SlopSettingsStrings.LiquidGlassBlur, SlopSettingsStrings.LiquidGlassBlurDescription),
                 createSlider(config, OsuSetting.SlopLiquidGlassDarkness, SlopSettingsStrings.LiquidGlassDarkness, SlopSettingsStrings.LiquidGlassDarknessDescription),
             };

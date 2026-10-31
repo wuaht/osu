@@ -70,19 +70,18 @@ namespace osu.Game.Rulesets.Osu.Skinning.Legacy
 
                 // https://github.com/peppy/osu-stable-reference/blob/3ea48705eb67172c430371dcfc8a16a002ed0d3d/osu!/Graphics/Renderers/MmSliderRendererGL.cs#L59-L70
                 const float shadow_portion = 1 - (OsuLegacySkinTransformer.LEGACY_CIRCLE_RADIUS / OsuHitObject.OBJECT_RADIUS);
-                const float border_portion = 0.1875f;
+                const float default_border_portion = 0.1875f;
+
+                // the border starts right after the shadow.
+                float borderPortion = shadow_portion + (default_border_portion - shadow_portion) * BorderScale;
 
                 if (position <= shadow_portion)
                     return LegacyUtils.InterpolateNonLinear(position, Color4.Black.Opacity(0f), shadow, 0, shadow_portion);
 
-                // without a border, the body starts right after the shadow.
-                if (HideBorder)
-                    return LegacyUtils.InterpolateNonLinear(position, outerColour, innerColour, shadow_portion, 1);
-
-                if (position <= border_portion)
+                if (position <= borderPortion)
                     return BorderColour;
 
-                return LegacyUtils.InterpolateNonLinear(position, outerColour, innerColour, border_portion, 1);
+                return LegacyUtils.InterpolateNonLinear(position, outerColour, innerColour, borderPortion, 1);
             }
 
             /// <summary>
