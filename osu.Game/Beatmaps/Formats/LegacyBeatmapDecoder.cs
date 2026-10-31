@@ -183,10 +183,39 @@ namespace osu.Game.Beatmaps.Formats
             }
             else
             {
+                // a volume set on the object itself overrides the control points, so there are no volume changes then.
+                if (hitObject is IHasVolumeChanges hasVolumeChanges && beatmap.ControlPointInfo is LegacyControlPointInfo legacyControlPoints && hitObject.Samples.All(s => s.Volume == 0))
+                    hasVolumeChanges.VolumeChanges = getVolumeChanges(hitObject, legacyControlPoints);
+
                 SampleControlPoint sampleControlPoint = (beatmap.ControlPointInfo as LegacyControlPointInfo)?.SamplePointAt(hitObject.GetEndTime() + CONTROL_POINT_LENIENCY)
                                                         ?? SampleControlPoint.DEFAULT;
                 hitObject.Samples = hitObject.Samples.Select(sampleControlPoint.ApplyTo).ToList();
             }
+        }
+
+        /// <summary>
+        /// Collects the volumes of the sample control points during an object, excluding the ones within leniency of its end (which apply to its samples).
+        /// </summary>
+        private static List<VolumeChange> getVolumeChanges(HitObject hitObject, LegacyControlPointInfo controlPoints)
+        {
+            double startTime = hitObject.StartTime + CONTROL_POINT_LENIENCY;
+            double endTime = hitObject.GetEndTime() - CONTROL_POINT_LENIENCY;
+            int endVolume = controlPoints.SamplePointAt(hitObject.GetEndTime() + CONTROL_POINT_LENIENCY).SampleVolume;
+
+            var changes = new List<VolumeChange> { new VolumeChange(0, controlPoints.SamplePointAt(startTime).SampleVolume) };
+
+            foreach (var point in controlPoints.SamplePoints)
+            {
+                if (point.Time <= startTime || point.Time >= endTime || point.SampleVolume == changes[^1].Volume)
+                    continue;
+
+                changes.Add(new VolumeChange(point.Time - hitObject.StartTime, point.SampleVolume));
+            }
+
+            if (changes.Count == 1 && changes[0].Volume == endVolume)
+                changes.Clear();
+
+            return changes;
         }
 
         /// <summary>

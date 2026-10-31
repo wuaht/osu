@@ -1,4 +1,4 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
@@ -7,6 +7,7 @@ using System.Linq;
 using osu.Game.Audio;
 using osu.Game.Rulesets.Objects;
 using osu.Game.Rulesets.Objects.Drawables;
+using osu.Game.Rulesets.Objects.Types;
 
 namespace osu.Game.Screens.Edit.Hitsounding
 {
@@ -63,9 +64,84 @@ namespace osu.Game.Screens.Edit.Hitsounding
                     else if (shouldResetBank(body.HitObject, matchedObjects, options))
                         applyUnmatched(body, source, options, result);
                 }
+
+                if (options.CopyVolumes)
+                {
+                    var volumes = getVolumePoints(source);
+
+                    foreach (var hitObject in columns.SelectMany(c => c.column.Targets).Select(t => t.HitObject).Where(h => h is IHasVolumeChanges).Distinct())
+                        applyVolumeChanges(hitObject, volumes, options, result);
+                }
             }
 
             return result;
+        }
+
+        /// <summary>
+        /// The volumes of the source over time, including the volume changes within its objects (e.g. spinners).
+        /// </summary>
+        private static List<(double time, int volume)> getVolumePoints(IReadOnlyList<HitsoundColumnState> source)
+        {
+            var points = new List<(double time, int volume)>();
+
+            foreach (var state in source)
+            {
+                points.Add((state.Time, state.Volume));
+
+                if (state.VolumeChanges != null)
+                    points.AddRange(state.VolumeChanges.Select(c => (state.Time + c.Offset, c.Volume)));
+            }
+
+            return points.OrderBy(p => p.time).ToList();
+        }
+
+        /// <summary>
+        /// Copies the volumes of the source during an object onto its volume changes (e.g. the spinning sound of a spinner).
+        /// </summary>
+        /// <remarks>
+        /// Like a sample control point, a volume of the source applies until the next one, so the object starts with the volume which is active at its start.
+        /// Volumes within leniency of its end belong to its end, like in <see cref="Beatmaps.Formats.LegacyBeatmapDecoder"/>.
+        /// </remarks>
+        private static void applyVolumeChanges(HitObject hitObject, List<(double time, int volume)> volumes, HitsoundCopyOptions options, HitsoundCopyResult result)
+        {
+            var hasVolumeChanges = (IHasVolumeChanges)hitObject;
+
+            double startTime = hitObject.StartTime + options.Leniency;
+            double endTime = hasVolumeChanges.EndTime - options.Leniency;
+
+            int endVolume = HitsoundSamples.GetVolume(hitObject.Samples);
+
+            var changes = new List<VolumeChange>();
+
+            foreach (var (time, volume) in volumes)
+            {
+                if (time >= endTime)
+                    break;
+
+                if (time <= startTime)
+                {
+                    // the last volume at or before the start.
+                    changes.Clear();
+                    changes.Add(new VolumeChange(0, volume));
+                    continue;
+                }
+
+                // without a volume before the start, the object starts with the volume of its samples.
+                if (changes.Count == 0)
+                    changes.Add(new VolumeChange(0, endVolume));
+
+                if (volume != changes[^1].Volume)
+                    changes.Add(new VolumeChange(time - hitObject.StartTime, volume));
+            }
+
+            if (changes.Count == 1 && changes[0].Volume == endVolume)
+                changes.Clear();
+
+            if (changes.SequenceEqual(hasVolumeChanges.VolumeChanges))
+                return;
+
+            hasVolumeChanges.VolumeChanges = changes;
+            result.ChangedHitObjects.Add(hitObject);
         }
 
         /// <summary>
@@ -294,7 +370,8 @@ namespace osu.Game.Screens.Edit.Hitsounding
         public bool CopyCustomIndices { get; init; } = true;
 
         /// <summary>
-        /// Whether to copy the hitsounds of slider bodies, from sliders starting at the same time.
+        /// Whether to copy the hitsounds of slider bodies, from sliders starting at the same time,
+        /// and (with <see cref="CopyVolumes"/>) the volumes during spinners, which change the volume of their spinning sound.
         /// </summary>
         public bool CopySliderBodies { get; init; } = true;
 

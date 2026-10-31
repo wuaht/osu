@@ -16,7 +16,7 @@ using osuTK;
 
 namespace osu.Game.Rulesets.Osu.Objects
 {
-    public class Spinner : OsuHitObject, IHasDuration
+    public class Spinner : OsuHitObject, IHasVolumeChanges
     {
         /// <summary>
         /// The RPM required to clear the spinner at ODs [ 0, 5, 10 ].
@@ -35,6 +35,8 @@ namespace osu.Game.Rulesets.Osu.Objects
         }
 
         public double Duration { get; set; }
+
+        public IList<VolumeChange> VolumeChanges { get; set; } = new List<VolumeChange>();
 
         /// <summary>
         /// Number of spins required to finish the spinner without miss.
@@ -89,9 +91,18 @@ namespace osu.Game.Rulesets.Osu.Objects
 
                 double startTime = StartTime + (float)(i + 1) / totalSpins * Duration;
 
-                AddNested(i < SpinsRequiredForBonus
-                    ? new SpinnerTick { StartTime = startTime, SpinnerDuration = Duration }
-                    : new SpinnerBonusTick { StartTime = startTime, SpinnerDuration = Duration, Samples = new[] { CreateHitSampleInfo("spinnerbonus") } });
+                if (i < SpinsRequiredForBonus)
+                {
+                    AddNested(new SpinnerTick { StartTime = startTime, SpinnerDuration = Duration });
+                    continue;
+                }
+
+                var bonusSample = CreateHitSampleInfo("spinnerbonus");
+
+                if (this.GetVolumeAt(startTime) is int volume)
+                    bonusSample = bonusSample.With(newVolume: volume);
+
+                AddNested(new SpinnerBonusTick { StartTime = startTime, SpinnerDuration = Duration, Samples = new[] { bonusSample } });
             }
         }
 

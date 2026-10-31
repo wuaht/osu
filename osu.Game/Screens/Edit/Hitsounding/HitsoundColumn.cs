@@ -1,10 +1,11 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using osu.Game.Audio;
+using osu.Game.Rulesets.Objects.Types;
 
 namespace osu.Game.Screens.Edit.Hitsounding
 {
@@ -89,7 +90,16 @@ namespace osu.Game.Screens.Edit.Hitsounding
         /// <summary>
         /// Creates a snapshot of the hitsounds, which stays valid after the hit objects change.
         /// </summary>
-        public HitsoundColumnState GetState() => HitsoundColumnState.Create(Time, Targets.Select(t => t.Samples));
+        public HitsoundColumnState GetState() => HitsoundColumnState.Create(Time, Targets.Select(t => t.Samples)) with { VolumeChanges = getVolumeChanges() };
+
+        private IReadOnlyList<VolumeChange>? getVolumeChanges()
+        {
+            var hitObject = Targets.Select(t => t.HitObject).FirstOrDefault(h => h is IHasVolumeChanges { VolumeChanges.Count: > 0 });
+
+            return hitObject == null
+                ? null
+                : ((IHasVolumeChanges)hitObject).VolumeChanges.Select(c => c with { Offset = hitObject.StartTime + c.Offset - Time }).ToList();
+        }
 
         public static int GetLaneMask(IEnumerable<HitSampleInfo> samples)
         {

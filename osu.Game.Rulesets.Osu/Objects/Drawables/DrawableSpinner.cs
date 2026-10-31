@@ -16,6 +16,7 @@ using osu.Game.Audio;
 using osu.Game.Rulesets.Judgements;
 using osu.Game.Rulesets.Objects;
 using osu.Game.Rulesets.Objects.Drawables;
+using osu.Game.Rulesets.Objects.Types;
 using osu.Game.Rulesets.Osu.Judgements;
 using osu.Game.Rulesets.Osu.Scoring;
 using osu.Game.Rulesets.Osu.Skinning;
@@ -50,6 +51,11 @@ namespace osu.Game.Rulesets.Osu.Objects.Drawables
         private const float spinning_sample_modulated_max_frequency = 100_000f / 44_100;
 
         private PausableSkinnableSound maxBonusSample;
+
+        /// <summary>
+        /// Follows the volume changes of the spinner, relative to the volume of its samples.
+        /// </summary>
+        private readonly BindableDouble volumeChangeAdjustment = new BindableDouble(1);
 
         /// <summary>
         /// The amount of bonus score gained from spinning after the required number of spins, for display purposes.
@@ -121,6 +127,9 @@ namespace osu.Game.Rulesets.Osu.Objects.Drawables
                     MinimumSampleVolume = MINIMUM_SAMPLE_VOLUME,
                 }
             });
+
+            spinningSample.AddAdjustment(AdjustableProperty.Volume, volumeChangeAdjustment);
+            maxBonusSample.AddAdjustment(AdjustableProperty.Volume, volumeChangeAdjustment);
 
             PositionBindable.BindValueChanged(pos => Position = pos.NewValue);
         }
@@ -285,6 +294,10 @@ namespace osu.Game.Rulesets.Osu.Objects.Drawables
 
             spinningSample?.Frequency.Value = spinnerFrequencyModulate
                 ? Math.Min(spinning_sample_modulated_max_frequency, spinning_sample_modulated_base_frequency + progressUnclamped * spinning_sample_modulaton_ratio)
+                : 1;
+
+            volumeChangeAdjustment.Value = HitObject.GetVolumeAt(Time.Current) is int volume && HitObject.Samples.FirstOrDefault() is HitSampleInfo referenceSample
+                ? Math.Max(volume, MINIMUM_SAMPLE_VOLUME) / (double)Math.Max(referenceSample.Volume, MINIMUM_SAMPLE_VOLUME)
                 : 1;
 
             // Ticks can theoretically be judged at any point in the spinner's duration.

@@ -222,6 +222,9 @@ namespace osu.Game.Screens.Edit
                     oldWithRepeats.NodeSamples.AddRange(newWithRepeats.NodeSamples);
                 }
 
+                if (oldObject is IHasVolumeChanges oldWithVolumeChanges && newObject is IHasVolumeChanges newWithVolumeChanges)
+                    oldWithVolumeChanges.VolumeChanges = newWithVolumeChanges.VolumeChanges;
+
                 editorBeatmap.Update(oldObject);
             }
         }

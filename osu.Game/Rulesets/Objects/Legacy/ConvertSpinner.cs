@@ -1,6 +1,7 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System.Collections.Generic;
 using osu.Game.Beatmaps.Legacy;
 using osu.Game.Rulesets.Objects.Types;
 
@@ -12,11 +13,13 @@ namespace osu.Game.Rulesets.Objects.Legacy
     /// <remarks>
     /// Only used for parsing beatmaps and not gameplay.
     /// </remarks>
-    internal sealed class ConvertSpinner : ConvertHitObject, IHasDuration
+    internal sealed class ConvertSpinner : ConvertHitObject, IHasVolumeChanges
     {
         public double Duration { get; set; }
 
         public double EndTime => StartTime + Duration;
+
+        public IList<VolumeChange> VolumeChanges { get; set; } = new List<VolumeChange>();
 
         public ConvertSpinner()
         {

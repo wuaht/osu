@@ -1,10 +1,11 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using osu.Game.Audio;
+using osu.Game.Rulesets.Objects.Types;
 
 namespace osu.Game.Screens.Edit.Hitsounding
 {
@@ -24,6 +25,11 @@ namespace osu.Game.Screens.Edit.Hitsounding
         /// such that hitsound patterns can reproduce the hitsounds exactly (e.g. an addition played from another custom sample set than the hitnormal).
         /// </summary>
         public IReadOnlyList<IReadOnlyList<HitSampleInfo>>? TargetSamples { get; init; }
+
+        /// <summary>
+        /// The volume changes of a target which has them (e.g. a spinner ending at this time), with offsets relative to <see cref="Time"/>.
+        /// </summary>
+        public IReadOnlyList<VolumeChange>? VolumeChanges { get; init; }
 
         public HitsoundColumnState WithTime(double time) => this with { Time = time };
 

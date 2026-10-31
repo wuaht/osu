@@ -13,7 +13,9 @@ using osu.Framework.Input.Events;
 using osu.Framework.Localisation;
 using osu.Game.Localisation;
 using osu.Game.Overlays;
+using osu.Game.Rulesets.Objects;
 using osu.Game.Rulesets.Objects.Drawables;
+using osu.Game.Rulesets.Objects.Types;
 using osuTK;
 using osuTK.Input;
 
@@ -24,10 +26,12 @@ namespace osu.Game.Screens.Edit.Hitsounding
     /// left dragging draws, right dragging draws a straight line, shift + dragging levels to the volume at which the drag started,
     /// and alt + dragging resets to the volume which most hitsounds use.
     /// Dragging a selected hitsound changes all selected hitsounds to the same volume, or by the same amount while holding shift.
+    /// The volume changes during objects like spinners are shown behind the hitsounds.
     /// </summary>
     public partial class HitsoundVolumeArea : HitsoundTimelinePart, IHasHitsoundTooltip
     {
         private readonly Container<VolumePiece> pieceContainer;
+        private readonly Container<VolumeSegment> segmentContainer;
         private readonly Box linePreview;
 
         private readonly Dictionary<int, VolumePiece> visiblePieces = new Dictionary<int, VolumePiece>();
@@ -35,6 +39,13 @@ namespace osu.Game.Screens.Edit.Hitsounding
         private readonly HashSet<int> wantedKeys = new HashSet<int>();
 
         private HitsoundMap? displayedMap;
+
+        /// <summary>
+        /// The objects of <see cref="displayedMap"/> which can change their volume while they are active.
+        /// </summary>
+        private IReadOnlyList<HitObject> volumeChangingObjects = Array.Empty<HitObject>();
+
+        private int visibleSegments;
         private bool displayInvalidated = true;
 
         [Resolved]
@@ -43,6 +54,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
         public HitsoundVolumeArea()
         {
             pieceContainer = new Container<VolumePiece> { RelativeSizeAxes = Axes.Both };
+            segmentContainer = new Container<VolumeSegment> { RelativeSizeAxes = Axes.Both };
 
             linePreview = new Box
             {
@@ -75,6 +87,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
             {
                 guides,
                 new HitsoundTicks(0.3f),
+                segmentContainer,
                 pieceContainer,
                 linePreview,
                 new HitsoundSelectionBoxDisplay(),
@@ -108,9 +121,12 @@ namespace osu.Game.Screens.Edit.Hitsounding
             {
                 displayedMap = map;
                 displayInvalidated = true;
+                volumeChangingObjects = map.Columns.SelectMany(c => c.Targets).Select(t => t.HitObject).Where(h => h is IHasVolumeChanges).Distinct().ToList();
             }
 
             var (start, end) = GetVisibleRange(INTERACTION_DISTANCE * 2);
+
+            updateSegments(start, end);
 
             wantedKeys.Clear();
 
@@ -142,6 +158,59 @@ namespace osu.Game.Screens.Edit.Hitsounding
             // the stroke may have been interrupted (e.g. by losing focus), in which case the mouse up event never arrives.
             if (drawButton is MouseButton button && GetContainingInputManager()?.CurrentState.Mouse.IsPressed(button) == false)
                 endDrawing();
+
+            // the timeline may move under a still cursor (scrolling, zooming or playback), so the line follows it every frame.
+            if (drawing && drawMode == DrawMode.Line && GetContainingInputManager()?.CurrentState is { } state)
+            {
+                var position = ToLocalSpace(state.Mouse.Position);
+                updateLine(position, volumeAt(position.Y, state.Keyboard.ControlPressed));
+            }
+        }
+
+        /// <summary>
+        /// Shows the volume of each object in <see cref="volumeChangingObjects"/> over its duration, as a segment for each volume.
+        /// </summary>
+        private void updateSegments(double start, double end)
+        {
+            int count = 0;
+
+            foreach (var hitObject in volumeChangingObjects)
+            {
+                var hasVolumeChanges = (IHasVolumeChanges)hitObject;
+
+                if (hasVolumeChanges.EndTime < start || hitObject.StartTime > end)
+                    continue;
+
+                var changes = hasVolumeChanges.VolumeChanges.Where(c => c.Offset < hasVolumeChanges.Duration).ToList();
+
+                if (changes.Count == 0)
+                    changes.Add(new VolumeChange(0, HitsoundSamples.GetVolume(hitObject.Samples)));
+
+                var colour = HitsoundLane.GetBankColour(HitsoundSamples.GetNormalBank(hitObject.Samples) ?? string.Empty);
+
+                for (int i = 0; i < changes.Count; i++)
+                {
+                    double segmentStart = hitObject.StartTime + changes[i].Offset;
+                    double segmentEnd = i + 1 < changes.Count ? hitObject.StartTime + changes[i + 1].Offset : hasVolumeChanges.EndTime;
+
+                    if (segmentEnd < start || segmentStart > end)
+                        continue;
+
+                    if (count == segmentContainer.Count)
+                        segmentContainer.Add(new VolumeSegment());
+
+                    var segment = segmentContainer[count++];
+
+                    segment.X = TimeToX(segmentStart);
+                    segment.Width = Math.Max(1, TimeToX(segmentEnd) - segment.X);
+                    segment.Apply(changes[i].Volume, colour);
+                }
+            }
+
+            for (int i = count; i < visibleSegments; i++)
+                segmentContainer[i].Alpha = 0;
+
+            visibleSegments = count;
         }
 
         private VolumePiece addPiece()
@@ -200,10 +269,11 @@ namespace osu.Game.Screens.Edit.Hitsounding
 
         private DrawMode drawMode;
 
-        private float lastX;
+        // positions are stored as times, as the timeline may move during a drag.
+        private double lastTime;
         private int lastVolume;
 
-        private Vector2 lineStart;
+        private double lineStartTime;
         private int lineStartVolume;
 
         /// <summary>
@@ -242,7 +312,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
             int volume = volumeAt(position.Y, e.ControlPressed);
 
             drawButton = e.Button;
-            lastX = position.X;
+            lastTime = XToTime(position.X);
             lastVolume = volume;
 
             HitsoundEditor.BeginStroke();
@@ -250,7 +320,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
             if (e.Button == MouseButton.Right)
             {
                 drawMode = DrawMode.Line;
-                lineStart = position;
+                lineStartTime = XToTime(position.X);
                 lineStartVolume = volume;
                 lineOriginalVolumes.Clear();
                 updateLine(position, volume);
@@ -337,14 +407,14 @@ namespace osu.Game.Screens.Edit.Hitsounding
                     break;
 
                 case DrawMode.Draw:
-                    drawBetween(lastX, x, lastVolume, volume);
+                    drawBetween(TimeToX(lastTime), x, lastVolume, volume);
                     break;
 
                 case DrawMode.Level:
                 case DrawMode.Reset:
                     // the volume stays the same for the whole drag.
                     volume = lastVolume;
-                    drawBetween(lastX, x, volume, volume);
+                    drawBetween(TimeToX(lastTime), x, volume, volume);
                     break;
 
                 case DrawMode.Line:
@@ -352,7 +422,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
                     break;
             }
 
-            lastX = x;
+            lastTime = XToTime(x);
             lastVolume = volume;
             hoverPosition = position;
         }
@@ -380,8 +450,9 @@ namespace osu.Game.Screens.Edit.Hitsounding
         /// </summary>
         private void updateLine(Vector2 position, int volume)
         {
-            double fromTime = XToTime(Math.Min(lineStart.X, position.X));
-            double toTime = XToTime(Math.Max(lineStart.X, position.X));
+            float startX = TimeToX(lineStartTime);
+            double fromTime = XToTime(Math.Min(startX, position.X));
+            double toTime = XToTime(Math.Max(startX, position.X));
 
             var covered = HitsoundEditor.Map.GetColumnsInRange(fromTime, toTime).ToList();
 
@@ -404,7 +475,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
             {
                 lineOriginalVolumes.TryAdd(column.Key, column.Volume);
 
-                int target = interpolate(TimeToX(column.Time), lineStart.X, position.X, lineStartVolume, volume);
+                int target = interpolate(TimeToX(column.Time), startX, position.X, lineStartVolume, volume);
 
                 if (column.Volume != target)
                     volumes.Add((column, target));
@@ -412,7 +483,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
 
             HitsoundEditor.SetVolumes(volumes);
 
-            var startPoint = new Vector2(lineStart.X, (1 - lineStartVolume / 100f) * DrawHeight);
+            var startPoint = new Vector2(startX, (1 - lineStartVolume / 100f) * DrawHeight);
             var endPoint = new Vector2(position.X, (1 - volume / 100f) * DrawHeight);
             var delta = endPoint - startPoint;
 
@@ -468,14 +539,62 @@ namespace osu.Game.Screens.Edit.Hitsounding
                 if (drawing)
                     return SlopHitsoundEditorStrings.VolumeValue(lastVolume);
 
-                if (hoverPosition is not Vector2 position || FindColumnAt(position.X) is not HitsoundColumn column)
+                if (hoverPosition is not Vector2 position)
                     return default;
 
-                return SlopHitsoundEditorStrings.VolumeValue(column.Volume);
+                if (FindColumnAt(position.X) is HitsoundColumn column)
+                    return SlopHitsoundEditorStrings.VolumeValue(column.Volume);
+
+                double time = XToTime(position.X);
+
+                if (volumeChangingObjects.FirstOrDefault(h => h.StartTime <= time && time < h.GetEndTime()) is HitObject hitObject)
+                    return SlopHitsoundEditorStrings.VolumeValue(hitObject.GetVolumeAt(time) ?? HitsoundSamples.GetVolume(hitObject.Samples));
+
+                return default;
             }
         }
 
         #endregion
+
+        private partial class VolumeSegment : CompositeDrawable
+        {
+            private readonly Container fill;
+            private readonly Box background;
+            private readonly Box line;
+
+            public VolumeSegment()
+            {
+                RelativeSizeAxes = Axes.Y;
+
+                InternalChild = fill = new Container
+                {
+                    RelativeSizeAxes = Axes.Both,
+                    Anchor = Anchor.BottomLeft,
+                    Origin = Anchor.BottomLeft,
+                    Children = new Drawable[]
+                    {
+                        background = new Box
+                        {
+                            RelativeSizeAxes = Axes.Both,
+                            Alpha = 0.15f,
+                        },
+                        line = new Box
+                        {
+                            RelativeSizeAxes = Axes.X,
+                            Height = 2,
+                            Alpha = 0.6f,
+                        },
+                    }
+                };
+            }
+
+            public void Apply(int volume, Colour4 colour)
+            {
+                Alpha = 1;
+                fill.Height = volume / 100f;
+                background.Colour = line.Colour = colour;
+            }
+        }
 
         private partial class VolumePiece : CompositeDrawable
         {

@@ -356,6 +356,16 @@ namespace osu.Game.Beatmaps.Formats
                     }
                     else if (hitObject.Samples.Count > 0)
                     {
+                        if (hitObject is IHasVolumeChanges hasVolumeChanges)
+                        {
+                            // the decoder reads the volume at the start of the object, which would otherwise be the one of the previous object.
+                            if (hasVolumeChanges.VolumeChanges.Count == 0)
+                                yield return createSampleControlPointFor(hitObject.StartTime, hitObject.Samples);
+
+                            foreach (var change in hasVolumeChanges.VolumeChanges.Where(c => c.Offset < hasVolumeChanges.Duration))
+                                yield return createSampleControlPointFor(hitObject.StartTime + change.Offset, hitObject.Samples.Select(s => s.With(newVolume: change.Volume)).ToList());
+                        }
+
                         yield return createSampleControlPointFor(hitObject.GetEndTime(), hitObject.Samples);
                     }
 

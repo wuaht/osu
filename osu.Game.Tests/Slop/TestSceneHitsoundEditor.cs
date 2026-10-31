@@ -990,10 +990,21 @@ namespace osu.Game.Tests.Slop
 
         private IEnumerable<HitObject> objectsAt(double time) => EditorBeatmap.HitObjects.Where(h => Math.Abs(h.StartTime - time) < 1);
 
+        private float lastVolumeHeight;
+
         [Test]
         public void TestVolumeLine()
         {
             AddStep("seek between objects", () => EditorClock.Seek(250));
+            // the area expands while hovered, which has to have happened before drawing, as the line follows the cursor.
+            AddStep("hover volumes", () => InputManager.MoveMouseTo(volumePosition(-50, 100)));
+            AddUntilStep("wait for volumes to expand", () =>
+            {
+                var area = Editor.ChildrenOfType<HitsoundVolumeArea>().Single();
+                bool settled = area.IsActive && area.DrawHeight == lastVolumeHeight;
+                lastVolumeHeight = area.DrawHeight;
+                return settled;
+            });
             AddStep("right drag line from 100% to 50%", () =>
             {
                 InputManager.MoveMouseTo(volumePosition(-50, 100));

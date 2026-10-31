@@ -57,6 +57,7 @@ namespace osu.Game.Rulesets.Osu.Beatmaps
                         StartTime = original.StartTime,
                         Samples = original.Samples,
                         EndTime = endTimeData.EndTime,
+                        VolumeChanges = (endTimeData as IHasVolumeChanges)?.VolumeChanges.ToList() ?? new List<VolumeChange>(),
                         Position = positionData?.Position ?? OsuPlayfield.BASE_SIZE / 2,
                         NewCombo = comboData?.NewCombo ?? false,
                         ComboOffset = comboData?.ComboOffset ?? 0,
