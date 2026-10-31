@@ -81,7 +81,7 @@ namespace osu.Game.Rulesets.Osu.Skinning.Legacy
                     return LegacyUtils.InterpolateNonLinear(position, Color4.Black.Opacity(0f), shadow, 0, shadow_portion);
 
                 if (position <= BorderEnd)
-                    return BorderColour;
+                    return GlassBorderColour;
 
                 return LegacyUtils.InterpolateNonLinear(position, outerColour, innerColour, BorderEnd, 1);
             }

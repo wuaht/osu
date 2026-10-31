@@ -3,8 +3,10 @@
 
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
+using osu.Framework.Extensions.Color4Extensions;
 using osu.Game.Configuration;
 using osuTK;
+using osuTK.Graphics;
 
 namespace osu.Game.Rulesets.Osu.Skinning.Default
 {
@@ -52,6 +54,13 @@ namespace osu.Game.Rulesets.Osu.Skinning.Default
         /// The position at which the border ends and the body starts, from 0 (the edge of the path) to 1 (the centre).
         /// </summary>
         protected abstract float BorderEnd { get; }
+
+        private bool borderIsGlass;
+
+        /// <summary>
+        /// The colour of the border. Under liquid glass, it is as transparent as the body, such that its glass shows through and is tinted like the body.
+        /// </summary>
+        protected Color4 GlassBorderColour => borderIsGlass ? BorderColour.Opacity(BorderColour.A * AccentColour.A) : BorderColour;
 
         public override float PathRadius
         {
@@ -101,11 +110,13 @@ namespace osu.Game.Rulesets.Osu.Skinning.Default
             BackdropTintStrength = glassStyle.Value == GlassStyle.LiquidGlass ? liquidGlass!.TintStrength : FrostedTintStrength;
             LiquidGlass = glassStyle.Value == GlassStyle.LiquidGlass ? liquidGlass!.CreateParameters(PathRadius * max_liquid_glass_thickness) : default;
 
-            float borderScale = glassStyle.Value == GlassStyle.LiquidGlass ? liquidGlass!.SliderBorderThickness : 1;
+            bool isLiquidGlass = glassStyle.Value == GlassStyle.LiquidGlass;
+            float borderScale = isLiquidGlass ? liquidGlass!.SliderBorderThickness : 1;
 
-            if (borderScale != BorderScale)
+            if (borderScale != BorderScale || isLiquidGlass != borderIsGlass)
             {
                 BorderScale = borderScale;
+                borderIsGlass = isLiquidGlass;
                 InvalidateTexture();
             }
         }

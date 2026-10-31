@@ -59,7 +59,7 @@ namespace osu.Game.Rulesets.Osu.Skinning.Argon
             protected override Color4 ColourAt(float position)
             {
                 if (BorderEnd != 0f && position <= BorderEnd)
-                    return BorderColour;
+                    return GlassBorderColour;
 
                 return DarkenBody ? AccentColour.Darken(4) : AccentColour;
             }
