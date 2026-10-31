@@ -65,6 +65,11 @@ namespace osu.Game.Online.OfflineProfiles
 
         private int nextUserID = OfflineProfile.FIRST_USER_ID;
 
+        /// <summary>
+        /// The number of plays started by osu! accounts, by user ID and ruleset short name, for their statistics from local scores.
+        /// </summary>
+        private Dictionary<int, Dictionary<string, int>> onlinePlayCounts = new Dictionary<int, Dictionary<string, int>>();
+
         private LargeTextureStore textures = null!;
 
         private Bindable<string> activeProfileSetting = null!;
@@ -327,11 +332,7 @@ namespace osu.Game.Online.OfflineProfiles
             // captured on the update thread, as profiles are changed there.
             var profileData = profiles.Select(profile => (profile, playCount: profile.PlayCounts.GetValueOrDefault(ruleset.ShortName))).ToList();
 
-            var scoresByProfile = realm.Run(r => profileData.ToDictionary(p => p.profile, p => r.GetAllLocalScoresForUser(p.profile.UserID)
-                                                                                         .AsEnumerable()
-                                                                                         .Where(s => s.Ruleset.ShortName == ruleset.ShortName)
-                                                                                         .Select(s => s.Detach())
-                                                                                         .ToList()));
+            var scoresByProfile = realm.Run(r => profileData.ToDictionary(p => p.profile, p => getScores(r, p.profile.UserID, ruleset)));
 
             return Task.Run(async () =>
             {
@@ -350,17 +351,45 @@ namespace osu.Game.Online.OfflineProfiles
         }
 
         /// <summary>
+        /// Calculates the statistics of any user in a ruleset from their local scores, like those of offline profiles.
+        /// Used for osu! accounts in rulesets which aren't available online. Must be called from the update thread.
+        /// </summary>
+        public Task<OfflineProfileStatistics> CalculateStatisticsAsync(int userId, RulesetInfo ruleset, CancellationToken cancellationToken = default)
+        {
+            bool includeUnranked = includeUnrankedBeatmaps.Value;
+            int playCount = onlinePlayCounts.GetValueOrDefault(userId)?.GetValueOrDefault(ruleset.ShortName) ?? 0;
+            var scores = realm.Run(r => getScores(r, userId, ruleset));
+
+            return Task.Run(() => OfflineProfileStatistics.CalculateAsync(scores, ruleset, playCount, difficultyCache, performanceCache, includeUnranked, cancellationToken), cancellationToken);
+        }
+
+        private static List<ScoreInfo> getScores(Realms.Realm realm, int userId, RulesetInfo ruleset) =>
+            realm.GetAllLocalScoresForUser(userId)
+                 .AsEnumerable()
+                 .Where(s => s.Ruleset.ShortName == ruleset.ShortName)
+                 .Select(s => s.Detach())
+                 .ToList();
+
+        /// <summary>
         /// Returns the profile with the given user ID. Thread-safe.
         /// </summary>
         public OfflineProfile? GetProfileByUserID(int userId) => profilesSnapshot.FirstOrDefault(p => p.UserID == userId);
 
         /// <summary>
-        /// Counts a started play for the active profile, if it is the local user.
+        /// Counts a started play for the local user, which is either the active profile or a logged in osu! account.
         /// </summary>
         public void RecordPlay(IRulesetInfo ruleset)
         {
             if (api.LocalUser.Value is not OfflineProfileUser user)
+            {
+                if (!api.IsLoggedIn)
+                    return;
+
+                var counts = onlinePlayCounts.GetValueOrDefault(api.LocalUser.Value.OnlineID) ?? (onlinePlayCounts[api.LocalUser.Value.OnlineID] = new Dictionary<string, int>());
+                counts[ruleset.ShortName] = counts.GetValueOrDefault(ruleset.ShortName) + 1;
+                save();
                 return;
+            }
 
             var profile = profiles.FirstOrDefault(p => p.ID == user.ProfileID);
 
@@ -390,6 +419,8 @@ namespace osu.Game.Online.OfflineProfiles
             public int NextUserID { get; set; } = OfflineProfile.FIRST_USER_ID;
 
             public List<OfflineProfile> Profiles { get; set; } = new List<OfflineProfile>();
+
+            public Dictionary<int, Dictionary<string, int>> OnlinePlayCounts { get; set; } = new Dictionary<int, Dictionary<string, int>>();
         }
 
         private void loadData()
@@ -408,6 +439,7 @@ namespace osu.Game.Online.OfflineProfiles
                             // never reuse IDs, even if the stored next ID is inconsistent with the profiles.
                             nextUserID = Math.Min(data.NextUserID, data.Profiles.Select(p => p.UserID - 1).DefaultIfEmpty(OfflineProfile.FIRST_USER_ID).Min());
                             profiles.AddRange(data.Profiles.Where(p => OfflineProfileUser.IsOfflineProfileID(p.UserID)));
+                            onlinePlayCounts = data.OnlinePlayCounts ?? onlinePlayCounts;
                         }
                     }
                 }
@@ -428,6 +460,7 @@ namespace osu.Game.Online.OfflineProfiles
             {
                 NextUserID = nextUserID,
                 Profiles = profiles.ToList(),
+                OnlinePlayCounts = onlinePlayCounts,
             };
 
             try

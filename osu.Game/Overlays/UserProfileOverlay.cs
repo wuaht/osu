@@ -152,19 +152,60 @@ namespace osu.Game.Overlays
 
             recreateBaseContent();
 
+            // osu! has no statistics in rulesets which aren't available online, so those of the local user are calculated from their local scores like offline profiles.
+            var localStatisticsRuleset = ruleset != null && !ruleset.IsLegacyRuleset() && offlineProfiles != null && user.OnlineID == API.LocalUser.Value.OnlineID
+                ? rulesets.GetRuleset(ruleset.ShortName)
+                : null;
+
             if (API.State.Value != APIState.Offline)
             {
-                userReq = user.OnlineID > 1 ? new GetUserRequest(user.OnlineID, ruleset) : new GetUserRequest(user.Username, ruleset);
-                userReq.Success += u => userLoadComplete(u, ruleset);
+                var requestRuleset = localStatisticsRuleset == null ? ruleset : null;
+                userReq = user.OnlineID > 1 ? new GetUserRequest(user.OnlineID, requestRuleset) : new GetUserRequest(user.Username, requestRuleset);
+                userReq.Success += u =>
+                {
+                    if (localStatisticsRuleset == null)
+                    {
+                        userLoadComplete(u, ruleset);
+                        return;
+                    }
+
+                    var cancellation = offlineStatisticsCancellation = new CancellationTokenSource();
+
+                    offlineProfiles!.CalculateStatisticsAsync(u.OnlineID, localStatisticsRuleset, cancellation.Token).ContinueWith(task => Schedule(() =>
+                    {
+                        if (cancellation.IsCancellationRequested)
+                            return;
+
+                        if (!task.IsCompletedSuccessfully)
+                        {
+                            Logger.Error(task.Exception, $"Failed to calculate the local statistics of {u.Username}");
+                            loadingLayer.Hide();
+                            return;
+                        }
+
+                        userLoadComplete(u, ruleset, task.GetResultSafely());
+                    }), CancellationToken.None);
+                };
 
                 API.Queue(userReq);
                 loadingLayer.Show();
             }
         }
 
-        private void userLoadComplete(APIUser loadedUser, IRulesetInfo? userRuleset)
+        private void userLoadComplete(APIUser loadedUser, IRulesetInfo? userRuleset, OfflineProfileStatistics? localStatistics = null)
         {
             Debug.Assert(sections != null && sectionsContainer != null && tabs != null);
+
+            if (localStatistics != null)
+            {
+                loadedUser.Statistics = localStatistics.Statistics;
+                sections = sections.Select(s => s switch
+                {
+                    RanksSection => new OfflineRanksSection(localStatistics),
+                    HistoricalSection => new OfflineHistoricalSection(localStatistics),
+                    _ => s
+                }).ToArray();
+            }
 
             // reuse header and content if same colour scheme, otherwise recreate both.
             int profileHue = loadedUser.ProfileHue ?? OverlayColourScheme.Pink.GetHue();

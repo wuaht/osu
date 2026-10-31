@@ -7,6 +7,7 @@ using osu.Framework.Bindables;
 using osu.Framework.Extensions.ObjectExtensions;
 using osu.Framework.Graphics.UserInterface;
 using osu.Game.Extensions;
+using osu.Game.Online.API;
 using osu.Game.Online.OfflineProfiles;
 using osu.Game.Rulesets;
 
@@ -16,6 +17,9 @@ namespace osu.Game.Overlays.Profile.Header.Components
     {
         [Resolved]
         private UserProfileOverlay? profileOverlay { get; set; }
+
+        [Resolved]
+        private IAPIProvider api { get; set; } = null!;
 
         public readonly Bindable<UserProfileData?> User = new Bindable<UserProfileData?>();
 
@@ -36,12 +40,13 @@ namespace osu.Game.Overlays.Profile.Header.Components
 
         private void updateState(UserProfileData? user)
         {
-            bool isOfflineProfile = user != null && OfflineProfileUser.IsOfflineProfileID(user.User.Id);
+            // the local user has statistics from local scores in rulesets which aren't available online.
+            bool showAllRulesets = user != null && (OfflineProfileUser.IsOfflineProfileID(user.User.Id) || user.User.Id == api.LocalUser.Value.Id);
 
             foreach (var tabItem in TabContainer)
-                tabItem.Alpha = isOfflineProfile || tabItem.Value.IsLegacyRuleset() ? 1 : 0;
+                tabItem.Alpha = showAllRulesets || tabItem.Value.IsLegacyRuleset() ? 1 : 0;
 
-            Current.Value = isOfflineProfile
+            Current.Value = showAllRulesets
                 ? Items.SingleOrDefault(ruleset => ruleset.ShortName == user!.Ruleset.ShortName)
                 : Items.SingleOrDefault(ruleset => user?.Ruleset.MatchesOnlineID(ruleset) == true);
             SetDefaultRuleset(Rulesets.GetRuleset(user?.User.PlayMode ?? @"osu").AsNonNull());
