@@ -582,7 +582,11 @@ namespace osu.Game.Overlays.Discord
             [Resolved]
             private DiscordUnreadMessages? unread { get; set; }
 
+            [Resolved]
+            private DiscordClient client { get; set; } = null!;
+
             private TruncatingSpriteText name = null!;
+            private TypingDots typingDots = null!;
             private Container badge = null!;
             private OsuSpriteText badgeText = null!;
 
@@ -602,10 +606,21 @@ namespace osu.Game.Overlays.Discord
                 if (unread != null)
                     unread.Changed += onUnreadChanged;
 
+                client.TypingChanged += onTypingChanged;
+
                 updateMentions();
+                updateTyping();
             }
 
             private void onUnreadChanged() => Scheduler.AddOnce(updateMentions);
+
+            private void onTypingChanged(ulong channelId)
+            {
+                if (channelId == Channel.Id)
+                    Scheduler.AddOnce(updateTyping);
+            }
+
+            private void updateTyping() => typingDots.Alpha = client.GetTypingUsers(Channel.Id).Count > 0 ? 1 : 0;
 
             private void updateMentions()
             {
@@ -624,6 +639,9 @@ namespace osu.Game.Overlays.Discord
 
                 if (unread != null)
                     unread.Changed -= onUnreadChanged;
+
+                if (client.IsNotNull())
+                    client.TypingChanged -= onTypingChanged;
             }
 
             protected override Drawable CreateContent() => new GridContainer
@@ -633,6 +651,7 @@ namespace osu.Game.Overlays.Discord
                 {
                     new Dimension(GridSizeMode.Absolute, 22),
                     new Dimension(),
+                    new Dimension(GridSizeMode.AutoSize),
                     new Dimension(GridSizeMode.AutoSize),
                 },
                 Content = new[]
@@ -654,6 +673,14 @@ namespace osu.Game.Overlays.Discord
                             RelativeSizeAxes = Axes.X,
                             Text = Channel.DisplayName,
                             Font = DiscordStyle.UiFont(15, FontWeight.Medium),
+                        },
+                        // Like in Discord, the channels in which someone is typing show animated dots.
+                        typingDots = new TypingDots
+                        {
+                            Anchor = Anchor.CentreRight,
+                            Origin = Anchor.CentreRight,
+                            Alpha = 0,
+                            Margin = new MarginPadding { Left = 6 },
                         },
                         // The number of unread mentions, like the mention badge of Discord.
                         badge = new CircularContainer
@@ -685,6 +712,35 @@ namespace osu.Game.Overlays.Discord
                     },
                 },
             };
+        }
+
+        /// <summary>
+        /// Three dots which light up one after another, which Discord shows while someone is typing.
+        /// </summary>
+        private partial class TypingDots : FillFlowContainer
+        {
+            public TypingDots()
+            {
+                AutoSizeAxes = Axes.Both;
+                Direction = FillDirection.Horizontal;
+                Spacing = new Vector2(2);
+
+                for (int i = 0; i < 3; i++)
+                    Add(new Circle { Size = new Vector2(4), Alpha = 0.3f });
+            }
+
+            protected override void LoadComplete()
+            {
+                base.LoadComplete();
+
+                for (int i = 0; i < Count; i++)
+                {
+                    var dot = Children[i];
+
+                    using (dot.BeginDelayedSequence(i * 150))
+                        dot.FadeTo(1, 300).Then().FadeTo(0.3f, 300).Loop(300);
+                }
+            }
         }
 
         /// <summary>

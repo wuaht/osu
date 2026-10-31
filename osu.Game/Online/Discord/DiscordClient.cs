@@ -91,9 +91,22 @@ namespace osu.Game.Online.Discord
         public event Action<DiscordReactionUpdate>? ReactionChanged;
 
         /// <summary>
-        /// Invoked with the channel ID and the user when another user starts typing, which Discord shows for ten seconds or until their message is sent.
+        /// Invoked with the channel ID when the users who are typing in the channel change.
         /// </summary>
-        public event Action<ulong, DiscordUser>? TypingStarted;
+        public event Action<ulong>? TypingChanged;
+
+        /// <summary>
+        /// How long Discord shows a user as typing, unless their message is sent before.
+        /// </summary>
+        private const double typing_duration = 10000;
+
+        private readonly Dictionary<ulong, Dictionary<ulong, (DiscordUser user, double expiry)>> typingUsers = new Dictionary<ulong, Dictionary<ulong, (DiscordUser, double)>>();
+
+        /// <summary>
+        /// The other users who are typing in a channel.
+        /// </summary>
+        public IReadOnlyList<DiscordUser> GetTypingUsers(ulong channelId) =>
+            typingUsers.TryGetValue(channelId, out var users) ? users.Values.Select(t => t.user).ToList() : Array.Empty<DiscordUser>();
 
         /// <summary>
         /// Invoked when the channels of a guild change.
@@ -322,9 +335,39 @@ namespace osu.Game.Online.Discord
             Users[user.Id] = user;
         }
 
-        protected void TriggerMessageCreated(DiscordMessage message) => MessageCreated?.Invoke(message);
+        protected void TriggerMessageCreated(DiscordMessage message)
+        {
+            removeTypingUser(message.ChannelId, message.Author.Id);
+            MessageCreated?.Invoke(message);
+        }
 
-        protected void TriggerTypingStarted(ulong channelId, DiscordUser user) => TypingStarted?.Invoke(channelId, user);
+        protected void TriggerTypingStarted(ulong channelId, DiscordUser user)
+        {
+            if (!typingUsers.TryGetValue(channelId, out var users))
+                typingUsers[channelId] = users = new Dictionary<ulong, (DiscordUser, double)>();
+
+            double expiry = Time.Current + typing_duration;
+            users[user.Id] = (user, expiry);
+            TypingChanged?.Invoke(channelId);
+
+            Scheduler.AddDelayed(() =>
+            {
+                // Typing again in the meantime shows the user for longer.
+                if (users.TryGetValue(user.Id, out var typing) && typing.expiry == expiry)
+                    removeTypingUser(channelId, user.Id);
+            }, typing_duration);
+        }
+
+        private void removeTypingUser(ulong channelId, ulong userId)
+        {
+            if (!typingUsers.TryGetValue(channelId, out var users) || !users.Remove(userId))
+                return;
+
+            if (users.Count == 0)
+                typingUsers.Remove(channelId);
+
+            TypingChanged?.Invoke(channelId);
+        }
 
         protected void TriggerChannelRead(ulong channelId) => ChannelRead?.Invoke(channelId);
 

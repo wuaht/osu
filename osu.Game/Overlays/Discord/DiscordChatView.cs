@@ -161,11 +161,6 @@ namespace osu.Game.Overlays.Discord
             private OsuTextFlowContainer typingText = null!;
 
             /// <summary>
-            /// The users who are typing in the channel, with the time at which they stop being shown as typing.
-            /// </summary>
-            private readonly Dictionary<ulong, (DiscordUser user, double expiry)> typingUsers = new Dictionary<ulong, (DiscordUser, double)>();
-
-            /// <summary>
             /// When the local user was last shown as typing to others, which Discord shows for ten seconds.
             /// </summary>
             private double? lastTypingSent;
@@ -284,7 +279,8 @@ namespace osu.Game.Overlays.Discord
                 client.MessageUpdated += onMessageUpdated;
                 client.MessageDeleted += onMessageDeleted;
                 client.ReactionChanged += onReactionChanged;
-                client.TypingStarted += onTypingStarted;
+                client.TypingChanged += onTypingChanged;
+                updateTyping();
 
                 loadOlder();
             }
@@ -455,25 +451,15 @@ namespace osu.Game.Overlays.Discord
                 client.SendTyping(Channel);
             }
 
-            private void onTypingStarted(ulong channelId, DiscordUser user) => Schedule(() =>
+            private void onTypingChanged(ulong channelId) => Schedule(() =>
             {
-                if (channelId != Channel.Id)
-                    return;
-
-                typingUsers[user.Id] = (user, Time.Current + 10000);
-                updateTyping();
-                Scheduler.AddDelayed(updateTyping, 10000);
+                if (channelId == Channel.Id)
+                    updateTyping();
             });
 
             private void updateTyping()
             {
-                foreach (var (id, (_, expiry)) in typingUsers.ToList())
-                {
-                    if (expiry <= Time.Current)
-                        typingUsers.Remove(id);
-                }
-
-                var names = typingUsers.Values.Select(t => t.user.DisplayName).ToList();
+                var names = client.GetTypingUsers(Channel.Id).Select(u => u.DisplayName).ToList();
 
                 typingText.Clear();
 
@@ -697,9 +683,6 @@ namespace osu.Game.Overlays.Discord
                 if (messageFlow.Any(m => m.Message.Id == message.Id && !m.Message.Pending))
                     return;
 
-                if (typingUsers.Remove(message.Author.Id))
-                    updateTyping();
-
                 var pending = message.Nonce == null ? null : messageFlow.FirstOrDefault(m => m.Message.Pending && m.Message.Nonce == message.Nonce);
 
                 if (pending != null)
@@ -840,7 +823,7 @@ namespace osu.Game.Overlays.Discord
                     client.MessageUpdated -= onMessageUpdated;
                     client.MessageDeleted -= onMessageDeleted;
                     client.ReactionChanged -= onReactionChanged;
-                    client.TypingStarted -= onTypingStarted;
+                    client.TypingChanged -= onTypingChanged;
                 }
             }
         }
