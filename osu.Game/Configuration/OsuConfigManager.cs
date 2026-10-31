@@ -416,6 +416,7 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopEditorTrueSliderEnds, false);
             SetDefault(OsuSetting.SlopEditorAnchorSnap, true);
             SetDefault(OsuSetting.SlopEditorStackSnap, true);
+            SetDefault(OsuSetting.SlopEditorRandomSliderAnchors, false);
             SetDefault(OsuSetting.SlopEditorCustomRotation, 60, 0, 180);
             SetDefault(OsuSetting.SlopEditorAlignBackground, false);
             SetDefault(OsuSetting.SlopMinimalReplayFrames, false);
@@ -1448,6 +1449,11 @@ namespace osu.Game.Configuration
         /// Whether dragged objects snap onto other objects to stack them.
         /// </summary>
         SlopEditorStackSnap,
+
+        /// <summary>
+        /// Whether the random slider shape hotkey generates random anchors instead of taking sliders from other beatmaps.
+        /// </summary>
+        SlopEditorRandomSliderAnchors,
 
         /// <summary>
         /// The angle in degrees by which the selection is rotated with the custom rotation shortcuts.

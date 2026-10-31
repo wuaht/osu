@@ -43,7 +43,7 @@ namespace osu.Game.Rulesets.Objects.Legacy
         /// </summary>
         private ConvertHitObject? lastObject;
 
-        internal ConvertHitObjectParser(double offset, int formatVersion)
+        public ConvertHitObjectParser(double offset, int formatVersion)
         {
             this.offset = offset;
             this.formatVersion = formatVersion;

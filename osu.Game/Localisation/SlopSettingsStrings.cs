@@ -1287,6 +1287,17 @@ namespace osu.Game.Localisation
             @"Dragged objects snap onto nearby objects, which makes stacking them easy.");
 
         /// <summary>
+        /// "Random slider shapes from random anchors"
+        /// </summary>
+        public static LocalisableString EditorRandomSliderAnchors => new TranslatableString(getKey(@"editor_random_slider_anchors"), @"Random slider shapes from random anchors");
+
+        /// <summary>
+        /// "The random slider shape key binding places random anchors instead of taking the shape of a slider from another beatmap."
+        /// </summary>
+        public static LocalisableString EditorRandomSliderAnchorsDescription => new TranslatableString(getKey(@"editor_random_slider_anchors_description"),
+            @"The random slider shape key binding places random anchors instead of taking the shape of a slider from another beatmap.");
+
+        /// <summary>
         /// "Custom rotation angle"
         /// </summary>
         public static LocalisableString EditorCustomRotation => new TranslatableString(getKey(@"editor_custom_rotation"), @"Custom rotation angle");

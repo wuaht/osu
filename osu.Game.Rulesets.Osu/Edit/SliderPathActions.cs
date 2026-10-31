@@ -10,6 +10,9 @@ using osu.Framework.Input;
 using osu.Framework.Input.Bindings;
 using osu.Framework.Input.Events;
 using osu.Framework.Localisation;
+using osu.Framework.Platform;
+using osu.Game.Configuration;
+using osu.Game.Database;
 using osu.Game.Input;
 using osu.Game.Input.Bindings;
 using osu.Game.Localisation;
@@ -38,6 +41,15 @@ namespace osu.Game.Rulesets.Osu.Edit
         [Resolved]
         private OnScreenDisplay? onScreenDisplay { get; set; }
 
+        [Resolved]
+        private RealmAccess realm { get; set; } = null!;
+
+        [Resolved]
+        private Storage storage { get; set; } = null!;
+
+        [Resolved]
+        private OsuConfigManager config { get; set; } = null!;
+
         private InputManager inputManager = null!;
 
         private readonly Random rng = new Random();
@@ -46,6 +58,8 @@ namespace osu.Game.Rulesets.Osu.Edit
         {
             base.LoadComplete();
             inputManager = GetContainingInputManager()!;
+
+            SliderLibrary.EnsureLoading(realm, storage);
         }
 
         public bool OnPressed(KeyBindingPressEvent<GlobalAction> e)
@@ -281,7 +295,7 @@ namespace osu.Game.Rulesets.Osu.Edit
         }
 
         /// <summary>
-        /// Replaces the path of the selected slider with a random path of mixed segment types between its head and its last control point.
+        /// Replaces the path of the selected slider with a random slider of another beatmap, or else a generated path, between its head and its last control point.
         /// </summary>
         private bool randomiseSliderShape()
         {
@@ -297,6 +311,56 @@ namespace osu.Game.Rulesets.Osu.Edit
             Vector2 head = origin + controlPoints[0].Position;
             Vector2 tail = origin + controlPoints[^1].Position;
 
+            var newPoints = config.Get<bool>(OsuSetting.SlopEditorRandomSliderAnchors)
+                ? generatePath(controlPoints, origin, head, tail)
+                : pathFromLibrary(controlPoints, origin, head, tail) ?? generatePath(controlPoints, origin, head, tail);
+
+            editorBeatmap.BeginChange();
+
+            controlPoints.Clear();
+            controlPoints.AddRange(newPoints);
+
+            // the length follows the new shape instead of truncating it.
+            slider.Path.ExpectedDistance.Value = null;
+
+            editorBeatmap.Update(slider);
+            editorBeatmap.EndChange();
+            return true;
+        }
+
+        /// <summary>
+        /// Takes a random slider of another beatmap which is like the current path, fitted between its head and tail.
+        /// </summary>
+        private List<PathControlPoint>? pathFromLibrary(IReadOnlyList<PathControlPoint> controlPoints, Vector2 origin, Vector2 head, Vector2 tail)
+        {
+            var fitted = SliderLibrary.Find(controlPoints, editorBeatmap.BeatmapInfo.BeatmapSet?.ID, head, tail, rng);
+
+            if (fitted == null)
+                return null;
+
+            foreach (var point in fitted)
+            {
+                Vector2 relative = point.Position - origin;
+                point.Position = new Vector2(MathF.Round(relative.X), MathF.Round(relative.Y));
+            }
+
+            // the head and tail must not be moved by rounding.
+            fitted[0].Position = controlPoints[0].Position;
+            fitted[^1].Position = controlPoints[^1].Position;
+
+            removeConsecutiveDuplicates(fitted);
+
+            fitted[0].Type ??= PathType.BEZIER;
+            fitted[^1].Type = null;
+
+            return fitted.Count > 1 ? fitted : null;
+        }
+
+        /// <summary>
+        /// Generates a random path of mixed segment types between the head and tail.
+        /// </summary>
+        private List<PathControlPoint> generatePath(IReadOnlyList<PathControlPoint> controlPoints, Vector2 origin, Vector2 head, Vector2 tail)
+        {
             var positions = new List<Vector2> { head };
             positions.AddRange(RandomSliderShapes.Generate(head, tail, rng));
             positions.Add(tail);
@@ -329,18 +393,7 @@ namespace osu.Game.Rulesets.Osu.Edit
                 newPoints.Add(new PathControlPoint(controlPoints[^1].Position));
 
             RandomSliderShapes.RandomiseSegmentTypes(newPoints, rng);
-
-            editorBeatmap.BeginChange();
-
-            controlPoints.Clear();
-            controlPoints.AddRange(newPoints);
-
-            // the length follows the new shape instead of truncating it.
-            slider.Path.ExpectedDistance.Value = null;
-
-            editorBeatmap.Update(slider);
-            editorBeatmap.EndChange();
-            return true;
+            return newPoints;
         }
 
         private static void removeConsecutiveDuplicates(List<PathControlPoint> points)

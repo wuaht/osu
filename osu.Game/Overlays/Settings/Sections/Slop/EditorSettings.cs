@@ -339,6 +339,12 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                     HintText = SlopSettingsStrings.EditorStackSnapDescription,
                     Current = config.GetBindable<bool>(OsuSetting.SlopEditorStackSnap),
                 }),
+                new SettingsItemV2(new FormCheckBox
+                {
+                    Caption = SlopSettingsStrings.EditorRandomSliderAnchors,
+                    HintText = SlopSettingsStrings.EditorRandomSliderAnchorsDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorRandomSliderAnchors),
+                }),
                 new SettingsItemV2(new FormSliderBar<int>
                 {
                     Caption = SlopSettingsStrings.EditorCustomRotation,
