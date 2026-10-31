@@ -841,6 +841,26 @@ Alt + scroll to zoom. Ctrl + click a lane name to preview the skin's sample inst
         /// </summary>
         public static LocalisableString SubPatternName(string name, string parent) => new TranslatableString(getKey(@"sub_pattern_name"), @"{0} (in {1})", name, parent);
 
+        /// <summary>
+        /// "Drop to add as {0} - {1}"
+        /// </summary>
+        public static LocalisableString DropSampleAdd(string lane, LocalisableString customIndex) => new TranslatableString(getKey(@"drop_sample_add"), @"Drop to add as {0} - {1}", lane, customIndex);
+
+        /// <summary>
+        /// "Drop to replace {0} - {1}"
+        /// </summary>
+        public static LocalisableString DropSampleReplace(string lane, LocalisableString customIndex) => new TranslatableString(getKey(@"drop_sample_replace"), @"Drop to replace {0} - {1}", lane, customIndex);
+
+        /// <summary>
+        /// "Added sample as {0} - {1}"
+        /// </summary>
+        public static LocalisableString SampleAdded(string lane, LocalisableString customIndex) => new TranslatableString(getKey(@"sample_added"), @"Added sample as {0} - {1}", lane, customIndex);
+
+        /// <summary>
+        /// "Replaced sample of {0} - {1}"
+        /// </summary>
+        public static LocalisableString SampleReplaced(string lane, LocalisableString customIndex) => new TranslatableString(getKey(@"sample_replaced"), @"Replaced sample of {0} - {1}", lane, customIndex);
+
         private static string getKey(string key) => $@"{prefix}:{key}";
     }
 }

@@ -20,6 +20,7 @@ using osu.Framework.Input.Events;
 using osu.Framework.Localisation;
 using osu.Framework.Platform;
 using osu.Game.Database;
+using osu.Game.Extensions;
 using osu.Game.Graphics.Sprites;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Overlays;
@@ -240,7 +241,14 @@ namespace osu.Game.Graphics.UserInterfaceV2
 
         Task ICanAcceptFiles.Import(params string[] paths)
         {
-            Schedule(() => Current.Value = new FileInfo(paths.First()));
+            Schedule(() =>
+            {
+                // e.g. the selectors of a hidden editor screen, while a file is dropped onto another one.
+                if (!this.IsPresentInHierarchy())
+                    return;
+
+                Current.Value = new FileInfo(paths.First());
+            });
             return Task.CompletedTask;
         }
 

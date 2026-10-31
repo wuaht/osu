@@ -52,6 +52,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
         private readonly BindableBool frosted = new BindableBool();
         private GridContainer grid = null!;
         private HitsoundVolumeArea volumeArea = null!;
+        private Container sampleDropArea = null!;
 
         private float currentVolumeHeight = volume_height;
 
@@ -174,6 +175,13 @@ namespace osu.Game.Screens.Edit.Hitsounding
                             Colour = colourProvider.Highlight1,
                         },
                     },
+                    // covers the lanes (including their headers), between the patterns and the volumes.
+                    sampleDropArea = new Container
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Padding = new MarginPadding { Top = HitsoundPatternStrip.HEIGHT, Bottom = volume_height },
+                        Child = new HitsoundSampleDropTarget(),
+                    },
                 }
             };
         }
@@ -212,6 +220,8 @@ namespace osu.Game.Screens.Edit.Hitsounding
                     new Dimension(),
                     new Dimension(GridSizeMode.Absolute, volumeHeight),
                 };
+
+                sampleDropArea.Padding = new MarginPadding { Top = HitsoundPatternStrip.HEIGHT, Bottom = volumeHeight };
             }
 
             float wantedHeight = hitsoundEditor.VisibleLanes.Count * LANE_HEIGHT;

@@ -10,6 +10,20 @@ namespace osu.Game.Extensions
     public static class DrawableExtensions
     {
         /// <summary>
+        /// Whether this drawable and all of its ancestors are present, i.e. whether it is shown (unlike e.g. a drawable on a hidden screen).
+        /// </summary>
+        public static bool IsPresentInHierarchy(this Drawable drawable)
+        {
+            for (Drawable? d = drawable; d != null; d = d.Parent)
+            {
+                if (!d.IsPresent)
+                    return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
         /// Shakes this drawable.
         /// </summary>
         /// <param name="target">The target to shake.</param>
