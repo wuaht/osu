@@ -87,6 +87,11 @@ namespace osu.Game.Overlays.Discord
         }
 
         /// <summary>
+        /// Whether media is cached, without reading it.
+        /// </summary>
+        public static bool Contains(string url) => pathFor(url) is string path && File.Exists(path);
+
+        /// <summary>
         /// Stores downloaded media in the cache.
         /// </summary>
         public static void Store(string url, byte[] data)

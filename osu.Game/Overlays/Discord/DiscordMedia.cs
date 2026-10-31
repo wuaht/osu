@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -77,7 +78,13 @@ namespace osu.Game.Overlays.Discord
         private static HttpClient createHttpClient()
         {
             // Long enough for videos, which are downloaded completely before they play.
-            var client = new HttpClient { Timeout = TimeSpan.FromMinutes(2) };
+            var client = new HttpClient
+            {
+                Timeout = TimeSpan.FromMinutes(2),
+                // Many images are requested at once, which HTTP/2 sends over one connection instead of opening one for each.
+                DefaultRequestVersion = HttpVersion.Version20,
+                DefaultVersionPolicy = HttpVersionPolicy.RequestVersionOrLower,
+            };
             client.DefaultRequestHeaders.UserAgent.ParseAdd(DiscordFullClient.USER_AGENT);
             return client;
         }
@@ -234,17 +241,37 @@ namespace osu.Game.Overlays.Discord
             lock (dominantColours)
             {
                 if (!dominantColours.TryGetValue(url, out var task))
-                    dominantColours[url] = task = throttled(() => computeDominantColour(url));
+                    dominantColours[url] = task = afterDownload(url, () => computeDominantColour(url));
 
                 return task;
             }
         }
 
         /// <summary>
-        /// Limits how many lookups run at once. A lookup performs its request synchronously and blocks a thread pool thread,
-        /// so many at once (like the icons of all guilds) starve the thread pool which the requests need to complete.
+        /// Limits how many lookups run at once. A lookup reads and decodes the image synchronously and blocks a thread pool thread,
+        /// so many at once (like the icons of all guilds) starve the thread pool which the downloads need to complete.
         /// </summary>
-        private static readonly SemaphoreSlim lookup_throttle = new SemaphoreSlim(4);
+        private static readonly SemaphoreSlim lookup_throttle = new SemaphoreSlim(Math.Clamp(Environment.ProcessorCount / 2, 2, 8));
+
+        /// <summary>
+        /// Downloads the image into the media cache without blocking a thread, so the throttled lookup only has to read and decode it.
+        /// Before, the lookups downloaded the images themselves, which let only a few images load at once.
+        /// </summary>
+        private static async Task<T?> afterDownload<T>(string url, Func<T?> lookup)
+        {
+            try
+            {
+                if (!DiscordMediaCache.Contains(url))
+                    await DiscordMedia.Download(url, CancellationToken.None).ConfigureAwait(false);
+            }
+            catch (Exception e)
+            {
+                Logger.Log($@"Failed to download {url}: {e.Message}", LoggingTarget.Network);
+                return default;
+            }
+
+            return await throttled(lookup).ConfigureAwait(false);
+        }
 
         private static async Task<T> throttled<T>(Func<T> lookup)
         {
@@ -317,7 +344,7 @@ namespace osu.Game.Overlays.Discord
             lock (pendingLookups)
             {
                 if (!pendingLookups.TryGetValue(url, out lookup))
-                    pendingLookups[url] = lookup = new PendingLookup(throttled(() => (Texture?)Get(url)));
+                    pendingLookups[url] = lookup = new PendingLookup(afterDownload(url, () => (Texture?)Get(url)));
 
                 lookup.Waiting++;
             }
