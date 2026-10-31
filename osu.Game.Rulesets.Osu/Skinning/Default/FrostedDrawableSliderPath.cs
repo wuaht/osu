@@ -43,6 +43,16 @@ namespace osu.Game.Rulesets.Osu.Skinning.Default
         /// </summary>
         protected float BorderScale { get; private set; } = 1;
 
+        /// <summary>
+        /// The position at which the border starts, from 0 (the edge of the path) to 1 (the centre).
+        /// </summary>
+        protected virtual float BorderStart => 0;
+
+        /// <summary>
+        /// The position at which the border ends and the body starts, from 0 (the edge of the path) to 1 (the centre).
+        /// </summary>
+        protected abstract float BorderEnd { get; }
+
         public override float PathRadius
         {
             get => base.PathRadius;
@@ -68,6 +78,15 @@ namespace osu.Game.Rulesets.Osu.Skinning.Default
             blur.BindValueChanged(_ => updateGlass());
 
             updateGlass();
+        }
+
+        protected override void Update()
+        {
+            base.Update();
+
+            // the border is a separate ring of glass, such that it stands out from the body.
+            LiquidGlassStart = BorderStart;
+            LiquidGlassSeparation = BorderEnd;
         }
 
         private void updateGlass()

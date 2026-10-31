@@ -54,11 +54,11 @@ namespace osu.Game.Rulesets.Osu.Skinning.Argon
 
             public bool DarkenBody { get; set; } = true;
 
+            protected override float BorderEnd => CalculatedBorderPortion * BorderScale;
+
             protected override Color4 ColourAt(float position)
             {
-                float borderPortion = CalculatedBorderPortion * BorderScale;
-
-                if (borderPortion != 0f && position <= borderPortion)
+                if (BorderEnd != 0f && position <= BorderEnd)
                     return BorderColour;
 
                 return DarkenBody ? AccentColour.Darken(4) : AccentColour;
