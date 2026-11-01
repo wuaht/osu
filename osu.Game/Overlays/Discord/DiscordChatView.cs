@@ -503,7 +503,10 @@ namespace osu.Game.Overlays.Discord
                 {
                     composer.Reset();
 
-                    if (!string.IsNullOrEmpty(text) && text != edited.Content)
+                    // Like in Discord, clearing the text of a message deletes it.
+                    if (string.IsNullOrEmpty(text))
+                        Delete(edited);
+                    else if (text != edited.Content)
                         client.EditMessage(edited, text).ContinueWith(t => logFailure(t, @"edit"), TaskContinuationOptions.OnlyOnFaulted);
 
                     return;
