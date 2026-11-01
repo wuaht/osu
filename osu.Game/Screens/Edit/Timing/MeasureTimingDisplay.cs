@@ -109,6 +109,8 @@ namespace osu.Game.Screens.Edit.Timing
 
         private InputManager inputManager = null!;
 
+        private CursorAudioPreview audioPreview = null!;
+
         private Container<RowDisplay> rowContainer = null!;
         private readonly List<RowDisplay> rowDisplays = new List<RowDisplay>();
         private TruncatingSpriteText statusText = null!;
@@ -172,6 +174,7 @@ namespace osu.Game.Screens.Edit.Timing
 
             InternalChildren = new Drawable[]
             {
+                audioPreview = new CursorAudioPreview(),
                 new Box
                 {
                     RelativeSizeAxes = Axes.Both,
@@ -508,7 +511,7 @@ namespace osu.Game.Screens.Edit.Timing
                 if (findPointAt(index, fraction) is TimingControlPoint point)
                 {
                     hoverTime = point.Time;
-                    status = $"{bpm(point.BeatLength)} · drag onto a beat, Ctrl+drag to change the offset, right-click to remove";
+                    status = $"{bpm(point.BeatLength)} · drag onto a beat, Ctrl+drag to change the offset, Ctrl+right-click to remove";
                 }
                 else
                 {
@@ -609,6 +612,7 @@ namespace osu.Game.Screens.Edit.Timing
 
             showLine(display.PlaybackLine, row, editorClock.CurrentTime);
             showLine(display.HoverLine, row, hoverTime);
+            showLine(display.PreviewLine, row, audioPreview.CurrentTime);
         }
 
         private static void showLine(Box line, MeasureRow row, double? time)
@@ -684,6 +688,7 @@ namespace osu.Game.Screens.Edit.Timing
             public readonly Box CutShade;
             public readonly Box PlaybackLine;
             public readonly Box HoverLine;
+            public readonly Box PreviewLine;
 
             /// <summary>
             /// The container in which positions are fractions of the bar.
@@ -774,6 +779,7 @@ namespace osu.Game.Screens.Edit.Timing
                                         ticks = new Container<Box> { RelativeSizeAxes = Axes.Both, RelativePositionAxes = Axes.Both },
                                         markers = new Container<Box> { RelativeSizeAxes = Axes.Both, RelativePositionAxes = Axes.Both },
                                         HoverLine = createLine(colours.Yellow),
+                                        PreviewLine = createLine(Color4.White.Opacity(0.7f)),
                                         PlaybackLine = createLine(Color4.White),
                                         BpmText = new OsuSpriteText
                                         {
@@ -1012,7 +1018,8 @@ namespace osu.Game.Screens.Edit.Timing
                     return true;
 
                 case MouseButton.Right:
-                    if (point != null)
+                    // like on the timeline: Ctrl removes the timing point, otherwise the audio at the cursor is previewed while held.
+                    if (controlPressed && point != null)
                     {
                         VariableTiming.RemoveTimingPoint(beatmap, point, adjustHitObjects.Value);
 
@@ -1020,7 +1027,7 @@ namespace osu.Game.Screens.Edit.Timing
                             selectedGroup.Value = null;
                     }
                     else
-                        editorClock.SeekSmoothlyTo(row.TimeAt(fraction));
+                        audioPreview.Start(row.TimeAt(fraction));
 
                     return true;
             }
@@ -1169,6 +1176,9 @@ namespace osu.Game.Screens.Edit.Timing
                 pressedRows = null;
                 pressedPoint = null;
             }
+
+            if (e.Button == MouseButton.Right)
+                audioPreview.Stop();
 
             base.OnMouseUp(e);
         }

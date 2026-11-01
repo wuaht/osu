@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using osu.Framework.Allocation;
-using osu.Framework.Audio.Track;
 using osu.Framework.Bindables;
 using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
@@ -13,7 +12,6 @@ using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Input;
 using osu.Framework.Input.Events;
-using osu.Game.Beatmaps;
 using osu.Game.Beatmaps.ControlPoints;
 using osu.Game.Configuration;
 using osu.Game.Graphics;
@@ -75,34 +73,12 @@ namespace osu.Game.Screens.Edit.Timing
         private TimingAnalyser? analyser { get; set; }
 
         [Resolved]
-        private EditorClock editorClock { get; set; } = null!;
-
-        [Resolved]
         private BindableBeatDivisor beatDivisor { get; set; } = null!;
 
-        [Resolved]
-        private BeatmapManager beatmapManager { get; set; } = null!;
-
-        [Resolved]
-        private IBindable<WorkingBeatmap> workingBeatmap { get; set; } = null!;
+        private CursorAudioPreview audioPreview = null!;
 
         /// <summary>
-        /// A separate instance of the track, which previews the audio at the cursor while holding the right mouse button, without moving the editor's time.
-        /// </summary>
-        private Track? previewTrack;
-
-        /// <summary>
-        /// The difference between the editor's time and the time of the track (e.g. offsets applied by the editor's clock).
-        /// </summary>
-        private double previewOffset;
-
-        /// <summary>
-        /// Whether the editor's playback was paused for the preview, and should be resumed afterwards.
-        /// </summary>
-        private bool resumeAfterPreview;
-
-        /// <summary>
-        /// Shows the position of <see cref="previewTrack"/> (a "shadow" of the editor's time).
+        /// Shows the position of <see cref="audioPreview"/>.
         /// </summary>
         private Box previewLine = null!;
 
@@ -152,6 +128,7 @@ namespace osu.Game.Screens.Edit.Timing
 
             AddRangeInternal(new Drawable[]
             {
+                audioPreview = new CursorAudioPreview(),
                 label = new Container
                 {
                     AutoSizeAxes = Axes.Both,
@@ -644,7 +621,7 @@ namespace osu.Game.Screens.Edit.Timing
             // listen to the audio at the cursor while holding the right mouse button.
             if (e.Button == MouseButton.Right && !(controlPressed && hoveredPoint != null))
             {
-                startPreview(timeline.TimeAtScreenSpacePosition(e.ScreenSpaceMousePosition));
+                audioPreview.Start(timeline.TimeAtScreenSpacePosition(e.ScreenSpaceMousePosition));
                 return true;
             }
 
@@ -727,7 +704,7 @@ namespace osu.Game.Screens.Edit.Timing
                 endMove();
 
             if (e.Button == MouseButton.Right)
-                endPreview();
+                audioPreview.Stop();
 
             base.OnMouseUp(e);
         }
@@ -742,80 +719,22 @@ namespace osu.Game.Screens.Edit.Timing
             beatmap.EndChange();
         }
 
-        private void startPreview(double time)
-        {
-            previewTrack ??= createPreviewTrack();
-
-            if (previewTrack == null)
-                return;
-
-            if (editorClock.IsRunning)
-            {
-                resumeAfterPreview = true;
-                editorClock.Stop();
-            }
-
-            previewOffset = editorClock.CurrentTime - workingBeatmap.Value.Track.CurrentTime;
-            previewTrack.Seek(Math.Max(0, time - previewOffset));
-            previewTrack.Start();
-        }
-
-        private void endPreview()
-        {
-            if (previewTrack?.IsRunning != true)
-                return;
-
-            previewTrack.Stop();
-
-            if (resumeAfterPreview)
-                editorClock.Start();
-
-            resumeAfterPreview = false;
-        }
-
         private void updatePreviewLine()
         {
-            if (previewTrack?.IsRunning != true)
+            if (audioPreview.CurrentTime is not double time)
             {
                 previewLine.Alpha = 0;
                 return;
             }
 
-            previewLine.X = (float)(previewTrack.CurrentTime + previewOffset);
+            previewLine.X = (float)time;
             previewLine.Alpha = 0.7f;
-        }
-
-        private Track? createPreviewTrack()
-        {
-            var working = workingBeatmap.Value;
-            string? audioFile = working.Metadata?.AudioFile;
-
-            if (string.IsNullOrEmpty(audioFile))
-                return null;
-
-            string? path = working.BeatmapSetInfo?.GetPathForFile(audioFile);
-
-            if (path == null)
-                return null;
-
-            var track = beatmapManager.BeatmapTrackStore.Get(path);
-
-            // play at the same speed as the editor.
-            track?.BindAdjustments(editorClock.AudioAdjustments);
-            return track;
         }
 
         private void selectMovedGroup()
         {
             if (activeMove != null)
                 selectedGroup.Value = beatmap.ControlPointInfo.GroupAt(activeMove.Point.Time);
-        }
-
-        protected override void Dispose(bool isDisposing)
-        {
-            base.Dispose(isDisposing);
-
-            previewTrack?.Dispose();
         }
 
         private static string bpm(double beatLength) => $"{60000 / beatLength:0.###} BPM";
