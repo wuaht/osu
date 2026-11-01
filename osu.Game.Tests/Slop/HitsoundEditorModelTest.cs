@@ -245,6 +245,25 @@ namespace osu.Game.Tests.Slop
             Assert.That(HitsoundSamples.GetNormalBank(slider.Samples), Is.EqualTo(HitSampleInfo.BANK_DRUM));
         }
 
+        [TestCase(HitSampleInfo.BANK_DRUM, HitSampleInfo.BANK_DRUM)]
+        [TestCase(HitSampleInfo.BANK_NORMAL, HitSampleInfo.BANK_SOFT)]
+        public void TestUnmatchedSliderKeepsBankOfSurroundingSection(string bankAfter, string expected)
+        {
+            var slider = createSlider(1000);
+            var map = HitsoundMap.Create(new[] { slider }, 0);
+
+            var source = new[]
+            {
+                state(500, HitSampleInfo.BANK_DRUM, HitSampleInfo.BANK_DRUM, 100),
+                state(100000, bankAfter, bankAfter, 100),
+            };
+
+            HitsoundCopier.Copy(source, [], map, new HitsoundCopyOptions { DefaultNormalBank = HitSampleInfo.BANK_SOFT });
+
+            Assert.That(slider.NodeSamples.Select(HitsoundSamples.GetNormalBank), Is.All.EqualTo(expected));
+            Assert.That(HitsoundSamples.GetNormalBank(slider.Samples), Is.EqualTo(expected));
+        }
+
         [Test]
         public void TestMapCreatesSliderTargets()
         {
