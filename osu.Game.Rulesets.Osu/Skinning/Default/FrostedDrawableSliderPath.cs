@@ -110,6 +110,9 @@ namespace osu.Game.Rulesets.Osu.Skinning.Default
             BackdropTintStrength = glassStyle.Value == GlassStyle.LiquidGlass ? liquidGlass!.TintStrength : FrostedTintStrength;
             LiquidGlass = glassStyle.Value == GlassStyle.LiquidGlass ? liquidGlass!.CreateParameters(PathRadius * max_liquid_glass_thickness) : default;
 
+            // liquid glass is barely blurred, so a lower resolution makes thin content behind it (e.g. the editor grid) flicker as it refracts and moves.
+            EffectBufferScale = new Vector2(glassStyle.Value == GlassStyle.LiquidGlass ? 1 : 0.25f);
+
             bool isLiquidGlass = glassStyle.Value == GlassStyle.LiquidGlass;
             float borderScale = isLiquidGlass ? liquidGlass!.SliderBorderThickness : 1;
 

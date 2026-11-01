@@ -314,7 +314,8 @@ namespace osu.Game.Rulesets.Osu.Skinning.Legacy
                 MaskCutoff = 0.3f;
 
                 // the backdrop is blurred at a lower resolution, which is barely noticeable at this size but much cheaper.
-                EffectBufferScale = new Vector2(0.5f);
+                // liquid glass is barely blurred though, so a lower resolution would make thin content behind it flicker as it refracts and moves.
+                EffectBufferScale = new Vector2(style == GlassStyle.LiquidGlass ? 1 : 0.5f);
 
                 Child = circle;
             }
