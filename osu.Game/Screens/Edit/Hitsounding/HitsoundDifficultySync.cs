@@ -117,7 +117,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
                 var map = HitsoundMap.Create(playable.HitObjects, info.Ruleset.OnlineID);
 
                 return (map.Columns.Select(c => c.GetState()).ToList(), map.Bodies.Select(b => b.GetState()).ToList());
-            }, targets, new HitsoundCopyOptions(), null, result =>
+            }, targets, new HitsoundCopyOptions { DefaultNormalBank = HitsoundPreferences.GetDefaultNormalBank(config, current.BeatmapSet) }, null, result =>
             {
                 // the failure has already been logged.
                 if (result == null)

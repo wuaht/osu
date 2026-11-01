@@ -198,7 +198,7 @@ namespace osu.Game.Tests.Slop
         }
 
         [Test]
-        public void TestUnmatchedSliderPartsGetActiveBank()
+        public void TestUnmatchedSliderPartsGetDefaultBank()
         {
             // placed sliders get the bank of the previous hit object on all nodes and the body.
             var slider = createSlider(1000, repeats: 1);
@@ -210,10 +210,11 @@ namespace osu.Game.Tests.Slop
                 state(map.Columns[0].Time, HitSampleInfo.BANK_SOFT, HitSampleInfo.BANK_SOFT, 100),
             };
 
-            HitsoundCopier.Copy(source, [], map, new HitsoundCopyOptions { OverwriteUnmatched = false });
+            HitsoundCopier.Copy(source, [], map, new HitsoundCopyOptions { OverwriteUnmatched = false, DefaultNormalBank = HitSampleInfo.BANK_DRUM });
 
-            Assert.That(slider.NodeSamples.Select(HitsoundSamples.GetNormalBank), Is.All.EqualTo(HitSampleInfo.BANK_SOFT));
-            Assert.That(HitsoundSamples.GetNormalBank(slider.Samples), Is.EqualTo(HitSampleInfo.BANK_SOFT));
+            // the matched head keeps its hitsound, the unmatched parts get the default bank rather than the one before them.
+            Assert.That(slider.NodeSamples.Select(HitsoundSamples.GetNormalBank), Is.EqualTo(new[] { HitSampleInfo.BANK_SOFT, HitSampleInfo.BANK_DRUM, HitSampleInfo.BANK_DRUM }));
+            Assert.That(HitsoundSamples.GetNormalBank(slider.Samples), Is.EqualTo(HitSampleInfo.BANK_DRUM));
         }
 
         [Test]
@@ -231,7 +232,7 @@ namespace osu.Game.Tests.Slop
         }
 
         [Test]
-        public void TestUnmatchedSliderGetsActiveBankWhenOverwriting()
+        public void TestUnmatchedSliderGetsMostUsedBankWhenOverwriting()
         {
             var slider = createSlider(1000);
             var map = HitsoundMap.Create(new[] { slider }, 0);

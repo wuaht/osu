@@ -1213,6 +1213,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
                     Leniency = PASTE_LENIENCY,
                     CopySliderBodies = false,
                     OverwriteUnmatched = false,
+                    DefaultNormalBank = GetDefaultNormalBank(),
                 });
 
                 changed.UnionWith(result.ChangedHitObjects);
@@ -1312,12 +1313,13 @@ namespace osu.Game.Screens.Edit.Hitsounding
         [Resolved(canBeNull: true)]
         private HitsoundPatterns? patterns { get; set; }
 
-        private static readonly HitsoundCopyOptions pattern_copy_options = new HitsoundCopyOptions
+        private HitsoundCopyOptions patternCopyOptions => new HitsoundCopyOptions
         {
             Leniency = PASTE_LENIENCY,
             CopySliderBodies = false,
             PreserveMutedVolumes = false,
             OverwriteUnmatched = true,
+            DefaultNormalBank = GetDefaultNormalBank(),
         };
 
         /// <summary>
@@ -1666,7 +1668,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
 
             var map = HitsoundMap.Create(editorBeatmap.HitObjects, rulesetId);
             var columns = getColumnsInRange(map, startTime, length).ToList();
-            var result = HitsoundCopier.Copy(absolute, Array.Empty<HitsoundBodyState>(), columns, Array.Empty<HitsoundBody>(), pattern_copy_options);
+            var result = HitsoundCopier.Copy(absolute, Array.Empty<HitsoundBodyState>(), columns, Array.Empty<HitsoundBody>(), patternCopyOptions);
 
             changed.UnionWith(result.ChangedHitObjects);
 

@@ -145,43 +145,27 @@ namespace osu.Game.Screens.Edit.Hitsounding
         }
 
         /// <summary>
-        /// Whether the hitnormal bank of an unmatched part of an object with repeats (a slider node or body) should be replaced with the bank of the source at its time.
+        /// Whether the hitnormal bank of an unmatched part of an object with repeats (a slider node or body) should be replaced with the default bank.
         /// </summary>
         /// <remarks>
         /// Slider nodes and bodies get the bank of the slider head when placed, which is inherited from the previous hit object,
-        /// so keeping it for parts without a counterpart would make them play a bank which the source doesn't use there.
+        /// so keeping it for parts without a counterpart would make them play a bank which the source doesn't have there.
         /// Without overwriting, this is only done for objects of which another part has a counterpart, as fully unmatched objects keep what they were placed with.
         /// </remarks>
         private static bool shouldResetBank(HitObject hitObject, HashSet<HitObject> matchedObjects, HitsoundCopyOptions options)
             => options.CopySampleSets && (options.OverwriteUnmatched || matchedObjects.Contains(hitObject));
 
         /// <summary>
-        /// The hitnormal bank which is active in the source at the given time, which is the bank of the last hitsound at or before it
-        /// (like a sample set which stays active until the next one).
+        /// The hitnormal bank which unmatched parts get, regardless of the hitsounds before them: <see cref="HitsoundCopyOptions.DefaultNormalBank"/>,
+        /// or the bank which most hitsounds of the source use.
         /// </summary>
-        private static string? getActiveBank(IReadOnlyList<HitsoundColumnState> source, double time, double leniency)
-        {
-            int min = 0;
-            int max = source.Count;
-
-            while (min < max)
-            {
-                int mid = (min + max) / 2;
-
-                if (source[mid].Time <= time + leniency)
-                    min = mid + 1;
-                else
-                    max = mid;
-            }
-
-            for (int i = min - 1; i >= 0; i--)
-            {
-                if (source[i].NormalBanks.Count > 0)
-                    return source[i].NormalBanks[0];
-            }
-
-            return null;
-        }
+        private static string? getDefaultBank(IReadOnlyList<HitsoundColumnState> source, HitsoundCopyOptions options)
+            => options.DefaultNormalBank
+               ?? source.Where(s => s.NormalBanks.Count > 0)
+                        .GroupBy(s => s.NormalBanks[0])
+                        .OrderByDescending(g => g.Count())
+                        .Select(g => g.Key)
+                        .FirstOrDefault();
 
         private static void apply(HitsoundColumn column, HitsoundColumnState state, HitsoundCopyOptions options, HitsoundCopyResult result)
         {
@@ -223,14 +207,14 @@ namespace osu.Game.Screens.Edit.Hitsounding
         {
             bool muteSliderEnd = options.MuteUnmatchedSliderEnds && column.Targets.Count == 1 && column.Targets[0].Kind == HitsoundTargetKind.Tail;
 
-            string? activeBank = getActiveBank(source, column.Time, options.Leniency);
+            string? defaultBank = getDefaultBank(source, options);
 
             foreach (var target in column.Targets)
             {
                 var samples = target.Samples.ToList();
 
-                if (activeBank != null && isNode(target) && shouldResetBank(target.HitObject, matchedObjects, options))
-                    samples = HitsoundSamples.WithNormalBank(samples, activeBank, true);
+                if (defaultBank != null && isNode(target) && shouldResetBank(target.HitObject, matchedObjects, options))
+                    samples = HitsoundSamples.WithNormalBank(samples, defaultBank, true);
 
                 if ((options.OverwriteUnmatched && options.CopyAdditions) || muteSliderEnd)
                     samples = HitsoundSamples.WithoutAdditions(samples);
@@ -247,12 +231,12 @@ namespace osu.Game.Screens.Edit.Hitsounding
 
         private static void applyUnmatched(HitsoundBody body, IReadOnlyList<HitsoundColumnState> source, HitsoundCopyOptions options, HitsoundCopyResult result)
         {
-            string? activeBank = getActiveBank(source, body.StartTime, options.Leniency);
+            string? defaultBank = getDefaultBank(source, options);
 
-            if (activeBank == null)
+            if (defaultBank == null)
                 return;
 
-            var samples = HitsoundSamples.WithNormalBank(body.Samples, activeBank, true);
+            var samples = HitsoundSamples.WithNormalBank(body.Samples, defaultBank, true);
 
             if (HitsoundSamples.AreEquivalent(samples, body.Samples))
                 return;
@@ -377,10 +361,15 @@ namespace osu.Game.Screens.Edit.Hitsounding
 
         /// <summary>
         /// Whether to remove the additions of hitsounds which have no counterpart in the source.
-        /// This also gives unmatched slider nodes and bodies the hitnormal bank which is active in the source at their time,
+        /// This also gives unmatched slider nodes and bodies the default hitnormal bank (see <see cref="DefaultNormalBank"/>),
         /// which is otherwise only done for sliders of which another part has a counterpart.
         /// </summary>
         public bool OverwriteUnmatched { get; init; } = true;
+
+        /// <summary>
+        /// The hitnormal bank which unmatched slider nodes and bodies get, or <c>null</c> to use the bank which most hitsounds of the source use.
+        /// </summary>
+        public string? DefaultNormalBank { get; init; }
 
         /// <summary>
         /// Whether to mute slider ends which have no counterpart in the source.

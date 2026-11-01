@@ -28,12 +28,6 @@ namespace osu.Game.Screens.Edit.Hitsounding
     /// </remarks>
     public partial class HitsoundDifficultyAutoApplier : Component
     {
-        private static readonly HitsoundCopyOptions options = new HitsoundCopyOptions
-        {
-            // hit objects without a hitsound at their time keep what they were placed with (see apply).
-            OverwriteUnmatched = false,
-        };
-
         [Resolved]
         private EditorBeatmap editorBeatmap { get; set; } = null!;
 
@@ -200,9 +194,16 @@ namespace osu.Game.Screens.Edit.Hitsounding
 
             var map = HitsoundMap.Create(hitObject.Yield(), editorBeatmap.BeatmapInfo.Ruleset.OnlineID);
 
+            var options = new HitsoundCopyOptions
+            {
+                // hit objects without a hitsound at their time keep what they were placed with, unless removeUnmatched.
+                OverwriteUnmatched = removeUnmatched,
+                DefaultNormalBank = HitsoundPreferences.GetDefaultNormalBank(config, editorBeatmap.BeatmapInfo.BeatmapSet),
+            };
+
             bool hasMatch = map.Columns.Any(c => source.Any(s => Math.Abs(s.Time - c.Time) <= options.Leniency));
 
-            var result = HitsoundCopier.Copy(source, sourceBodies, map, removeUnmatched ? new HitsoundCopyOptions { OverwriteUnmatched = true } : options);
+            var result = HitsoundCopier.Copy(source, sourceBodies, map, options);
 
             if (hasMatch)
                 matched.Add(hitObject);

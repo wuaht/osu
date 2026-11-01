@@ -948,6 +948,9 @@ namespace osu.Game.Screens.Edit.Hitsounding
             private HitsoundScreen screen { get; set; } = null!;
 
             [Resolved]
+            private HitsoundEditor hitsoundEditor { get; set; } = null!;
+
+            [Resolved]
             private OsuConfigManager config { get; set; } = null!;
 
             private readonly List<(BeatmapInfo difficulty, BindableBool selected)> difficulties = new List<(BeatmapInfo, BindableBool)>();
@@ -1069,6 +1072,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
                 CopySliderBodies = copySliderBodies.Value,
                 OverwriteUnmatched = overwriteUnmatched.Value,
                 MuteUnmatchedSliderEnds = muteUnmatchedSliderEnds.Value,
+                DefaultNormalBank = hitsoundEditor.DefaultNormalBank.Value,
             };
         }
 
