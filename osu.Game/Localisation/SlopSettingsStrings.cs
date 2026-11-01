@@ -70,6 +70,11 @@ namespace osu.Game.Localisation
         public static LocalisableString GlassHitCircles => new TranslatableString(getKey(@"glass_hit_circles"), @"Glass hit circles");
 
         /// <summary>
+        /// "Frosted hit circles"
+        /// </summary>
+        public static LocalisableString FrostedHitCircles => new TranslatableString(getKey(@"frosted_hit_circles"), @"Frosted hit circles");
+
+        /// <summary>
         /// "Hit circles which are translucent with glass sliders show the content behind them like slider bodies. Has no effect on opaque hit circles."
         /// </summary>
         public static LocalisableString GlassHitCirclesDescription => new TranslatableString(getKey(@"glass_hit_circles_description"),

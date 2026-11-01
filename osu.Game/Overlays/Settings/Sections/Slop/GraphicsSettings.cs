@@ -25,7 +25,7 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
         [BackgroundDependencyLoader]
         private void load(OsuConfigManager config)
         {
-            SettingsItemV2 frostiness, frostBlur, alwaysColoured, hitCircles;
+            SettingsItemV2 frostiness, frostBlur, alwaysColoured, frostedHitCircles, glassHitCircles;
 
             Children = new Drawable[]
             {
@@ -57,7 +57,14 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                     HintText = SlopSettingsStrings.GlassSlidersAlwaysColouredDescription,
                     Current = config.GetBindable<bool>(OsuSetting.SlopFrostedSlidersAlwaysColoured),
                 }),
-                hitCircles = new SettingsItemV2(new FormCheckBox
+                // the same setting under the name of the selected glass style, as captions can't change after construction.
+                frostedHitCircles = new SettingsItemV2(new FormCheckBox
+                {
+                    Caption = SlopSettingsStrings.FrostedHitCircles,
+                    HintText = SlopSettingsStrings.GlassHitCirclesDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopFrostedHitCircles),
+                }),
+                glassHitCircles = new SettingsItemV2(new FormCheckBox
                 {
                     Caption = SlopSettingsStrings.GlassHitCircles,
                     HintText = SlopSettingsStrings.GlassHitCirclesDescription,
@@ -97,8 +104,9 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
             // the settings of frosted glass only apply to it, the others to any glass style.
             sliderGlassStyle.BindValueChanged(s =>
             {
-                frostiness.CanBeShown.Value = frostBlur.CanBeShown.Value = s.NewValue == GlassStyle.Frosted;
-                alwaysColoured.CanBeShown.Value = hitCircles.CanBeShown.Value = s.NewValue != GlassStyle.Standard;
+                frostiness.CanBeShown.Value = frostBlur.CanBeShown.Value = frostedHitCircles.CanBeShown.Value = s.NewValue == GlassStyle.Frosted;
+                glassHitCircles.CanBeShown.Value = s.NewValue == GlassStyle.LiquidGlass;
+                alwaysColoured.CanBeShown.Value = s.NewValue != GlassStyle.Standard;
             }, true);
         }
     }
