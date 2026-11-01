@@ -116,7 +116,7 @@ namespace osu.Game.Rulesets.Osu.Objects.Drawables
                     RelativeSizeAxes = Axes.Both,
                     Children = new[]
                     {
-                        Body = new SkinnableDrawable(new OsuSkinComponentLookup(OsuSkinComponents.SliderBody), _ => new DefaultSliderBody(), confineMode: ConfineMode.NoScaling),
+                        Body = new SkinnableDrawable(new OsuSkinComponentLookup(OsuSkinComponents.SliderBody), _ => new DefaultGlassSliderBody(), confineMode: ConfineMode.NoScaling),
                         // proxied here so that the tail is drawn under repeats/ticks - legacy skins rely on this
                         tailContainer.CreateProxy(),
                         tickContainer = new Container<DrawableSliderTick> { RelativeSizeAxes = Axes.Both },
@@ -381,10 +381,6 @@ namespace osu.Game.Rulesets.Osu.Objects.Drawables
         }
 
         public override bool ReceivePositionalInputAt(Vector2 screenSpacePos) => SliderBody?.ReceivePositionalInputAt(screenSpacePos) ?? base.ReceivePositionalInputAt(screenSpacePos);
-
-        private partial class DefaultSliderBody : PlaySliderBody
-        {
-        }
 
         #region FOR EDITOR USE ONLY, DO NOT USE FOR ANY OTHER PURPOSE
 

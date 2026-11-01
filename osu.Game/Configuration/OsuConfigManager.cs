@@ -264,10 +264,11 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopFrostedSlidersAlwaysColoured, true);
             SetDefault(OsuSetting.SlopFrostedHitCircles, true);
             SetDefault(OsuSetting.SlopLiquidGlassThickness, 1f, 0.1f, 1f, 0.01f);
-            SetDefault(OsuSetting.SlopLiquidGlassRefraction, 1f, 0f, 1f, 0.01f);
+            SetDefault(OsuSetting.SlopLiquidGlassRefraction, 0.4f, 0f, 1f, 0.01f);
             SetDefault(OsuSetting.SlopLiquidGlassChromaticAberration, 1f, 0f, 1f, 0.01f);
-            SetDefault(OsuSetting.SlopLiquidGlassTint, 0.6f, 0f, 1f, 0.01f);
-            SetDefault(OsuSetting.SlopLiquidGlassSliderBorderThickness, 0.5f, 0f, 1f, 0.01f);
+            SetDefault(OsuSetting.SlopLiquidGlassTint, 0.6f, 0f, 2f, 0.01f);
+            SetDefault(OsuSetting.SlopLiquidGlassSliderBorderThickness, 1f, 0f, 1f, 0.01f);
+            SetDefault(OsuSetting.SlopLiquidGlassSliderBodyBrightness, 0f, 0f, 1f, 0.01f);
             SetDefault(OsuSetting.SlopLiquidGlassBlur, 0.15f, 0f, 1f, 0.01f);
             SetDefault(OsuSetting.SlopLiquidGlassDarkness, 0.1f, 0f, 1f, 0.01f);
             SetDefault(OsuSetting.SlopMenuCursorStyle, MenuCursorStyle.Default);
@@ -768,7 +769,7 @@ namespace osu.Game.Configuration
         SlopLiquidGlassChromaticAberration,
 
         /// <summary>
-        /// How strongly liquid glass slider bodies and hit circles tint the content behind them with their colour, from 0 to 1.
+        /// How strongly liquid glass slider bodies and hit circles tint the content behind them with their colour, from 0 to 2.
         /// </summary>
         SlopLiquidGlassTint,
 
@@ -776,6 +777,11 @@ namespace osu.Game.Configuration
         /// The thickness of the border of liquid glass slider bodies, relative to the border of the other glass styles, from 0 to 1.
         /// </summary>
         SlopLiquidGlassSliderBorderThickness,
+
+        /// <summary>
+        /// How bright liquid glass slider bodies are, from 0 (darkened like argon slider bodies) to 1 (the combo colour as is).
+        /// </summary>
+        SlopLiquidGlassSliderBodyBrightness,
 
         /// <summary>
         /// How strongly liquid glass blurs the content behind it, from 0 to 1.

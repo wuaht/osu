@@ -1,4 +1,4 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
@@ -13,7 +13,10 @@ namespace osu.Game.Rulesets.Osu.Skinning.Legacy
 {
     public partial class LegacySliderBody : FrostedPlaySliderBody
     {
-        protected override DrawableSliderPath CreateSliderPath() => new LegacyDrawableSliderPath();
+        // kept here as well, as the path is recreated when the body is recycled.
+        private bool darkenBody = true;
+
+        protected override DrawableSliderPath CreateSliderPath() => new LegacyDrawableSliderPath { DarkenBody = darkenBody };
 
         protected override Color4 GetBorderColour(ISkinSource skin)
             => skin.GetConfig<OsuSkinColour, Color4>(OsuSkinColour.SliderBorder)?.Value ?? Color4.White;
@@ -22,6 +25,10 @@ namespace osu.Game.Rulesets.Osu.Skinning.Legacy
         {
             // glass slider bodies may always use the combo colour, regardless of the skin's slider track colour.
             Color4? trackOverride = IsGlass && AlwaysColoured.Value ? null : skin.GetConfig<OsuSkinColour, Color4>(OsuSkinColour.SliderTrackOverride)?.Value;
+
+            // like argon, a custom track colour is shown as is under liquid glass, it would be barely distinguishable from black if it was darkened like the combo colour.
+            darkenBody = trackOverride == null;
+            ((LegacyDrawableSliderPath)Path).DarkenBody = darkenBody;
 
             // legacy skins use a constant value for slider track alpha, regardless of the source colour.
             return (trackOverride ?? hitObjectAccentColour).Opacity(getBodyAlpha());
@@ -55,7 +62,8 @@ namespace osu.Game.Rulesets.Osu.Skinning.Legacy
             // the border starts right after the shadow.
             protected override float BorderStart => shadow_portion;
 
-            protected override float BorderEnd => shadow_portion + (default_border_portion - shadow_portion) * BorderScale;
+            // under liquid glass, the border is as thick as the border of argon slider bodies.
+            protected override float BorderEnd => shadow_portion + (IsLiquidGlass ? ARGON_BORDER_PORTION : default_border_portion - shadow_portion) * BorderScale;
 
             public LegacyDrawableSliderPath()
             {
@@ -82,6 +90,10 @@ namespace osu.Game.Rulesets.Osu.Skinning.Legacy
 
                 if (position <= BorderEnd)
                     return GlassBorderColour;
+
+                // liquid glass bodies are a flat dark fill like argon, rather than the legacy gradient.
+                if (IsLiquidGlass)
+                    return ArgonBodyColour;
 
                 return LegacyUtils.InterpolateNonLinear(position, outerColour, innerColour, BorderEnd, 1);
             }

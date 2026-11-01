@@ -52,8 +52,6 @@ namespace osu.Game.Rulesets.Osu.Skinning.Argon
                 FrostedTintStrength = 0.6f;
             }
 
-            public bool DarkenBody { get; set; } = true;
-
             protected override float BorderEnd => CalculatedBorderPortion * BorderScale;
 
             protected override Color4 ColourAt(float position)
@@ -61,7 +59,7 @@ namespace osu.Game.Rulesets.Osu.Skinning.Argon
                 if (BorderEnd != 0f && position <= BorderEnd)
                     return GlassBorderColour;
 
-                return DarkenBody ? AccentColour.Darken(4) : AccentColour;
+                return ArgonBodyColour;
             }
         }
     }

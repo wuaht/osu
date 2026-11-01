@@ -1,6 +1,7 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Extensions.Color4Extensions;
@@ -49,6 +50,10 @@ namespace osu.Game.Rulesets.Osu.Skinning.Argon
 
         private Bindable<bool> configHitLighting = null!;
 
+        private readonly bool withOuterFill;
+        private readonly Drawable[] fillLayers;
+        private readonly Drawable[] overlayLayers;
+
         private static readonly Vector2 circle_size = OsuHitObject.OBJECT_DIMENSIONS;
 
         [Resolved]
@@ -56,12 +61,14 @@ namespace osu.Game.Rulesets.Osu.Skinning.Argon
 
         public ArgonMainCirclePiece(bool withOuterFill)
         {
+            this.withOuterFill = withOuterFill;
+
             Size = circle_size;
 
             Anchor = Anchor.Centre;
             Origin = Anchor.Centre;
 
-            InternalChildren = new Drawable[]
+            fillLayers = new Drawable[]
             {
                 outerFill = new Circle // renders dark fill
                 {
@@ -89,6 +96,10 @@ namespace osu.Game.Rulesets.Osu.Skinning.Argon
                     Anchor = Anchor.Centre,
                     Origin = Anchor.Centre,
                 },
+            };
+
+            overlayLayers = new Drawable[]
+            {
                 kiaiContainer = new CircularContainer
                 {
                     Masking = true,
@@ -123,6 +134,27 @@ namespace osu.Game.Rulesets.Osu.Skinning.Argon
 
             configHitLighting = config.GetBindable<bool>(OsuSetting.HitLighting);
             config.BindWith(OsuSetting.SlopShowComboNumbers, showComboNumbers);
+
+            Drawable[] fills = fillLayers;
+
+            // With glass sliders, circles are made translucent to match the slider bodies (see LegacyMainCirclePiece).
+            // The overlapping fill layers are flattened first, so they don't show through each other.
+            if (config.Get<GlassStyle>(OsuSetting.SlopSliderGlassStyle) != GlassStyle.Standard)
+            {
+                fills = new Drawable[]
+                {
+                    new BufferedContainer
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Anchor = Anchor.Centre,
+                        Origin = Anchor.Centre,
+                        Alpha = withOuterFill ? 0.75f : 0.5f,
+                        Children = fillLayers,
+                    }
+                };
+            }
+
+            InternalChildren = fills.Concat(overlayLayers).ToArray();
         }
 
         protected override void LoadComplete()

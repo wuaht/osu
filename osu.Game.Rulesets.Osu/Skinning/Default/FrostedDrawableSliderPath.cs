@@ -1,10 +1,12 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Extensions.Color4Extensions;
 using osu.Game.Configuration;
+using osu.Game.Rulesets.Osu.Objects;
+using osu.Game.Rulesets.Osu.Skinning.Argon;
 using osuTK;
 using osuTK.Graphics;
 
@@ -36,6 +38,11 @@ namespace osu.Game.Rulesets.Osu.Skinning.Default
         private LiquidGlassConfig? liquidGlass;
 
         /// <summary>
+        /// The width of the border of argon slider bodies, relative to the radius of a slider path matching the hit circle size.
+        /// </summary>
+        public const float ARGON_BORDER_PORTION = ArgonMainCirclePiece.GRADIENT_THICKNESS / OsuHitObject.OBJECT_RADIUS;
+
+        /// <summary>
         /// How strongly frosted bodies tint the backdrop with their colour. Liquid glass uses its tint setting instead.
         /// </summary>
         protected float FrostedTintStrength { get; init; }
@@ -55,7 +62,29 @@ namespace osu.Game.Rulesets.Osu.Skinning.Default
         /// </summary>
         protected abstract float BorderEnd { get; }
 
+        /// <summary>
+        /// Whether the path is currently displayed as liquid glass.
+        /// </summary>
+        protected bool IsLiquidGlass => glassStyle.Value == GlassStyle.LiquidGlass;
+
         private float? borderTint;
+
+        /// <summary>
+        /// How much argon slider bodies are darkened at the lowest liquid glass brightness setting, and in the other glass styles.
+        /// </summary>
+        private const float argon_body_darkening = 4;
+
+        private float bodyDarkening = argon_body_darkening;
+
+        /// <summary>
+        /// Whether the body is darkened like argon slider bodies (see <see cref="ArgonBodyColour"/>), rather than showing its colour as is.
+        /// </summary>
+        public bool DarkenBody { get; set; } = true;
+
+        /// <summary>
+        /// The flat colour of argon slider bodies. Under liquid glass, it is lightened according to the brightness setting.
+        /// </summary>
+        protected Color4 ArgonBodyColour => DarkenBody ? AccentColour.Darken(bodyDarkening) : AccentColour;
 
         /// <summary>
         /// The colour of the border. Under liquid glass, it is at most as opaque as the body and fades out along with the tint, such that its glass shows through.
@@ -117,11 +146,13 @@ namespace osu.Game.Rulesets.Osu.Skinning.Default
             float borderScale = isLiquidGlass ? liquidGlass!.SliderBorderThickness : 1;
 
             float? tint = isLiquidGlass ? liquidGlass!.TintStrength : null;
+            float darkening = isLiquidGlass ? argon_body_darkening * (1 - liquidGlass!.SliderBodyBrightness) : argon_body_darkening;
 
-            if (borderScale != BorderScale || tint != borderTint)
+            if (borderScale != BorderScale || tint != borderTint || darkening != bodyDarkening)
             {
                 BorderScale = borderScale;
                 borderTint = tint;
+                bodyDarkening = darkening;
                 InvalidateTexture();
             }
         }

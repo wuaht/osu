@@ -59,6 +59,10 @@ namespace osu.Game.Rulesets.Osu.Skinning.Default
             accentColour.BindTo(drawableObject.AccentColour);
             indexInCurrentCombo.BindTo(drawableOsuObject.IndexInCurrentComboBindable);
             gameConfig?.BindWith(OsuSetting.SlopShowComboNumbers, showComboNumbers);
+
+            // With glass sliders, circles are made translucent to match the slider bodies (see LegacyMainCirclePiece).
+            if (gameConfig?.Get<GlassStyle>(OsuSetting.SlopSliderGlassStyle) is GlassStyle style && style != GlassStyle.Standard)
+                circle.Alpha = drawableObject is DrawableSliderHead ? 0.5f : 0.75f;
         }
 
         protected override void LoadComplete()

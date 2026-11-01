@@ -21,10 +21,11 @@ namespace osu.Game.Configuration
         private const float max_blur_sigma = 20;
 
         private readonly BindableFloat thickness = new BindableFloat(1);
-        private readonly BindableFloat refraction = new BindableFloat(1);
+        private readonly BindableFloat refraction = new BindableFloat(0.4f);
         private readonly BindableFloat chromaticAberration = new BindableFloat(1);
         private readonly BindableFloat tint = new BindableFloat(0.6f);
-        private readonly BindableFloat sliderBorderThickness = new BindableFloat(0.5f);
+        private readonly BindableFloat sliderBorderThickness = new BindableFloat(1);
+        private readonly BindableFloat sliderBodyBrightness = new BindableFloat();
         private readonly BindableFloat blur = new BindableFloat(0.15f);
         private readonly BindableFloat darkness = new BindableFloat(0.1f);
 
@@ -37,6 +38,7 @@ namespace osu.Game.Configuration
             bind(OsuSetting.SlopLiquidGlassChromaticAberration, chromaticAberration);
             bind(OsuSetting.SlopLiquidGlassTint, tint);
             bind(OsuSetting.SlopLiquidGlassSliderBorderThickness, sliderBorderThickness);
+            bind(OsuSetting.SlopLiquidGlassSliderBodyBrightness, sliderBodyBrightness);
             bind(OsuSetting.SlopLiquidGlassBlur, blur);
             bind(OsuSetting.SlopLiquidGlassDarkness, darkness);
 
@@ -61,6 +63,11 @@ namespace osu.Game.Configuration
         /// The thickness of the border of slider bodies, relative to the border of the other glass styles.
         /// </summary>
         public float SliderBorderThickness => sliderBorderThickness.Value;
+
+        /// <summary>
+        /// How bright slider bodies are, from 0 (darkened like argon slider bodies) to 1 (the combo colour as is).
+        /// </summary>
+        public float SliderBodyBrightness => sliderBodyBrightness.Value;
 
         /// <summary>
         /// Creates the parameters of liquid glass.

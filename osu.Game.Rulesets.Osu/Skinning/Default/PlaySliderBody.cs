@@ -58,8 +58,8 @@ namespace osu.Game.Rulesets.Osu.Skinning.Default
 
             gameConfig?.BindWith(OsuSetting.SlopSliderBorderComboColour, borderComboColour);
 
-            AccentColourBindable.BindValueChanged(_ => updateBorderColour());
-            borderComboColour.BindValueChanged(_ => updateBorderColour(), true);
+            AccentColourBindable.BindValueChanged(_ => UpdateBorderColour());
+            borderComboColour.BindValueChanged(_ => UpdateBorderColour(), true);
 
             gameConfig?.BindWith(OsuSetting.SlopHideSliderBodies, hideSliderBodies);
             hideSliderBodies.BindValueChanged(_ => updatePathVisibility(), true);
@@ -73,7 +73,7 @@ namespace osu.Game.Rulesets.Osu.Skinning.Default
 
         private void updatePathVisibility() => Path.Alpha = hideSliderBodies.Value ? 0 : 1;
 
-        private void updateBorderColour()
+        protected void UpdateBorderColour()
         {
             // same as argon: the border takes the combo colour as is.
             BorderColour = borderComboColour.Value

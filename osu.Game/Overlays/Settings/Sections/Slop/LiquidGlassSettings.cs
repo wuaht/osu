@@ -41,6 +41,8 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                 createSlider(config, OsuSetting.SlopLiquidGlassTint, SlopSettingsStrings.LiquidGlassTint, SlopSettingsStrings.LiquidGlassTintDescription),
                 createSlider(config, OsuSetting.SlopLiquidGlassSliderBorderThickness, SlopSettingsStrings.LiquidGlassSliderBorderThickness,
                     SlopSettingsStrings.LiquidGlassSliderBorderThicknessDescription),
+                createSlider(config, OsuSetting.SlopLiquidGlassSliderBodyBrightness, SlopSettingsStrings.LiquidGlassSliderBodyBrightness,
+                    SlopSettingsStrings.LiquidGlassSliderBodyBrightnessDescription),
                 createSlider(config, OsuSetting.SlopLiquidGlassBlur, SlopSettingsStrings.LiquidGlassBlur, SlopSettingsStrings.LiquidGlassBlurDescription),
                 createSlider(config, OsuSetting.SlopLiquidGlassDarkness, SlopSettingsStrings.LiquidGlassDarkness, SlopSettingsStrings.LiquidGlassDarknessDescription),
             };
