@@ -142,6 +142,11 @@ namespace osu.Game.Screens.Edit.Timing
         private double lastClockTime = double.NaN;
 
         /// <summary>
+        /// The part of a bar scrolled during playback which hasn't been seeked yet (for smooth scrolling devices).
+        /// </summary>
+        private double playbackScrollRemainder;
+
+        /// <summary>
         /// The time under the cursor (snapped to an onset), displayed in all rows.
         /// </summary>
         private double? hoverTime;
@@ -1217,6 +1222,25 @@ namespace osu.Game.Screens.Edit.Timing
             if (viewWidth < 1 + 2 * overlap && (shiftPressed || e.ScrollDelta.Y == 0))
             {
                 setViewStart(viewStart - delta * 0.1 * viewWidth);
+                return true;
+            }
+
+            // during playback, the view follows the playback, so scrolling seeks the playback by bars instead (like scrolling the timeline).
+            if (editorClock.IsRunning && rows.Count > 0)
+            {
+                playbackScrollRemainder -= delta;
+                int bars = (int)playbackScrollRemainder;
+
+                if (bars != 0)
+                {
+                    playbackScrollRemainder -= bars;
+
+                    double time = editorClock.CurrentTime;
+                    int index = rowIndexAt(time);
+                    var target = rows[Math.Clamp(index + bars, 0, rows.Count - 1)];
+                    editorClock.SeekSmoothlyTo(target.TimeAt(Math.Clamp(rows[index].FractionAt(time), 0, 1)));
+                }
+
                 return true;
             }
 
