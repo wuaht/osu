@@ -516,6 +516,12 @@ namespace osu.Game.Localisation
         public static LocalisableString HideTimingPointPanels => new TranslatableString(getKey(@"hide_timing_point_panels"), @"Hide the timing point list and settings");
 
         /// <summary>
+        /// "Remove redundant timing points: the ones which lie on a bar line of the previous timing point with the same BPM and meter"
+        /// </summary>
+        public static LocalisableString RemoveRedundantTimingPoints => new TranslatableString(getKey(@"remove_redundant_timing_points"),
+            @"Remove redundant timing points: the ones which lie on a bar line of the previous timing point with the same BPM and meter");
+
+        /// <summary>
         /// The controls of the bar view of the timing screen, and how to time a song with a varying tempo.
         /// </summary>
         public static LocalisableString TimingGuide => new TranslatableString(getKey(@"timing_guide"), @"Every row is one bar, so the beats of all bars line up. The ends of the neighbouring bars are shown darkened at the sides.
@@ -531,7 +537,8 @@ How to time a song with a varying tempo:
 2. Play or scroll on until the onsets start drifting away from the beat lines.
 3. Drag a clear onset just before the drift onto its beat line. This places a timing point and recalculates the tempo before it.
 4. Repeat until the onsets of all bars form straight columns.
-5. Open the timing point list and settings (the button next to this one) to type in exact values or change the meter.");
+5. Open the timing point list and settings (the button on the right) to type in exact values or change the meter.
+6. Clean up with the broom button, which removes the timing points that continue the previous one unchanged.");
 
         private static string getKey(string key) => $"{prefix}:{key}";
     }

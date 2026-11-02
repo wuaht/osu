@@ -247,6 +247,70 @@ namespace osu.Game.Screens.Edit.Timing
         }
 
         /// <summary>
+        /// How far the beats may move when removing a redundant timing point (see <see cref="RemoveRedundantTimingPoints"/>), in milliseconds.
+        /// </summary>
+        private const double redundancy_tolerance = 1;
+
+        /// <summary>
+        /// Removes the timing points which the preceding timing point already continues: they lie on one of its bar lines and have the same meter,
+        /// and removing them moves no beat by more than <see cref="redundancy_tolerance"/>. The first timing point is always kept.
+        /// </summary>
+        /// <returns>The number of removed timing points.</returns>
+        public static int RemoveRedundantTimingPoints(EditorBeatmap beatmap, bool adjustHitObjects)
+        {
+            var points = beatmap.ControlPointInfo.TimingPoints.ToList();
+
+            if (points.Count < 2)
+                return 0;
+
+            double endTime = GetEndTime(beatmap);
+            int removed = 0;
+            var previous = points[0];
+
+            beatmap.BeginChange();
+
+            for (int i = 1; i < points.Count; i++)
+            {
+                var point = points[i];
+
+                if (isRedundant(previous, point, i + 1 < points.Count ? points[i + 1] : null, endTime))
+                {
+                    RemoveTimingPoint(beatmap, point, adjustHitObjects);
+                    removed++;
+                }
+                else
+                    previous = point;
+            }
+
+            beatmap.EndChange();
+            return removed;
+        }
+
+        private static bool isRedundant(TimingControlPoint previous, TimingControlPoint point, TimingControlPoint? next, double endTime)
+        {
+            if (!point.TimeSignature.Equals(previous.TimeSignature) || point.OmitFirstBarLine != previous.OmitFirstBarLine)
+                return false;
+
+            int previousBeats = CountBeats(previous.Time, point.Time, previous.BeatLength);
+
+            // a timing point between the bar lines of the preceding one starts a bar of its own, which would be lost.
+            if (previousBeats % Math.Max(1, previous.TimeSignature.Numerator) != 0)
+                return false;
+
+            // the beat length of the preceding timing point after removing this one (see RemoveTimingPoint).
+            double beatLength = next != null
+                ? (next.Time - previous.Time) / (previousBeats + CountBeats(point.Time, next.Time, point.BeatLength))
+                : previous.BeatLength;
+
+            // the beats in between move linearly, so they move the most at the timing point and at the end of its section.
+            double sectionBeats = ((next?.Time ?? Math.Max(endTime, point.Time)) - point.Time) / point.BeatLength;
+            double deviationAtPoint = previous.Time + previousBeats * beatLength - point.Time;
+            double deviationAtEnd = deviationAtPoint + sectionBeats * (beatLength - point.BeatLength);
+
+            return Math.Abs(deviationAtPoint) <= redundancy_tolerance && Math.Abs(deviationAtEnd) <= redundancy_tolerance;
+        }
+
+        /// <summary>
         /// The time at which the last hit object of the beatmap ends.
         /// </summary>
         public static double GetEndTime(EditorBeatmap beatmap)

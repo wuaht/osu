@@ -211,6 +211,14 @@ namespace osu.Game.Screens.Edit.Timing
                             Children = new Drawable[]
                             {
                                 new GuideIcon(),
+                                new IconButton
+                                {
+                                    Icon = FontAwesome.Solid.Broom,
+                                    Size = new Vector2(26),
+                                    IconScale = new Vector2(0.8f),
+                                    TooltipText = SlopEditorStrings.RemoveRedundantTimingPoints,
+                                    Action = () => VariableTiming.RemoveRedundantTimingPoints(beatmap, adjustHitObjects.Value),
+                                },
                                 panelsButton = new IconButton
                                 {
                                     Icon = FontAwesome.Solid.SlidersH,
@@ -1043,14 +1051,24 @@ namespace osu.Game.Screens.Edit.Timing
             {
                 for (int i = row; i < nextRow; i++)
                     nextBeats += pressedRows[i].Beats;
-
-                if (beat >= nextBeats)
-                    return;
             }
+
+            // the start of the bar of the previous timing point is taken, so the timing point is placed at the beat itself (like in VariableTiming.CalculatePlacement).
+            int anchorBeat = beat;
+
+            if (row == previousRow)
+            {
+                previousBeats += beat;
+                nextBeats -= beat;
+                anchorBeat = 0;
+            }
+
+            if (activeMove.Next != null && anchorBeat >= nextBeats)
+                return;
 
             moveTarget = (row, beat);
 
-            activeMove.SetBeats(previousBeats, beat, nextBeats);
+            activeMove.SetBeats(previousBeats, anchorBeat, nextBeats);
             activeMove.MoveTo(moveAnchorTime);
             selectMovedGroup();
         }
@@ -1080,7 +1098,7 @@ namespace osu.Game.Screens.Edit.Timing
                 return null;
 
             // the moved timing point stays between its neighbours.
-            if (row <= previousRow || row >= nextRow)
+            if (row < previousRow || (row == previousRow && beat == 0) || row >= nextRow)
                 return null;
 
             return (row, beat);
