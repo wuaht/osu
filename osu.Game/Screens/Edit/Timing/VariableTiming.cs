@@ -247,16 +247,11 @@ namespace osu.Game.Screens.Edit.Timing
         }
 
         /// <summary>
-        /// How far the beats may move when removing a redundant timing point (see <see cref="RemoveRedundantTimingPoints"/>), in milliseconds.
-        /// </summary>
-        private const double redundancy_tolerance = 1;
-
-        /// <summary>
         /// Removes the timing points which the preceding timing point already continues: they lie on one of its bar lines and have the same meter,
-        /// and removing them moves no beat by more than <see cref="redundancy_tolerance"/>. The first timing point is always kept.
+        /// and removing them moves no beat by more than <paramref name="leeway"/> milliseconds. The first timing point is always kept.
         /// </summary>
         /// <returns>The number of removed timing points.</returns>
-        public static int RemoveRedundantTimingPoints(EditorBeatmap beatmap, bool adjustHitObjects)
+        public static int RemoveRedundantTimingPoints(EditorBeatmap beatmap, bool adjustHitObjects, double leeway)
         {
             var points = beatmap.ControlPointInfo.TimingPoints.ToList();
 
@@ -273,7 +268,7 @@ namespace osu.Game.Screens.Edit.Timing
             {
                 var point = points[i];
 
-                if (isRedundant(previous, point, i + 1 < points.Count ? points[i + 1] : null, endTime))
+                if (isRedundant(previous, point, i + 1 < points.Count ? points[i + 1] : null, endTime, leeway))
                 {
                     RemoveTimingPoint(beatmap, point, adjustHitObjects);
                     removed++;
@@ -286,7 +281,7 @@ namespace osu.Game.Screens.Edit.Timing
             return removed;
         }
 
-        private static bool isRedundant(TimingControlPoint previous, TimingControlPoint point, TimingControlPoint? next, double endTime)
+        private static bool isRedundant(TimingControlPoint previous, TimingControlPoint point, TimingControlPoint? next, double endTime, double leeway)
         {
             if (!point.TimeSignature.Equals(previous.TimeSignature) || point.OmitFirstBarLine != previous.OmitFirstBarLine)
                 return false;
@@ -307,7 +302,7 @@ namespace osu.Game.Screens.Edit.Timing
             double deviationAtPoint = previous.Time + previousBeats * beatLength - point.Time;
             double deviationAtEnd = deviationAtPoint + sectionBeats * (beatLength - point.BeatLength);
 
-            return Math.Abs(deviationAtPoint) <= redundancy_tolerance && Math.Abs(deviationAtEnd) <= redundancy_tolerance;
+            return Math.Abs(deviationAtPoint) <= leeway && Math.Abs(deviationAtEnd) <= leeway;
         }
 
         /// <summary>

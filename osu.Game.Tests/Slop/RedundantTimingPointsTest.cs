@@ -21,7 +21,7 @@ namespace osu.Game.Tests.Slop
         {
             var beatmap = createBeatmap((0, 500), (4000, 500), (8000, 500));
 
-            Assert.That(VariableTiming.RemoveRedundantTimingPoints(beatmap, false), Is.EqualTo(2));
+            Assert.That(VariableTiming.RemoveRedundantTimingPoints(beatmap, false, 1), Is.EqualTo(2));
             Assert.That(beatmap.ControlPointInfo.TimingPoints.Select(p => p.Time), Is.EqualTo(new double[] { 0 }));
         }
 
@@ -31,7 +31,7 @@ namespace osu.Game.Tests.Slop
             // 6 beats after the first timing point, so it starts a bar which the first one doesn't.
             var beatmap = createBeatmap((0, 500), (3000, 500));
 
-            Assert.That(VariableTiming.RemoveRedundantTimingPoints(beatmap, false), Is.Zero);
+            Assert.That(VariableTiming.RemoveRedundantTimingPoints(beatmap, false, 1), Is.Zero);
         }
 
         [Test]
@@ -39,7 +39,7 @@ namespace osu.Game.Tests.Slop
         {
             var beatmap = createBeatmap((0, 500), (4000, 480), (8000, 500));
 
-            Assert.That(VariableTiming.RemoveRedundantTimingPoints(beatmap, false), Is.Zero);
+            Assert.That(VariableTiming.RemoveRedundantTimingPoints(beatmap, false, 1), Is.Zero);
         }
 
         [Test]
@@ -48,7 +48,7 @@ namespace osu.Game.Tests.Slop
             var beatmap = createBeatmap((0, 500), (4000, 500));
             beatmap.ControlPointInfo.TimingPoints[1].TimeSignature = TimeSignature.SimpleTriple;
 
-            Assert.That(VariableTiming.RemoveRedundantTimingPoints(beatmap, false), Is.Zero);
+            Assert.That(VariableTiming.RemoveRedundantTimingPoints(beatmap, false, 1), Is.Zero);
         }
 
         private static EditorBeatmap createBeatmap(params (double time, double beatLength)[] timingPoints)

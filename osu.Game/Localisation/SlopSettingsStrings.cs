@@ -440,6 +440,22 @@ namespace osu.Game.Localisation
             @"How the waveform is displayed in the timeline at the top of the editor.");
 
         /// <summary>
+        /// "Redundant timing point leeway"
+        /// </summary>
+        public static LocalisableString RedundantTimingPointLeeway => new TranslatableString(getKey(@"redundant_timing_point_leeway"), @"Redundant timing point leeway");
+
+        /// <summary>
+        /// "How many milliseconds the beats may move when the broom button in the bar view of the timing screen removes redundant timing points."
+        /// </summary>
+        public static LocalisableString RedundantTimingPointLeewayDescription => new TranslatableString(getKey(@"redundant_timing_point_leeway_description"),
+            @"How many milliseconds the beats may move when the broom button in the bar view of the timing screen removes redundant timing points.");
+
+        /// <summary>
+        /// "{0} ms"
+        /// </summary>
+        public static LocalisableString RedundantTimingPointLeewayMilliseconds(double milliseconds) => new TranslatableString(getKey(@"redundant_timing_point_leeway_milliseconds"), @"{0} ms", milliseconds);
+
+        /// <summary>
         /// "Default"
         /// </summary>
         public static LocalisableString WaveformStyleDefault => new TranslatableString(getKey(@"waveform_style_default"), @"Default");

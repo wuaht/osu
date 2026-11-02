@@ -94,6 +94,8 @@ namespace osu.Game.Screens.Edit.Timing
         private IBindable<WorkingBeatmap> workingBeatmap { get; set; } = null!;
 
         private Bindable<bool> adjustHitObjects = null!;
+
+        private Bindable<double> redundantLeeway = null!;
         private Bindable<EditorWaveformStyle> waveformStyle = null!;
         private Bindable<float> waveformOpacity = null!;
 
@@ -159,6 +161,7 @@ namespace osu.Game.Screens.Edit.Timing
         private void load(OsuConfigManager config, OverlayColourProvider colourProvider)
         {
             adjustHitObjects = config.GetBindable<bool>(OsuSetting.EditorAdjustExistingObjectsOnTimingChanges);
+            redundantLeeway = config.GetBindable<double>(OsuSetting.SlopEditorRedundantTimingPointLeeway);
             waveformStyle = config.GetBindable<EditorWaveformStyle>(OsuSetting.SlopEditorWaveformStyle);
             waveformOpacity = config.GetBindable<float>(OsuSetting.EditorWaveformOpacity);
 
@@ -217,7 +220,7 @@ namespace osu.Game.Screens.Edit.Timing
                                     Size = new Vector2(26),
                                     IconScale = new Vector2(0.8f),
                                     TooltipText = SlopEditorStrings.RemoveRedundantTimingPoints,
-                                    Action = () => VariableTiming.RemoveRedundantTimingPoints(beatmap, adjustHitObjects.Value),
+                                    Action = () => VariableTiming.RemoveRedundantTimingPoints(beatmap, adjustHitObjects.Value, redundantLeeway.Value),
                                 },
                                 panelsButton = new IconButton
                                 {
