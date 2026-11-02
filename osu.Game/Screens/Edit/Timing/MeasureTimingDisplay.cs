@@ -392,6 +392,20 @@ namespace osu.Game.Screens.Edit.Timing
         }
 
         /// <summary>
+        /// The row whose number and BPM are displayed at a position, if any.
+        /// </summary>
+        private MeasureRow? gutterRowAt(Vector2 screenSpacePosition)
+        {
+            Vector2 local = rowContainer.ToLocalSpace(screenSpacePosition);
+            int index = (int)Math.Floor(local.Y / rowHeight + scroll);
+
+            if (index < 0 || index >= rows.Count || local.Y < 0 || local.Y > rowContainer.DrawHeight || local.X < 0 || local.X >= gutter_width)
+                return null;
+
+            return rows[index];
+        }
+
+        /// <summary>
         /// Finds the timing point displayed closest to a position in a row, if within <see cref="marker_grab_distance"/>.
         /// </summary>
         private TimingControlPoint? findPointAt(int index, double fraction)
@@ -660,8 +674,8 @@ namespace osu.Game.Screens.Edit.Timing
                 var marker = display.GetMarker(used++);
 
                 marker.X = (float)fraction;
-                marker.Width = 2 * pixelWidth;
-                marker.Colour = isSelected ? colours.RedLighter : colours.Red1;
+                marker.Width = (isSelected ? 4 : 2) * pixelWidth;
+                marker.Colour = isSelected ? colours.Yellow : colours.Red1;
             }
 
             display.HideMarkersFrom(used);
@@ -978,6 +992,12 @@ namespace osu.Game.Screens.Edit.Timing
 
         protected override bool OnMouseDown(MouseDownEvent e)
         {
+            if (activeMove == null && e.Button == MouseButton.Left && gutterRowAt(e.ScreenSpaceMouseDownPosition) is MeasureRow gutterRow && gutterRow.Point != null)
+            {
+                selectedGroup.Value = beatmap.ControlPointInfo.GroupAt(gutterRow.Point.Time);
+                return true;
+            }
+
             if (activeMove != null || positionAt(e.ScreenSpaceMouseDownPosition) is not var (index, fraction))
                 return false;
 
