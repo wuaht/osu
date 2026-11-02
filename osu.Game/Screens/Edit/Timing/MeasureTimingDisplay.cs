@@ -72,11 +72,6 @@ namespace osu.Game.Screens.Edit.Timing
         /// </summary>
         private const double offset_drag_milliseconds_per_pixel = 0.2;
 
-        /// <summary>
-        /// How long a reason for not placing a timing point is displayed, in milliseconds.
-        /// </summary>
-        private const double rejection_display_duration = 4000;
-
         [Resolved]
         private EditorBeatmap beatmap { get; set; } = null!;
 
@@ -144,9 +139,6 @@ namespace osu.Game.Screens.Edit.Timing
         /// </summary>
         private double? hoverTime;
 
-        private string? rejection;
-        private double rejectionTime;
-
         /// <summary>
         /// The rows at the time the left mouse button was pressed. Drags target the beats of these rows, such that the grid doesn't shift under the cursor while the BPMs change.
         /// </summary>
@@ -154,13 +146,11 @@ namespace osu.Game.Screens.Edit.Timing
 
         private TimingControlPoint? pressedPoint;
         private double pressedTime;
-        private bool pressedSnapped;
         private bool dragStarted;
 
         private VariableTiming.TimingPointMove? activeMove;
         private bool isOffsetDrag;
         private double moveAnchorTime;
-        private bool moveSnapped;
         private int previousRow;
         private int nextRow;
         private (int row, int beat)? moveTarget;
@@ -521,17 +511,7 @@ namespace osu.Game.Screens.Edit.Timing
                 }
             }
 
-            if (rejection != null && Time.Current - rejectionTime < rejection_display_duration)
-            {
-                statusText.Text = rejection;
-                statusText.Colour = colours.Red1;
-            }
-            else
-            {
-                rejection = null;
-                statusText.Text = status ?? string.Empty;
-                statusText.Colour = Color4.White;
-            }
+            statusText.Text = status ?? string.Empty;
         }
 
         private void createRowDisplay()
@@ -904,16 +884,14 @@ namespace osu.Game.Screens.Edit.Timing
 
         #region Placement
 
-        private Func<double, double, double?>? estimateBeatLength => analyser?.Envelope != null ? analyser.Envelope.EstimateBeatLength : null;
-
         /// <summary>
-        /// Snaps a time to the closest onset in the audio, unless Shift is held.
+        /// Snaps a time to the closest onset in the audio while the onsets waveform is displayed, unless Shift is held.
         /// </summary>
         private (double time, bool snapped) snapToOnset(double time, MeasureRow row)
         {
             var envelope = analyser?.Envelope;
 
-            if (envelope == null || shiftPressed)
+            if (envelope == null || shiftPressed || waveformStyle.Value != EditorWaveformStyle.Onsets)
                 return (Math.Round(time), false);
 
             double radius = Math.Clamp(VariableTimingOverlay.ONSET_SNAP_DISTANCE * millisecondsPerPixel(row),
@@ -924,55 +902,13 @@ namespace osu.Game.Screens.Edit.Timing
         }
 
         /// <summary>
-        /// Fits a beat which was snapped to an onset to the onsets of all beats since <paramref name="start"/> (see <see cref="OnsetEnvelope.FitAnchor"/>).
+        /// Places a timing point such that the audio at <paramref name="time"/> lies on the closest beat of the current timing (like Tempora).
         /// </summary>
-        private double fitToBeats(double anchorTime, double? start, int beats, bool snapped)
+        private void place(double time)
         {
-            var envelope = analyser?.Envelope;
-
-            if (envelope == null || !snapped || start == null)
-                return anchorTime;
-
-            return envelope.FitAnchor(start.Value, beats, anchorTime, out _);
-        }
-
-        private VariableTiming.PlacementPreview calculatePlacement(double time, bool snapped)
-        {
-            var preview = VariableTiming.CalculatePlacement(beatmap.ControlPointInfo, time, estimateBeatLength);
-
-            double fitted = fitToBeats(time, preview.Previous?.Time, preview.PreviousBeats + preview.AnchorBeat, snapped);
-
-            if (fitted != time)
-                preview = VariableTiming.CalculatePlacement(beatmap.ControlPointInfo, fitted, estimateBeatLength);
-
-            return preview;
-        }
-
-        /// <summary>
-        /// Whether a placement can be made, showing why not otherwise.
-        /// </summary>
-        private bool canPlace(VariableTiming.PlacementPreview preview)
-        {
-            if (altPressed || VariableTiming.FindLargeTempoChange(beatmap.ControlPointInfo, preview) is not var (oldBeatLength, newBeatLength))
-                return true;
-
-            double percentage = (oldBeatLength / newBeatLength - 1) * 100;
-
-            rejection = $"Not placed: changes {bpm(oldBeatLength)} to {bpm(newBeatLength)} ({percentage:+0;-0}%), probably not on the right beat. Hold Alt to place anyway";
-            rejectionTime = Time.Current;
-            return false;
-        }
-
-        private void place(double time, bool snapped)
-        {
-            var preview = calculatePlacement(time, snapped);
-
-            if (!canPlace(preview))
-                return;
-
             beatmap.BeginChange();
 
-            var move = VariableTiming.TimingPointMove.Place(beatmap, preview.AnchorTime, adjustHitObjects.Value, estimateBeatLength);
+            var move = VariableTiming.TimingPointMove.Place(beatmap, time, adjustHitObjects.Value);
 
             beatmap.UpdateAllHitObjects();
             beatmap.EndChange();
@@ -1013,7 +949,7 @@ namespace osu.Game.Screens.Edit.Timing
                 case MouseButton.Left:
                     pressedRows = new List<MeasureRow>(rows);
                     pressedPoint = point;
-                    (pressedTime, pressedSnapped) = snapToOnset(row.TimeAt(fraction), row);
+                    pressedTime = snapToOnset(row.TimeAt(fraction), row).time;
                     dragStarted = false;
                     return true;
 
@@ -1060,21 +996,14 @@ namespace osu.Game.Screens.Edit.Timing
                 beatmap.BeginChange();
                 activeMove = VariableTiming.TimingPointMove.Begin(beatmap, pressedPoint, adjustHitObjects.Value);
                 moveAnchorTime = pressedPoint.Time;
-                moveSnapped = false;
             }
             else
             {
-                var preview = calculatePlacement(pressedTime, pressedSnapped);
-
-                if (!canPlace(preview))
-                    return false;
-
                 beatmap.BeginChange();
-                activeMove = VariableTiming.TimingPointMove.Place(beatmap, preview.AnchorTime, adjustHitObjects.Value, estimateBeatLength);
+                activeMove = VariableTiming.TimingPointMove.Place(beatmap, pressedTime, adjustHitObjects.Value);
 
                 // the audio under the cursor stays where it is, and is moved onto the beat of the grid under the cursor.
-                moveAnchorTime = activeMove.AnchorBeat == 0 ? activeMove.Point.Time : preview.AnchorTime;
-                moveSnapped = pressedSnapped && activeMove.AnchorBeat > 0;
+                moveAnchorTime = activeMove.AnchorBeat == 0 ? activeMove.Point.Time : pressedTime;
             }
 
             isOffsetDrag = false;
@@ -1122,7 +1051,7 @@ namespace osu.Game.Screens.Edit.Timing
             moveTarget = (row, beat);
 
             activeMove.SetBeats(previousBeats, beat, nextBeats);
-            activeMove.MoveTo(fitToBeats(moveAnchorTime, activeMove.Previous?.Time, previousBeats + beat, moveSnapped));
+            activeMove.MoveTo(moveAnchorTime);
             selectMovedGroup();
         }
 
@@ -1170,7 +1099,7 @@ namespace osu.Game.Screens.Edit.Timing
                     if (pressedPoint != null)
                         selectedGroup.Value = beatmap.ControlPointInfo.GroupAt(pressedPoint.Time);
                     else
-                        place(pressedTime, pressedSnapped);
+                        place(pressedTime);
                 }
 
                 pressedRows = null;
