@@ -44,7 +44,7 @@ namespace osu.Game.Screens.Edit.Timing
 
         protected override void Update()
         {
-            Divisor = computeDivisor();
+            Divisor = ComputeDivisor();
 
             base.Update();
         }
@@ -52,7 +52,7 @@ namespace osu.Game.Screens.Edit.Timing
         /// <summary>
         /// While Ctrl is held, the metronome also ticks on the halves (or thirds, for triplet beat snap divisors) of beats.
         /// </summary>
-        private int computeDivisor()
+        public int ComputeDivisor()
         {
             bool spedUp = GetContainingInputManager()?.CurrentState.Keyboard.ControlPressed == true;
 
@@ -78,13 +78,24 @@ namespace osu.Game.Screens.Edit.Timing
         {
             base.OnNewBeat(beatIndex, timingPoint, effectPoint, amplitudes);
 
-            if (!IsBeatSyncedWithTrack || !EnableClicking)
+            if (!IsBeatSyncedWithTrack)
+                return;
+
+            PlayTick(beatIndex % timingPoint.TimeSignature.Numerator == 0);
+        }
+
+        /// <summary>
+        /// Plays a tick, unless clicking is disabled or muted by holding Alt.
+        /// </summary>
+        public void PlayTick(bool downbeat)
+        {
+            if (!EnableClicking)
                 return;
 
             bool altPressed = GetContainingInputManager()?.CurrentState.Keyboard.AltPressed == true;
 
             if (!altPressed)
-                SamplePlaybackHelper.PlayWithRandomPitch(beatIndex % timingPoint.TimeSignature.Numerator == 0 ? sampleTickDownbeat : sampleTick, 0.02f);
+                SamplePlaybackHelper.PlayWithRandomPitch(downbeat ? sampleTickDownbeat : sampleTick, 0.02f);
 
             Ticked?.Invoke();
         }
