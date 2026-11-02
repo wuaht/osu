@@ -262,26 +262,34 @@ namespace osu.Game.Screens.Edit.Timing
             int removed = 0;
             var previous = points[0];
 
+            // where the timing points removed after the previous one lay originally, and on which of its beats they are now.
+            var removedPoints = new List<(double time, int beats)>();
+
             beatmap.BeginChange();
 
             for (int i = 1; i < points.Count; i++)
             {
                 var point = points[i];
+                int beats = CountBeats(previous.Time, point.Time, previous.BeatLength);
 
-                if (isRedundant(previous, point, i + 1 < points.Count ? points[i + 1] : null, endTime, leeway))
+                if (isRedundant(previous, point, i + 1 < points.Count ? points[i + 1] : null, endTime, leeway, removedPoints))
                 {
+                    removedPoints.Add((point.Time, beats));
                     RemoveTimingPoint(beatmap, point, adjustHitObjects);
                     removed++;
                 }
                 else
+                {
                     previous = point;
+                    removedPoints.Clear();
+                }
             }
 
             beatmap.EndChange();
             return removed;
         }
 
-        private static bool isRedundant(TimingControlPoint previous, TimingControlPoint point, TimingControlPoint? next, double endTime, double leeway)
+        private static bool isRedundant(TimingControlPoint previous, TimingControlPoint point, TimingControlPoint? next, double endTime, double leeway, IEnumerable<(double time, int beats)> removedPoints)
         {
             if (!point.TimeSignature.Equals(previous.TimeSignature) || point.OmitFirstBarLine != previous.OmitFirstBarLine)
                 return false;
@@ -301,6 +309,10 @@ namespace osu.Game.Screens.Edit.Timing
             double sectionBeats = ((next?.Time ?? Math.Max(endTime, point.Time)) - point.Time) / point.BeatLength;
             double deviationAtPoint = previous.Time + previousBeats * beatLength - point.Time;
             double deviationAtEnd = deviationAtPoint + sectionBeats * (beatLength - point.BeatLength);
+
+            // the new beat length also moves the beats where earlier removed timing points lay, which must stay within the leeway of their original timing.
+            if (removedPoints.Any(p => Math.Abs(previous.Time + p.beats * beatLength - p.time) > leeway))
+                return false;
 
             return Math.Abs(deviationAtPoint) <= leeway && Math.Abs(deviationAtEnd) <= leeway;
         }
