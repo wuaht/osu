@@ -527,7 +527,7 @@ namespace osu.Game.Localisation
         public static LocalisableString TimingGuide => new TranslatableString(getKey(@"timing_guide"), @"Every row is one bar, so the beats of all bars line up. The ends of the neighbouring bars are shown darkened at the sides.
 Click: place a timing point such that the audio under the cursor lies on the closest beat. The BPM of the previous timing point is recalculated to end on a whole beat.
 Drag: grab the audio under the cursor and drop it onto the beat line it belongs to. The BPMs of the timing points around it are recalculated.
-Drag a timing point: move it onto another beat. Ctrl + drag it to only change its offset.
+Drag a timing point: move it onto another beat, or onto a division of a beat with the beat divisor. Ctrl + drag it to only change its offset.
 Ctrl + scroll: nudge the timing point of the bar under the cursor by 1 ms (Ctrl + Alt: 10 ms).
 Hold right click: listen to the audio at the cursor. Click a timing point or the number of its bar to select it in the list. Ctrl + right click: remove a timing point, or jump the playback there. Scroll to move through the bars. Ctrl + Shift + scroll: zoom into the bars, Shift + scroll: move sideways while zoomed in.
 With the onsets waveform style, clicks and drags snap to the exact millisecond of the onset under the cursor. Hold Shift to not snap.

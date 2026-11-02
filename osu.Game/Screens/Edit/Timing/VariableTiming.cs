@@ -22,6 +22,12 @@ namespace osu.Game.Screens.Edit.Timing
         public static int CountBeats(double from, double to, double beatLength) => Math.Max(1, (int)Math.Round((to - from) / beatLength));
 
         /// <summary>
+        /// The number of beats between <paramref name="from"/> and <paramref name="to"/> with the given beat length, snapped to 1/<paramref name="divisor"/> beats, at least one such division.
+        /// </summary>
+        public static double CountBeats(double from, double to, double beatLength, int divisor)
+            => Math.Max(1d / divisor, Math.Round((to - from) / beatLength * divisor) / divisor);
+
+        /// <summary>
         /// The timing point preceding <paramref name="time"/>, if any.
         /// </summary>
         public static TimingControlPoint? TimingPointBefore(ControlPointInfo controlPointInfo, double time)
@@ -51,7 +57,8 @@ namespace osu.Game.Screens.Edit.Timing
         /// <param name="anchorTime">The time of the placed beat.</param>
         /// <param name="estimateBeatLength">Estimates the beat length of the audio in a time range (see <see cref="OnsetEnvelope.EstimateBeatLength"/>), if available.
         /// Only used to find the number of beats while the tempo isn't established yet, as the tempo of the timing is more reliable afterwards.</param>
-        public static PlacementPreview CalculatePlacement(ControlPointInfo controlPointInfo, double anchorTime, Func<double, double, double?>? estimateBeatLength = null)
+        /// <param name="divisor">The placed beat is snapped to 1/<paramref name="divisor"/> beats of the surrounding timing.</param>
+        public static PlacementPreview CalculatePlacement(ControlPointInfo controlPointInfo, double anchorTime, Func<double, double, double?>? estimateBeatLength = null, int divisor = 1)
         {
             var previous = TimingPointBefore(controlPointInfo, anchorTime);
             var next = controlPointInfo.TimingPointAfter(anchorTime);
@@ -82,17 +89,17 @@ namespace osu.Game.Screens.Edit.Timing
             {
                 if (next != null)
                 {
-                    preview.NextBeats = CountBeats(anchorTime, next.Time, referenceBeatLength);
+                    preview.NextBeats = CountBeats(anchorTime, next.Time, referenceBeatLength, divisor);
                     preview.BeatLength = (next.Time - anchorTime) / preview.NextBeats;
                 }
 
                 return preview;
             }
 
-            int beats = CountBeats(previous.Time, anchorTime, referenceBeatLength);
+            double beats = CountBeats(previous.Time, anchorTime, referenceBeatLength, divisor);
             int meter = previous.TimeSignature.Numerator;
-            int beatInBar = beats % meter;
-            int nextBeats = next != null ? CountBeats(anchorTime, next.Time, referenceBeatLength) : 0;
+            double beatInBar = beats % meter;
+            double nextBeats = next != null ? CountBeats(anchorTime, next.Time, referenceBeatLength, divisor) : 0;
 
             if (beatInBar != 0 && beats >= meter)
             {
@@ -354,7 +361,7 @@ namespace osu.Game.Screens.Edit.Timing
             /// <summary>
             /// The number of beats between the new timing point and the placed beat.
             /// </summary>
-            public int AnchorBeat;
+            public double AnchorBeat;
 
             /// <summary>
             /// The beat length of the new timing point.
@@ -366,7 +373,7 @@ namespace osu.Game.Screens.Edit.Timing
             /// <summary>
             /// The number of beats between the preceding timing point and the new one.
             /// </summary>
-            public int PreviousBeats;
+            public double PreviousBeats;
 
             /// <summary>
             /// The recalculated beat length of the preceding timing point.
@@ -378,7 +385,7 @@ namespace osu.Game.Screens.Edit.Timing
             /// <summary>
             /// The number of beats between the new timing point and the following one.
             /// </summary>
-            public int NextBeats;
+            public double NextBeats;
 
             /// <summary>
             /// Whether the new timing point is placed onto a bar line of the preceding timing point. If not, the bar lines after it shift.
@@ -495,17 +502,17 @@ namespace osu.Game.Screens.Edit.Timing
             /// <summary>
             /// The number of beats between <see cref="Previous"/> and <see cref="Point"/>, which is kept while moving.
             /// </summary>
-            public int PreviousBeats { get; private set; }
+            public double PreviousBeats { get; private set; }
 
             /// <summary>
             /// The number of beats between <see cref="Point"/> and <see cref="Next"/>, which is kept while moving.
             /// </summary>
-            public int NextBeats { get; private set; }
+            public double NextBeats { get; private set; }
 
             /// <summary>
             /// The beat of <see cref="Point"/> which is moved. Zero moves the timing point itself.
             /// </summary>
-            public int AnchorBeat { get; private set; }
+            public double AnchorBeat { get; private set; }
 
             private readonly EditorBeatmap beatmap;
             private readonly ControlPoint[] movingPoints;
@@ -525,15 +532,15 @@ namespace osu.Game.Screens.Edit.Timing
             /// Places a beat at <paramref name="time"/> (see <see cref="CalculatePlacement"/>), recalculating the BPMs of the new and the preceding timing point.
             /// The returned move can be used to further move the beat.
             /// </summary>
-            public static TimingPointMove Place(EditorBeatmap beatmap, double time, bool adjustHitObjects, Func<double, double, double?>? estimateBeatLength = null)
+            public static TimingPointMove Place(EditorBeatmap beatmap, double time, bool adjustHitObjects, Func<double, double, double?>? estimateBeatLength = null, int divisor = 1)
             {
                 var controlPointInfo = beatmap.ControlPointInfo;
 
                 // there can only be one timing point at a time.
                 if (controlPointInfo.GroupAt(time)?.ControlPoints.OfType<TimingControlPoint>().FirstOrDefault() is TimingControlPoint existing)
-                    return Begin(beatmap, existing, adjustHitObjects);
+                    return Begin(beatmap, existing, adjustHitObjects, divisor);
 
-                var preview = CalculatePlacement(controlPointInfo, time, estimateBeatLength);
+                var preview = CalculatePlacement(controlPointInfo, time, estimateBeatLength, divisor);
 
                 // the beats of the hit objects are taken from the timing before placing the new timing point.
                 var anchors = new List<TimingAnchor>();
@@ -557,7 +564,7 @@ namespace osu.Game.Screens.Edit.Timing
 
                 // the start of the bar may coincide with another timing point after rounding.
                 if (controlPointInfo.GroupAt(pointTime)?.ControlPoints.OfType<TimingControlPoint>().FirstOrDefault() is TimingControlPoint coinciding)
-                    return Begin(beatmap, coinciding, adjustHitObjects);
+                    return Begin(beatmap, coinciding, adjustHitObjects, divisor);
 
                 controlPointInfo.GroupAt(pointTime, true).Add(point);
 
@@ -567,16 +574,17 @@ namespace osu.Game.Screens.Edit.Timing
 
             /// <summary>
             /// Starts moving an existing timing point, along with the other control points of its group.
+            /// The beats to the surrounding timing points are counted in 1/<paramref name="divisor"/> beats.
             /// </summary>
-            public static TimingPointMove Begin(EditorBeatmap beatmap, TimingControlPoint point, bool adjustHitObjects)
+            public static TimingPointMove Begin(EditorBeatmap beatmap, TimingControlPoint point, bool adjustHitObjects, int divisor = 1)
             {
                 var controlPointInfo = beatmap.ControlPointInfo;
 
                 var previous = TimingPointBefore(controlPointInfo, point.Time);
                 var next = controlPointInfo.TimingPointAfter(point.Time);
 
-                int previousBeats = previous != null ? CountBeats(previous.Time, point.Time, previous.BeatLength) : 0;
-                int nextBeats = next != null ? CountBeats(point.Time, next.Time, point.BeatLength) : 0;
+                double previousBeats = previous != null ? CountBeats(previous.Time, point.Time, previous.BeatLength, divisor) : 0;
+                double nextBeats = next != null ? CountBeats(point.Time, next.Time, point.BeatLength, divisor) : 0;
 
                 var movingPoints = controlPointInfo.GroupAt(point.Time)?.ControlPoints.ToArray() ?? new ControlPoint[] { point };
 
@@ -584,7 +592,7 @@ namespace osu.Game.Screens.Edit.Timing
             }
 
             private TimingPointMove(EditorBeatmap beatmap, TimingControlPoint point, ControlPoint[] movingPoints, TimingControlPoint? previous, TimingControlPoint? next,
-                                    int previousBeats, int nextBeats, int anchorBeat, bool followPreviousBeatLength, HitObjectSnapshot? snapshot,
+                                    double previousBeats, double nextBeats, double anchorBeat, bool followPreviousBeatLength, HitObjectSnapshot? snapshot,
                                     bool adjustHitObjects, double anchorTime)
             {
                 this.beatmap = beatmap;
@@ -608,9 +616,9 @@ namespace osu.Game.Screens.Edit.Timing
             /// <see cref="Point"/> is at the start of the bar containing the beat, <paramref name="anchorBeat"/> beats before it.
             /// Takes effect on the next <see cref="MoveTo"/>.
             /// </summary>
-            public void SetBeats(int previousBeats, int anchorBeat, int nextBeats)
+            public void SetBeats(double previousBeats, double anchorBeat, double nextBeats)
             {
-                if (Previous != null && previousBeats < 1)
+                if (Previous != null && previousBeats <= 0)
                     throw new ArgumentOutOfRangeException(nameof(previousBeats));
 
                 if (anchorBeat < 0 || (Next != null && nextBeats <= anchorBeat))

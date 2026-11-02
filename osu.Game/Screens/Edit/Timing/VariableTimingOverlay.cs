@@ -252,7 +252,7 @@ namespace osu.Game.Screens.Edit.Timing
             var (time, snapped) = snapToOnset(cursorTime);
             var preview = VariableTiming.CalculatePlacement(beatmap.ControlPointInfo, time, estimateBeatLength);
 
-            double fitted = fitToBeats(time, preview.Previous?.Time, preview.PreviousBeats + preview.AnchorBeat, snapped);
+            double fitted = fitToBeats(time, preview.Previous?.Time, (int)(preview.PreviousBeats + preview.AnchorBeat), snapped);
 
             if (fitted != time)
                 preview = VariableTiming.CalculatePlacement(beatmap.ControlPointInfo, fitted, estimateBeatLength);
@@ -267,7 +267,7 @@ namespace osu.Game.Screens.Edit.Timing
         {
             var (time, snapped) = snapToOnset(cursorTime);
 
-            return fitToBeats(time, move.Previous?.Time, move.PreviousBeats + move.AnchorBeat, snapped);
+            return fitToBeats(time, move.Previous?.Time, (int)(move.PreviousBeats + move.AnchorBeat), snapped);
         }
 
         private bool controlPressed => inputManager.CurrentState.Keyboard.ControlPressed;

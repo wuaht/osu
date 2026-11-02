@@ -90,6 +90,11 @@ namespace osu.Game.Screens.Edit.Timing
         [Resolved]
         private BindableBeatDivisor beatDivisor { get; set; } = null!;
 
+        /// <summary>
+        /// Timing points are placed and dragged onto divisions of beats of the editor's beat divisor (like the grid divisor of Tempora).
+        /// </summary>
+        private int snapDivisor => Math.Max(1, beatDivisor.Value);
+
         [Resolved]
         private IBindable<WorkingBeatmap> workingBeatmap { get; set; } = null!;
 
@@ -155,7 +160,7 @@ namespace osu.Game.Screens.Edit.Timing
         private double moveAnchorTime;
         private int previousRow;
         private int nextRow;
-        private (int row, int beat)? moveTarget;
+        private (int row, double beat)? moveTarget;
 
         [BackgroundDependencyLoader]
         private void load(OsuConfigManager config, OverlayColourProvider colourProvider)
@@ -283,9 +288,9 @@ namespace osu.Game.Screens.Edit.Timing
         private readonly record struct MeasureRow(double Start, double Duration, double End, double BeatLength, int Meter, TimingControlPoint? Point, bool IsSectionStart)
         {
             /// <summary>
-            /// The number of beats in this row, which is less than <see cref="Meter"/> if the next timing point cuts the bar short.
+            /// The number of beats in this row in 1/<paramref name="divisor"/> beats, which is less than <see cref="Meter"/> if the next timing point cuts the bar short.
             /// </summary>
-            public int Beats => VariableTiming.CountBeats(Start, End, BeatLength);
+            public double Beats(int divisor) => VariableTiming.CountBeats(Start, End, BeatLength, divisor);
 
             public double FractionAt(double time) => (time - Start) / Duration;
 
@@ -962,7 +967,7 @@ namespace osu.Game.Screens.Edit.Timing
         {
             beatmap.BeginChange();
 
-            var move = VariableTiming.TimingPointMove.Place(beatmap, time, adjustHitObjects.Value);
+            var move = VariableTiming.TimingPointMove.Place(beatmap, time, adjustHitObjects.Value, divisor: snapDivisor);
 
             beatmap.UpdateAllHitObjects();
             beatmap.EndChange();
@@ -977,7 +982,7 @@ namespace osu.Game.Screens.Edit.Timing
         {
             beatmap.BeginChange();
 
-            var move = VariableTiming.TimingPointMove.Begin(beatmap, point, adjustHitObjects.Value);
+            var move = VariableTiming.TimingPointMove.Begin(beatmap, point, adjustHitObjects.Value, snapDivisor);
             move.MoveTo(point.Time + amount);
 
             beatmap.UpdateAllHitObjects();
@@ -1046,7 +1051,7 @@ namespace osu.Game.Screens.Edit.Timing
                     return false;
 
                 beatmap.BeginChange();
-                activeMove = VariableTiming.TimingPointMove.Begin(beatmap, pressedPoint, adjustHitObjects.Value);
+                activeMove = VariableTiming.TimingPointMove.Begin(beatmap, pressedPoint, adjustHitObjects.Value, snapDivisor);
                 isOffsetDrag = true;
                 moveAnchorTime = pressedPoint.Time;
                 selectMovedGroup();
@@ -1056,13 +1061,13 @@ namespace osu.Game.Screens.Edit.Timing
             if (pressedPoint != null)
             {
                 beatmap.BeginChange();
-                activeMove = VariableTiming.TimingPointMove.Begin(beatmap, pressedPoint, adjustHitObjects.Value);
+                activeMove = VariableTiming.TimingPointMove.Begin(beatmap, pressedPoint, adjustHitObjects.Value, snapDivisor);
                 moveAnchorTime = pressedPoint.Time;
             }
             else
             {
                 beatmap.BeginChange();
-                activeMove = VariableTiming.TimingPointMove.Place(beatmap, pressedTime, adjustHitObjects.Value);
+                activeMove = VariableTiming.TimingPointMove.Place(beatmap, pressedTime, adjustHitObjects.Value, divisor: snapDivisor);
 
                 // the audio under the cursor stays where it is, and is moved onto the beat of the grid under the cursor.
                 moveAnchorTime = activeMove.AnchorBeat == 0 ? activeMove.Point.Time : pressedTime;
@@ -1092,23 +1097,23 @@ namespace osu.Game.Screens.Edit.Timing
             if (beatTargetAt(pressedRows, e.ScreenSpaceMousePosition) is not var (row, beat) || moveTarget == (row, beat))
                 return;
 
-            int previousBeats = 0;
-            int nextBeats = 0;
+            double previousBeats = 0;
+            double nextBeats = 0;
 
             if (activeMove.Previous != null)
             {
                 for (int i = previousRow; i < row; i++)
-                    previousBeats += pressedRows[i].Beats;
+                    previousBeats += pressedRows[i].Beats(snapDivisor);
             }
 
             if (activeMove.Next != null)
             {
                 for (int i = row; i < nextRow; i++)
-                    nextBeats += pressedRows[i].Beats;
+                    nextBeats += pressedRows[i].Beats(snapDivisor);
             }
 
             // the start of the bar of the previous timing point is taken, so the timing point is placed at the beat itself (like in VariableTiming.CalculatePlacement).
-            int anchorBeat = beat;
+            double anchorBeat = beat;
 
             if (row == previousRow)
             {
@@ -1128,9 +1133,9 @@ namespace osu.Game.Screens.Edit.Timing
         }
 
         /// <summary>
-        /// Finds the beat of <paramref name="rowList"/> closest to a screen space position, between the timing points surrounding the moved one.
+        /// Finds the beat of <paramref name="rowList"/> closest to a screen space position (snapped to the beat divisor), between the timing points surrounding the moved one.
         /// </summary>
-        private (int row, int beat)? beatTargetAt(List<MeasureRow> rowList, Vector2 screenSpacePosition)
+        private (int row, double beat)? beatTargetAt(List<MeasureRow> rowList, Vector2 screenSpacePosition)
         {
             Vector2 local = rowContainer.ToLocalSpace(screenSpacePosition);
             int row = (int)Math.Floor(local.Y / rowHeight + scroll);
@@ -1139,14 +1144,15 @@ namespace osu.Game.Screens.Edit.Timing
                 return null;
 
             double fraction = fractionAt(local.X - gutter_width);
-            int beat = (int)Math.Round(fraction * rowList[row].Meter);
+            int divisor = snapDivisor;
+            double beat = Math.Round(fraction * rowList[row].Meter * divisor) / divisor;
 
             // beats in the overlapping parts belong to the neighbouring rows.
             while (beat < 0 && row > 0)
-                beat += rowList[--row].Beats;
+                beat += rowList[--row].Beats(divisor);
 
-            while (row < rowList.Count && beat >= rowList[row].Beats)
-                beat -= rowList[row++].Beats;
+            while (row < rowList.Count && beat >= rowList[row].Beats(divisor))
+                beat -= rowList[row++].Beats(divisor);
 
             if (beat < 0 || row >= rowList.Count)
                 return null;
