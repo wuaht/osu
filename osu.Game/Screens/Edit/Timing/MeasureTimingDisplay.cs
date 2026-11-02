@@ -142,13 +142,6 @@ namespace osu.Game.Screens.Edit.Timing
         private double lastClockTime = double.NaN;
 
         /// <summary>
-        /// Whether the view follows the playback. Scrolling during playback stops following until the next seek, start or stop of the playback.
-        /// </summary>
-        private bool followPlayback = true;
-
-        private IBindable<bool> seekingOrStopped = null!;
-
-        /// <summary>
         /// The time under the cursor (snapped to an onset), displayed in all rows.
         /// </summary>
         private double? hoverTime;
@@ -249,9 +242,6 @@ namespace osu.Game.Screens.Edit.Timing
             base.LoadComplete();
 
             inputManager = GetContainingInputManager()!;
-
-            seekingOrStopped = editorClock.SeekingOrStopped.GetBoundCopy();
-            seekingOrStopped.BindValueChanged(_ => followPlayback = true);
 
             editorClock.TrackChanged += onTrackChanged;
             waveformStyle.BindValueChanged(_ =>
@@ -493,7 +483,7 @@ namespace osu.Game.Screens.Edit.Timing
             double time = editorClock.CurrentTime;
 
             // follow the playback and seeks, but keep the position scrolled to by the user otherwise.
-            if (activeMove == null && rows.Count > 0 && followPlayback && (editorClock.IsRunning || time != lastClockTime))
+            if (activeMove == null && rows.Count > 0 && (editorClock.IsRunning || time != lastClockTime))
             {
                 targetScroll = rowIndexAt(time) - visible_rows / 3;
 
@@ -1214,9 +1204,6 @@ namespace osu.Game.Screens.Edit.Timing
             }
 
             float delta = e.ScrollDelta.Y != 0 ? e.ScrollDelta.Y : e.ScrollDelta.X;
-
-            if (!controlPressed && editorClock.IsRunning)
-                followPlayback = false;
 
             if (controlPressed)
             {
