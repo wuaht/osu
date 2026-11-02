@@ -994,7 +994,7 @@ namespace osu.Game.Screens.Edit.Timing
                     return true;
 
                 case MouseButton.Right:
-                    // like on the timeline: Ctrl removes the timing point, otherwise the audio at the cursor is previewed while held.
+                    // like on the timeline: Ctrl removes the timing point or seeks to the cursor, otherwise the audio at the cursor is previewed while held.
                     if (controlPressed && point != null)
                     {
                         VariableTiming.RemoveTimingPoint(beatmap, point, adjustHitObjects.Value);
@@ -1002,6 +1002,8 @@ namespace osu.Game.Screens.Edit.Timing
                         if (selectedGroup.Value != null && !beatmap.ControlPointInfo.Groups.Contains(selectedGroup.Value))
                             selectedGroup.Value = null;
                     }
+                    else if (controlPressed)
+                        editorClock.SeekSmoothlyTo(row.TimeAt(fraction));
                     else
                         audioPreview.Start(row.TimeAt(fraction));
 

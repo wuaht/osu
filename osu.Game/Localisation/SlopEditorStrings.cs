@@ -529,7 +529,7 @@ Click: place a timing point such that the audio under the cursor lies on the clo
 Drag: grab the audio under the cursor and drop it onto the beat line it belongs to. The BPMs of the timing points around it are recalculated.
 Drag a timing point: move it onto another beat. Ctrl + drag it to only change its offset.
 Ctrl + scroll: nudge the timing point of the bar under the cursor by 1 ms (Ctrl + Alt: 10 ms).
-Hold right click: listen to the audio at the cursor. Ctrl + right click: remove a timing point. Scroll to move through the bars. Ctrl + Shift + scroll: zoom into the bars, Shift + scroll: move sideways while zoomed in.
+Hold right click: listen to the audio at the cursor. Ctrl + right click: remove a timing point, or jump the playback there. Scroll to move through the bars. Ctrl + Shift + scroll: zoom into the bars, Shift + scroll: move sideways while zoomed in.
 With the onsets waveform style, clicks and drags snap to the exact millisecond of the onset under the cursor. Hold Shift to not snap.
 
 How to time a song with a varying tempo:
