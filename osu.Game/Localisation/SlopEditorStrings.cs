@@ -516,10 +516,10 @@ namespace osu.Game.Localisation
         public static LocalisableString HideTimingPointPanels => new TranslatableString(getKey(@"hide_timing_point_panels"), @"Hide the timing point list and settings");
 
         /// <summary>
-        /// "Remove redundant timing points: the ones which lie on a bar line of the previous timing point with the same BPM and meter"
+        /// "Remove redundant timing points: the ones which lie on a bar line of the previous timing point with the same BPM and meter, moving no beat by more than {0} ms. Ctrl+scroll to change the leeway."
         /// </summary>
-        public static LocalisableString RemoveRedundantTimingPoints => new TranslatableString(getKey(@"remove_redundant_timing_points"),
-            @"Remove redundant timing points: the ones which lie on a bar line of the previous timing point with the same BPM and meter");
+        public static LocalisableString RemoveRedundantTimingPoints(double leeway) => new TranslatableString(getKey(@"remove_redundant_timing_points"),
+            @"Remove redundant timing points: the ones which lie on a bar line of the previous timing point with the same BPM and meter, moving no beat by more than {0} ms. Ctrl+scroll to change the leeway.", leeway);
 
         /// <summary>
         /// The controls of the bar view of the timing screen, and how to time a song with a varying tempo.

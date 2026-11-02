@@ -95,7 +95,7 @@ namespace osu.Game.Screens.Edit.Timing
 
         private Bindable<bool> adjustHitObjects = null!;
 
-        private Bindable<double> redundantLeeway = null!;
+        private BindableDouble redundantLeeway = null!;
         private Bindable<EditorWaveformStyle> waveformStyle = null!;
         private Bindable<float> waveformOpacity = null!;
 
@@ -161,7 +161,7 @@ namespace osu.Game.Screens.Edit.Timing
         private void load(OsuConfigManager config, OverlayColourProvider colourProvider)
         {
             adjustHitObjects = config.GetBindable<bool>(OsuSetting.EditorAdjustExistingObjectsOnTimingChanges);
-            redundantLeeway = config.GetBindable<double>(OsuSetting.SlopEditorRedundantTimingPointLeeway);
+            redundantLeeway = (BindableDouble)config.GetBindable<double>(OsuSetting.SlopEditorRedundantTimingPointLeeway);
             waveformStyle = config.GetBindable<EditorWaveformStyle>(OsuSetting.SlopEditorWaveformStyle);
             waveformOpacity = config.GetBindable<float>(OsuSetting.EditorWaveformOpacity);
 
@@ -214,12 +214,8 @@ namespace osu.Game.Screens.Edit.Timing
                             Children = new Drawable[]
                             {
                                 new GuideIcon(),
-                                new IconButton
+                                new RedundantTimingPointsButton(redundantLeeway)
                                 {
-                                    Icon = FontAwesome.Solid.Broom,
-                                    Size = new Vector2(26),
-                                    IconScale = new Vector2(0.8f),
-                                    TooltipText = SlopEditorStrings.RemoveRedundantTimingPoints,
                                     Action = () => VariableTiming.RemoveRedundantTimingPoints(beatmap, adjustHitObjects.Value, redundantLeeway.Value),
                                 },
                                 panelsButton = new IconButton
@@ -888,6 +884,39 @@ namespace osu.Game.Screens.Edit.Timing
                     Size = new Vector2(14),
                     Icon = FontAwesome.Solid.QuestionCircle,
                 };
+            }
+        }
+
+        /// <summary>
+        /// Removes the redundant timing points. Ctrl+scroll on it changes how far the beats may move by doing so.
+        /// </summary>
+        private partial class RedundantTimingPointsButton : IconButton
+        {
+            private readonly BindableDouble leeway;
+
+            public RedundantTimingPointsButton(BindableDouble leeway)
+            {
+                this.leeway = leeway;
+
+                Icon = FontAwesome.Solid.Broom;
+                Size = new Vector2(26);
+                IconScale = new Vector2(0.8f);
+            }
+
+            protected override void LoadComplete()
+            {
+                base.LoadComplete();
+                leeway.BindValueChanged(v => TooltipText = SlopEditorStrings.RemoveRedundantTimingPoints(v.NewValue), true);
+            }
+
+            protected override bool OnScroll(ScrollEvent e)
+            {
+                if (!e.ControlPressed)
+                    return base.OnScroll(e);
+
+                float delta = e.ScrollDelta.Y != 0 ? e.ScrollDelta.Y : e.ScrollDelta.X;
+                leeway.Value += Math.Sign(delta) * leeway.Precision;
+                return true;
             }
         }
 

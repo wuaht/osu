@@ -23,7 +23,7 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
     {
         protected override LocalisableString Header => SlopSettingsStrings.EditorHeader;
 
-        public override IEnumerable<LocalisableString> FilterTerms => base.FilterTerms.Concat(new LocalisableString[] { "skin", "backup", "autosave", "snap", "blanket", "triangle", "waveform", "hitsound", "frosted", "bn", "nominator", "request", "alias", "break", "own", "border", "fps", "star", "difficulty", "bezier", "curve", "colour", "color", "alt", "pitch", "speed", "stretch", "mods", "preview", "mania", "playfield", "text editor", "notepad", "mute", "c999", "zoom", "grid", "rotation", "origin", "timing", "redundant", "leeway" });
+        public override IEnumerable<LocalisableString> FilterTerms => base.FilterTerms.Concat(new LocalisableString[] { "skin", "backup", "autosave", "snap", "blanket", "triangle", "waveform", "hitsound", "frosted", "bn", "nominator", "request", "alias", "break", "own", "border", "fps", "star", "difficulty", "bezier", "curve", "colour", "color", "alt", "pitch", "speed", "stretch", "mods", "preview", "mania", "playfield", "text editor", "notepad", "mute", "c999", "zoom", "grid", "rotation", "origin" });
 
         /// <summary>
         /// Dropdown entry representing "use the regular gameplay skin".
@@ -116,14 +116,6 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                     Caption = SlopSettingsStrings.WaveformStyle,
                     HintText = SlopSettingsStrings.WaveformStyleDescription,
                     Current = config.GetBindable<EditorWaveformStyle>(OsuSetting.SlopEditorWaveformStyle),
-                }),
-                new SettingsItemV2(new FormSliderBar<double>
-                {
-                    Caption = SlopSettingsStrings.RedundantTimingPointLeeway,
-                    HintText = SlopSettingsStrings.RedundantTimingPointLeewayDescription,
-                    Current = config.GetBindable<double>(OsuSetting.SlopEditorRedundantTimingPointLeeway),
-                    KeyboardStep = 0.5f,
-                    LabelFormat = SlopSettingsStrings.RedundantTimingPointLeewayMilliseconds,
                 }),
                 new SettingsItemV2(new FormEnumDropdown<EditorUnsnapMode>
                 {
