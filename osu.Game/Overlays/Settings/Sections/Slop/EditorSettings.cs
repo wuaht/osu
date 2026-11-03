@@ -1,4 +1,4 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+﻿﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
@@ -12,7 +12,6 @@ using osu.Game.Configuration;
 using osu.Game.Database;
 using osu.Game.Graphics.UserInterfaceV2;
 using osu.Game.Localisation;
-using osu.Game.Screens.Edit.Components;
 using osu.Game.Screens.Edit.Compose.Components.Timeline;
 using osu.Game.Skinning;
 using Realms;
@@ -23,7 +22,7 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
     {
         protected override LocalisableString Header => SlopSettingsStrings.EditorHeader;
 
-        public override IEnumerable<LocalisableString> FilterTerms => base.FilterTerms.Concat(new LocalisableString[] { "skin", "backup", "autosave", "snap", "blanket", "triangle", "waveform", "hitsound", "frosted", "bn", "nominator", "request", "alias", "break", "own", "border", "fps", "star", "difficulty", "bezier", "curve", "colour", "color", "alt", "pitch", "speed", "stretch", "mods", "preview", "mania", "playfield", "text editor", "notepad", "mute", "c999", "zoom", "grid", "rotation", "origin" });
+        public override IEnumerable<LocalisableString> FilterTerms => base.FilterTerms.Concat(new LocalisableString[] { "skin", "waveform", "frosted", "bn", "nominator", "request", "border", "fps", "star", "difficulty", "curve", "colour", "color", "accent", "hue", "zoom", "grid", "strain", "autoplay", "cursor", "offscreen" });
 
         /// <summary>
         /// Dropdown entry representing "use the regular gameplay skin".
@@ -52,9 +51,15 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
 
         private EditorSkinDropdown cursorSkinDropdown = null!;
 
-        private Bindable<EditorUnsnapMode> unsnapMode = null!;
+        private Bindable<bool> customAccentColour = null!;
 
-        private SettingsItemV2 unsnapDivisorsItem = null!;
+        private Bindable<bool> showAutoplayCursor = null!;
+
+        private SettingsItemV2 cursorSkinItem = null!;
+
+        private SettingsItemV2 cursorEngineItem = null!;
+
+        private SettingsItemV2 accentHueItem = null!;
 
         private IDisposable? realmSubscription;
 
@@ -83,33 +88,14 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                 }),
                 new SettingsItemV2(new FormCheckBox
                 {
-                    Caption = SlopSettingsStrings.ShowSelectionBox,
-                    HintText = SlopSettingsStrings.ShowSelectionBoxDescription,
-                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorShowSelectionBox),
+                    Caption = SlopSettingsStrings.CustomEditorAccentColour,
+                    HintText = SlopSettingsStrings.CustomEditorAccentColourDescription,
+                    Current = customAccentColour = config.GetBindable<bool>(OsuSetting.SlopEditorCustomAccentColour),
                 }),
-                new SettingsItemV2(new FormCheckBox
+                accentHueItem = new SettingsItemV2(new FormHueSlider
                 {
-                    Caption = SlopSettingsStrings.ShowSelectionBoxButtons,
-                    HintText = SlopSettingsStrings.ShowSelectionBoxButtonsDescription,
-                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorShowSelectionBoxButtons),
-                }),
-                new SettingsItemV2(new FormEnumDropdown<EditorAnchorShape>
-                {
-                    Caption = SlopSettingsStrings.AnchorShape,
-                    HintText = SlopSettingsStrings.AnchorShapeDescription,
-                    Current = config.GetBindable<EditorAnchorShape>(OsuSetting.SlopEditorAnchorShape),
-                }),
-                new SettingsItemV2(new FormCheckBox
-                {
-                    Caption = SlopSettingsStrings.ShowSliderEndDragMarker,
-                    HintText = SlopSettingsStrings.ShowSliderEndDragMarkerDescription,
-                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorShowSliderEndDragMarker),
-                }),
-                new SettingsItemV2(new FormCheckBox
-                {
-                    Caption = SlopSettingsStrings.ImmediateDrag,
-                    HintText = SlopSettingsStrings.ImmediateDragDescription,
-                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorImmediateDrag),
+                    Caption = SlopSettingsStrings.EditorAccentHue,
+                    Current = config.GetBindable<int>(OsuSetting.SlopEditorAccentHue),
                 }),
                 new SettingsItemV2(new FormEnumDropdown<EditorWaveformStyle>
                 {
@@ -117,113 +103,16 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                     HintText = SlopSettingsStrings.WaveformStyleDescription,
                     Current = config.GetBindable<EditorWaveformStyle>(OsuSetting.SlopEditorWaveformStyle),
                 }),
-                new SettingsItemV2(new FormEnumDropdown<EditorUnsnapMode>
-                {
-                    Caption = SlopSettingsStrings.UnsnapMode,
-                    HintText = SlopSettingsStrings.UnsnapModeDescription,
-                    Current = unsnapMode = config.GetBindable<EditorUnsnapMode>(OsuSetting.SlopEditorUnsnapMode),
-                }),
-                unsnapDivisorsItem = new SettingsItemV2(new FormTextBox
-                {
-                    Caption = SlopSettingsStrings.UnsnapDivisors,
-                    HintText = SlopSettingsStrings.UnsnapDivisorsDescription,
-                    Current = config.GetBindable<string>(OsuSetting.SlopEditorUnsnapDivisors),
-                }),
-                new SettingsItemV2(new FormEnumDropdown<GlassStyle>
-                {
-                    Caption = SlopSettingsStrings.HitsoundLanesGlassStyle,
-                    HintText = SlopSettingsStrings.HitsoundLanesGlassStyleDescription,
-                    Current = config.GetBindable<GlassStyle>(OsuSetting.SlopHitsoundEditorLanesGlassStyle),
-                }),
-                new SettingsItemV2(new FormCheckBox
-                {
-                    Caption = SlopSettingsStrings.HitsoundToolboxExpandOnHover,
-                    HintText = SlopSettingsStrings.HitsoundToolboxExpandOnHoverDescription,
-                    Current = config.GetBindable<bool>(OsuSetting.SlopHitsoundEditorToolboxExpandOnHover),
-                }),
-                new SettingsItemV2(new FormCheckBox
-                {
-                    Caption = SlopSettingsStrings.AutoApplyHitsoundDifficulty,
-                    HintText = SlopSettingsStrings.AutoApplyHitsoundDifficultyDescription,
-                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorAutoApplyHitsoundDifficulty),
-                }),
                 new SettingsItemV2(new FormEnumDropdown<GlassStyle>
                 {
                     Caption = SlopSettingsStrings.BnTrackerPanelsGlassStyle,
                     HintText = SlopSettingsStrings.BnTrackerPanelsGlassStyleDescription,
                     Current = config.GetBindable<GlassStyle>(OsuSetting.SlopBnTrackerPanelsGlassStyle),
                 }),
-                new SettingsItemV2(new FormCheckBox
+                new SettingsItemV2(new FormEnumDropdown<SliderCurveColourStyle>
                 {
-                    Caption = SlopSettingsStrings.VisualSpacingSnap,
-                    HintText = SlopSettingsStrings.VisualSpacingSnapDescription,
-                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorVisualSpacingSnap),
-                }),
-                new SettingsItemV2(new FormCheckBox
-                {
-                    Caption = SlopSettingsStrings.BlanketSnap,
-                    HintText = SlopSettingsStrings.BlanketSnapDescription,
-                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorBlanketSnap),
-                }),
-                new SettingsItemV2(new FormCheckBox
-                {
-                    Caption = SlopSettingsStrings.LineSnap,
-                    HintText = SlopSettingsStrings.LineSnapDescription,
-                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorLineSnap),
-                }),
-                new SettingsItemV2(new FormCheckBox
-                {
-                    Caption = SlopSettingsStrings.TriangleCentreSnap,
-                    HintText = SlopSettingsStrings.TriangleCentreSnapDescription,
-                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorTriangleCentreSnap),
-                }),
-                new SettingsItemV2(new FormCheckBox
-                {
-                    Caption = SlopSettingsStrings.SliderBlanketSnap,
-                    HintText = SlopSettingsStrings.SliderBlanketSnapDescription,
-                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorSliderBlanketSnap),
-                }),
-                new SettingsItemV2(new FormCheckBox
-                {
-                    Caption = SlopSettingsStrings.RotateAroundObjectStarts,
-                    HintText = SlopSettingsStrings.RotateAroundObjectStartsDescription,
-                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorRotateAroundObjectStarts),
-                }),
-                new SettingsItemV2(new FormCheckBox
-                {
-                    Caption = SlopSettingsStrings.TimelineSliderVelocityWithAlt,
-                    HintText = SlopSettingsStrings.TimelineSliderVelocityWithAltDescription,
-                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorTimelineSliderVelocityWithAlt),
-                }),
-                new SettingsItemV2(new FormCheckBox
-                {
-                    Caption = SlopSettingsStrings.ShowOffscreenObjects,
-                    HintText = SlopSettingsStrings.ShowOffscreenObjectsDescription,
-                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorShowOffscreenObjects),
-                }),
-                new SettingsItemV2(new FormCheckBox
-                {
-                    Caption = SlopSettingsStrings.ShowDifficultyStrains,
-                    HintText = SlopSettingsStrings.ShowDifficultyStrainsDescription,
-                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorShowDifficultyStrains),
-                }),
-                new SettingsItemV2(new FormCheckBox
-                {
-                    Caption = SlopSettingsStrings.LoopMusic,
-                    HintText = SlopSettingsStrings.LoopMusicDescription,
-                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorLoopMusic),
-                }),
-                new SettingsItemV2(new FormCheckBox
-                {
-                    Caption = SlopSettingsStrings.MutedEndsSoftC999,
-                    HintText = SlopSettingsStrings.MutedEndsSoftC999Description,
-                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorMutedEndsSoftC999),
-                }),
-                new SettingsItemV2(new FormCheckBox
-                {
-                    Caption = SlopSettingsStrings.ZoomOutPlayfield,
-                    HintText = SlopSettingsStrings.ZoomOutPlayfieldDescription,
-                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorZoomOut),
+                    Caption = SlopSettingsStrings.SliderCurveColour,
+                    Current = config.GetBindable<SliderCurveColourStyle>(OsuSetting.SlopEditorSliderCurveColour),
                 }),
                 new SettingsItemV2(new FormCheckBox
                 {
@@ -233,87 +122,21 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                 }),
                 new SettingsItemV2(new FormCheckBox
                 {
-                    Caption = SlopSettingsStrings.RotateAroundSelection,
-                    HintText = SlopSettingsStrings.RotateAroundSelectionDescription,
-                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorRotateAroundSelection),
-                }),
-                new SettingsItemV2(new FormCheckBox
-                {
-                    Caption = SlopSettingsStrings.BackupOnSave,
-                    HintText = SlopSettingsStrings.BackupOnSaveDescription,
-                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorBackupOnSave),
-                }),
-                new SettingsItemV2(new FormSliderBar<int>
-                {
-                    Caption = SlopSettingsStrings.AutosaveInterval,
-                    HintText = SlopSettingsStrings.AutosaveIntervalDescription,
-                    Current = config.GetBindable<int>(OsuSetting.SlopEditorAutosaveInterval),
-                    KeyboardStep = 1,
-                    LabelFormat = minutes => minutes == 0 ? SlopSettingsStrings.AutosaveOff : SlopSettingsStrings.AutosaveMinutes(minutes),
-                }),
-                new SettingsItemV2(new FormCheckBox
-                {
-                    Caption = SlopSettingsStrings.OnlyAutosaveOwnMaps,
-                    HintText = SlopSettingsStrings.OnlyAutosaveOwnMapsDescription,
-                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorOnlyAutosaveOwnMaps),
-                }),
-                new SettingsItemV2(new FormCheckBox
-                {
-                    Caption = SlopSettingsStrings.AutosaveToBackups,
-                    HintText = SlopSettingsStrings.AutosaveToBackupsDescription,
-                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorAutosaveToBackups),
-                }),
-                new SettingsItemV2(new FormTextBox
-                {
-                    Caption = SlopSettingsStrings.MyMapsAliases,
-                    Current = config.GetBindable<string>(OsuSetting.SlopEditorMyMapsAliases),
-                }),
-                new SettingsItemV2(new FormCheckBox
-                {
-                    Caption = SlopSettingsStrings.NoAutomaticBreaks,
-                    HintText = SlopSettingsStrings.NoAutomaticBreaksDescription,
-                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorNoAutomaticBreaks),
-                }),
-                new SettingsItemV2(new FormCheckBox
-                {
                     Caption = SlopSettingsStrings.DrawScreenBorders,
                     HintText = SlopSettingsStrings.DrawScreenBordersDescription,
                     Current = config.GetBindable<bool>(OsuSetting.SlopEditorDrawScreenBorders),
                 }),
                 new SettingsItemV2(new FormCheckBox
                 {
-                    Caption = SlopSettingsStrings.AlwaysHideFps,
-                    HintText = SlopSettingsStrings.AlwaysHideFpsDescription,
-                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorAlwaysHideFps),
+                    Caption = SlopSettingsStrings.ShowOffscreenObjects,
+                    HintText = SlopSettingsStrings.ShowOffscreenObjectsDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorShowOffscreenObjects),
                 }),
                 new SettingsItemV2(new FormCheckBox
                 {
-                    Caption = SlopSettingsStrings.DifficultyStars,
-                    HintText = SlopSettingsStrings.DifficultyStarsDescription,
-                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorDifficultyStars),
-                }),
-                new SettingsItemV2(new FormCheckBox
-                {
-                    Caption = SlopSettingsStrings.AlwaysIgnoreBeatmapSamples,
-                    HintText = SlopSettingsStrings.AlwaysIgnoreBeatmapSamplesDescription,
-                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorAlwaysIgnoreBeatmapSamples),
-                }),
-                new SettingsItemV2(new FormCheckBox
-                {
-                    Caption = SlopSettingsStrings.PointInsertPreview,
-                    HintText = SlopSettingsStrings.PointInsertPreviewDescription,
-                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorPointInsertPreview),
-                }),
-                new SettingsItemV2(new FormEnumDropdown<SliderCurveColourStyle>
-                {
-                    Caption = SlopSettingsStrings.SliderCurveColour,
-                    Current = config.GetBindable<SliderCurveColourStyle>(OsuSetting.SlopEditorSliderCurveColour),
-                }),
-                new SettingsItemV2(new FormCheckBox
-                {
-                    Caption = SlopSettingsStrings.SnapSliderEndsToLaterTimingPoints,
-                    HintText = SlopSettingsStrings.SnapSliderEndsToLaterTimingPointsDescription,
-                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorSnapSliderEndsToLaterTimingPoints),
+                    Caption = SlopSettingsStrings.ZoomOutPlayfield,
+                    HintText = SlopSettingsStrings.ZoomOutPlayfieldDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorZoomOut),
                 }),
                 new SettingsItemV2(new FormCheckBox
                 {
@@ -323,79 +146,29 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                 }),
                 new SettingsItemV2(new FormCheckBox
                 {
-                    Caption = SlopSettingsStrings.EditorTrueSliderEnds,
-                    HintText = SlopSettingsStrings.EditorTrueSliderEndsDescription,
-                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorTrueSliderEnds),
+                    Caption = SlopSettingsStrings.ShowDifficultyStrains,
+                    HintText = SlopSettingsStrings.ShowDifficultyStrainsDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorShowDifficultyStrains),
                 }),
                 new SettingsItemV2(new FormCheckBox
                 {
-                    Caption = SlopSettingsStrings.EditorAnchorSnap,
-                    HintText = SlopSettingsStrings.EditorAnchorSnapDescription,
-                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorAnchorSnap),
+                    Caption = SlopSettingsStrings.DifficultyStars,
+                    HintText = SlopSettingsStrings.DifficultyStarsDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorDifficultyStars),
                 }),
                 new SettingsItemV2(new FormCheckBox
                 {
-                    Caption = SlopSettingsStrings.EditorStackSnap,
-                    HintText = SlopSettingsStrings.EditorStackSnapDescription,
-                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorStackSnap),
-                }),
-                new SettingsItemV2(new FormCheckBox
-                {
-                    Caption = SlopSettingsStrings.EditorRandomSliderAnchors,
-                    HintText = SlopSettingsStrings.EditorRandomSliderAnchorsDescription,
-                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorRandomSliderAnchors),
-                }),
-                new SettingsItemV2(new FormSliderBar<int>
-                {
-                    Caption = SlopSettingsStrings.EditorCustomRotation,
-                    HintText = SlopSettingsStrings.EditorCustomRotationDescription,
-                    Current = config.GetBindable<int>(OsuSetting.SlopEditorCustomRotation),
-                    KeyboardStep = 1,
-                    LabelFormat = v => $@"{v}°",
-                }),
-                new SettingsItemV2(new FormCheckBox
-                {
-                    Caption = SlopSettingsStrings.DisableAltDistanceSnap,
-                    HintText = SlopSettingsStrings.DisableAltDistanceSnapDescription,
-                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorDisableAltDistanceSnap),
-                }),
-                new SettingsItemV2(new FormCheckBox
-                {
-                    Caption = SlopSettingsStrings.SliderPartOnFirstClick,
-                    HintText = SlopSettingsStrings.SliderPartOnFirstClickDescription,
-                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorSliderPartOnFirstClick),
-                }),
-                new SettingsItemV2(new FormCheckBox
-                {
-                    Caption = SlopSettingsStrings.EditorNoAudioStretch,
-                    HintText = SlopSettingsStrings.EditorNoAudioStretchDescription,
-                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorNoAudioStretch),
-                }),
-                new SettingsItemV2(new FormCheckBox
-                {
-                    Caption = SlopSettingsStrings.EditorPreviewMods,
-                    HintText = SlopSettingsStrings.EditorPreviewModsDescription,
-                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorPreviewMods),
-                }),
-                new SettingsItemV2(new FormCheckBox
-                {
-                    Caption = SlopSettingsStrings.EditorSongSelectShowPlayButtons,
-                    HintText = SlopSettingsStrings.EditorSongSelectShowPlayButtonsDescription,
-                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorSongSelectShowPlayButtons),
-                }),
-                new SettingsItemV2(new FormCheckBox
-                {
-                    Caption = SlopSettingsStrings.EditorManiaPlayfieldWaveform,
-                    HintText = SlopSettingsStrings.EditorManiaPlayfieldWaveformDescription,
-                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorManiaPlayfieldWaveform),
+                    Caption = SlopSettingsStrings.AlwaysHideFps,
+                    HintText = SlopSettingsStrings.AlwaysHideFpsDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorAlwaysHideFps),
                 }),
                 new SettingsItemV2(new FormCheckBox
                 {
                     Caption = SlopSettingsStrings.EditorShowAutoplayCursor,
                     HintText = SlopSettingsStrings.EditorShowAutoplayCursorDescription,
-                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorShowAutoplayCursor),
+                    Current = showAutoplayCursor = config.GetBindable<bool>(OsuSetting.SlopEditorShowAutoplayCursor),
                 }),
-                new SettingsItemV2(cursorSkinDropdown = new EditorSkinDropdown
+                cursorSkinItem = new SettingsItemV2(cursorSkinDropdown = new EditorSkinDropdown
                 {
                     AlwaysShowSearchBar = true,
                     AllowNonContiguousMatching = true,
@@ -405,17 +178,11 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                     Current = selectedCursorSkin,
                     Items = new[] { same_as_gameplay_skin },
                 }),
-                new SettingsItemV2(new FormEnumDropdown<SlopAutoplayEngine>
+                cursorEngineItem = new SettingsItemV2(new FormEnumDropdown<SlopAutoplayEngine>
                 {
                     Caption = SlopSettingsStrings.EditorAutoplayEngine,
                     HintText = SlopSettingsStrings.EditorAutoplayEngineDescription,
                     Current = config.GetBindable<SlopAutoplayEngine>(OsuSetting.SlopEditorAutoplayEngine),
-                }),
-                new SettingsItemV2(new FormTextBox
-                {
-                    Caption = SlopSettingsStrings.EditorTextEditor,
-                    HintText = SlopSettingsStrings.EditorTextEditorDescription,
-                    Current = config.GetBindable<string>(OsuSetting.SlopEditorTextEditor),
                 }),
             };
         }
@@ -438,7 +205,9 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                 cursorSkinSetting.Value = skin.NewValue.ID == Guid.Empty ? string.Empty : skin.NewValue.ID.ToString();
             });
 
-            unsnapMode.BindValueChanged(mode => unsnapDivisorsItem.Alpha = mode.NewValue == EditorUnsnapMode.Enabled ? 1 : 0, true);
+            customAccentColour.BindValueChanged(custom => accentHueItem.Alpha = custom.NewValue ? 1 : 0, true);
+
+            showAutoplayCursor.BindValueChanged(show => cursorSkinItem.Alpha = cursorEngineItem.Alpha = show.NewValue ? 1 : 0.5f, true);
         }
 
         private void skinsChanged(IRealmCollection<SkinInfo> sender, ChangeSet? changes)

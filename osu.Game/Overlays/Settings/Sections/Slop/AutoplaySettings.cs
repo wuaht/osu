@@ -21,6 +21,8 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
         [BackgroundDependencyLoader]
         private void load(OsuConfigManager config)
         {
+            SettingsItemV2 tagCount, tagSplit, tagColours;
+
             Children = new Drawable[]
             {
                 new SettingsItemV2(new FormEnumDropdown<SlopAutoplayEngine>
@@ -62,6 +64,12 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                 {
                     Caption = SlopSettingsStrings.AutoPlusAlternateButtons,
                     Current = config.GetBindable<bool>(OsuSetting.SlopAutoPlusAlternateButtons),
+                }),
+                new SettingsItemV2(new FormCheckBox
+                {
+                    Caption = SlopSettingsStrings.AutoPlusZeroInterpolation,
+                    HintText = SlopSettingsStrings.AutoPlusZeroInterpolationDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopAutoPlusZeroInterpolation),
                 }),
                 new SettingsItemV2(new FormCheckBox
                 {
@@ -110,34 +118,34 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                 }),
                 new SettingsItemV2(new FormCheckBox
                 {
-                    Caption = SlopSettingsStrings.AutoPlusZeroInterpolation,
-                    HintText = SlopSettingsStrings.AutoPlusZeroInterpolationDescription,
-                    Current = config.GetBindable<bool>(OsuSetting.SlopAutoPlusZeroInterpolation),
-                }),
-                new SettingsItemV2(new FormCheckBox
-                {
                     Caption = SlopSettingsStrings.AutoPlusTag,
                     HintText = SlopSettingsStrings.AutoPlusTagDescription,
                     Current = config.GetBindable<bool>(OsuSetting.SlopAutoPlusTag),
                 }),
-                new SettingsItemV2(new FormSliderBar<int>
+                tagCount = new SettingsItemV2(new FormSliderBar<int>
                 {
                     Caption = SlopSettingsStrings.AutoPlusTagCount,
                     HintText = SlopSettingsStrings.AutoPlusTagCountDescription,
                     Current = config.GetBindable<int>(OsuSetting.SlopAutoPlusTagCount),
                     KeyboardStep = 1,
                 }),
-                new SettingsItemV2(new FormEnumDropdown<AutoPlusTagSplitMode>
+                tagSplit = new SettingsItemV2(new FormEnumDropdown<AutoPlusTagSplitMode>
                 {
                     Caption = SlopSettingsStrings.AutoPlusTagSplit,
                     Current = config.GetBindable<AutoPlusTagSplitMode>(OsuSetting.SlopAutoPlusTagSplit),
                 }),
-                new SettingsItemV2(new FormEnumDropdown<AutoPlusTagColourSource>
+                tagColours = new SettingsItemV2(new FormEnumDropdown<AutoPlusTagColourSource>
                 {
                     Caption = SlopSettingsStrings.AutoPlusTagColours,
                     Current = config.GetBindable<AutoPlusTagColourSource>(OsuSetting.SlopAutoPlusTagColours),
                 }),
             };
+
+            // the tag options only matter while tag is on; keep them visible but dimmed so they stay discoverable.
+            config.GetBindable<bool>(OsuSetting.SlopAutoPlusTag).BindValueChanged(tag =>
+            {
+                tagCount.Alpha = tagSplit.Alpha = tagColours.Alpha = tag.NewValue ? 1 : 0.5f;
+            }, true);
         }
     }
 }

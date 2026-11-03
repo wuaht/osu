@@ -25,8 +25,9 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
             {
                 new SettingsItemV2(new FormCheckBox
                 {
-                    Caption = SlopSettingsStrings.ShowGreatJudgements,
-                    Current = config.GetBindable<bool>(OsuSetting.SlopShowGreatJudgements),
+                    Caption = SlopSettingsStrings.HideSliderBodies,
+                    HintText = SlopSettingsStrings.HideSliderBodiesDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopHideSliderBodies),
                 }),
                 new SettingsItemV2(new FormCheckBox
                 {
@@ -36,26 +37,25 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                 }),
                 new SettingsItemV2(new FormCheckBox
                 {
-                    Caption = SlopSettingsStrings.ShowComboNumbers,
-                    Current = config.GetBindable<bool>(OsuSetting.SlopShowComboNumbers),
-                }),
-                new SettingsItemV2(new FormCheckBox
-                {
                     Caption = SlopSettingsStrings.HideFollowPoints,
                     HintText = SlopSettingsStrings.HideFollowPointsDescription,
                     Current = config.GetBindable<bool>(OsuSetting.SlopHideFollowPoints),
                 }),
                 new SettingsItemV2(new FormCheckBox
                 {
-                    Caption = SlopSettingsStrings.HideSliderBodies,
-                    HintText = SlopSettingsStrings.HideSliderBodiesDescription,
-                    Current = config.GetBindable<bool>(OsuSetting.SlopHideSliderBodies),
+                    Caption = SlopSettingsStrings.ShowComboNumbers,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopShowComboNumbers),
                 }),
                 new SettingsItemV2(new FormCheckBox
                 {
                     Caption = SlopSettingsStrings.WhiteApproachCircles,
                     HintText = SlopSettingsStrings.WhiteApproachCirclesDescription,
                     Current = config.GetBindable<bool>(OsuSetting.SlopWhiteApproachCircles),
+                }),
+                new SettingsItemV2(new FormCheckBox
+                {
+                    Caption = SlopSettingsStrings.ShowGreatJudgements,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopShowGreatJudgements),
                 }),
             };
         }

@@ -25,18 +25,6 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
             {
                 new SettingsItemV2(new FormCheckBox
                 {
-                    Caption = SlopSettingsStrings.AllowOverlaysDuringGameplay,
-                    HintText = SlopSettingsStrings.AllowOverlaysDuringGameplayDescription,
-                    Current = config.GetBindable<bool>(OsuSetting.SlopAllowOverlaysDuringGameplay),
-                }),
-                new SettingsItemV2(new FormCheckBox
-                {
-                    Caption = SlopSettingsStrings.SkipBreaks,
-                    HintText = SlopSettingsStrings.SkipBreaksDescription,
-                    Current = config.GetBindable<bool>(OsuSetting.SlopSkipBreaks),
-                }),
-                new SettingsItemV2(new FormCheckBox
-                {
                     Caption = SlopSettingsStrings.KillOnFail,
                     HintText = SlopSettingsStrings.KillOnFailDescription,
                     Current = config.GetBindable<bool>(OsuSetting.SlopKillOnFail),
@@ -46,6 +34,18 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                     Caption = SlopSettingsStrings.DisableSoftFailEffects,
                     HintText = SlopSettingsStrings.DisableSoftFailEffectsDescription,
                     Current = config.GetBindable<bool>(OsuSetting.SlopDisableSoftFailEffects),
+                }),
+                new SettingsItemV2(new FormCheckBox
+                {
+                    Caption = SlopSettingsStrings.SkipBreaks,
+                    HintText = SlopSettingsStrings.SkipBreaksDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopSkipBreaks),
+                }),
+                new SettingsItemV2(new FormCheckBox
+                {
+                    Caption = SlopSettingsStrings.AllowOverlaysDuringGameplay,
+                    HintText = SlopSettingsStrings.AllowOverlaysDuringGameplayDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopAllowOverlaysDuringGameplay),
                 }),
                 new SettingsItemV2(new FormEnumDropdown<IgnoreBeatmapVolumeMode>
                 {

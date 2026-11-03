@@ -112,6 +112,31 @@ namespace osu.Game.Localisation
         public static LocalisableString EditorHeader => new TranslatableString(getKey(@"editor_header"), @"Editor");
 
         /// <summary>
+        /// "Editor: Snapping"
+        /// </summary>
+        public static LocalisableString EditorSnappingHeader => new TranslatableString(getKey(@"editor_snapping_header"), @"Editor: Snapping");
+
+        /// <summary>
+        /// "Editor: Saving"
+        /// </summary>
+        public static LocalisableString EditorSavingHeader => new TranslatableString(getKey(@"editor_saving_header"), @"Editor: Saving");
+
+        /// <summary>
+        /// "Editor: Editing"
+        /// </summary>
+        public static LocalisableString EditorEditingHeader => new TranslatableString(getKey(@"editor_editing_header"), @"Editor: Editing");
+
+        /// <summary>
+        /// "Editor: Playback"
+        /// </summary>
+        public static LocalisableString EditorPlaybackHeader => new TranslatableString(getKey(@"editor_playback_header"), @"Editor: Playback");
+
+        /// <summary>
+        /// "Editor: Hitsounds"
+        /// </summary>
+        public static LocalisableString EditorHitsoundsHeader => new TranslatableString(getKey(@"editor_hitsounds_header"), @"Editor: Hitsounds");
+
+        /// <summary>
         /// "Editor skin"
         /// </summary>
         public static LocalisableString EditorSkin => new TranslatableString(getKey(@"editor_skin"), @"Editor skin");
@@ -212,6 +237,22 @@ namespace osu.Game.Localisation
         /// "Move objects without delay"
         /// </summary>
         public static LocalisableString ImmediateDrag => new TranslatableString(getKey(@"immediate_drag"), @"Move objects without delay");
+
+        /// <summary>
+        /// "Custom editor accent colour"
+        /// </summary>
+        public static LocalisableString CustomEditorAccentColour => new TranslatableString(getKey(@"custom_editor_accent_colour"), @"Custom editor accent colour");
+
+        /// <summary>
+        /// "Use your own hue for the editor's accent colour. The editor reloads when changed."
+        /// </summary>
+        public static LocalisableString CustomEditorAccentColourDescription => new TranslatableString(getKey(@"custom_editor_accent_colour_description"),
+            @"Use your own hue for the editor's accent colour. The editor reloads when changed.");
+
+        /// <summary>
+        /// "Editor accent hue"
+        /// </summary>
+        public static LocalisableString EditorAccentHue => new TranslatableString(getKey(@"editor_accent_hue"), @"Editor accent hue");
 
         /// <summary>
         /// "Objects and slider anchors start moving as soon as the mouse moves, instead of only after the mouse has moved a few pixels. Allows very small adjustments."

@@ -296,6 +296,8 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopEditorShowSelectionBoxButtons, false);
             SetDefault(OsuSetting.SlopEditorShowSliderEndDragMarker, false);
             SetDefault(OsuSetting.SlopEditorImmediateDrag, true);
+            SetDefault(OsuSetting.SlopEditorCustomAccentColour, false);
+            SetDefault(OsuSetting.SlopEditorAccentHue, 160, 0, 360);
             SetDefault(OsuSetting.SlopEditorAnchorShape, EditorAnchorShape.Square);
             SetDefault(OsuSetting.SlopEditorVisualSpacingSnap, true);
             SetDefault(OsuSetting.SlopEditorBlanketSnap, true);
@@ -900,6 +902,16 @@ namespace osu.Game.Configuration
         /// rather than only after the mouse has moved a minimum distance.
         /// </summary>
         SlopEditorImmediateDrag,
+
+        /// <summary>
+        /// Whether the editor uses <see cref="SlopEditorAccentHue"/> instead of the default accent colour.
+        /// </summary>
+        SlopEditorCustomAccentColour,
+
+        /// <summary>
+        /// The hue (in degrees) of the editor's accent colour, used when <see cref="SlopEditorCustomAccentColour"/> is enabled.
+        /// </summary>
+        SlopEditorAccentHue,
 
         /// <summary>
         /// The shape of slider control points and selection box handles in the beatmap editor.

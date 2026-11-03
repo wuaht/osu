@@ -11,9 +11,10 @@ namespace osu.Game.Screens.Edit.Submission
 {
     public partial class BeatmapSubmissionOverlay : WizardOverlay
     {
-        public BeatmapSubmissionOverlay()
+        public BeatmapSubmissionOverlay(int hue)
             : base(OverlayColourScheme.Aquamarine)
         {
+            ColourProvider.ChangeColourScheme(hue);
         }
 
         [BackgroundDependencyLoader]

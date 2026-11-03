@@ -15,6 +15,7 @@ using osu.Game.Database;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Containers;
 using osu.Game.Localisation;
+using osu.Game.Overlays;
 using osu.Game.Storyboards.Drawables;
 
 namespace osu.Game.Screens.Edit.Setup
@@ -22,7 +23,7 @@ namespace osu.Game.Screens.Edit.Setup
     public partial class SetupScreenVideoPreview : CompositeDrawable
     {
         [Resolved]
-        private OsuColour colours { get; set; } = null!;
+        private OverlayColourProvider colourProvider { get; set; } = null!;
 
         [Resolved]
         private IBindable<WorkingBeatmap> working { get; set; } = null!;
@@ -91,7 +92,7 @@ namespace osu.Game.Screens.Edit.Setup
             {
                 new Box
                 {
-                    Colour = colours.GreySeaFoamDarker,
+                    Colour = colourProvider.Background4,
                     RelativeSizeAxes = Axes.Both,
                 },
                 new OsuTextFlowContainer(t => t.Font = OsuFont.Default.With(size: 24))

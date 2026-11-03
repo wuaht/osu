@@ -297,9 +297,20 @@ namespace osu.Game.Screens.Edit
             FooterContent.Value = ScreenFooterContent.None;
         }
 
+        /// <summary>
+        /// The hue of the editor's accent colour, which is the user's own if enabled.
+        /// </summary>
+        public static int GetAccentHue(OsuConfigManager config)
+            => config.Get<bool>(OsuSetting.SlopEditorCustomAccentColour) ? config.Get<int>(OsuSetting.SlopEditorAccentHue) : OverlayColourScheme.Aquamarine.GetHue();
+
         [BackgroundDependencyLoader]
         private void load(OsuConfigManager config)
         {
+            colourProvider.ChangeColourScheme(GetAccentHue(config));
+            HitsoundTooltip.KeyColour = colourProvider.Highlight1;
+
+            customAccentColour = config.GetBindable<bool>(OsuSetting.SlopEditorCustomAccentColour);
+            accentHue = config.GetBindable<int>(OsuSetting.SlopEditorAccentHue);
             backupOnSave = config.GetBindable<bool>(OsuSetting.SlopEditorBackupOnSave);
             autosaveInterval = config.GetBindable<int>(OsuSetting.SlopEditorAutosaveInterval);
             difficultyStars = config.GetBindable<bool>(OsuSetting.SlopEditorDifficultyStars);
@@ -607,6 +618,10 @@ namespace osu.Game.Screens.Edit
 
             lastSaveTime = Time.Current;
 
+            // the colour provider can't notify existing drawables, so rebuild the editor (keeping its state) once the setting settles
+            customAccentColour.BindValueChanged(_ => scheduleAccentReload());
+            accentHue.BindValueChanged(_ => scheduleAccentReload());
+
             Mode.Value = isNewBeatmap ? EditorScreenMode.SongSetup : EditorScreenMode.Compose;
             Mode.BindValueChanged(onModeChanged, true);
 
@@ -811,6 +826,10 @@ namespace osu.Game.Screens.Edit
             // reset regardless of the outcome, so that a failing autosave isn't retried every frame.
             lastSaveTime = Time.Current;
 
+            // the colour provider can't notify existing drawables, so rebuild the editor (keeping its state) once the setting settles
+            customAccentColour.BindValueChanged(_ => scheduleAccentReload());
+            accentHue.BindValueChanged(_ => scheduleAccentReload());
+
             try
             {
                 // keep a copy of the previous file before it gets replaced.
@@ -869,6 +888,10 @@ namespace osu.Game.Screens.Edit
 
             // reset regardless of the outcome, so that a failing autosave isn't retried every frame.
             lastSaveTime = Time.Current;
+
+            // the colour provider can't notify existing drawables, so rebuild the editor (keeping its state) once the setting settles
+            customAccentColour.BindValueChanged(_ => scheduleAccentReload());
+            accentHue.BindValueChanged(_ => scheduleAccentReload());
 
             Task<Action> task;
 
@@ -941,6 +964,9 @@ namespace osu.Game.Screens.Edit
 
         private Bindable<bool> backupOnSave;
         private Bindable<int> autosaveInterval;
+        private Bindable<bool> customAccentColour;
+        private Bindable<int> accentHue;
+        private ScheduledDelegate accentReload;
         private Bindable<bool> difficultyStars;
         private Bindable<bool> onlyAutosaveOwnMaps;
         private Bindable<bool> autosaveToBackups;
@@ -2481,6 +2507,12 @@ namespace osu.Game.Screens.Edit
         {
             updateSampleDisabledState();
             loader?.CancelPendingDifficultySwitch();
+        }
+
+        private void scheduleAccentReload()
+        {
+            accentReload?.Cancel();
+            accentReload = Scheduler.AddDelayed(() => SaveAndReload(false), 600);
         }
 
         public Task<bool> SaveAndReload(bool withDialog = true)

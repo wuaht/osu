@@ -31,6 +31,12 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                 }),
                 new SettingsItemV2(new FormCheckBox
                 {
+                    Caption = SlopSettingsStrings.ForceDisableCursorExpand,
+                    HintText = SlopSettingsStrings.ForceDisableCursorExpandDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopForceDisableCursorExpand),
+                }),
+                new SettingsItemV2(new FormCheckBox
+                {
                     Caption = SlopSettingsStrings.AnimateHitCircleOverlay,
                     HintText = SlopSettingsStrings.AnimateHitCircleOverlayDescription,
                     Current = config.GetBindable<bool>(OsuSetting.SlopAnimateHitCircleOverlay),
@@ -39,6 +45,11 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                 {
                     Caption = SlopSettingsStrings.InstafadeSliders,
                     Current = config.GetBindable<bool>(OsuSetting.SlopInstafadeSliders),
+                }),
+                new SettingsItemV2(new FormCheckBox
+                {
+                    Caption = SlopSettingsStrings.InstafadeNumbers,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopInstafadeNumbers),
                 }),
                 new SettingsItemV2(new FormCheckBox
                 {
@@ -51,17 +62,6 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                     Caption = SlopSettingsStrings.DisableReverseArrowAnimations,
                     HintText = SlopSettingsStrings.DisableReverseArrowAnimationsDescription,
                     Current = config.GetBindable<bool>(OsuSetting.SlopDisableReverseArrowAnimations),
-                }),
-                new SettingsItemV2(new FormCheckBox
-                {
-                    Caption = SlopSettingsStrings.InstafadeNumbers,
-                    Current = config.GetBindable<bool>(OsuSetting.SlopInstafadeNumbers),
-                }),
-                new SettingsItemV2(new FormCheckBox
-                {
-                    Caption = SlopSettingsStrings.ForceDisableCursorExpand,
-                    HintText = SlopSettingsStrings.ForceDisableCursorExpandDescription,
-                    Current = config.GetBindable<bool>(OsuSetting.SlopForceDisableCursorExpand),
                 }),
                 new SettingsItemV2(new FormCheckBox
                 {

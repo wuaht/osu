@@ -64,12 +64,6 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
 
             Children = new Drawable[]
             {
-                new SettingsItemV2(new FormEnumDropdown<BeatmapMirror>
-                {
-                    Caption = SlopSettingsStrings.BeatmapMirror,
-                    HintText = SlopSettingsStrings.BeatmapMirrorDescription,
-                    Current = config.GetBindable<BeatmapMirror>(OsuSetting.SlopBeatmapMirror),
-                }),
                 new SettingsItemV2(new FormCheckBox
                 {
                     Caption = SlopSettingsStrings.WebsiteLogin,
@@ -79,6 +73,23 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                 websiteSignOutButton = new SettingsButtonV2
                 {
                     Action = () => webSession?.Logout(),
+                },
+                new SettingsItemV2(new FormEnumDropdown<BeatmapMirror>
+                {
+                    Caption = SlopSettingsStrings.BeatmapMirror,
+                    HintText = SlopSettingsStrings.BeatmapMirrorDescription,
+                    Current = config.GetBindable<BeatmapMirror>(OsuSetting.SlopBeatmapMirror),
+                }),
+                new SettingsItemV2(serverTextBox = new FormTextBox
+                {
+                    Caption = SlopSettingsStrings.BnTrackerServer,
+                    HintText = SlopSettingsStrings.BnTrackerServerDescription,
+                    PlaceholderText = BnTrackerClient.DEFAULT_SERVER,
+                    Current = bnTrackerServerText,
+                }),
+                bnTrackerSignOutButton = new SettingsButtonV2
+                {
+                    Action = () => logFailure(bnTracker.SignOutAsync()),
                 },
                 new SettingsItemV2(new FormCheckBox
                 {
@@ -90,17 +101,6 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                 {
                     Text = SlopSettingsStrings.ClearStoredMappers,
                     Action = clearMappers,
-                },
-                new SettingsItemV2(serverTextBox = new FormTextBox
-                {
-                    Caption = SlopSettingsStrings.BnTrackerServer,
-                    HintText = SlopSettingsStrings.BnTrackerServerDescription,
-                    PlaceholderText = BnTrackerClient.DEFAULT_SERVER,
-                    Current = bnTrackerServerText,
-                }),
-                bnTrackerSignOutButton = new SettingsButtonV2
-                {
-                    Action = () => logFailure(bnTracker.SignOutAsync()),
                 },
             };
 

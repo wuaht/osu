@@ -63,7 +63,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
         /// <summary>
         /// The accent colour of the editor.
         /// </summary>
-        private static readonly Colour4 key_colour = new OverlayColourProvider(OverlayColourScheme.Aquamarine).Highlight1;
+        public static Colour4 KeyColour { get; set; } = new OverlayColourProvider(OverlayColourScheme.Aquamarine).Highlight1;
 
         private readonly Box background;
         private readonly TextFlowContainer text;
@@ -163,7 +163,7 @@ namespace osu.Game.Screens.Edit.Hitsounding
 
                 // only keys are bold, such that headings stand out the most. banks are recognisable by their colour, and samples only need to stand out slightly.
                 if (match.Groups[@"key"].Success)
-                    addText(flow, match.Value, key_colour, FontWeight.Bold);
+                    addText(flow, match.Value, KeyColour, FontWeight.Bold);
                 else if (match.Groups[@"bank"].Success)
                     addText(flow, match.Value, HitsoundLane.GetBankColour(getBank(match.Value)), FontWeight.Regular);
                 else if (match.Groups[@"sample"].Success)

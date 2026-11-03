@@ -82,16 +82,16 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                     HintText = SlopSettingsStrings.MenuCursorStyleDescription,
                     Current = config.GetBindable<MenuCursorStyle>(OsuSetting.SlopMenuCursorStyle),
                 }),
+                new SettingsItemV2(new FormEnumDropdown<CursorTrailStyle>
+                {
+                    Caption = SlopSettingsStrings.CursorTrailStyle,
+                    Current = config.GetBindable<CursorTrailStyle>(OsuSetting.SlopCursorTrailStyle),
+                }),
                 new SettingsItemV2(new FormCheckBox
                 {
                     Caption = SlopSettingsStrings.ForceArgonCursorTrail,
                     HintText = SlopSettingsStrings.ForceArgonCursorTrailDescription,
                     Current = config.GetBindable<bool>(OsuSetting.SlopForceArgonCursorTrail),
-                }),
-                new SettingsItemV2(new FormEnumDropdown<CursorTrailStyle>
-                {
-                    Caption = SlopSettingsStrings.CursorTrailStyle,
-                    Current = config.GetBindable<CursorTrailStyle>(OsuSetting.SlopCursorTrailStyle),
                 }),
                 new SettingsItemV2(new FormCheckBox
                 {

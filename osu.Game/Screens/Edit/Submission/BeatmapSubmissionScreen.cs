@@ -94,13 +94,15 @@ namespace osu.Game.Screens.Edit.Submission
         [BackgroundDependencyLoader]
         private void load(AudioManager audio)
         {
+            colourProvider.ChangeColourScheme(Editor.GetAccentHue(configManager));
+
             // hitsound difficulties only exist to edit hitsounds, so they aren't uploaded unless chosen otherwise in the submission settings.
             // set before the settings are loaded, as they show the defaults.
             settings.ExcludeHitsoundDifficulties(configManager, Beatmap.Value.BeatmapSetInfo.Beatmaps);
 
             AddRangeInternal(new Drawable[]
             {
-                overlay = new BeatmapSubmissionOverlay(),
+                overlay = new BeatmapSubmissionOverlay(colourProvider.Hue),
                 submissionProgress = new Container
                 {
                     RelativeSizeAxes = Axes.X,

@@ -41,6 +41,30 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
             {
                 new SettingsItemV2(new FormCheckBox
                 {
+                    Caption = SlopSettingsStrings.MapsetVerifierAutoSnapshot,
+                    HintText = SlopSettingsStrings.MapsetVerifierAutoSnapshotDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopMapsetVerifierAutoSnapshot),
+                }),
+                new SettingsItemV2(new FormCheckBox
+                {
+                    Caption = SlopSettingsStrings.MapsetVerifierRecheckOnSave,
+                    HintText = SlopSettingsStrings.MapsetVerifierRecheckOnSaveDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopMapsetVerifierRecheckOnSave),
+                }),
+                new SettingsItemV2(new FormCheckBox
+                {
+                    Caption = SlopSettingsStrings.MapsetVerifierCheckRunDelta,
+                    HintText = SlopSettingsStrings.MapsetVerifierCheckRunDeltaDescription,
+                    Current = showCheckRunDelta,
+                }),
+                deltaUnchangedItem = new SettingsItemV2(new FormCheckBox
+                {
+                    Caption = SlopSettingsStrings.MapsetVerifierDeltaUnchanged,
+                    HintText = SlopSettingsStrings.MapsetVerifierDeltaUnchangedDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopMapsetVerifierDeltaShowUnchanged),
+                }),
+                new SettingsItemV2(new FormCheckBox
+                {
                     Caption = SlopSettingsStrings.MapsetVerifierShowMinor,
                     HintText = SlopSettingsStrings.MapsetVerifierShowMinorDescription,
                     Current = config.GetBindable<bool>(OsuSetting.SlopMapsetVerifierShowMinor),
@@ -62,35 +86,17 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                     HintText = SlopSettingsStrings.MapsetVerifierGamemodeDifficultyNamesDescription,
                     Current = config.GetBindable<bool>(OsuSetting.SlopMapsetVerifierShowGamemodeDifficultyNames),
                 }),
-                new SettingsItemV2(new FormCheckBox
-                {
-                    Caption = SlopSettingsStrings.MapsetVerifierAutoSnapshot,
-                    HintText = SlopSettingsStrings.MapsetVerifierAutoSnapshotDescription,
-                    Current = config.GetBindable<bool>(OsuSetting.SlopMapsetVerifierAutoSnapshot),
-                }),
-                new SettingsItemV2(new FormCheckBox
-                {
-                    Caption = SlopSettingsStrings.MapsetVerifierCheckRunDelta,
-                    HintText = SlopSettingsStrings.MapsetVerifierCheckRunDeltaDescription,
-                    Current = showCheckRunDelta,
-                }),
-                deltaUnchangedItem = new SettingsItemV2(new FormCheckBox
-                {
-                    Caption = SlopSettingsStrings.MapsetVerifierDeltaUnchanged,
-                    HintText = SlopSettingsStrings.MapsetVerifierDeltaUnchangedDescription,
-                    Current = config.GetBindable<bool>(OsuSetting.SlopMapsetVerifierDeltaShowUnchanged),
-                }),
-                new SettingsItemV2(new FormCheckBox
-                {
-                    Caption = SlopSettingsStrings.MapsetVerifierRecheckOnSave,
-                    HintText = SlopSettingsStrings.MapsetVerifierRecheckOnSaveDescription,
-                    Current = config.GetBindable<bool>(OsuSetting.SlopMapsetVerifierRecheckOnSave),
-                }),
                 new SettingsItemV2(new FormEnumDropdown<MapsetVerifierStrainDisplayMode>
                 {
                     Caption = SlopSettingsStrings.MapsetVerifierStrainDisplay,
                     HintText = SlopSettingsStrings.MapsetVerifierStrainDisplayDescription,
                     Current = config.GetBindable<MapsetVerifierStrainDisplayMode>(OsuSetting.SlopMapsetVerifierStrainDisplayMode),
+                }),
+                new SettingsItemV2(new FormEnumDropdown<GlassStyle>
+                {
+                    Caption = SlopSettingsStrings.MapsetVerifierPanelsGlassStyle,
+                    HintText = SlopSettingsStrings.MapsetVerifierPanelsGlassStyleDescription,
+                    Current = config.GetBindable<GlassStyle>(OsuSetting.SlopMapsetVerifierPanelsGlassStyle),
                 }),
                 new SettingsItemV2(new FormCheckBox
                 {
@@ -103,12 +109,6 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                     Caption = SlopSettingsStrings.MapsetVerifierCheckSpeed,
                     HintText = SlopSettingsStrings.MapsetVerifierCheckSpeedDescription,
                     Current = config.GetBindable<bool>(OsuSetting.SlopMapsetVerifierShowCheckSpeedStats),
-                }),
-                new SettingsItemV2(new FormEnumDropdown<GlassStyle>
-                {
-                    Caption = SlopSettingsStrings.MapsetVerifierPanelsGlassStyle,
-                    HintText = SlopSettingsStrings.MapsetVerifierPanelsGlassStyleDescription,
-                    Current = config.GetBindable<GlassStyle>(OsuSetting.SlopMapsetVerifierPanelsGlassStyle),
                 }),
             };
 
