@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using osu.Framework.Extensions.ObjectExtensions;
 using osu.Framework.Allocation;
 using osu.Framework.Audio;
 using osu.Framework.Audio.Sample;
@@ -124,6 +125,12 @@ namespace osu.Game.Screens.Select
         protected FilterControl FilterControl { get; private set; } = null!;
 
         private BeatmapTitleWedge titleWedge = null!;
+        private Drawable titleWedgeWrapper = null!;
+
+        [Resolved]
+        private ISkinSource skin { get; set; } = null!;
+
+        private bool legacyLayout;
         private BeatmapDetailsArea detailsArea = null!;
         private FillFlowContainer wedgesContainer = null!;
         private Box rightGradientBackground = null!;
@@ -193,7 +200,6 @@ namespace osu.Game.Screens.Select
             {
                 new ScrollAdjustsVolume(),
                 onlineLookupSource,
-                new LegacySongSelectBackground(),
                 // the toolbar is transparent, so clip anything extending above the top of the screen (e.g. hidden wedge corners or carousel panels).
                 // only the top edge is clipped, as content is allowed to extend into the footer and beyond the sides of the screen.
                 new Container
@@ -272,7 +278,7 @@ namespace osu.Game.Screens.Select
                                                                     Direction = FillDirection.Vertical,
                                                                     Children = new Drawable[]
                                                                     {
-                                                                        new ShearAligningWrapper(titleWedge = new BeatmapTitleWedge
+                                                                        titleWedgeWrapper = new ShearAligningWrapper(titleWedge = new BeatmapTitleWedge
                                                                         {
                                                                             TopPadding = TopPadding,
                                                                         }),
@@ -344,13 +350,14 @@ namespace osu.Game.Screens.Select
                         },
                     },
                 },
-                new LegacyModeButton { Ruleset = { BindTarget = Ruleset } },
                 skinnableContent = new SkinnableContainer(new GlobalSkinnableContainerLookup(GlobalSkinnableContainers.SongSelect))
                 {
                     Anchor = Anchor.Centre,
                     Origin = Anchor.Centre,
                     RelativeSizeAxes = Axes.Both,
                 },
+                // legacy skins draw their song select artwork in the skinnable layer, which should not cover the filter controls.
+                FilterControl.CreateProxy(),
                 modSpeedHotkeyHandler = new ModSpeedHotkeyHandler()
             });
 
@@ -438,6 +445,9 @@ namespace osu.Game.Screens.Select
 
             FilterControl.CriteriaChanged += criteriaChanged;
 
+            skin.SourceChanged += updateLegacyLayout;
+            updateLegacyLayout();
+
             modSelectOverlay.State.BindValueChanged(v =>
             {
                 if (!this.IsCurrentScreen())
@@ -452,7 +462,7 @@ namespace osu.Game.Screens.Select
         {
             base.Update();
 
-            detailsArea.Height = wedgesContainer.ChildSize.Y - titleWedge.LayoutSize.Y - 4;
+            detailsArea.Height = wedgesContainer.ChildSize.Y - (legacyLayout ? 0 : titleWedge.LayoutSize.Y) - 4;
 
             float widescreenBonusWidth = Math.Max(0, DrawWidth / DrawHeight - 2f);
 
@@ -867,6 +877,18 @@ namespace osu.Game.Screens.Select
             logo.ScaleTo(0.2f, 120, Easing.Out);
             logo.FadeOut(120, Easing.Out);
         }
+
+        private void updateLegacyLayout() => Schedule(() =>
+        {
+            legacyLayout = skin.UsesLegacyLayout();
+
+            // stable shows the beatmap details in the skinnable layer (see LegacyBeatmapDetails) and starts the leaderboard below the top artwork.
+            titleWedgeWrapper.Alpha = legacyLayout ? 0 : 1;
+            wedgesContainer.Padding = new MarginPadding { Top = legacyLayout ? legacy_top_height + CORNER_RADIUS_HIDE_OFFSET : 0 };
+            FilterControl.ShowBackground = !legacyLayout;
+        });
+
+        private const float legacy_top_height = 82 * LegacySongSelectComponent.STABLE_SCALE;
 
         private void updateWedgeVisibility()
         {
@@ -1371,6 +1393,9 @@ namespace osu.Game.Screens.Select
         {
             base.Dispose(isDisposing);
             modSelectOverlayRegistration?.Dispose();
+
+            if (skin.IsNotNull())
+                skin.SourceChanged -= updateLegacyLayout;
         }
     }
 }

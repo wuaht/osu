@@ -85,6 +85,16 @@ namespace osu.Game.Screens.Select
 
         private IDisposable? collectionsSubscription;
 
+        private Container background = null!;
+
+        /// <summary>
+        /// Whether the wedge background is shown. Legacy skins draw their own artwork behind the filter controls instead.
+        /// </summary>
+        public bool ShowBackground
+        {
+            set => background.Alpha = value ? 1 : 0;
+        }
+
         [BackgroundDependencyLoader]
         private void load(IAPIProvider api)
         {
@@ -96,7 +106,7 @@ namespace osu.Game.Screens.Select
 
             InternalChildren = new Drawable[]
             {
-                new Container
+                background = new Container
                 {
                     RelativeSizeAxes = Axes.Both,
                     CornerRadius = corner_radius,

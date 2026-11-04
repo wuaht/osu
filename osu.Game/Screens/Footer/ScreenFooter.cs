@@ -148,6 +148,11 @@ namespace osu.Game.Screens.Footer
                     Origin = Anchor.BottomLeft,
                     Action = onBackPressed,
                 },
+                legacyBackButton = new LegacyBackButton
+                {
+                    Alpha = 0,
+                    Action = onBackPressed,
+                },
                 hiddenLeftButtonsContainer = new Container<ScreenFooterButton>
                 {
                     Name = "Hidden left footer buttons",
@@ -183,10 +188,7 @@ namespace osu.Game.Screens.Footer
         /// </summary>
         private const float legacy_first_button_x = 316;
 
-        /// <summary>
-        /// The width of stable's back button area, narrower than ours so it doesn't cover stable's mode button.
-        /// </summary>
-        private const float legacy_back_button_width = 200;
+        private LegacyBackButton legacyBackButton = null!;
 
         private bool usingLegacyLayout;
 
@@ -206,7 +208,8 @@ namespace osu.Game.Screens.Footer
 
             leftButtonsFlow.X = legacyLayout ? legacy_first_button_x - (OsuGame.SCREEN_EDGE_MARGIN + ScreenBackButton.BUTTON_WIDTH + padding) : 0;
             leftButtonsFlow.Spacing = new Vector2(legacyLayout ? 0 : 7, 0);
-            BackButton.ResizeWidthTo(legacyLayout ? legacy_back_button_width : ScreenBackButton.BUTTON_WIDTH, 200, Easing.OutQuint);
+            BackButton.Alpha = legacyLayout ? 0 : 1;
+            legacyBackButton.Alpha = legacyLayout ? 1 : 0;
         }
 
         private ScheduledDelegate? changeLogoDepthDelegate;

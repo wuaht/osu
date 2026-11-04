@@ -23,6 +23,7 @@ using osu.Game.Rulesets.Objects.Types;
 using osu.Game.Rulesets.Scoring;
 using osu.Game.Screens.Play.HUD;
 using osu.Game.Screens.Play.HUD.HitErrorMeters;
+using osu.Game.Screens.Select;
 using osuTK;
 using osuTK.Graphics;
 
@@ -381,6 +382,15 @@ namespace osu.Game.Skinning
         {
             switch (lookup)
             {
+                // saving a legacy skin in the skin editor used to store an empty song select layout, from before legacy skins had song select components.
+                // treat it as not configured so those skins get the stable layout. shortcut: also discards a layout the user cleared on purpose.
+                case UserSkinComponentLookup { Component: GlobalSkinnableContainerLookup { Lookup: GlobalSkinnableContainers.SongSelect } songSelectLookup }:
+                    if (LayoutInfos.TryGetValue(GlobalSkinnableContainers.SongSelect, out var songSelectLayout)
+                        && (!songSelectLayout.TryGetDrawableInfo(songSelectLookup.Ruleset, out var songSelectComponents) || songSelectComponents.Length == 0))
+                        return null;
+
+                    break;
+
                 case GlobalSkinnableContainerLookup containerLookup:
                     switch (containerLookup.Lookup)
                     {
@@ -470,6 +480,19 @@ namespace osu.Game.Skinning
                                     // for the sake of hacky full screen area health bars
                                     new LegacyHealthDisplay(),
                                 }
+                            };
+
+                        case GlobalSkinnableContainers.SongSelect:
+                            return new DefaultSkinComponentsContainer(container =>
+                            {
+                                foreach (var d in container.OfType<ISerialisableDrawable>())
+                                    d.UsesFixedAnchor = true;
+                            })
+                            {
+                                new LegacySongSelectTop(),
+                                new LegacySongSelectBottom(),
+                                new LegacyModeButton(),
+                                new LegacyBeatmapDetails(),
                             };
                     }
 

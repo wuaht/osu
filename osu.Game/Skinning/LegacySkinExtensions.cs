@@ -110,14 +110,16 @@ namespace osu.Game.Skinning
         }
 
         /// <summary>
-        /// Retrieves a texture only if the user's own legacy skin provides it, ignoring the built-in fallback skins.
-        /// Used for elements which should only replace lazer visuals when a skinner deliberately designed them.
+        /// Whether the current skin is a legacy skin, in which case screens like song select use stable's layout.
         /// </summary>
-        public static Texture? GetUserLegacyTexture(this ISkinSource source, string componentName)
-        {
-            var provider = source.FindProvider(s => s.GetTexture(componentName) != null);
-            return provider is LegacySkin and not DefaultLegacySkin ? provider.GetTexture(componentName) : null;
-        }
+        public static bool UsesLegacyLayout(this ISkinSource source) => source.AllSources.FirstOrDefault() is LegacySkin;
+
+        /// <summary>
+        /// Retrieves a texture for stable's layout, falling back to the default legacy skin like stable does.
+        /// Returns <c>null</c> when the current skin isn't a legacy skin, so lazer skins keep the lazer visuals.
+        /// </summary>
+        public static Texture? GetLegacyLayoutTexture(this ISkinSource source, string componentName)
+            => source.UsesLegacyLayout() ? source.GetTexture(componentName) : null;
 
         public static Texture WithMaximumSize(this Texture texture, Vector2 maxSize)
         {

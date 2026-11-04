@@ -250,7 +250,7 @@ namespace osu.Game.Screens.Footer
 
         private void updateLegacyState()
         {
-            Texture? texture = LegacyTextureName == null ? null : skin?.GetUserLegacyTexture(LegacyTextureName);
+            Texture? texture = LegacyTextureName == null ? null : skin?.GetLegacyLayoutTexture(LegacyTextureName);
 
             IsLegacy = texture != null;
 
