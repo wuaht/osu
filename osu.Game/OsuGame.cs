@@ -1914,7 +1914,7 @@ namespace osu.Game
 
                 if (newScreen.HideOverlaysOnEnter)
                     CloseAllOverlays();
-                else
+                else if (newOsuScreen.ShowToolbarOnEnter)
                     Toolbar.Show();
 
                 skinEditor.SetTarget(newOsuScreen);

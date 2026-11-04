@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using osu.Framework.Allocation;
+using osu.Framework.Audio;
 using osu.Framework.Audio.Track;
 using osu.Framework.Bindables;
 using osu.Framework.Extensions.Color4Extensions;
@@ -21,8 +22,10 @@ using osu.Framework.Graphics.Rendering;
 using osu.Framework.Graphics.Textures;
 using osu.Framework.Input.Events;
 using osu.Framework.Utils;
+using osu.Game.Audio;
 using osu.Game.Beatmaps;
 using osu.Game.Beatmaps.ControlPoints;
+using osu.Game.Extensions;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.Sprites;
@@ -82,9 +85,6 @@ namespace osu.Game.Screens.Select
 
         private Container? fill;
 
-        [Resolved]
-        private SkinManager? skinManager { get; set; }
-
         public LegacySongSelectTop()
         {
             RelativeSizeAxes = Axes.X;
@@ -103,15 +103,7 @@ namespace osu.Game.Screens.Select
             ClearInternal();
             fill = null;
 
-            // stable darkens the search text with its default menu-button-background, below the top artwork.
-            AddInternal(new Sprite
-            {
-                Anchor = Anchor.TopRight,
-                Origin = Anchor.Centre,
-                Position = new Vector2(-14, 46) * STABLE_SCALE,
-                Texture = skinManager?.DefaultClassicSkin.GetTexture("menu-button-background"),
-                Colour = Color4.Black.Opacity(102 / 255f),
-            });
+            // stable's search background sits below this artwork, see LegacyFilterDisplay.SearchBackground.
 
             if (Skin.GetTexture("songselect-top") is not Texture top)
             {
@@ -264,9 +256,9 @@ namespace osu.Game.Screens.Select
 
     /// <summary>
     /// stable's mode button: <c>selection-mode</c> with its hover texture and the current ruleset's icon.
-    /// Cycles through the rulesets on click, as lazer has no mode menu to open.
+    /// Opens stable's mode menu on click, or cycles through the rulesets where there is none.
     /// </summary>
-    public partial class LegacyModeButton : OsuClickableContainer, ISerialisableDrawable
+    public partial class LegacyModeButton : ClickableContainer, ISerialisableDrawable
     {
         public const float STABLE_X = 140 * LegacySongSelectComponent.STABLE_SCALE;
 
@@ -276,10 +268,19 @@ namespace osu.Game.Screens.Select
         private ISkinSource skin { get; set; } = null!;
 
         [Resolved]
+        private AudioManager audio { get; set; } = null!;
+
+        [Resolved]
         private RulesetStore rulesets { get; set; } = null!;
 
         [Resolved(canBeNull: true)]
         private Bindable<RulesetInfo>? ruleset { get; set; }
+
+        [Resolved]
+        private LegacyModeMenu? menu { get; set; }
+
+        [Resolved]
+        private LegacyModeButtonLayer? layer { get; set; }
 
         private Sprite modeSprite = null!;
         private Sprite overSprite = null!;
@@ -346,7 +347,17 @@ namespace osu.Game.Screens.Select
                 new BeatFlash { Flash = flashIcon },
             };
 
-            Action = cycleRuleset;
+            Action = () =>
+            {
+                if (menu == null)
+                {
+                    cycleRuleset();
+                    return;
+                }
+
+                PlayExpandSample();
+                menu.Toggle();
+            };
         }
 
         protected override void LoadComplete()
@@ -359,7 +370,18 @@ namespace osu.Game.Screens.Select
                 ruleset.BindValueChanged(_ => updateRuleset());
 
             updateTextures();
+
+            // stable draws the button's artwork above the group tabs and the search line, which some skins cover with it.
+            layer?.Display(this);
+
+            if (menu != null)
+                menu.Button = this;
         }
+
+        /// <summary>
+        /// stable's <c>select-expand</c>, which lazer's default skins only have as a song select sample.
+        /// </summary>
+        internal void PlayExpandSample() => (skin.GetSample(new SampleInfo("select-expand")) ?? audio.Samples.Get("SongSelect/select-expand"))?.Play();
 
         private void onSkinChanged() => Schedule(updateTextures);
 
@@ -412,13 +434,14 @@ namespace osu.Game.Screens.Select
 
         protected override bool OnHover(HoverEvent e)
         {
-            overSprite.FadeIn(100, Easing.OutQuint);
+            overSprite.FadeIn(100);
+            skin.GetSample(new SampleInfo("click-short"))?.Play();
             return base.OnHover(e);
         }
 
         protected override void OnHoverLost(HoverLostEvent e)
         {
-            overSprite.FadeOut(100, Easing.OutQuint);
+            overSprite.FadeOut(100);
             base.OnHoverLost(e);
         }
 
@@ -438,6 +461,309 @@ namespace osu.Game.Screens.Select
             {
                 base.OnNewBeat(beatIndex, timingPoint, effectPoint, amplitudes);
                 Flash?.Invoke(timingPoint.BeatLength);
+            }
+        }
+    }
+
+    /// <summary>
+    /// The layer of song select that shows the <see cref="LegacyModeButton"/>'s artwork at stable's depth,
+    /// above the filter controls' group tabs but below their dropdowns.
+    /// </summary>
+    public partial class LegacyModeButtonLayer : Container
+    {
+        private Drawable? button;
+
+        public void Display(Drawable modeButton)
+        {
+            Clear();
+            button = modeButton;
+            Add(modeButton.CreateProxy());
+        }
+
+        protected override void Update()
+        {
+            base.Update();
+
+            // the button goes away with its skin.
+            if (button != null && button.Parent == null)
+            {
+                Clear();
+                button = null;
+            }
+        }
+    }
+
+    /// <summary>
+    /// stable's mode menu, opened by the <see cref="LegacyModeButton"/>: a row per ruleset above the button, osu! at the bottom.
+    /// Rulesets stable doesn't have go on top, and the menu scrolls once there are more than stable's four.
+    /// While open, any click outside its rows closes it.
+    /// </summary>
+    public partial class LegacyModeMenu : CompositeDrawable
+    {
+        private const float scale = LegacySongSelectComponent.STABLE_SCALE;
+        private const float row_height = 80;
+        private const int visible_rows = 4;
+
+        [Resolved]
+        private RulesetStore rulesets { get; set; } = null!;
+
+        [Resolved]
+        private Bindable<RulesetInfo> ruleset { get; set; } = null!;
+
+        [Resolved]
+        private ISkinSource skin { get; set; } = null!;
+
+        private readonly OsuScrollContainer scroll;
+        private readonly FillFlowContainer<Row> rows;
+
+        /// <summary>
+        /// The button that opens the menu, which closes it with its sound when clicked again.
+        /// </summary>
+        internal LegacyModeButton? Button { get; set; }
+
+        public bool IsOpen { get; private set; }
+
+        public LegacyModeMenu()
+        {
+            RelativeSizeAxes = Axes.Both;
+
+            // stable's rows start at its mode button and stack upwards from 56 units above the screen's bottom.
+            InternalChild = scroll = new OsuScrollContainer
+            {
+                Anchor = Anchor.BottomLeft,
+                Origin = Anchor.BottomLeft,
+                X = LegacyModeButton.STABLE_X,
+                Y = -56 * scale,
+                Size = new Vector2(280, row_height * visible_rows) * scale,
+                ScrollbarVisible = false,
+                Child = rows = new FillFlowContainer<Row>
+                {
+                    RelativeSizeAxes = Axes.X,
+                    AutoSizeAxes = Axes.Y,
+                    Direction = FillDirection.Vertical,
+                },
+            };
+        }
+
+        [BackgroundDependencyLoader]
+        private void load()
+        {
+            var available = rulesets.AvailableRulesets.ToList();
+            var bottomToTop = available.Where(r => r.IsLegacyRuleset()).OrderBy(r => r.OnlineID).Concat(available.Where(r => !r.IsLegacyRuleset())).ToList();
+
+            for (int i = bottomToTop.Count - 1; i >= 0; i--)
+            {
+                var r = bottomToTop[i];
+
+                rows.Add(new Row(r, i)
+                {
+                    Action = () => select(r),
+                });
+            }
+        }
+
+        protected override void LoadComplete()
+        {
+            base.LoadComplete();
+
+            skin.SourceChanged += onSkinChanged;
+            updateIcons();
+        }
+
+        private void onSkinChanged() => Schedule(updateIcons);
+
+        private void updateIcons()
+        {
+            foreach (var row in rows)
+                row.Icon = skin.GetTexture($"mode-{row.Ruleset.ShortName}-med");
+        }
+
+        public void Toggle()
+        {
+            if (IsOpen)
+                Close();
+            else
+                Open();
+        }
+
+        public void Open()
+        {
+            if (IsOpen)
+                return;
+
+            IsOpen = true;
+            scroll.ScrollToEnd(false);
+
+            // stable shows the rows from the bottom up, 20ms apart.
+            foreach (var row in rows)
+                row.Appear(row.Index * 20);
+        }
+
+        public void Close()
+        {
+            if (!IsOpen)
+                return;
+
+            IsOpen = false;
+
+            foreach (var row in rows)
+                row.Disappear();
+        }
+
+        private void select(RulesetInfo r)
+        {
+            if (!ruleset.Disabled)
+                ruleset.Value = r;
+
+            Close();
+        }
+
+        public override bool PropagatePositionalInputSubTree => IsOpen && base.PropagatePositionalInputSubTree;
+
+        public override bool ReceivePositionalInputAt(Vector2 screenSpacePos) => IsOpen;
+
+        protected override bool OnMouseDown(MouseDownEvent e) => IsOpen;
+
+        protected override bool OnClick(ClickEvent e)
+        {
+            if (!IsOpen)
+                return false;
+
+            if (Button?.ReceivePositionalInputAt(e.ScreenSpaceMousePosition) == true)
+                Button.PlayExpandSample();
+
+            Close();
+            return true;
+        }
+
+        protected override void Dispose(bool isDisposing)
+        {
+            base.Dispose(isDisposing);
+
+            if (skin.IsNotNull())
+                skin.SourceChanged -= onSkinChanged;
+        }
+
+        /// <summary>
+        /// stable's <c>pSpriteMenuItem</c>: a dark 280x80 row that turns purple on hover, with the mode's icon and name.
+        /// </summary>
+        private partial class Row : CompositeDrawable
+        {
+            private static readonly Color4 background_colour = new Color4(0, 0, 0, 160);
+            private static readonly Color4 highlight_colour = new Color4(165, 90, 234, 230);
+
+            private const float text_x = 90;
+
+            public readonly RulesetInfo Ruleset;
+            public readonly int Index;
+            public Action? Action { get; init; }
+
+            [Resolved]
+            private ISkinSource skin { get; set; } = null!;
+
+            private readonly Box background;
+            private readonly Sprite icon;
+            private readonly Container fallbackIcon;
+            private readonly OsuSpriteText text;
+
+            public Row(RulesetInfo ruleset, int index)
+            {
+                Ruleset = ruleset;
+                Index = index;
+
+                RelativeSizeAxes = Axes.X;
+                Height = row_height * scale;
+
+                InternalChildren = new Drawable[]
+                {
+                    // stable's colour alpha also scales the sprite's alpha, which fades in to the same value.
+                    background = new Box
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Colour = background_colour,
+                        Alpha = 0,
+                    },
+                    icon = new Sprite
+                    {
+                        Origin = Anchor.Centre,
+                        Position = new Vector2(40) * scale,
+                        Alpha = 0,
+                    },
+                    // lazer's default skins have no mode-*-med icons, so rulesets show their own at the size of stable's.
+                    fallbackIcon = new Container
+                    {
+                        Origin = Anchor.Centre,
+                        Position = new Vector2(40) * scale,
+                        Size = new Vector2(62 * scale),
+                        Alpha = 0,
+                        Child = ruleset.CreateInstance().CreateIcon().With(d =>
+                        {
+                            d.Anchor = d.Origin = Anchor.Centre;
+                            d.RelativeSizeAxes = Axes.Both;
+                        }),
+                    },
+                    text = new OsuSpriteText
+                    {
+                        Origin = Anchor.CentreLeft,
+                        Position = new Vector2(text_x, 40) * scale,
+                        Text = ruleset.Name,
+                        Font = OsuFont.GetFont(size: 24 * LegacyUserPanel.StableText.EM * scale, weight: FontWeight.Bold),
+                        Shadow = true,
+                        Alpha = 0,
+                    },
+                };
+            }
+
+            public Texture? Icon
+            {
+                set
+                {
+                    icon.Texture = value;
+                    icon.Size = value?.DisplaySize ?? Vector2.Zero;
+                    fallbackIcon.Size = value == null ? new Vector2(62 * scale) : Vector2.Zero;
+                }
+            }
+
+            public void Appear(double delay)
+            {
+                background.Delay(delay).FadeTo(background_colour.A, 200);
+                icon.Delay(delay).FadeIn(200);
+                fallbackIcon.Delay(delay).FadeIn(200);
+                text.Delay(delay).FadeIn(200);
+            }
+
+            public void Disappear()
+            {
+                background.FadeOut(100);
+                icon.FadeOut(100);
+                fallbackIcon.FadeOut(100);
+                text.FadeOut(100);
+            }
+
+            protected override bool OnHover(HoverEvent e)
+            {
+                background.FadeColour(highlight_colour, 10);
+                // stable only bounces its own default icons.
+                fallbackIcon.ScaleTo(1.1f, 1000, Easing.OutElastic);
+                text.MoveToX((text_x + 10) * scale, 300, Easing.Out);
+                skin.GetSample(new SampleInfo("click-short"))?.Play();
+                return true;
+            }
+
+            protected override void OnHoverLost(HoverLostEvent e)
+            {
+                background.FadeColour(background_colour, 100);
+                fallbackIcon.ScaleTo(1, 1000, Easing.OutElastic);
+                text.MoveToX(text_x * scale, 300, Easing.Out);
+            }
+
+            protected override bool OnMouseDown(MouseDownEvent e) => true;
+
+            protected override bool OnClick(ClickEvent e)
+            {
+                skin.GetSample(new SampleInfo("click-short-confirm"))?.Play();
+                Action?.Invoke();
+                return true;
             }
         }
     }
@@ -624,12 +950,12 @@ namespace osu.Game.Screens.Select
             switch (status)
             {
                 case BeatmapOnlineStatus.Ranked:
+                case BeatmapOnlineStatus.Qualified:
                 case BeatmapOnlineStatus.Loved:
                     statusIcon.ScaleTo(0.92f).ScaleTo(1.4f, 200, Easing.In).Then().ScaleTo(1, 200, Easing.In);
                     break;
 
                 case BeatmapOnlineStatus.Approved:
-                case BeatmapOnlineStatus.Qualified:
                     statusIcon.RotateTo(MathHelper.RadiansToDegrees(-0.4f)).RotateTo(0, 400, Easing.Out);
                     statusIcon.ScaleTo(1.4f).ScaleTo(1, 400, Easing.Out);
                     break;

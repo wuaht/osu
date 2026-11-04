@@ -15,12 +15,11 @@ using osuTK;
 namespace osu.Game.Screens.Select
 {
     /// <summary>
-    /// stable's song select play button in the bottom right corner, showing the client's logo at the size of the skin's <c>menu-osu</c>.
-    /// It grows on hover and starts the beatmap on click.
+    /// stable's song select play button in the bottom right corner (<c>s_Osu2</c>), showing the client's logo at the size of the skin's <c>menu-osu</c>.
+    /// Like stable, it stays hidden until hovered, fades in at its hovered size and starts the beatmap on click.
     /// </summary>
     public partial class LegacyPlayButton : CompositeDrawable
     {
-        private const float beat_scale = 0.4f;
         private const float hover_scale = 0.55f;
 
         public Action? Action { get; set; }
@@ -47,6 +46,8 @@ namespace osu.Game.Screens.Select
 
             InternalChild = hoverContainer = new LogoContainer
             {
+                Alpha = 0,
+                Scale = new Vector2(hover_scale),
                 Child = logo = new OsuLogo(),
             };
         }
@@ -70,25 +71,28 @@ namespace osu.Game.Screens.Select
             base.Update();
 
             if (logo.DrawWidth > 0)
-                logo.Scale = new Vector2(textureWidth * beat_scale / logo.DrawWidth);
+                logo.Scale = new Vector2(textureWidth / logo.DrawWidth);
         }
 
         // stable reacts within the hovered size of the round button.
         public override bool ReceivePositionalInputAt(Vector2 screenSpacePos) => ToLocalSpace(screenSpacePos).Length < textureWidth * hover_scale / 2;
 
+        // stable's HoverEffect: a linear 100ms fade, reversed when the hover is lost.
         protected override bool OnHover(HoverEvent e)
         {
-            hoverContainer.ScaleTo(hover_scale / beat_scale, 500, Easing.OutElastic);
+            hoverContainer.FadeIn(100);
             return true;
         }
 
-        protected override void OnHoverLost(HoverLostEvent e) => hoverContainer.ScaleTo(1, 500, Easing.OutElastic);
+        protected override void OnHoverLost(HoverLostEvent e) => hoverContainer.FadeOut(100);
 
         protected override bool OnMouseDown(MouseDownEvent e) => true;
 
         protected override bool OnClick(ClickEvent e)
         {
-            hoverContainer.ScaleTo(0.9f * hover_scale / beat_scale).ScaleTo(hover_scale / beat_scale, 500, Easing.OutElastic);
+            // stable's start_OnClick: the logo bursts from 0.6 to 2 and fades out.
+            hoverContainer.ScaleTo(0.6f).ScaleTo(2, 800, Easing.Out).Then().ScaleTo(hover_scale);
+            hoverContainer.FadeIn().FadeTo(0.011f, 100).Then(700).FadeOut();
             Action?.Invoke();
             return true;
         }

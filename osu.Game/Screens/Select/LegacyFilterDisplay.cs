@@ -55,6 +55,8 @@ namespace osu.Game.Screens.Select
         private OsuSpriteText statusText = null!;
         private LegacyInfoCard infoCard = null!;
         private LegacyWebButton webButton = null!;
+
+        private readonly LegacyModeButtonLayer modeButtonLayer;
         private string? infoCardTexture;
 
         [Resolved]
@@ -105,11 +107,33 @@ namespace osu.Game.Screens.Select
             }
         }
 
-        public LegacyFilterDisplay(FilterControl filterControl, BeatmapDetailsArea detailsArea)
+        /// <summary>
+        /// stable's search background, which darkens the search line. Stable draws it below the <c>songselect-top</c> artwork,
+        /// so it is shown through a proxy below the skinnable layer.
+        /// </summary>
+        public readonly Drawable SearchBackground;
+
+        private readonly Sprite searchBackground;
+
+        private const float search_background_y = 46;
+        private const float search_background_search_y = 54;
+
+        public LegacyFilterDisplay(FilterControl filterControl, BeatmapDetailsArea detailsArea, LegacyModeButtonLayer modeButtonLayer)
         {
             this.filterControl = filterControl;
             this.detailsArea = detailsArea;
+            this.modeButtonLayer = modeButtonLayer;
             RelativeSizeAxes = Axes.Both;
+
+            // stable's colour alpha (102) also scales the sprite's alpha, which starts at the same 0.4.
+            SearchBackground = searchBackground = new Sprite
+            {
+                Anchor = Anchor.TopRight,
+                Origin = Anchor.Centre,
+                Position = new Vector2(-14, search_background_y) * scale,
+                Colour = Color4.Black.Opacity(102 / 255f),
+                Alpha = 102 / 255f,
+            };
             // keeps updating so it can follow the filter control's visibility.
             AlwaysPresent = true;
         }
@@ -129,7 +153,8 @@ namespace osu.Game.Screens.Select
                 Items = Enum.GetValues<SortMode>(),
             };
 
-            scopeDropdown = new LegacyDropdown<BeatmapLeaderboardScope>(new Color4(31, 184, 255, 255), new Color4(31, 184, 255, 180), 14, 190)
+            // stable keeps its default pink (NEW_SKIN_COLOUR_MAIN_DARKER) here and only tints the border.
+            scopeDropdown = new LegacyDropdown<BeatmapLeaderboardScope>(new Color4(187, 17, 119, 255), new Color4(31, 184, 255, 180), 14, 190)
             {
                 Anchor = Anchor.TopLeft,
                 Position = new Vector2(5, 73.5f) * scale,
@@ -168,16 +193,17 @@ namespace osu.Game.Screens.Select
             }
             config.BindWith(OsuSetting.SongSelectSortingMode, sortDropdown.Current);
 
+            searchBackground.Texture = skinManager?.DefaultClassicSkin.GetTexture("menu-button-background");
+
             InternalChildren = new Drawable[]
             {
+                searchBackground,
                 // stable's labels sit left of their dropdowns, bottom right aligned at 40 units from the top.
                 sortText = new OsuSpriteText
                 {
                     Anchor = Anchor.TopRight,
                     Origin = Anchor.BottomRight,
                     Position = new Vector2(-130, 40) * scale,
-                    // stable draws the labels above the tabs.
-                    Depth = -1,
                     Text = SongSelectStrings.Sort,
                     Font = font(22),
                     Colour = new Color4(174, 210, 139, 255),
@@ -188,7 +214,6 @@ namespace osu.Game.Screens.Select
                     Anchor = Anchor.TopRight,
                     Origin = Anchor.BottomRight,
                     Y = 40 * scale,
-                    Depth = -1,
                     Text = SongSelectStrings.Group,
                     Font = font(22),
                     Colour = new Color4(146, 195, 230, 255),
@@ -227,17 +252,6 @@ namespace osu.Game.Screens.Select
                     Font = font(11, FontWeight.Bold),
                     Shadow = true,
                 },
-                // stable's web access button right of the leaderboard dropdown, a 25 unit square centred at (214, 81).
-                webButton = new LegacyWebButton
-                {
-                    Position = new Vector2(214, 81) * scale,
-                    Size = new Vector2(25 * scale),
-                    Action = () =>
-                    {
-                        if (beatmap.Value.BeatmapInfo.OnlineID > 0)
-                            game?.ShowBeatmap(beatmap.Value.BeatmapInfo.OnlineID);
-                    },
-                },
                 infoCard = new LegacyInfoCard
                 {
                     Position = info_card_position,
@@ -245,6 +259,18 @@ namespace osu.Game.Screens.Select
                 },
                 tabs,
                 new LegacyPlayButton { Action = () => StartRequested?.Invoke() },
+                // stable's mode button covers the tabs and the search line in skins like WhiteCat's, and is covered by the web button.
+                modeButtonLayer,
+                // stable's web access button right of the leaderboard dropdown, centred at (214, 81).
+                webButton = new LegacyWebButton
+                {
+                    Position = new Vector2(214, 81) * scale,
+                    Action = () =>
+                    {
+                        if (beatmap.Value.BeatmapInfo.OnlineID > 0)
+                            game?.ShowBeatmap(beatmap.Value.BeatmapInfo.OnlineID);
+                    },
+                },
                 // the group dropdown opens over the sort dropdown's area, so it goes on top.
                 scopeDropdown,
                 sortDropdown,
@@ -288,7 +314,11 @@ namespace osu.Game.Screens.Select
             {
                 queryText.Text = string.IsNullOrEmpty(q.NewValue) ? "Type to search!" : q.NewValue;
                 updateStatus();
-            }, true);
+
+                if (string.IsNullOrEmpty(q.OldValue) != string.IsNullOrEmpty(q.NewValue))
+                    updateSearchBackground(!string.IsNullOrEmpty(q.NewValue));
+            });
+            updateSearchBackground(!string.IsNullOrEmpty(query.Value), true);
         }
 
         private void updateSkinTextures() => Schedule(() =>
@@ -305,6 +335,23 @@ namespace osu.Game.Screens.Select
 
             if (skin.IsNotNull())
                 skin.SourceChanged -= updateSkinTextures;
+        }
+
+        /// <summary>
+        /// stable's <c>ShowSearch</c> and <c>ResetSearch</c>: the background brightens and moves down to cover the matches line while searching.
+        /// </summary>
+        private void updateSearchBackground(bool searching, bool instant = false)
+        {
+            if (searching)
+            {
+                searchBackground.FadeTo(0.95f, instant ? 0 : 300);
+                searchBackground.MoveToY(search_background_search_y * scale, instant ? 0 : 200, Easing.Out);
+            }
+            else
+            {
+                searchBackground.FadeTo(102 / 255f, instant ? 0 : 200);
+                searchBackground.MoveToY(search_background_y * scale, instant ? 0 : 200, Easing.Out);
+            }
         }
 
         private void updateStatus() => statusText.Text = string.IsNullOrEmpty(query.Value) ? default : status;
@@ -378,32 +425,42 @@ namespace osu.Game.Screens.Select
             beatmapDownloader?.DownloadAsUpdate(beatmap.Value.BeatmapSetInfo, config.Get<bool>(OsuSetting.PreferNoVideo));
         }
 
+        /// <summary>
+        /// stable's <c>rank-forum</c>: centred on the full texture, but only its top left 25x25 pixels are drawn (and clickable).
+        /// </summary>
         private partial class LegacyWebButton : OsuClickableContainer
         {
+            private const float draw_size = 25;
+
             private readonly Sprite sprite;
 
             public LegacyWebButton()
             {
-                Origin = Anchor.Centre;
                 Alpha = 0;
+                Masking = true;
                 TooltipText = "Web access";
-                Child = sprite = new Sprite
-                {
-                    RelativeSizeAxes = Axes.Both,
-                    Anchor = Anchor.Centre,
-                    Origin = Anchor.Centre,
-                };
+                Child = sprite = new Sprite { Origin = Anchor.Centre };
             }
 
             public Texture? Texture
             {
-                set => sprite.Texture = value;
+                set
+                {
+                    sprite.Texture = value;
+
+                    Vector2 textureSize = value?.DisplaySize ?? Vector2.Zero;
+                    sprite.Size = textureSize;
+                    sprite.Position = textureSize / 2;
+                    Size = Vector2.ComponentMin(textureSize, new Vector2(draw_size));
+                    OriginPosition = textureSize / 2;
+                }
             }
 
             public override bool PropagatePositionalInputSubTree => Alpha > 0 && base.PropagatePositionalInputSubTree;
 
             protected override bool OnClick(ClickEvent e)
             {
+                // stable's ClickEffect scales the whole sprite around its centre.
                 sprite.ScaleTo(1.1f).ScaleTo(1, 50);
                 return base.OnClick(e);
             }
@@ -572,6 +629,9 @@ namespace osu.Game.Screens.Select
 
         private partial class LegacyDropdown<T> : OsuDropdown<T>
         {
+            // stable scales pText corners and borders by window height / 768 rather than its 640x480 space, which is lazer's 768 unit height.
+            private const float corner_radius = 5;
+
             private readonly Color4 highlight;
 
             public LegacyDropdown(Color4 highlight, Color4? border = null, float textSize = 13, float width = 118)
@@ -587,8 +647,6 @@ namespace osu.Game.Screens.Select
                     legacyHeader.BorderColour = border ?? highlight.Darken(0.2f);
                     legacyHeader.TextSize = textSize;
                 }
-
-                Menu.MaxHeight = 300 * scale;
             }
 
             protected override void LoadComplete()
@@ -599,7 +657,6 @@ namespace osu.Game.Screens.Select
                 {
                     menu.BackgroundColour = Color4.Black.Opacity(240 / 255f);
                     menu.HoverColour = highlight;
-                    menu.SelectionColour = highlight.Opacity(0.5f);
                 }
             }
 
@@ -616,19 +673,20 @@ namespace osu.Game.Screens.Select
             {
                 public LegacyDropdownMenu()
                 {
-                    CornerRadius = 2 * scale;
-                    MaskingContainer.CornerRadius = 2 * scale;
+                    CornerRadius = corner_radius;
+                    MaskingContainer.CornerRadius = corner_radius;
                     ItemsContainer.Padding = new MarginPadding();
                 }
 
                 protected override DrawableDropdownMenuItem CreateDrawableDropdownMenuItem(MenuItem item) => new LegacyDropdownMenuItem(item)
                 {
                     BackgroundColourHover = HoverColour,
-                    BackgroundColourSelected = SelectionColour
                 };
 
                 private partial class LegacyDropdownMenuItem : DrawableOsuDropdownMenuItem
                 {
+                    private Content? content;
+
                     public LegacyDropdownMenuItem(MenuItem item)
                         : base(item)
                     {
@@ -638,16 +696,34 @@ namespace osu.Game.Screens.Select
 
                     protected override Drawable CreateContent()
                     {
-                        var content = (Content)base.CreateContent();
+                        content = (Content)base.CreateContent();
 
-                        // the content auto-sizes to its label, so stable's (12, 3) padding gives the 17 unit row.
+                        // stable draws each option into a fixed 17 unit row, offsetting its text by a (12, 3) padding that is scaled by window height / 768 like the corners.
+                        // the content auto-sizes to its label, so the label carries the row height.
+                        content.Label.Height = 17 * scale;
                         content.Label.Font = font(12);
                         content.Label.Shadow = true;
-                        content.Label.Padding = new MarginPadding { Left = 12 * scale, Vertical = 3 * scale };
+                        content.Label.Padding = new MarginPadding { Left = 12, Top = 3 };
                         content.Chevron.Size = new Vector2(6 * scale);
                         content.Chevron.Margin = new MarginPadding { Left = 3 * scale };
 
                         return content;
+                    }
+
+                    // stable only highlights the hovered option, instantly, and marks the selected one in bold instead.
+                    protected override void UpdateBackgroundColour()
+                    {
+                        Background.ClearTransforms();
+                        Background.Colour = BackgroundColourHover;
+                        Background.Alpha = IsPreSelected ? 1 : 0;
+                    }
+
+                    protected override void UpdateForegroundColour()
+                    {
+                        base.UpdateForegroundColour();
+
+                        if (content != null)
+                            content.Label.Font = font(12, IsSelected ? FontWeight.Bold : FontWeight.Regular);
                     }
                 }
             }
@@ -664,8 +740,8 @@ namespace osu.Game.Screens.Select
                     AutoSizeAxes = Axes.None;
                     Height = 15 * scale;
                     Margin = new MarginPadding();
-                    CornerRadius = 2 * scale;
-                    BorderThickness = scale;
+                    CornerRadius = corner_radius;
+                    BorderThickness = 1;
                     Foreground.Padding = new MarginPadding { Horizontal = 2 * scale };
 
                     // stable uses a 14pt chevron, about 11 units wide.

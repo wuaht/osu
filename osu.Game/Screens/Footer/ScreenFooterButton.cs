@@ -319,7 +319,8 @@ namespace osu.Game.Screens.Footer
         {
             if (IsLegacy)
             {
-                legacyOverSprite.FadeTo(IsHovered || OverlayState.Value == Visibility.Visible ? 1 : 0, 100, Easing.OutQuint);
+                // stable's HoverEffect: a linear 100ms fade, reversed when the hover is lost.
+                legacyOverSprite.FadeTo(IsHovered || OverlayState.Value == Visibility.Visible ? 1 : 0, 100);
                 legacySprite.FadeTo(Enabled.Value ? 1 : 0.5f, 150, Easing.OutQuint);
             }
 

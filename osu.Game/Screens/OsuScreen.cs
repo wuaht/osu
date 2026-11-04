@@ -44,6 +44,11 @@ namespace osu.Game.Screens
 
         public virtual bool HideOverlaysOnEnter => false;
 
+        /// <summary>
+        /// Whether the toolbar should be shown when this screen is entered (and <see cref="HideOverlaysOnEnter"/> is not set).
+        /// </summary>
+        public virtual bool ShowToolbarOnEnter => true;
+
         public virtual bool HideMenuCursorOnNonMouseInput => false;
 
         public virtual bool RequiresPortraitOrientation => false;

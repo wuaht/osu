@@ -133,6 +133,12 @@ namespace osu.Game.Screens.Select
         private bool legacyLayout;
 
         private LegacyFilterDisplay legacyFilterDisplay = null!;
+
+        [Cached]
+        private readonly LegacyModeButtonLayer legacyModeButtonLayer = new LegacyModeButtonLayer();
+
+        [Cached]
+        private readonly LegacyModeMenu legacyModeMenu = new LegacyModeMenu();
         private Container legacyFilterLayer = null!;
         private BeatmapDetailsArea detailsArea = null!;
         private FillFlowContainer wedgesContainer = null!;
@@ -353,6 +359,18 @@ namespace osu.Game.Screens.Select
                         },
                     },
                 },
+                // stable draws its mode menu below the song select artwork.
+                legacyModeMenu.CreateProxy(),
+                // stable draws its search background below the song select artwork.
+                (legacyFilterDisplay = new LegacyFilterDisplay(FilterControl, detailsArea, legacyModeButtonLayer)
+                {
+                    Alpha = 0,
+                    StartRequested = () =>
+                    {
+                        ensureGlobalBeatmapValid();
+                        SelectAndRun(Beatmap.Value.BeatmapInfo, OnStart);
+                    },
+                }).SearchBackground.CreateProxy(),
                 skinnableContent = new SkinnableContainer(new GlobalSkinnableContainerLookup(GlobalSkinnableContainers.SongSelect))
                 {
                     Anchor = Anchor.Centre,
@@ -367,14 +385,11 @@ namespace osu.Game.Screens.Select
                     Anchor = Anchor.Centre,
                     Origin = Anchor.Centre,
                     RelativeSizeAxes = Axes.Both,
-                    Child = legacyFilterDisplay = new LegacyFilterDisplay(FilterControl, detailsArea)
+                    Children = new Drawable[]
                     {
-                        Alpha = 0,
-                        StartRequested = () =>
-                        {
-                            ensureGlobalBeatmapValid();
-                            SelectAndRun(Beatmap.Value.BeatmapInfo, OnStart);
-                        },
+                        legacyFilterDisplay,
+                        // above the filter controls, so that a click outside the open menu only closes it.
+                        legacyModeMenu,
                     },
                 },
                 modSpeedHotkeyHandler = new ModSpeedHotkeyHandler()
@@ -465,7 +480,8 @@ namespace osu.Game.Screens.Select
             FilterControl.CriteriaChanged += criteriaChanged;
 
             skin.SourceChanged += updateLegacyLayout;
-            updateLegacyLayout();
+            // applied right away so the lazer layout doesn't show for a frame before the legacy one.
+            applyLegacyLayout();
 
             modSelectOverlay.State.BindValueChanged(v =>
             {
@@ -844,6 +860,7 @@ namespace osu.Game.Screens.Select
         private void onLeavingScreen()
         {
             restoreBackground();
+            legacyModeMenu.Close();
 
             Beatmap.ValueChanged -= updateVariousState;
 
@@ -907,7 +924,9 @@ namespace osu.Game.Screens.Select
             logo.FadeOut(120, Easing.Out);
         }
 
-        private void updateLegacyLayout() => Schedule(() =>
+        private void updateLegacyLayout() => Schedule(applyLegacyLayout);
+
+        private void applyLegacyLayout()
         {
             legacyLayout = skin.UsesLegacyLayout();
 
@@ -916,13 +935,21 @@ namespace osu.Game.Screens.Select
             wedgesContainer.Padding = new MarginPadding { Top = legacyLayout ? legacy_top_height + CORNER_RADIUS_HIDE_OFFSET : 0 };
             FilterControl.LegacyLayout = legacyLayout;
             legacyFilterDisplay.InUse = legacyLayout;
+
+            if (!legacyLayout)
+                legacyModeMenu.Close();
             detailsArea.LegacyLayout = legacyLayout;
 
             if (this.IsCurrentScreen() && ShowOsuLogo && modSelectOverlay.State.Value == Visibility.Hidden)
                 logo?.FadeTo(shownLogoAlpha, 200, Easing.OutQuint);
 
             updateToolbarVisibility();
-        });
+        }
+
+        /// <summary>
+        /// stable has no toolbar on song select, so it isn't shown when entering (see <see cref="updateToolbarVisibility"/>).
+        /// </summary>
+        public override bool ShowToolbarOnEnter => !skin.UsesLegacyLayout();
 
         /// <summary>
         /// stable has no toolbar on song select. Showing it would also shrink the whole screen, which breaks the stable layout.

@@ -15,12 +15,12 @@ using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Input.Events;
 using osu.Framework.Logging;
+using osu.Game.Audio;
 using osu.Game.Database;
 using osu.Game.Extensions;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.Sprites;
-using osu.Game.Graphics.UserInterface;
 using osu.Game.Models;
 using osu.Game.Online;
 using osu.Game.Online.API;
@@ -29,6 +29,7 @@ using osu.Game.Online.OfflineProfiles;
 using osu.Game.Overlays;
 using osu.Game.Rulesets;
 using osu.Game.Scoring;
+using osu.Game.Skinning;
 using osu.Game.Users;
 using osu.Game.Users.Drawables;
 using Realms;
@@ -70,6 +71,14 @@ namespace osu.Game.Screens.Select
 
         private readonly IBindable<APIUser> localUser = new Bindable<APIUser>();
 
+        [Resolved]
+        private SkinManager? skinManager { get; set; }
+
+        // stable's additive hover glow behind the panel, which is black (and so invisible) until hovered.
+        private static readonly Color4 background_idle_colour = new Color4(1, 1, 1, 255);
+        private static readonly Color4 background_hover_colour = new Color4(41, 41, 41, 255);
+
+        private readonly Sprite background;
         private readonly UpdateableAvatar avatar;
         private readonly StableText name;
         private readonly StableText[] infoLines = new StableText[3];
@@ -103,7 +112,12 @@ namespace osu.Game.Screens.Select
 
             InternalChildren = new Drawable[]
             {
-                new HoverClickSounds(),
+                background = new Sprite
+                {
+                    Position = new Vector2(-4) * scale,
+                    Blending = BlendingParameters.Additive,
+                    Colour = background_idle_colour,
+                },
                 avatar = new UpdateableAvatar(isInteractive: false)
                 {
                     Origin = Anchor.Centre,
@@ -149,6 +163,7 @@ namespace osu.Game.Screens.Select
         {
             levelBarBackground.Texture = Skin.GetTexture("levelbar-bg");
             levelBarForeground.Texture = Skin.GetTexture("levelbar");
+            background.Texture = skinManager?.DefaultClassicSkin.GetTexture("user-bg");
         }
 
         protected override void LoadComplete()
@@ -168,8 +183,19 @@ namespace osu.Game.Screens.Select
 
         private bool isGuest => localUser.Value.Id <= 1 && !isOfflineProfile;
 
+        protected override bool OnHover(HoverEvent e)
+        {
+            background.FadeColour(background_hover_colour, 200);
+            Skin.GetSample(new SampleInfo("click-short"))?.Play();
+            return true;
+        }
+
+        protected override void OnHoverLost(HoverLostEvent e) => background.FadeColour(background_idle_colour, 200);
+
         protected override bool OnClick(ClickEvent e)
         {
+            Skin.GetSample(new SampleInfo("click-short-confirm"))?.Play();
+
             if (isGuest)
                 loginOverlay?.Show();
             else
