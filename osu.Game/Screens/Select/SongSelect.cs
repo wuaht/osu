@@ -131,6 +131,9 @@ namespace osu.Game.Screens.Select
         private ISkinSource skin { get; set; } = null!;
 
         private bool legacyLayout;
+
+        private LegacyFilterDisplay legacyFilterDisplay = null!;
+        private Container legacyFilterLayer = null!;
         private BeatmapDetailsArea detailsArea = null!;
         private FillFlowContainer wedgesContainer = null!;
         private Box rightGradientBackground = null!;
@@ -358,6 +361,14 @@ namespace osu.Game.Screens.Select
                 },
                 // legacy skins draw their song select artwork in the skinnable layer, which should not cover the filter controls.
                 FilterControl.CreateProxy(),
+                // follows the skinnable layer when the background is revealed.
+                legacyFilterLayer = new Container
+                {
+                    Anchor = Anchor.Centre,
+                    Origin = Anchor.Centre,
+                    RelativeSizeAxes = Axes.Both,
+                    Child = legacyFilterDisplay = new LegacyFilterDisplay(FilterControl, detailsArea) { Alpha = 0 },
+                },
                 modSpeedHotkeyHandler = new ModSpeedHotkeyHandler()
             });
 
@@ -454,7 +465,7 @@ namespace osu.Game.Screens.Select
                     return;
 
                 if (ShowOsuLogo)
-                    logo?.FadeTo(v.NewValue == Visibility.Visible ? 0f : 1f, 200, Easing.OutQuint);
+                    logo?.FadeTo(v.NewValue == Visibility.Visible ? 0f : shownLogoAlpha, 200, Easing.OutQuint);
             });
         }
 
@@ -474,7 +485,26 @@ namespace osu.Game.Screens.Select
             };
 
             if (this.IsCurrentScreen())
+            {
                 updateDebounce();
+                updateLegacyLogoHover();
+            }
+        }
+
+        /// <summary>
+        /// stable's play button is invisible until hovered, as legacy skins paint their own artwork around it.
+        /// </summary>
+        private float shownLogoAlpha => legacyLayout && logo?.IsHovered != true ? 0.0011f : 1;
+
+        private bool logoHovered;
+
+        private void updateLegacyLogoHover()
+        {
+            if (logo == null || !ShowOsuLogo || modSelectOverlay.State.Value == Visibility.Visible || logo.IsHovered == logoHovered)
+                return;
+
+            logoHovered = logo.IsHovered;
+            logo.FadeTo(shownLogoAlpha, 100);
         }
 
         #region Selection debounce
@@ -770,6 +800,9 @@ namespace osu.Game.Screens.Select
 
         private void onArrivingAtScreen()
         {
+            // OsuGame shows the toolbar after the screen has entered, so hide it afterwards.
+            Schedule(updateToolbarVisibility);
+
             modSelectOverlay.Beatmap.BindTo(Beatmap);
             modSelectOverlay.Ruleset.BindTo(Ruleset);
             // required due to https://github.com/ppy/osu-framework/issues/3218
@@ -844,7 +877,7 @@ namespace osu.Game.Screens.Select
                 Footer?.StartTrackingLogo(logo);
             }
 
-            logo.FadeIn(240, Easing.OutQuint);
+            logo.FadeTo(shownLogoAlpha, 240, Easing.OutQuint);
             logo.ScaleTo(logo_scale, 240, Easing.OutQuint);
 
             logo.Action = () =>
@@ -885,8 +918,29 @@ namespace osu.Game.Screens.Select
             // stable shows the beatmap details in the skinnable layer (see LegacyBeatmapDetails) and starts the leaderboard below the top artwork.
             titleWedgeWrapper.Alpha = legacyLayout ? 0 : 1;
             wedgesContainer.Padding = new MarginPadding { Top = legacyLayout ? legacy_top_height + CORNER_RADIUS_HIDE_OFFSET : 0 };
-            FilterControl.ShowBackground = !legacyLayout;
+            FilterControl.LegacyLayout = legacyLayout;
+            legacyFilterDisplay.InUse = legacyLayout;
+            detailsArea.LegacyLayout = legacyLayout;
+
+            if (this.IsCurrentScreen() && ShowOsuLogo && modSelectOverlay.State.Value == Visibility.Hidden)
+                logo?.FadeTo(shownLogoAlpha, 200, Easing.OutQuint);
+
+            updateToolbarVisibility();
         });
+
+        /// <summary>
+        /// stable has no toolbar on song select. Showing it would also shrink the whole screen, which breaks the stable layout.
+        /// </summary>
+        private void updateToolbarVisibility()
+        {
+            if (!this.IsCurrentScreen() || (game as OsuGame)?.Toolbar is not Overlays.Toolbar.Toolbar toolbar)
+                return;
+
+            if (legacyLayout)
+                toolbar.Hide();
+            else
+                toolbar.Show();
+        }
 
         private const float legacy_top_height = 82 * LegacySongSelectComponent.STABLE_SCALE;
 
@@ -969,7 +1023,7 @@ namespace osu.Game.Screens.Select
 
             updateNoResultsPlaceholder();
 
-            FilterControl.StatusText = SongSelectStrings.MatchesCount(carousel.MatchedBeatmapsCount);
+            FilterControl.StatusText = legacyFilterDisplay.StatusText = SongSelectStrings.MatchesCount(carousel.MatchedBeatmapsCount);
 
             // If there's already a selection update in progress, let's not interrupt it.
             // Interrupting could cause the debounce interval to be reduced.
@@ -1053,9 +1107,12 @@ namespace osu.Game.Screens.Select
                     mainContent.ScaleTo(1.2f, 600, Easing.OutQuint);
                     mainContent.FadeOut(200, Easing.OutQuint);
 
-                    skinnableContent.ResizeWidthTo(1.2f, 600, Easing.OutQuint);
-                    skinnableContent.ScaleTo(1.2f, 600, Easing.OutQuint);
-                    skinnableContent.FadeOut(200, Easing.OutQuint);
+                    foreach (var layer in new Drawable[] { skinnableContent, legacyFilterLayer })
+                    {
+                        layer.ResizeWidthTo(1.2f, 600, Easing.OutQuint);
+                        layer.ScaleTo(1.2f, 600, Easing.OutQuint);
+                        layer.FadeOut(200, Easing.OutQuint);
+                    }
 
                     updateBackgroundDim();
 
@@ -1083,9 +1140,12 @@ namespace osu.Game.Screens.Select
                 mainContent.ScaleTo(1, 500, Easing.OutQuint);
                 mainContent.FadeIn(500, Easing.OutQuint);
 
-                skinnableContent.ResizeWidthTo(1f, 500, Easing.OutQuint);
-                skinnableContent.ScaleTo(1, 500, Easing.OutQuint);
-                skinnableContent.FadeIn(500, Easing.OutQuint);
+                foreach (var layer in new Drawable[] { skinnableContent, legacyFilterLayer })
+                {
+                    layer.ResizeWidthTo(1f, 500, Easing.OutQuint);
+                    layer.ScaleTo(1, 500, Easing.OutQuint);
+                    layer.FadeIn(500, Easing.OutQuint);
+                }
 
                 Footer?.Show();
             }

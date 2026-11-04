@@ -32,7 +32,7 @@ namespace osu.Game.Screens.Select
 
             public IBindable<Selection> Type => tabControl.Current;
 
-            public IBindable<BeatmapLeaderboardScope> Scope => scopeDropdown.Current;
+            public Bindable<BeatmapLeaderboardScope> Scope => scopeDropdown.Current;
 
             private readonly Bindable<BeatmapDetailTab> configDetailTab = new Bindable<BeatmapDetailTab>();
 

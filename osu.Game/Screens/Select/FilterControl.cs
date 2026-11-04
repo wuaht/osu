@@ -86,14 +86,30 @@ namespace osu.Game.Screens.Select
         private IDisposable? collectionsSubscription;
 
         private Container background = null!;
+        private Drawable content = null!;
+
+        private bool legacyLayout;
 
         /// <summary>
-        /// Whether the wedge background is shown. Legacy skins draw their own artwork behind the filter controls instead.
+        /// Whether the controls are hidden in favour of <see cref="LegacyFilterDisplay"/>.
+        /// The search box stays present (but invisible) so typing still filters.
         /// </summary>
-        public bool ShowBackground
+        public bool LegacyLayout
         {
-            set => background.Alpha = value ? 1 : 0;
+            set
+            {
+                legacyLayout = value;
+                background.Alpha = value ? 0 : 1;
+                content.Alpha = value ? 0 : 1;
+            }
         }
+
+        /// <summary>
+        /// The current search query.
+        /// </summary>
+        public Bindable<string> SearchQuery => searchTextBox.Current;
+
+        public override bool PropagatePositionalInputSubTree => !legacyLayout && base.PropagatePositionalInputSubTree;
 
         [BackgroundDependencyLoader]
         private void load(IAPIProvider api)
@@ -117,10 +133,11 @@ namespace osu.Game.Screens.Select
                         Scale = new Vector2(-1, 1),
                     }
                 },
-                new ReverseChildIDFillFlowContainer<Drawable>
+                content = new ReverseChildIDFillFlowContainer<Drawable>
                 {
                     RelativeSizeAxes = Axes.X,
                     AutoSizeAxes = Axes.Y,
+                    AlwaysPresent = true,
                     Direction = FillDirection.Vertical,
                     Padding = new MarginPadding { Top = corner_radius + 5, Bottom = 2, Right = 40f, Left = 2f },
                     Children = new Drawable[]

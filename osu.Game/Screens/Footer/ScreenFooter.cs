@@ -20,6 +20,7 @@ using osu.Game.Input.Bindings;
 using osu.Game.Overlays;
 using osu.Game.Overlays.Mods;
 using osu.Game.Screens.Menu;
+using osu.Game.Screens.Select;
 using osuTK;
 
 namespace osu.Game.Screens.Footer
@@ -209,7 +210,9 @@ namespace osu.Game.Screens.Footer
             leftButtonsFlow.X = legacyLayout ? legacy_first_button_x - (OsuGame.SCREEN_EDGE_MARGIN + ScreenBackButton.BUTTON_WIDTH + padding) : 0;
             leftButtonsFlow.Spacing = new Vector2(legacyLayout ? 0 : 7, 0);
             BackButton.Alpha = legacyLayout ? 0 : 1;
-            legacyBackButton.Alpha = legacyLayout ? 1 : 0;
+            legacyBackButton.Alpha = legacyLayout && State.Value == Visibility.Visible ? 1 : 0;
+            // stable's (mostly invisible) play button sits at (W-40, 450).
+            logoTrackingContainer.LogoFacade.Position = legacyLayout ? new Vector2(-40, -30) * LegacySongSelectComponent.STABLE_SCALE : new Vector2(-76, -36);
         }
 
         private ScheduledDelegate? changeLogoDepthDelegate;
@@ -235,6 +238,9 @@ namespace osu.Game.Screens.Footer
         {
             leftButtonsFlow.FadeIn(transition_duration / 4, Easing.OutQuint);
 
+            if (usingLegacyLayout)
+                legacyBackButton.FadeIn(transition_duration / 4, Easing.OutQuint);
+
             this.MoveToY(0, transition_duration, Easing.OutQuint)
                 .FadeIn();
         }
@@ -244,6 +250,8 @@ namespace osu.Game.Screens.Footer
             // Really we shouldn't need to do this, but some buttons protrude vertically more than expected
             // (see FooterButtonMods).
             leftButtonsFlow.FadeOut(transition_duration, Easing.OutQuint);
+            // the legacy back button is taller than the footer slide, so it would linger on screen.
+            legacyBackButton.FadeOut(transition_duration / 4, Easing.OutQuint);
 
             this.MoveToY(ScreenFooterButton.HEIGHT, transition_duration, Easing.OutQuint)
                 .Then()

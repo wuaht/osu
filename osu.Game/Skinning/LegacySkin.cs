@@ -493,6 +493,7 @@ namespace osu.Game.Skinning
                                 new LegacySongSelectBottom(),
                                 new LegacyModeButton(),
                                 new LegacyBeatmapDetails(),
+                                new LegacyUserPanel(),
                             };
                     }
 

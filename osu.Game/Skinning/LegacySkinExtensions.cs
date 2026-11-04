@@ -121,6 +121,13 @@ namespace osu.Game.Skinning
         public static Texture? GetLegacyLayoutTexture(this ISkinSource source, string componentName)
             => source.UsesLegacyLayout() ? source.GetTexture(componentName) : null;
 
+        /// <summary>
+        /// Whether stable would lay out the song select buttons from the top (y=426) instead of the bottom,
+        /// which it does for skins up to version 1.0 that provide their own button textures.
+        /// </summary>
+        public static bool UsesOldSongSelectButtonLayout(this ISkinSource source)
+            => source.AllSources.FirstOrDefault() is LegacySkin skin && skin.Configuration.LegacyVersion <= 1.0m && skin.GetTexture("selection-mods") != null;
+
         public static Texture WithMaximumSize(this Texture texture, Vector2 maxSize)
         {
             if (texture.DisplayWidth <= maxSize.X && texture.DisplayHeight <= maxSize.Y)

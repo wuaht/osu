@@ -431,6 +431,16 @@ namespace osu.Game.Screens.Select
 
         private LeaderboardState displayedState;
 
+        /// <summary>
+        /// The state currently shown, used by the legacy layout to show stable's own placeholder.
+        /// </summary>
+        public LeaderboardState DisplayedState => displayedState;
+
+        /// <summary>
+        /// Whether stable's "no records" box is shown elsewhere (see <see cref="LegacyFilterDisplay"/>) instead of the placeholder.
+        /// </summary>
+        public bool LegacyStyle { get; init; }
+
         private ScheduledDelegate? loadingShowDelegate;
 
         protected void SetState(LeaderboardState state)
@@ -539,7 +549,7 @@ namespace osu.Game.Screens.Select
                     return new MessagePlaceholder(LeaderboardStrings.LeaderboardsAreNotAvailableForThisBeatmap);
 
                 case LeaderboardState.NoScores:
-                    return new MessagePlaceholder(LeaderboardStrings.NoRecordsYet);
+                    return LegacyStyle ? null : new MessagePlaceholder(LeaderboardStrings.NoRecordsYet);
 
                 case LeaderboardState.NotLoggedIn:
                     return new LoginPlaceholder(LeaderboardStrings.PleaseSignInToViewOnlineLeaderboards);

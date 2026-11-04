@@ -20,6 +20,7 @@ using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.Sprites;
 using osu.Game.Input.Bindings;
 using osu.Game.Overlays;
+using osu.Game.Screens.Select;
 using osu.Game.Skinning;
 using osuTK;
 using osuTK.Graphics;
@@ -257,6 +258,15 @@ namespace osu.Game.Screens.Footer
             legacySprite.Texture = texture;
             // like stable, a missing hover texture falls back to the default legacy skin's.
             legacyOverSprite.Texture = IsLegacy ? skin!.GetTexture(LegacyTextureName + "-over") : null;
+
+            // old layout skins draw both sprites top-aligned at stable's y=426, i.e. 54 stable units above the screen bottom.
+            bool oldLayout = IsLegacy && skin!.UsesOldSongSelectButtonLayout();
+
+            foreach (var sprite in new[] { legacySprite, legacyOverSprite })
+            {
+                sprite.Anchor = sprite.Origin = oldLayout ? Anchor.TopLeft : Anchor.BottomLeft;
+                sprite.Y = oldLayout ? LEGACY_SIZE.Y - 54 * LegacySongSelectComponent.STABLE_SCALE : 0;
+            }
 
             shearedContent.Alpha = IsLegacy ? 0 : 1;
             legacyContent.Alpha = IsLegacy ? 1 : 0;

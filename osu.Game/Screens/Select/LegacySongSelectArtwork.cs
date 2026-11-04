@@ -17,8 +17,10 @@ using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Primitives;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
+using osu.Framework.Graphics.Rendering;
 using osu.Framework.Graphics.Textures;
 using osu.Framework.Input.Events;
+using osu.Framework.Utils;
 using osu.Game.Beatmaps;
 using osu.Game.Beatmaps.ControlPoints;
 using osu.Game.Graphics;
@@ -30,6 +32,7 @@ using osu.Game.Skinning;
 using osu.Game.Utils;
 using osuTK;
 using osuTK.Graphics;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace osu.Game.Screens.Select
 {
@@ -70,10 +73,15 @@ namespace osu.Game.Screens.Select
     }
 
     /// <summary>
-    /// stable's <c>songselect-top</c>, with its rightmost column repeated to fill wider screens.
+    /// stable's <c>songselect-top</c>. Like stable, windows wider than 1366 pixels get raw texture column 1365
+    /// stretched from window pixel 1365 to the right edge, covering the rest of the texture.
     /// </summary>
     public partial class LegacySongSelectTop : LegacySongSelectComponent
     {
+        private const int fill_start = 1365;
+
+        private Container? fill;
+
         public LegacySongSelectTop()
         {
             RelativeSizeAxes = Axes.X;
@@ -83,37 +91,121 @@ namespace osu.Game.Screens.Select
         protected override void UpdateArtwork()
         {
             ClearInternal();
+            fill = null;
+
+            // stable darkens the search text with its default menu-button-background, below the top artwork.
+            AddInternal(new Box
+            {
+                Anchor = Anchor.TopRight,
+                Origin = Anchor.Centre,
+                Position = new Vector2(-14, 46) * STABLE_SCALE,
+                Size = new Vector2(434, 52) * STABLE_SCALE,
+                Colour = Color4.Black.Opacity(0.4f),
+            });
 
             if (Skin.GetTexture("songselect-top") is not Texture top)
             {
-                // lazer doesn't ship stable's default artwork, so keep the texts readable with a plain shade instead.
-                AddInternal(new Box
+                // lazer doesn't ship stable's default artwork, so draw its shape instead, measured against stable at 1080p.
+                AddRangeInternal(new Drawable[]
                 {
-                    RelativeSizeAxes = Axes.X,
-                    Height = 82 * STABLE_SCALE,
-                    Colour = ColourInfo.GradientVertical(Color4.Black.Opacity(0.8f), Color4.Black.Opacity(0.5f)),
+                    new Box
+                    {
+                        RelativeSizeAxes = Axes.X,
+                        Height = fallback_band_height * STABLE_SCALE,
+                        Colour = fallback_colour,
+                    },
+                    new Box
+                    {
+                        RelativeSizeAxes = Axes.X,
+                        Y = fallback_band_height * STABLE_SCALE,
+                        Height = fallback_edge_width * STABLE_SCALE,
+                        Colour = fallback_edge_colour,
+                    },
+                    new Sprite
+                    {
+                        Texture = fallbackTexture ??= createFallbackTexture(),
+                        Size = new Vector2(fallback_width, fallback_tab_height + fallback_edge_width) * STABLE_SCALE,
+                    },
                 });
                 return;
             }
 
-            var lastColumn = top.Crop(new RectangleF(top.Width - 1, 0, 1, top.Height));
-            lastColumn.ScaleAdjust = top.ScaleAdjust;
+            var fillColumn = top.Crop(new RectangleF(Math.Min(fill_start, top.Width - 1), 0, 1, top.Height));
+            fillColumn.ScaleAdjust = top.ScaleAdjust;
 
             AddRangeInternal(new Drawable[]
             {
                 new Sprite { Texture = top },
-                new Container
+                fill = new Container
                 {
                     RelativeSizeAxes = Axes.X,
                     Height = top.DisplayHeight,
-                    Padding = new MarginPadding { Left = top.DisplayWidth - 1 },
                     Child = new Sprite
                     {
                         RelativeSizeAxes = Axes.Both,
-                        Texture = lastColumn,
+                        Texture = fillColumn,
                     }
                 },
             });
+        }
+
+        private const float fallback_band_height = 52.4f;
+        private const float fallback_tab_height = 91;
+        private const float fallback_curve_start = 249;
+        private const float fallback_curve_end = 369;
+        private const float fallback_width = 380;
+        private const float fallback_edge_width = 0.9f;
+        private const int fallback_resolution = 3;
+
+        private static readonly Color4 fallback_colour = new Color4(4, 20, 24, 255);
+        private static readonly Color4 fallback_edge_colour = new Color4(36, 93, 81, 255);
+
+        [Resolved]
+        private IRenderer renderer { get; set; } = null!;
+
+        private Texture? fallbackTexture;
+
+        /// <summary>
+        /// The left part of stable's default top, which curves down to make room for the leaderboard scope.
+        /// </summary>
+        private Texture createFallbackTexture()
+        {
+            int width = (int)(fallback_width * fallback_resolution);
+            int height = (int)MathF.Ceiling((fallback_tab_height + fallback_edge_width) * fallback_resolution);
+            var image = new SixLabors.ImageSharp.Image<Rgba32>(width, height);
+
+            for (int x = 0; x < width; x++)
+            {
+                float u = (x + 0.5f) / fallback_resolution;
+                float t = Math.Clamp((u - fallback_curve_start) / (fallback_curve_end - fallback_curve_start), 0, 1);
+                float edge = fallback_tab_height - (fallback_tab_height - fallback_band_height) * t * t * (3 - 2 * t);
+
+                for (int y = 0; y < height; y++)
+                {
+                    float distance = (edge + fallback_edge_width - (y + 0.5f) / fallback_resolution) * fallback_resolution;
+                    float alpha = Math.Clamp(distance + 0.5f, 0, 1);
+                    float edgeAmount = Math.Clamp(fallback_edge_width * fallback_resolution - distance + 0.5f, 0, 1);
+
+                    var colour = Interpolation.ValueAt(edgeAmount, fallback_colour, fallback_edge_colour, 0, 1);
+                    image[x, y] = new Rgba32(colour.R, colour.G, colour.B, alpha);
+                }
+            }
+
+            var texture = renderer.CreateTexture(width, height);
+            texture.SetData(new TextureUpload(image));
+            return texture;
+        }
+
+        protected override void Update()
+        {
+            base.Update();
+
+            if (fill == null)
+                return;
+
+            // stable measures this in window pixels, not in its scaled coordinates.
+            fill.Alpha = ScreenSpaceDrawQuad.Width > fill_start + 1 ? 1 : 0;
+            fill.Padding = new MarginPadding { Left = ToLocalSpace(ScreenSpaceDrawQuad.TopLeft + new Vector2(fill_start, 0)).X };
         }
     }
 
@@ -342,6 +434,7 @@ namespace osu.Game.Screens.Select
         private readonly OsuSpriteText lengthAndBpm;
         private readonly OsuSpriteText objectCounts;
         private readonly OsuSpriteText difficulty;
+        private readonly SpriteIcon statusIcon;
 
         private CancellationTokenSource? cancellationSource;
         private IBindable<StarDifficulty>? starDifficulty;
@@ -352,19 +445,26 @@ namespace osu.Game.Screens.Select
 
             InternalChildren = new Drawable[]
             {
-                title = createText(new Vector2(21, -3), 18, FontWeight.Regular),
-                mapper = createText(new Vector2(23, 13), 12, FontWeight.Regular),
-                lengthAndBpm = createText(new Vector2(1, 24), 12, FontWeight.Bold),
-                objectCounts = createText(new Vector2(1, 36), 12, FontWeight.Regular),
-                difficulty = createText(new Vector2(1, 48), 8, FontWeight.Regular),
+                statusIcon = new SpriteIcon
+                {
+                    Origin = Anchor.Centre,
+                    Position = new Vector2(12) * LegacySongSelectComponent.STABLE_SCALE,
+                    Size = new Vector2(18 * LegacySongSelectComponent.STABLE_SCALE),
+                    Colour = new Color4(140, 220, 255, 255),
+                    Alpha = 0,
+                },
+                title = createText(new Vector2(24, -3), 18, FontWeight.Regular),
+                mapper = createText(new Vector2(25, 13), 12, FontWeight.Regular),
+                lengthAndBpm = createText(new Vector2(2.5f, 24), 12, FontWeight.Bold),
+                objectCounts = createText(new Vector2(2.5f, 36), 12, FontWeight.Regular),
+                difficulty = createText(new Vector2(2.5f, 48), 8, FontWeight.Regular),
             };
         }
 
         private static OsuSpriteText createText(Vector2 stablePosition, float stableSize, FontWeight weight) => new OsuSpriteText
         {
             Position = stablePosition * LegacySongSelectComponent.STABLE_SCALE,
-            // stable's font renders noticeably smaller than its nominal size.
-            Font = OsuFont.GetFont(size: stableSize * LegacySongSelectComponent.STABLE_SCALE * 0.8f, weight: weight),
+            Font = OsuFont.GetFont(size: stableSize * LegacySongSelectComponent.STABLE_SCALE, weight: weight),
             Shadow = false,
         };
 
@@ -390,11 +490,14 @@ namespace osu.Game.Screens.Select
             {
                 foreach (var text in InternalChildren.OfType<OsuSpriteText>())
                     text.Text = string.Empty;
+                statusIcon.FadeOut(500);
                 return;
             }
 
             double rate = ModUtils.CalculateRateWithMods(mods.Value);
             Color4 rateColour = rate > 1 ? colour_increased : rate < 1 ? colour_decreased : Color4.White;
+
+            updateStatusIcon(info.Status);
 
             title.Text = $"{info.Metadata.Artist} - {info.Metadata.Title} [{info.DifficultyName}]";
             mapper.Text = string.IsNullOrEmpty(info.Metadata.Author.Username) ? string.Empty : $"Mapped by {info.Metadata.Author.Username}";
@@ -425,7 +528,38 @@ namespace osu.Game.Screens.Select
             var attributes = ruleset.Value.CreateInstance().GetBeatmapAttributesForDisplay(beatmap.Value.BeatmapInfo, mods.Value);
             string attributeText = string.Join(" ", attributes.Select(a => $"{a.Acronym}:{a.AdjustedValue:0.##}"));
 
-            difficulty.Text = $"{attributeText} Stars:{starDifficulty?.Value.Stars ?? 0:0.##}";
+            difficulty.Text = $"{attributeText} Star Rating: {starDifficulty?.Value.Stars ?? 0:0.##}★";
+        }
+
+        // stable shows its ranked status icons at the top left; the textures are not available, so use the closest icons.
+        private void updateStatusIcon(BeatmapOnlineStatus status)
+        {
+            IconUsage? icon = status switch
+            {
+                BeatmapOnlineStatus.None or BeatmapOnlineStatus.LocallyModified => null,
+                BeatmapOnlineStatus.Ranked => FontAwesome.Solid.AngleDoubleUp,
+                BeatmapOnlineStatus.Approved or BeatmapOnlineStatus.Qualified => FontAwesome.Solid.Check,
+                BeatmapOnlineStatus.Loved => FontAwesome.Solid.Heart,
+                _ => FontAwesome.Solid.Question,
+            };
+
+            statusIcon.ClearTransforms();
+
+            if (icon == null)
+            {
+                statusIcon.FadeOut(500).ScaleTo(0.8f, 500, Easing.Out);
+                return;
+            }
+
+            if (!statusIcon.Icon.Equals(icon.Value))
+            {
+                statusIcon.Icon = icon.Value;
+                statusIcon.FadeInFromZero(400);
+            }
+            else
+                statusIcon.FadeIn(400);
+
+            statusIcon.ScaleTo(0.92f).ScaleTo(1.4f, 200, Easing.In).Then().ScaleTo(1, 200, Easing.In);
         }
 
         private void updateObjectCounts(WorkingBeatmap working, CancellationToken cancellationToken)

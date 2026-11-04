@@ -2,9 +2,12 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using osu.Framework.Allocation;
+using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Game.Graphics.Containers;
+using osu.Game.Online.Leaderboards;
+using osu.Game.Screens.Play.Leaderboards;
 
 namespace osu.Game.Screens.Select
 {
@@ -15,7 +18,43 @@ namespace osu.Game.Screens.Select
     public partial class BeatmapDetailsArea : VisibilityContainer
     {
         private Header? header;
+        private Drawable headerWrapper = null!;
         private Container contentContainer = null!;
+
+        private bool legacyLayout;
+
+        /// <summary>
+        /// stable always shows the leaderboard, below its own scope dropdown (see <see cref="LegacyFilterDisplay"/>), in a narrower column.
+        /// </summary>
+        public bool LegacyLayout
+        {
+            set
+            {
+                if (legacyLayout == value)
+                    return;
+
+                legacyLayout = value;
+
+                headerWrapper.Alpha = value ? 0 : 1;
+                contentContainer.Padding = new MarginPadding { Top = value ? legacy_content_offset : header_height };
+                contentContainer.RelativeSizeAxes = value ? Axes.Y : Axes.Both;
+                contentContainer.Width = value ? legacy_content_width : 1;
+
+                if (IsLoaded)
+                    updateDisplay();
+            }
+        }
+
+        /// <summary>
+        /// The leaderboard scope, or <c>null</c> if this area has no leaderboard.
+        /// </summary>
+        public Bindable<BeatmapLeaderboardScope>? LeaderboardScope => header?.Scope;
+
+        private const float header_height = 35f;
+
+        // stable's score list starts at y = 92, the area itself at y = 82.
+        private const float legacy_content_offset = 10 * LegacySongSelectComponent.STABLE_SCALE;
+        private const float legacy_content_width = 290 * LegacySongSelectComponent.STABLE_SCALE;
 
         /// <summary>
         /// Whether this area is displayed in the beatmap editor song select.
@@ -31,11 +70,9 @@ namespace osu.Game.Screens.Select
         [BackgroundDependencyLoader]
         private void load()
         {
-            const float header_height = 35f;
-
             InternalChildren = new Drawable[]
             {
-                new ShearAligningWrapper(EditorMode
+                headerWrapper = new ShearAligningWrapper(EditorMode
                     ? new EditorHeader
                     {
                         Shear = -OsuGame.SHEAR,
@@ -100,7 +137,7 @@ namespace osu.Game.Screens.Select
                 return;
             }
 
-            switch (header!.Type.Value)
+            switch (legacyLayout ? Header.Selection.Ranking : header!.Type.Value)
             {
                 default:
                 case Header.Selection.Details:
@@ -110,9 +147,10 @@ namespace osu.Game.Screens.Select
                 case Header.Selection.Ranking:
                     currentContent = new BeatmapLeaderboardWedge
                     {
-                        Scope = { BindTarget = header.Scope },
+                        Scope = { BindTarget = header!.Scope },
                         Sorting = { BindTarget = header.Sorting },
                         FilterBySelectedMods = { BindTarget = header.FilterBySelectedMods },
+                        LegacyStyle = legacyLayout,
                     };
 
                     break;
@@ -121,6 +159,11 @@ namespace osu.Game.Screens.Select
             contentContainer.Add(currentContent);
             currentContent.Show();
         }
+
+        /// <summary>
+        /// Whether the leaderboard is shown and has no scores.
+        /// </summary>
+        public bool ShowsNoScores => currentContent is BeatmapLeaderboardWedge { DisplayedState: LeaderboardState.NoScores };
 
         public void Refresh()
         {
