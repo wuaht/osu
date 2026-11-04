@@ -21,6 +21,7 @@ using osu.Game.Graphics;
 using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.Sprites;
 using osu.Game.Graphics.UserInterface;
+using osu.Game.Localisation;
 using osu.Game.Online.Leaderboards;
 using osu.Game.Screens.Play.Leaderboards;
 using osu.Game.Screens.Select.Filter;
@@ -44,6 +45,9 @@ namespace osu.Game.Screens.Select
         private readonly BeatmapDetailsArea detailsArea;
 
         private LegacyDropdown<BeatmapLeaderboardScope> scopeDropdown = null!;
+        private LegacyDropdown<GroupMode> groupDropdown = null!;
+        private OsuSpriteText groupText = null!;
+        private OsuSpriteText sortText = null!;
 
         private readonly Bindable<string> query = new Bindable<string>(string.Empty);
 
@@ -113,7 +117,7 @@ namespace osu.Game.Screens.Select
         [BackgroundDependencyLoader]
         private void load(OsuConfigManager config)
         {
-            var groupDropdown = new LegacyDropdown<GroupMode>(new Color4(146, 195, 230, 255))
+            groupDropdown = new LegacyDropdown<GroupMode>(new Color4(146, 195, 230, 255))
             {
                 Position = new Vector2(-352, 18) * scale,
                 Items = Enum.GetValues<GroupMode>(),
@@ -166,6 +170,30 @@ namespace osu.Game.Screens.Select
 
             InternalChildren = new Drawable[]
             {
+                // stable's labels sit left of their dropdowns, bottom right aligned at 40 units from the top.
+                sortText = new OsuSpriteText
+                {
+                    Anchor = Anchor.TopRight,
+                    Origin = Anchor.BottomRight,
+                    Position = new Vector2(-130, 40) * scale,
+                    // stable draws the labels above the tabs.
+                    Depth = -1,
+                    Text = SongSelectStrings.Sort,
+                    Font = font(22),
+                    Colour = new Color4(174, 210, 139, 255),
+                    Shadow = true,
+                },
+                groupText = new OsuSpriteText
+                {
+                    Anchor = Anchor.TopRight,
+                    Origin = Anchor.BottomRight,
+                    Y = 40 * scale,
+                    Depth = -1,
+                    Text = SongSelectStrings.Group,
+                    Font = font(22),
+                    Colour = new Color4(146, 195, 230, 255),
+                    Shadow = true,
+                },
                 new FillFlowContainer
                 {
                     Anchor = Anchor.TopRight,
@@ -287,6 +315,11 @@ namespace osu.Game.Screens.Select
 
             // follow the filter control when the carousel hides the wedges.
             Alpha = InUse ? filterControl.Alpha : 0;
+
+            // stable places the group label and dropdown 258 units from the right, further left by the sort label's width.
+            float groupX = -258 * scale - sortText.DrawWidth;
+            groupText.X = groupX;
+            groupDropdown.X = groupX;
 
             string? texture = getInfoCardTexture();
 

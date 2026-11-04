@@ -108,10 +108,9 @@ namespace osu.Game.Screens.Select
                 {
                     Origin = Anchor.Centre,
                     Position = new Vector2(23) * scale,
-                    // stable shows the avatar as a circle of about 42 units.
+                    // stable shows the avatar as a square of about 42 units.
                     Size = new Vector2(42 * scale),
                     Masking = true,
-                    CornerRadius = 21 * scale,
                 },
                 name = new StableText(new Vector2(48, -2), 14),
                 infoLines[0] = new StableText(new Vector2(48, 12), 10),
