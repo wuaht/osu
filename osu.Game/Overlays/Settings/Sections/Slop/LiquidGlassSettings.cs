@@ -39,6 +39,12 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                 createSlider(config, OsuSetting.SlopLiquidGlassChromaticAberration, SlopSettingsStrings.LiquidGlassChromaticAberration,
                     SlopSettingsStrings.LiquidGlassChromaticAberrationDescription),
                 createSlider(config, OsuSetting.SlopLiquidGlassTint, SlopSettingsStrings.LiquidGlassTint, SlopSettingsStrings.LiquidGlassTintDescription),
+                new SettingsItemV2(new FormCheckBox
+                {
+                    Caption = SlopSettingsStrings.LiquidGlassSliderBorder,
+                    HintText = SlopSettingsStrings.LiquidGlassSliderBorderDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopLiquidGlassSliderBorder),
+                }),
                 createSlider(config, OsuSetting.SlopLiquidGlassSliderBorderThickness, SlopSettingsStrings.LiquidGlassSliderBorderThickness,
                     SlopSettingsStrings.LiquidGlassSliderBorderThicknessDescription),
                 createSlider(config, OsuSetting.SlopLiquidGlassSliderBodyBrightness, SlopSettingsStrings.LiquidGlassSliderBodyBrightness,

@@ -39,6 +39,11 @@ namespace osu.Game.Rulesets.Osu.Skinning.Default
         protected readonly Bindable<bool> AlwaysColoured = new Bindable<bool>();
 
         /// <summary>
+        /// Whether liquid glass slider bodies have their own border, rather than the border of the other glass styles.
+        /// </summary>
+        protected readonly Bindable<bool> LiquidGlassBorder = new Bindable<bool>();
+
+        /// <summary>
         /// Whether slider bodies show the content behind them in any way.
         /// </summary>
         protected bool IsGlass => GlassStyle.Value != osu.Game.Configuration.GlassStyle.Standard;
@@ -59,6 +64,7 @@ namespace osu.Game.Rulesets.Osu.Skinning.Default
             config?.BindWith(OsuSetting.SlopSliderGlassStyle, GlassStyle);
             config?.BindWith(OsuSetting.SlopFrostedSlidersFrostiness, frostiness);
             config?.BindWith(OsuSetting.SlopFrostedSlidersAlwaysColoured, AlwaysColoured);
+            config?.BindWith(OsuSetting.SlopLiquidGlassSliderBorder, LiquidGlassBorder);
 
             GlassStyle.BindValueChanged(_ => updateAccentColour(skin));
             frostiness.BindValueChanged(_ => updateAccentColour(skin));

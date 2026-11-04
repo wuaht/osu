@@ -1975,15 +1975,26 @@ namespace osu.Game.Localisation
             @"How strongly liquid glass slider bodies and hit circles tint the content behind them with their colour.");
 
         /// <summary>
+        /// "Liquid glass slider border"
+        /// </summary>
+        public static LocalisableString LiquidGlassSliderBorder => new TranslatableString(getKey(@"liquid_glass_slider_border"), @"Liquid glass slider border");
+
+        /// <summary>
+        /// "Give liquid glass slider bodies their own border, as thick as the border of argon slider bodies. Otherwise, they have the same border as frosted slider bodies."
+        /// </summary>
+        public static LocalisableString LiquidGlassSliderBorderDescription => new TranslatableString(getKey(@"liquid_glass_slider_border_description"),
+            @"Give liquid glass slider bodies their own border, as thick as the border of argon slider bodies. Otherwise, they have the same border as frosted slider bodies.");
+
+        /// <summary>
         /// "Slider border thickness"
         /// </summary>
         public static LocalisableString LiquidGlassSliderBorderThickness => new TranslatableString(getKey(@"liquid_glass_slider_border_thickness"), @"Slider border thickness");
 
         /// <summary>
-        /// "How thick the border of liquid glass slider bodies is, relative to the usual border."
+        /// "How thick the liquid glass slider border is, relative to the border of argon slider bodies. Only applies while the liquid glass slider border is enabled."
         /// </summary>
         public static LocalisableString LiquidGlassSliderBorderThicknessDescription => new TranslatableString(getKey(@"liquid_glass_slider_border_thickness_description"),
-            @"How thick the border of liquid glass slider bodies is, relative to the usual border.");
+            @"How thick the liquid glass slider border is, relative to the border of argon slider bodies. Only applies while the liquid glass slider border is enabled.");
 
         /// <summary>
         /// "Slider body brightness"

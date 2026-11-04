@@ -267,6 +267,7 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopLiquidGlassRefraction, 0.4f, 0f, 1f, 0.01f);
             SetDefault(OsuSetting.SlopLiquidGlassChromaticAberration, 1f, 0f, 1f, 0.01f);
             SetDefault(OsuSetting.SlopLiquidGlassTint, 0.6f, 0f, 2f, 0.01f);
+            SetDefault(OsuSetting.SlopLiquidGlassSliderBorder, false);
             SetDefault(OsuSetting.SlopLiquidGlassSliderBorderThickness, 1f, 0f, 1f, 0.01f);
             SetDefault(OsuSetting.SlopLiquidGlassSliderBodyBrightness, 0f, 0f, 1f, 0.01f);
             SetDefault(OsuSetting.SlopLiquidGlassBlur, 0.15f, 0f, 1f, 0.01f);
@@ -775,6 +776,11 @@ namespace osu.Game.Configuration
         /// How strongly liquid glass slider bodies and hit circles tint the content behind them with their colour, from 0 to 2.
         /// </summary>
         SlopLiquidGlassTint,
+
+        /// <summary>
+        /// Whether liquid glass slider bodies have their own border (as thick as the border of argon slider bodies) rather than the border of the other glass styles.
+        /// </summary>
+        SlopLiquidGlassSliderBorder,
 
         /// <summary>
         /// The thickness of the border of liquid glass slider bodies, relative to the border of the other glass styles, from 0 to 1.

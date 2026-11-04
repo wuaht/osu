@@ -17,22 +17,27 @@ namespace osu.Game.Rulesets.Osu.Skinning.Default
 
         private bool isLiquidGlass => GlassStyle.Value == osu.Game.Configuration.GlassStyle.LiquidGlass;
 
+        private bool hasLiquidGlassBorder => isLiquidGlass && LiquidGlassBorder.Value;
+
         protected override void LoadComplete()
         {
             base.LoadComplete();
 
-            GlassStyle.BindValueChanged(_ =>
-            {
-                // the border is as thick as the border of argon slider bodies.
-                BorderSize = isLiquidGlass ? FrostedDrawableSliderPath.ARGON_BORDER_PORTION / DrawableSliderPath.BORDER_PORTION : 1;
-                UpdateBorderColour();
-            }, true);
+            LiquidGlassBorder.BindValueChanged(_ => updateBorder());
+            GlassStyle.BindValueChanged(_ => updateBorder(), true);
+        }
+
+        private void updateBorder()
+        {
+            // the border is as thick as the border of argon slider bodies.
+            BorderSize = hasLiquidGlassBorder ? FrostedDrawableSliderPath.ARGON_BORDER_PORTION / DrawableSliderPath.BORDER_PORTION : 1;
+            UpdateBorderColour();
         }
 
         protected override DrawableSliderPath CreateSliderPath() => new DefaultGlassDrawableSliderPath { DarkenBody = darkenBody };
 
         // same as argon: the border takes the combo colour unless the beatmap or skin provides one.
-        protected override Color4 GetBorderColour(ISkinSource skin) => isLiquidGlass ? GetSkinBorderColour() ?? AccentColourBindable.Value : base.GetBorderColour(skin);
+        protected override Color4 GetBorderColour(ISkinSource skin) => hasLiquidGlassBorder ? GetSkinBorderColour() ?? AccentColourBindable.Value : base.GetBorderColour(skin);
 
         protected override Color4 GetBodyAccentColour(ISkinSource skin, Color4 hitObjectAccentColour)
         {

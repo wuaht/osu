@@ -67,6 +67,11 @@ namespace osu.Game.Rulesets.Osu.Skinning.Default
         /// </summary>
         protected bool IsLiquidGlass => glassStyle.Value == GlassStyle.LiquidGlass;
 
+        /// <summary>
+        /// Whether the path is currently displayed as liquid glass with its own border, which is as thick as the border of argon slider bodies.
+        /// </summary>
+        protected bool HasLiquidGlassBorder => IsLiquidGlass && liquidGlass?.SliderBorder == true;
+
         private float? borderTint;
 
         /// <summary>
@@ -143,9 +148,10 @@ namespace osu.Game.Rulesets.Osu.Skinning.Default
             EffectBufferScale = new Vector2(glassStyle.Value == GlassStyle.LiquidGlass ? 1 : 0.25f);
 
             bool isLiquidGlass = glassStyle.Value == GlassStyle.LiquidGlass;
-            float borderScale = isLiquidGlass ? liquidGlass!.SliderBorderThickness : 1;
+            bool liquidGlassBorder = isLiquidGlass && liquidGlass!.SliderBorder;
+            float borderScale = liquidGlassBorder ? liquidGlass!.SliderBorderThickness : 1;
 
-            float? tint = isLiquidGlass ? liquidGlass!.TintStrength : null;
+            float? tint = liquidGlassBorder ? liquidGlass!.TintStrength : null;
             float darkening = isLiquidGlass ? argon_body_darkening * (1 - liquidGlass!.SliderBodyBrightness) : argon_body_darkening;
 
             if (borderScale != BorderScale || tint != borderTint || darkening != bodyDarkening)

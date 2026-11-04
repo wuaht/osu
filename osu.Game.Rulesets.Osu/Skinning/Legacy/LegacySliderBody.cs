@@ -62,8 +62,8 @@ namespace osu.Game.Rulesets.Osu.Skinning.Legacy
             // the border starts right after the shadow.
             protected override float BorderStart => shadow_portion;
 
-            // under liquid glass, the border is as thick as the border of argon slider bodies.
-            protected override float BorderEnd => shadow_portion + (IsLiquidGlass ? ARGON_BORDER_PORTION : default_border_portion - shadow_portion) * BorderScale;
+            // with the liquid glass slider border, the border is as thick as the border of argon slider bodies.
+            protected override float BorderEnd => shadow_portion + (HasLiquidGlassBorder ? ARGON_BORDER_PORTION : default_border_portion - shadow_portion) * BorderScale;
 
             public LegacyDrawableSliderPath()
             {
