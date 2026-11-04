@@ -161,9 +161,9 @@ namespace osu.Game.Screens.Select
         }
 
         /// <summary>
-        /// Whether the leaderboard is shown and has no scores.
+        /// The state of the leaderboard, or null when it is not shown.
         /// </summary>
-        public bool ShowsNoScores => currentContent is BeatmapLeaderboardWedge { DisplayedState: LeaderboardState.NoScores };
+        public LeaderboardState? LeaderboardState => (currentContent as BeatmapLeaderboardWedge)?.DisplayedState;
 
         public void Refresh()
         {

@@ -491,9 +491,10 @@ namespace osu.Game.Skinning
                             {
                                 new LegacySongSelectTop(),
                                 new LegacySongSelectBottom(),
+                                // stable draws the user panel below the mode button, whose artwork often carries the panel's labels.
+                                new LegacyUserPanel(),
                                 new LegacyModeButton(),
                                 new LegacyBeatmapDetails(),
-                                new LegacyUserPanel(),
                             };
                     }
 

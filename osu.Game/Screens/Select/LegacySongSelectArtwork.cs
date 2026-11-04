@@ -82,11 +82,21 @@ namespace osu.Game.Screens.Select
 
         private Container? fill;
 
+        [Resolved]
+        private SkinManager? skinManager { get; set; }
+
         public LegacySongSelectTop()
         {
             RelativeSizeAxes = Axes.X;
             AutoSizeAxes = Axes.Y;
         }
+
+        // like stable, the bar is solid: clicks on it must not reach the carousel below.
+        protected override bool OnHover(HoverEvent e) => true;
+
+        protected override bool OnMouseDown(MouseDownEvent e) => true;
+
+        protected override bool OnClick(ClickEvent e) => true;
 
         protected override void UpdateArtwork()
         {
@@ -94,13 +104,13 @@ namespace osu.Game.Screens.Select
             fill = null;
 
             // stable darkens the search text with its default menu-button-background, below the top artwork.
-            AddInternal(new Box
+            AddInternal(new Sprite
             {
                 Anchor = Anchor.TopRight,
                 Origin = Anchor.Centre,
                 Position = new Vector2(-14, 46) * STABLE_SCALE,
-                Size = new Vector2(434, 52) * STABLE_SCALE,
-                Colour = Color4.Black.Opacity(0.4f),
+                Texture = skinManager?.DefaultClassicSkin.GetTexture("menu-button-background"),
+                Colour = Color4.Black.Opacity(102 / 255f),
             });
 
             if (Skin.GetTexture("songselect-top") is not Texture top)
@@ -222,6 +232,13 @@ namespace osu.Game.Screens.Select
             AutoSizeAxes = Axes.Y;
         }
 
+        // like stable, the bar is solid: clicks on it must not reach the carousel below.
+        protected override bool OnHover(HoverEvent e) => true;
+
+        protected override bool OnMouseDown(MouseDownEvent e) => true;
+
+        protected override bool OnClick(ClickEvent e) => true;
+
         protected override void UpdateArtwork()
         {
             ClearInternal();
@@ -269,6 +286,7 @@ namespace osu.Game.Screens.Select
         private Container iconContainer = null!;
         private Sprite rulesetIcon = null!;
         private Sprite rulesetIconFlash = null!;
+        private Container fallbackIcon = null!;
 
         public LegacyModeButton()
         {
@@ -316,6 +334,13 @@ namespace osu.Game.Screens.Select
                             Blending = BlendingParameters.Additive,
                             Alpha = 0,
                         },
+                        // rulesets without a stable icon (like custom rulesets) show their own, at the size of stable's 32 unit icons.
+                        fallbackIcon = new Container
+                        {
+                            Anchor = Anchor.Centre,
+                            Origin = Anchor.Centre,
+                            Size = new Vector2(26),
+                        },
                     }
                 },
                 new BeatFlash { Flash = flashIcon },
@@ -351,6 +376,16 @@ namespace osu.Game.Screens.Select
 
             rulesetIcon.Texture = icon;
             rulesetIconFlash.Texture = icon;
+
+            fallbackIcon.Clear();
+
+            if (icon == null && ruleset?.Value != null)
+            {
+                var drawable = ruleset.Value.CreateInstance().CreateIcon();
+                drawable.Anchor = drawable.Origin = Anchor.Centre;
+                drawable.Size = fallbackIcon.Size;
+                fallbackIcon.Add(drawable);
+            }
 
             // like stable, the icon pops in whenever the mode changes.
             iconContainer.ScaleTo(0).ScaleTo(1, 1000, Easing.OutElastic);
@@ -429,12 +464,20 @@ namespace osu.Game.Screens.Select
         [Resolved]
         private BeatmapDifficultyCache difficultyCache { get; set; } = null!;
 
+        [Resolved]
+        private SkinManager? skinManager { get; set; }
+
+        [Resolved]
+        private OsuGame? game { get; set; }
+
         private readonly OsuSpriteText title;
-        private readonly OsuSpriteText mapper;
+        private readonly FillFlowContainer mapper;
+        private readonly OsuSpriteText mapperName;
         private readonly OsuSpriteText lengthAndBpm;
         private readonly OsuSpriteText objectCounts;
         private readonly OsuSpriteText difficulty;
-        private readonly SpriteIcon statusIcon;
+        private readonly Sprite statusIcon;
+        private string? statusTexture;
 
         private CancellationTokenSource? cancellationSource;
         private IBindable<StarDifficulty>? starDifficulty;
@@ -445,16 +488,36 @@ namespace osu.Game.Screens.Select
 
             InternalChildren = new Drawable[]
             {
-                statusIcon = new SpriteIcon
+                statusIcon = new Sprite
                 {
                     Origin = Anchor.Centre,
                     Position = new Vector2(12) * LegacySongSelectComponent.STABLE_SCALE,
-                    Size = new Vector2(18 * LegacySongSelectComponent.STABLE_SCALE),
-                    Colour = new Color4(140, 220, 255, 255),
                     Alpha = 0,
                 },
                 title = createText(new Vector2(24, -3), 18, FontWeight.Regular),
-                mapper = createText(new Vector2(25, 13), 12, FontWeight.Regular),
+                mapper = new FillFlowContainer
+                {
+                    Position = new Vector2(25, 13) * LegacySongSelectComponent.STABLE_SCALE,
+                    AutoSizeAxes = Axes.Both,
+                    Direction = FillDirection.Horizontal,
+                    Alpha = 0,
+                    Children = new Drawable[]
+                    {
+                        createText(Vector2.Zero, 12, FontWeight.Regular).With(t => t.Text = "Mapped by "),
+                        new OsuHoverContainer
+                        {
+                            AutoSizeAxes = Axes.Both,
+                            IdleColour = Color4.White,
+                            HoverColour = new Color4(255, 204, 34, 255),
+                            Action = () =>
+                            {
+                                if (!beatmap.IsDefault)
+                                    game?.ShowUser(beatmap.Value.BeatmapInfo.Metadata.Author);
+                            },
+                            Child = mapperName = createText(Vector2.Zero, 12, FontWeight.Regular),
+                        },
+                    }
+                },
                 lengthAndBpm = createText(new Vector2(2.5f, 24), 12, FontWeight.Bold),
                 objectCounts = createText(new Vector2(2.5f, 36), 12, FontWeight.Regular),
                 difficulty = createText(new Vector2(2.5f, 48), 8, FontWeight.Regular),
@@ -490,6 +553,7 @@ namespace osu.Game.Screens.Select
             {
                 foreach (var text in InternalChildren.OfType<OsuSpriteText>())
                     text.Text = string.Empty;
+                mapper.Hide();
                 statusIcon.FadeOut(500);
                 return;
             }
@@ -500,7 +564,8 @@ namespace osu.Game.Screens.Select
             updateStatusIcon(info.Status);
 
             title.Text = $"{info.Metadata.Artist} - {info.Metadata.Title} [{info.DifficultyName}]";
-            mapper.Text = string.IsNullOrEmpty(info.Metadata.Author.Username) ? string.Empty : $"Mapped by {info.Metadata.Author.Username}";
+            mapperName.Text = info.Metadata.Author.Username;
+            mapper.Alpha = string.IsNullOrEmpty(info.Metadata.Author.Username) ? 0 : 1;
 
             double length = info.Length / rate;
             var controlPoints = working.Beatmap.ControlPointInfo;
@@ -531,35 +596,44 @@ namespace osu.Game.Screens.Select
             difficulty.Text = $"{attributeText} Star Rating: {starDifficulty?.Value.Stars ?? 0:0.##}★";
         }
 
-        // stable shows its ranked status icons at the top left; the textures are not available, so use the closest icons.
+        // stable's ranked status icons always come from its default skin. It hides the icon for unsubmitted maps,
+        // but local maps get its question mark here so they are not left without one.
         private void updateStatusIcon(BeatmapOnlineStatus status)
         {
-            IconUsage? icon = status switch
+            string textureName = status switch
             {
-                BeatmapOnlineStatus.None or BeatmapOnlineStatus.LocallyModified => null,
-                BeatmapOnlineStatus.Ranked => FontAwesome.Solid.AngleDoubleUp,
-                BeatmapOnlineStatus.Approved or BeatmapOnlineStatus.Qualified => FontAwesome.Solid.Check,
-                BeatmapOnlineStatus.Loved => FontAwesome.Solid.Heart,
-                _ => FontAwesome.Solid.Question,
+                BeatmapOnlineStatus.Ranked => "selection-ranked",
+                BeatmapOnlineStatus.Approved or BeatmapOnlineStatus.Qualified => "selection-approved",
+                BeatmapOnlineStatus.Loved => "selection-loved",
+                _ => "selection-question",
             };
 
             statusIcon.ClearTransforms();
+            statusIcon.Rotation = 0;
+            statusIcon.Scale = Vector2.One;
 
-            if (icon == null)
+            if (textureName != statusTexture)
             {
-                statusIcon.FadeOut(500).ScaleTo(0.8f, 500, Easing.Out);
-                return;
-            }
-
-            if (!statusIcon.Icon.Equals(icon.Value))
-            {
-                statusIcon.Icon = icon.Value;
+                statusTexture = textureName;
+                statusIcon.Texture = skinManager?.DefaultClassicSkin.GetTexture(textureName);
                 statusIcon.FadeInFromZero(400);
             }
             else
                 statusIcon.FadeIn(400);
 
-            statusIcon.ScaleTo(0.92f).ScaleTo(1.4f, 200, Easing.In).Then().ScaleTo(1, 200, Easing.In);
+            switch (status)
+            {
+                case BeatmapOnlineStatus.Ranked:
+                case BeatmapOnlineStatus.Loved:
+                    statusIcon.ScaleTo(0.92f).ScaleTo(1.4f, 200, Easing.In).Then().ScaleTo(1, 200, Easing.In);
+                    break;
+
+                case BeatmapOnlineStatus.Approved:
+                case BeatmapOnlineStatus.Qualified:
+                    statusIcon.RotateTo(MathHelper.RadiansToDegrees(-0.4f)).RotateTo(0, 400, Easing.Out);
+                    statusIcon.ScaleTo(1.4f).ScaleTo(1, 400, Easing.Out);
+                    break;
+            }
         }
 
         private void updateObjectCounts(WorkingBeatmap working, CancellationToken cancellationToken)

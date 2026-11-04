@@ -73,6 +73,8 @@ namespace osu.Game.Screens.Select
         private Container<Placeholder> placeholderContainer = null!;
         private Placeholder? placeholder;
 
+        private const float legacy_placeholder_scale = 0.65f;
+
         private Container scoresContainer = null!;
 
         private OsuScrollContainer scoresScroll = null!;
@@ -200,6 +202,9 @@ namespace osu.Game.Screens.Select
                         Anchor = Anchor.Centre,
                         Origin = Anchor.Centre,
                         RelativeSizeAxes = Axes.Both,
+                        // stable's leaderboard messages are much smaller than lazer's placeholders.
+                        Size = new Vector2(LegacyStyle ? 1 / legacy_placeholder_scale : 1),
+                        Scale = new Vector2(LegacyStyle ? legacy_placeholder_scale : 1),
                     },
                     loading = new LoadingLayer(),
                 }
@@ -546,7 +551,7 @@ namespace osu.Game.Screens.Select
                     return new MessagePlaceholder(LeaderboardStrings.LeaderboardsAreNotAvailableForThisRuleset);
 
                 case LeaderboardState.BeatmapUnavailable:
-                    return new MessagePlaceholder(LeaderboardStrings.LeaderboardsAreNotAvailableForThisBeatmap);
+                    return LegacyStyle ? null : new MessagePlaceholder(LeaderboardStrings.LeaderboardsAreNotAvailableForThisBeatmap);
 
                 case LeaderboardState.NoScores:
                     return LegacyStyle ? null : new MessagePlaceholder(LeaderboardStrings.NoRecordsYet);

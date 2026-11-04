@@ -367,7 +367,15 @@ namespace osu.Game.Screens.Select
                     Anchor = Anchor.Centre,
                     Origin = Anchor.Centre,
                     RelativeSizeAxes = Axes.Both,
-                    Child = legacyFilterDisplay = new LegacyFilterDisplay(FilterControl, detailsArea) { Alpha = 0 },
+                    Child = legacyFilterDisplay = new LegacyFilterDisplay(FilterControl, detailsArea)
+                    {
+                        Alpha = 0,
+                        StartRequested = () =>
+                        {
+                            ensureGlobalBeatmapValid();
+                            SelectAndRun(Beatmap.Value.BeatmapInfo, OnStart);
+                        },
+                    },
                 },
                 modSpeedHotkeyHandler = new ModSpeedHotkeyHandler()
             });
@@ -487,25 +495,13 @@ namespace osu.Game.Screens.Select
             if (this.IsCurrentScreen())
             {
                 updateDebounce();
-                updateLegacyLogoHover();
             }
         }
 
         /// <summary>
-        /// stable's play button is invisible until hovered, as legacy skins paint their own artwork around it.
+        /// Legacy skins use stable's play button (see <see cref="LegacyPlayButton"/>) instead of the logo.
         /// </summary>
-        private float shownLogoAlpha => legacyLayout && logo?.IsHovered != true ? 0.0011f : 1;
-
-        private bool logoHovered;
-
-        private void updateLegacyLogoHover()
-        {
-            if (logo == null || !ShowOsuLogo || modSelectOverlay.State.Value == Visibility.Visible || logo.IsHovered == logoHovered)
-                return;
-
-            logoHovered = logo.IsHovered;
-            logo.FadeTo(shownLogoAlpha, 100);
-        }
+        private float shownLogoAlpha => legacyLayout ? 0 : 1;
 
         #region Selection debounce
 
