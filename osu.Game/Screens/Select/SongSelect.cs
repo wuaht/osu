@@ -949,7 +949,8 @@ namespace osu.Game.Screens.Select
         /// <summary>
         /// stable has no toolbar on song select, so it isn't shown when entering (see <see cref="updateToolbarVisibility"/>).
         /// </summary>
-        public override bool ShowToolbarOnEnter => !skin.UsesLegacyLayout();
+        // skin is only resolved once the screen has loaded; updateToolbarVisibility() hides the toolbar after that.
+        public override bool ShowToolbarOnEnter => (skin as ISkinSource)?.UsesLegacyLayout() != true;
 
         /// <summary>
         /// stable has no toolbar on song select. Showing it would also shrink the whole screen, which breaks the stable layout.
