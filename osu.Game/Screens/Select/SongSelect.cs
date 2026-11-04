@@ -193,6 +193,7 @@ namespace osu.Game.Screens.Select
             {
                 new ScrollAdjustsVolume(),
                 onlineLookupSource,
+                new LegacySongSelectBackground(),
                 // the toolbar is transparent, so clip anything extending above the top of the screen (e.g. hidden wedge corners or carousel panels).
                 // only the top edge is clipped, as content is allowed to extend into the footer and beyond the sides of the screen.
                 new Container
@@ -343,6 +344,7 @@ namespace osu.Game.Screens.Select
                         },
                     },
                 },
+                new LegacyModeButton { Ruleset = { BindTarget = Ruleset } },
                 skinnableContent = new SkinnableContainer(new GlobalSkinnableContainerLookup(GlobalSkinnableContainers.SongSelect))
                 {
                     Anchor = Anchor.Centre,

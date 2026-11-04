@@ -11,6 +11,7 @@ using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Effects;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
+using osu.Framework.Graphics.Textures;
 using osu.Framework.Input.Bindings;
 using osu.Framework.Input.Events;
 using osu.Framework.Localisation;
@@ -19,6 +20,7 @@ using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.Sprites;
 using osu.Game.Input.Bindings;
 using osu.Game.Overlays;
+using osu.Game.Skinning;
 using osuTK;
 using osuTK.Graphics;
 
@@ -30,6 +32,30 @@ namespace osu.Game.Screens.Footer
 
         public const int HEIGHT = 75;
         protected const int BUTTON_WIDTH = 116;
+
+        /// <summary>
+        /// The size of the clickable area of song select buttons in stable, which legacy skins design their artwork around.
+        /// </summary>
+        public static readonly Vector2 LEGACY_SIZE = new Vector2(77, 90);
+
+        /// <summary>
+        /// The legacy skin texture which replaces this button's visuals when the user's legacy skin provides it.
+        /// The <c>-over</c> variant is shown on hover.
+        /// </summary>
+        protected virtual string? LegacyTextureName => null;
+
+        /// <summary>
+        /// Whether this button is currently displayed using legacy skin textures.
+        /// </summary>
+        public bool IsLegacy { get; private set; }
+
+        /// <summary>
+        /// The width of this button without any extra content, depending on whether it is displayed with legacy skin textures.
+        /// </summary>
+        protected float BaseWidth => IsLegacy ? LEGACY_SIZE.X : BUTTON_WIDTH;
+
+        [Resolved]
+        private ISkinSource? skin { get; set; }
 
         /// <summary>
         /// If this footer button controls the visibility of an overlay, it will be bound to this bindable.
@@ -95,6 +121,10 @@ namespace osu.Game.Screens.Footer
         private readonly Box backgroundBox;
         private readonly Box glowBox;
         private readonly Box flashLayer;
+
+        private readonly Container legacyContent;
+        private readonly Sprite legacySprite;
+        private readonly Sprite legacyOverSprite;
 
         public readonly OverlayContainer? Overlay;
 
@@ -174,7 +204,28 @@ namespace osu.Game.Screens.Footer
                             Alpha = 0,
                         },
                     },
-                }
+                },
+                legacyContent = new Container
+                {
+                    RelativeSizeAxes = Axes.Both,
+                    // the footer lets buttons extend below the screen edge by the corner radius.
+                    Padding = new MarginPadding { Bottom = CORNER_RADIUS },
+                    Alpha = 0,
+                    Children = new Drawable[]
+                    {
+                        legacySprite = new Sprite
+                        {
+                            Anchor = Anchor.BottomLeft,
+                            Origin = Anchor.BottomLeft,
+                        },
+                        legacyOverSprite = new Sprite
+                        {
+                            Anchor = Anchor.BottomLeft,
+                            Origin = Anchor.BottomLeft,
+                            Alpha = 0,
+                        },
+                    }
+                },
             };
         }
 
@@ -188,11 +239,37 @@ namespace osu.Game.Screens.Footer
             OverlayState.BindValueChanged(_ => UpdateDisplay());
             Enabled.BindValueChanged(_ => UpdateDisplay(), true);
 
+            if (skin != null)
+                skin.SourceChanged += onSkinChanged;
+            updateLegacyState();
+
             FinishTransforms(true);
         }
 
+        private void onSkinChanged() => Schedule(updateLegacyState);
+
+        private void updateLegacyState()
+        {
+            Texture? texture = LegacyTextureName == null ? null : skin?.GetUserLegacyTexture(LegacyTextureName);
+
+            IsLegacy = texture != null;
+
+            legacySprite.Texture = texture;
+            // like stable, a missing hover texture falls back to the default legacy skin's.
+            legacyOverSprite.Texture = IsLegacy ? skin!.GetTexture(LegacyTextureName + "-over") : null;
+
+            shearedContent.Alpha = IsLegacy ? 0 : 1;
+            legacyContent.Alpha = IsLegacy ? 1 : 0;
+            // drop pending width transforms from subclasses which were started for the previous layout.
+            ClearTransforms(targetMember: nameof(Width));
+            Size = new Vector2(BaseWidth, IsLegacy ? LEGACY_SIZE.Y + CORNER_RADIUS : HEIGHT);
+
+            UpdateDisplay();
+        }
+
         // account for shear and buttons temporarily hidden with DisappearToBottom.
-        public override bool ReceivePositionalInputAt(Vector2 screenSpacePos) => shearedContent.ReceivePositionalInputAt(screenSpacePos);
+        public override bool ReceivePositionalInputAt(Vector2 screenSpacePos)
+            => IsLegacy ? legacyContent.ReceivePositionalInputAt(screenSpacePos) : shearedContent.ReceivePositionalInputAt(screenSpacePos);
 
         public GlobalAction? Hotkey;
 
@@ -204,7 +281,11 @@ namespace osu.Game.Screens.Footer
             return base.OnClick(e);
         }
 
-        protected virtual void Flash() => flashLayer.FadeOutFromOne(800, Easing.OutQuint);
+        protected virtual void Flash()
+        {
+            if (!IsLegacy)
+                flashLayer.FadeOutFromOne(800, Easing.OutQuint);
+        }
 
         protected override bool OnHover(HoverEvent e)
         {
@@ -226,6 +307,12 @@ namespace osu.Game.Screens.Footer
 
         public void UpdateDisplay()
         {
+            if (IsLegacy)
+            {
+                legacyOverSprite.FadeTo(IsHovered || OverlayState.Value == Visibility.Visible ? 1 : 0, 100, Easing.OutQuint);
+                legacySprite.FadeTo(Enabled.Value ? 1 : 0.5f, 150, Easing.OutQuint);
+            }
+
             Color4 backgroundColour = OverlayState.Value == Visibility.Visible ? buttonAccentColour : colourProvider.Background3.Opacity(0.6f);
             Color4 textColour = OverlayState.Value == Visibility.Visible ? colourProvider.Background6 : colourProvider.Content1;
             Color4 accentColour = OverlayState.Value == Visibility.Visible ? colourProvider.Background6 : buttonAccentColour;
@@ -245,6 +332,14 @@ namespace osu.Game.Screens.Footer
             bar.FadeColour(accentColour, 150, Easing.OutQuint);
 
             glowBox.FadeColour(ColourInfo.GradientVertical(buttonAccentColour.Opacity(0f), buttonAccentColour.Opacity(0.2f)), 150, Easing.OutQuint);
+        }
+
+        protected override void Dispose(bool isDisposing)
+        {
+            base.Dispose(isDisposing);
+
+            if (skin != null)
+                skin.SourceChanged -= onSkinChanged;
         }
 
         public void AppearFromLeft(double delay)

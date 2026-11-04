@@ -109,6 +109,16 @@ namespace osu.Game.Skinning
             string getFrameName(int frameIndex) => $"{componentName}{animationSeparator}{frameIndex}";
         }
 
+        /// <summary>
+        /// Retrieves a texture only if the user's own legacy skin provides it, ignoring the built-in fallback skins.
+        /// Used for elements which should only replace lazer visuals when a skinner deliberately designed them.
+        /// </summary>
+        public static Texture? GetUserLegacyTexture(this ISkinSource source, string componentName)
+        {
+            var provider = source.FindProvider(s => s.GetTexture(componentName) != null);
+            return provider is LegacySkin and not DefaultLegacySkin ? provider.GetTexture(componentName) : null;
+        }
+
         public static Texture WithMaximumSize(this Texture texture, Vector2 maxSize)
         {
             if (texture.DisplayWidth <= maxSize.X && texture.DisplayHeight <= maxSize.Y)

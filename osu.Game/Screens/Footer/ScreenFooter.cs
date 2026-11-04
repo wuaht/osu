@@ -177,6 +177,38 @@ namespace osu.Game.Screens.Footer
             };
         }
 
+        /// <summary>
+        /// The screen-space X of the first footer button in stable's song select.
+        /// Legacy skins paint artwork around stable's fixed button positions, so legacy buttons are laid out edge to edge from here.
+        /// </summary>
+        private const float legacy_first_button_x = 316;
+
+        /// <summary>
+        /// The width of stable's back button area, narrower than ours so it doesn't cover stable's mode button.
+        /// </summary>
+        private const float legacy_back_button_width = 200;
+
+        private bool usingLegacyLayout;
+
+        // the legacy layout lets the screen's own legacy elements (like stable's mode button) receive input between the footer buttons.
+        protected override bool BlockPositionalInput => !usingLegacyLayout;
+
+        protected override void Update()
+        {
+            base.Update();
+
+            bool legacyLayout = leftButtonsFlow.FirstOrDefault()?.IsLegacy == true;
+
+            if (legacyLayout == usingLegacyLayout)
+                return;
+
+            usingLegacyLayout = legacyLayout;
+
+            leftButtonsFlow.X = legacyLayout ? legacy_first_button_x - (OsuGame.SCREEN_EDGE_MARGIN + ScreenBackButton.BUTTON_WIDTH + padding) : 0;
+            leftButtonsFlow.Spacing = new Vector2(legacyLayout ? 0 : 7, 0);
+            BackButton.ResizeWidthTo(legacyLayout ? legacy_back_button_width : ScreenBackButton.BUTTON_WIDTH, 200, Easing.OutQuint);
+        }
+
         private ScheduledDelegate? changeLogoDepthDelegate;
 
         public void StartTrackingLogo(OsuLogo logo, float duration = 0, Easing easing = Easing.None)

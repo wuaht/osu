@@ -84,6 +84,8 @@ namespace osu.Game.Screens.Select
 
         private IBindable<Language> currentLanguage = null!;
 
+        protected override string LegacyTextureName => "selection-mods";
+
         public FooterButtonMods(ModSelectOverlay overlay)
             : base(overlay)
         {
@@ -224,7 +226,7 @@ namespace osu.Game.Screens.Select
                 unrankedBadge.FadeOut(duration, easing);
 
                 // add delay to let unranked indicator hide first before resizing the button back to its original width.
-                this.Delay(duration).ResizeWidthTo(BUTTON_WIDTH, duration, easing);
+                this.Delay(duration).ResizeWidthTo(BaseWidth, duration, easing);
             }
             else
             {
@@ -233,14 +235,15 @@ namespace osu.Game.Screens.Select
                     unrankedBadge.MoveToX(0, duration, easing);
                     unrankedBadge.FadeIn(duration, easing);
 
-                    this.ResizeWidthTo(BUTTON_WIDTH + 5 + unrankedBadge.DrawWidth, duration, easing);
+                    // legacy buttons keep stable's fixed size so they stay aligned with the skin's artwork.
+                    this.ResizeWidthTo(IsLegacy ? BaseWidth : BUTTON_WIDTH + 5 + unrankedBadge.DrawWidth, duration, easing);
                 }
                 else
                 {
                     unrankedBadge.MoveToX(-unrankedBadge.DrawWidth, duration, easing);
                     unrankedBadge.FadeOut(duration, easing);
 
-                    this.ResizeWidthTo(BUTTON_WIDTH, duration, easing);
+                    this.ResizeWidthTo(BaseWidth, duration, easing);
                 }
 
                 modDisplayBar.MoveToY(-5, duration, Easing.OutQuint);

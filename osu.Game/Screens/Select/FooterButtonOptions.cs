@@ -19,6 +19,8 @@ namespace osu.Game.Screens.Select
 {
     public partial class FooterButtonOptions : ScreenFooterButton, IHasPopover
     {
+        protected override string LegacyTextureName => "selection-options";
+
         [Resolved]
         private OverlayColourProvider colourProvider { get; set; } = null!;
 

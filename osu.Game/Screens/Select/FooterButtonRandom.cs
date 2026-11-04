@@ -19,6 +19,8 @@ namespace osu.Game.Screens.Select
 {
     public partial class FooterButtonRandom : ScreenFooterButton
     {
+        protected override string LegacyTextureName => "selection-random";
+
         public Action? NextRandom { get; set; }
         public Action? PreviousRandom { get; set; }
 
