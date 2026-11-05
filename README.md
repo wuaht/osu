@@ -35,10 +35,7 @@ It is possible to create a (or multiple) local offline accounts to track your sc
 
 The client also has beatmap mirror support (only Mino tested), so you don't even have to login to download maps
 
-## Features
-full list of features not available yet since i still have stuff i want to implement.
-
-But there is *osu!fps* (first person osu!) and a *new* editor look with a hitsound editor and a BN manager. And also frosted sliders and hit circles.
+## Long List of Features: [features.md](features.md)
 
 ## Building/Installing
 
