@@ -17,6 +17,10 @@ namespace osu.Game.Screens.RankingV2.Legacy
     {
         public override bool ReceivePositionalInputAt(Vector2 screenSpacePos) => true;
 
+        // SLOP-RESULTS-V2: temporary until upstream finishes SoloResultsScreenV2. Remove once upstream's results screen is merged.
+        [Resolved]
+        private SlopSoloResultsScreenV2? slopResultsScreen { get; set; }
+
         [BackgroundDependencyLoader]
         private void load(IBindable<IScoreInfo> _)
         {
@@ -30,7 +34,8 @@ namespace osu.Game.Screens.RankingV2.Legacy
                 AccentColour = Colour4.BlueViolet,
                 Text = ResultsScreenStrings.LegacyOnlineRankingButtonText,
                 Size = new Vector2(200, 30) * LegacySkin.STABLE_MAGIC_SCALE_FACTOR,
-                Action = () => { },
+                // SLOP-RESULTS-V2: temporary until upstream finishes SoloResultsScreenV2. Once upstream's results screen is merged, use upstream's action instead.
+                Action = () => slopResultsScreen?.ShowOnlineRanking(),
             };
         }
 

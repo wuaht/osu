@@ -79,6 +79,7 @@ using osu.Game.Screens.OnlinePlay.Playlists;
 using osu.Game.Screens.Play;
 using osu.Game.Screens.Play.Leaderboards;
 using osu.Game.Screens.Ranking;
+using osu.Game.Screens.RankingV2;
 using osu.Game.Screens.Select;
 using osu.Game.Seasonal;
 using osu.Game.Skinning;
@@ -941,7 +942,8 @@ namespace osu.Game
                         break;
 
                     case ScorePresentType.Results:
-                        screen.Push(new SoloResultsScreen(databasedScore.ScoreInfo));
+                        // SLOP-RESULTS-V2: temporary until upstream finishes SoloResultsScreenV2. Once upstream's results screen is merged, push the SoloResultsScreen directly again.
+                        screen.Push(SlopSoloResultsScreenV2.ReplaceSoloResults(new SoloResultsScreen(databasedScore.ScoreInfo), SkinManager, LocalConfig));
                         break;
                 }
             }, validScreens: validScreens);

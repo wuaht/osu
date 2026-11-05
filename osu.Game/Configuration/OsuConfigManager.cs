@@ -403,6 +403,8 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopCatchSkin, string.Empty);
             SetDefault(OsuSetting.SlopManiaSkin, string.Empty);
             SetDefault(OsuSetting.SlopLegacySongSelect, true);
+            // SLOP-RESULTS-V2: temporary until upstream finishes SoloResultsScreenV2. Remove this setting once upstream's results screen is merged.
+            SetDefault(OsuSetting.SlopLegacyResultsScreen, true);
             SetDefault(OsuSetting.SlopEditorOnlyAutosaveOwnMaps, true);
             SetDefault(OsuSetting.SlopEditorAutosaveToBackups, false);
             SetDefault(OsuSetting.SlopEditorMyMapsAliases, string.Empty);
@@ -1397,6 +1399,12 @@ namespace osu.Game.Configuration
         /// Whether legacy skins show stable's song select layout.
         /// </summary>
         SlopLegacySongSelect,
+
+        /// <summary>
+        /// Whether legacy skins show upstream's work-in-progress legacy results screen.
+        /// </summary>
+        // SLOP-RESULTS-V2: temporary until upstream finishes SoloResultsScreenV2. Remove this setting once upstream's results screen is merged.
+        SlopLegacyResultsScreen,
 
         /// <summary>
         /// Whether autosaving is restricted to beatmaps created by the local user (or one of their aliases).

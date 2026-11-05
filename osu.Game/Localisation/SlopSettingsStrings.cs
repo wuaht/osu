@@ -1074,6 +1074,19 @@ namespace osu.Game.Localisation
         public static LocalisableString LegacySongSelectDescription => new TranslatableString(getKey(@"legacy_song_select_description"),
             @"Shows stable's song select layout while a legacy skin is active.");
 
+        // SLOP-RESULTS-V2: temporary until upstream finishes SoloResultsScreenV2. Remove this string once upstream's results screen is merged.
+        /// <summary>
+        /// "Use legacy skin results screen"
+        /// </summary>
+        public static LocalisableString LegacyResultsScreen => new TranslatableString(getKey(@"legacy_results_screen"), @"Use legacy skin results screen");
+
+        // SLOP-RESULTS-V2: temporary until upstream finishes SoloResultsScreenV2. Remove this string once upstream's results screen is merged.
+        /// <summary>
+        /// "Shows stable's results screen layout after solo plays while a legacy skin is active."
+        /// </summary>
+        public static LocalisableString LegacyResultsScreenDescription => new TranslatableString(getKey(@"legacy_results_screen_description"),
+            @"Shows stable's results screen layout after solo plays while a legacy skin is active.");
+
         /// <summary>
         /// "&lt;Use main skin&gt;"
         /// </summary>

@@ -90,19 +90,55 @@ namespace osu.Game.Screens.RankingV2.Legacy
 
     public partial class LegacyRankingRetryButton : LegacyRankingButton
     {
+        // SLOP-RESULTS-V2: temporary until upstream finishes SoloResultsScreenV2. Remove once upstream's results screen is merged.
+        [Resolved]
+        private SlopSoloResultsScreenV2? slopResultsScreen { get; set; }
+
         // https://github.com/peppy/osu-stable-reference/blob/6b3838c41c4b8005cadf7db0b503ae967776d9f9/osu!/GameModes/Ranking/Ranking.cs#L833
         public LegacyRankingRetryButton()
             : base(@"ranking-retry", @"pause-retry")
         {
         }
+
+        // SLOP-RESULTS-V2: temporary until upstream finishes SoloResultsScreenV2. Remove once upstream's results screen is merged.
+        [BackgroundDependencyLoader]
+        private void load()
+        {
+            // SLOP-RESULTS-V2: like stable, only show retry where it works. Outside our screen (skin editor, tests) the button stays as upstream has it.
+            if (slopResultsScreen == null)
+                return;
+
+            if (slopResultsScreen.CanRetry)
+                Action = slopResultsScreen.Retry;
+            else
+                Alpha = 0;
+        }
     }
 
     public partial class LegacyRankingWatchReplayButton : LegacyRankingButton
     {
+        // SLOP-RESULTS-V2: temporary until upstream finishes SoloResultsScreenV2. Remove once upstream's results screen is merged.
+        [Resolved]
+        private SlopSoloResultsScreenV2? slopResultsScreen { get; set; }
+
         // https://github.com/peppy/osu-stable-reference/blob/6b3838c41c4b8005cadf7db0b503ae967776d9f9/osu!/GameModes/Ranking/Ranking.cs#L855-L860
         public LegacyRankingWatchReplayButton()
             : base(@"ranking-replay", @"pause-replay")
         {
+        }
+
+        // SLOP-RESULTS-V2: temporary until upstream finishes SoloResultsScreenV2. Remove once upstream's results screen is merged.
+        [BackgroundDependencyLoader]
+        private void load()
+        {
+            // SLOP-RESULTS-V2: like stable, only show watch replay where it works. Outside our screen (skin editor, tests) the button stays as upstream has it.
+            if (slopResultsScreen == null)
+                return;
+
+            if (slopResultsScreen.CanWatchReplay)
+                Action = slopResultsScreen.WatchReplay;
+            else
+                Alpha = 0;
         }
     }
 }

@@ -154,7 +154,8 @@ namespace osu.Game.Screens.Play
                             return;
 
                         ValidForResume = false;
-                        this.Push(new SoloResultsScreen(Score.ScoreInfo));
+                        // SLOP-RESULTS-V2: temporary until upstream finishes SoloResultsScreenV2. Once upstream's results screen is merged, push the SoloResultsScreen directly again.
+                        this.Push(SlopReplaceSoloResults(new SoloResultsScreen(Score.ScoreInfo)));
                     }
                 }
             });

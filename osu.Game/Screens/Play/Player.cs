@@ -36,6 +36,7 @@ using osu.Game.Rulesets.UI.Scrolling;
 using osu.Game.Scoring;
 using osu.Game.Scoring.Legacy;
 using osu.Game.Screens.Ranking;
+using osu.Game.Screens.RankingV2;
 using osu.Game.Skinning;
 using osu.Game.Users;
 using osu.Game.Utils;
@@ -240,6 +241,26 @@ namespace osu.Game.Screens.Play
         protected virtual void PrepareReplay()
         {
             DrawableRuleset.SetRecordTarget(Score);
+        }
+
+        // SLOP-RESULTS-V2: temporary until upstream finishes SoloResultsScreenV2. Remove once upstream's results screen is merged.
+        [Resolved]
+        private ISkinSource? slopResultsSkin { get; set; }
+
+        // SLOP-RESULTS-V2: temporary until upstream finishes SoloResultsScreenV2. Remove once upstream's results screen is merged.
+        [Resolved]
+        private OsuConfigManager? slopResultsConfig { get; set; }
+
+        /// <summary>
+        /// Swaps a plain <see cref="SoloResultsScreen"/> for <see cref="SlopSoloResultsScreenV2"/> when the legacy results screen applies.
+        /// </summary>
+        // SLOP-RESULTS-V2: temporary until upstream finishes SoloResultsScreenV2. Remove this method (and its callers' use of it) once upstream's results screen is merged.
+        protected OsuScreen SlopReplaceSoloResults(ResultsScreen results)
+        {
+            if (slopResultsSkin == null || slopResultsConfig == null)
+                return results;
+
+            return SlopSoloResultsScreenV2.ReplaceSoloResults(results, slopResultsSkin, slopResultsConfig);
         }
 
         [BackgroundDependencyLoader(true)]
@@ -994,7 +1015,8 @@ namespace osu.Game.Screens.Play
                     return;
 
                 OnShowingResults?.Invoke();
-                this.Push(CreateResults(prepareScoreForDisplayTask.GetResultSafely()));
+                // SLOP-RESULTS-V2: temporary until upstream finishes SoloResultsScreenV2. Once upstream's results screen is merged, go back to pushing CreateResults(...) directly.
+                this.Push(SlopReplaceSoloResults(CreateResults(prepareScoreForDisplayTask.GetResultSafely())));
             }, Time.Current + delay, 50);
 
             Scheduler.Add(resultsDisplayDelegate);
