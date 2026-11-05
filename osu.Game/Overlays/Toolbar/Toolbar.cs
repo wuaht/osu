@@ -4,6 +4,8 @@
 #nullable disable
 
 using System;
+using System.Linq;
+using osu.Framework.Testing;
 using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Colour;
@@ -43,6 +45,11 @@ namespace osu.Game.Overlays.Toolbar
 
         // Toolbar and its components need keyboard input even when hidden.
         public override bool PropagateNonPositionalInputSubTree => OverlayActivationMode.Value != OverlayActivation.Disabled;
+
+        /// <summary>
+        /// Whether a dropdown or overlay opened from one of this toolbar's buttons (e.g. the user menu or now playing) is open.
+        /// </summary>
+        public bool HasOpenOverlay => this.ChildrenOfType<ToolbarOverlayToggleButton>().Any(b => b.StateContainer?.State.Value == Visibility.Visible);
 
         public Toolbar()
         {

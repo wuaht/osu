@@ -984,17 +984,19 @@ namespace osu.Game.Screens.Select
         public override bool ShowToolbarOnEnter => legacySongSelect?.Value != true || (skin as ISkinSource)?.UsesLegacyLayout() != true;
 
         /// <summary>
-        /// stable has no toolbar on song select. Showing it would also shrink the whole screen, which breaks the stable layout.
+        /// stable has no toolbar on song select, so it's only revealed when hovering the top of the screen (OsuGame handles that).
+        /// </summary>
+        public override bool RevealToolbarOnHover => legacyLayout;
+
+        /// <summary>
+        /// Brings the toolbar back when switching away from the legacy layout, since OsuGame stops managing it then.
         /// </summary>
         private void updateToolbarVisibility()
         {
-            if (!this.IsCurrentScreen() || (game as OsuGame)?.Toolbar is not Overlays.Toolbar.Toolbar toolbar)
+            if (!this.IsCurrentScreen() || legacyLayout || (game as OsuGame)?.Toolbar is not Overlays.Toolbar.Toolbar toolbar)
                 return;
 
-            if (legacyLayout)
-                toolbar.Hide();
-            else
-                toolbar.Show();
+            toolbar.Show();
         }
 
         private const float legacy_top_height = 82 * LegacySongSelectComponent.STABLE_SCALE;

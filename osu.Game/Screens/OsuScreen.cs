@@ -49,6 +49,11 @@ namespace osu.Game.Screens
         /// </summary>
         public virtual bool ShowToolbarOnEnter => true;
 
+        /// <summary>
+        /// Whether the toolbar is only shown while the cursor is at the top of the screen (or an overlay is open), without pushing the screen down.
+        /// </summary>
+        public virtual bool RevealToolbarOnHover => false;
+
         public virtual bool HideMenuCursorOnNonMouseInput => false;
 
         public virtual bool RequiresPortraitOrientation => false;

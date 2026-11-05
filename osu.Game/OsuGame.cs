@@ -1816,11 +1816,19 @@ namespace osu.Game
         {
             base.UpdateAfterChildren();
 
-            ScreenOffsetContainer.Padding = new MarginPadding { Top = toolbarOffset };
+            bool revealToolbarOnHover = (ScreenStack.CurrentScreen as OsuScreen)?.RevealToolbarOnHover == true;
+
+            if (revealToolbarOnHover)
+                updateHoverRevealedToolbar();
+
+            // a hover-revealed toolbar floats above the screen instead of shrinking it.
+            float screenOffset = revealToolbarOnHover ? 0 : toolbarOffset;
+
+            ScreenOffsetContainer.Padding = new MarginPadding { Top = screenOffset };
             overlayOffsetContainer.Padding = new MarginPadding { Top = toolbarOffset };
 
             // the toolbar is transparent, so let the background continue behind it.
-            float backgroundBleed = ScreenStack.ToLocalSpace(ToScreenSpace(new Vector2(0, toolbarOffset))).Y - ScreenStack.ToLocalSpace(ToScreenSpace(Vector2.Zero)).Y;
+            float backgroundBleed = ScreenStack.ToLocalSpace(ToScreenSpace(new Vector2(0, screenOffset))).Y - ScreenStack.ToLocalSpace(ToScreenSpace(Vector2.Zero)).Y;
             ScreenStack.BackgroundBleedTop = backgroundBleed;
             backbufferBleedContainer.Padding = new MarginPadding { Top = -backgroundBleed };
             screenStackBleedOffsetContainer.Padding = new MarginPadding { Top = backgroundBleed };
@@ -1828,6 +1836,21 @@ namespace osu.Game
             adjustGlobalScreenOffset();
 
             GlobalCursorDisplay.ShowCursor = (ScreenStack.CurrentScreen as IOsuScreen)?.CursorVisible ?? false;
+        }
+
+        private void updateHoverRevealedToolbar()
+        {
+            if (Toolbar?.IsLoaded != true || GetContainingInputManager() is not InputManager inputManager)
+                return;
+
+            // a thin strip reveals the toolbar; once shown, it stays while the cursor is anywhere over it.
+            float revealHeight = Toolbar.State.Value == Visibility.Visible ? Toolbar.DrawHeight : Toolbar.DrawHeight / 4;
+            bool cursorAtTop = Toolbar.Parent!.ToLocalSpace(inputManager.CurrentState.Mouse.Position).Y < revealHeight;
+
+            if (cursorAtTop || Toolbar.HasOpenOverlay || focusedOverlays.Any(o => o.State.Value == Visibility.Visible))
+                Toolbar.Show();
+            else
+                Toolbar.Hide();
         }
 
         private float horizontalOffsetAdjust;
