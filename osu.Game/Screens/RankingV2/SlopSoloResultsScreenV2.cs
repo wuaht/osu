@@ -4,6 +4,19 @@
 // SLOP-RESULTS-V2: this whole file is a temporary stand-in until upstream finishes SoloResultsScreenV2.
 // When upstream's finished results screen is merged, delete this file (and every other SLOP-RESULTS-V2 change)
 // and use upstream's results screen instead.
+//
+// Checklist for the removal: the marker appears on 58 lines across 9 files
+// (count lines with `git grep -c` for the marker above; update these numbers whenever markers are added or removed):
+//   osu.Game/Configuration/OsuConfigManager.cs                      2
+//   osu.Game/Localisation/SlopSettingsStrings.cs                    2
+//   osu.Game/OsuGame.cs                                             2
+//   osu.Game/Overlays/Settings/Sections/Slop/SkinSettings.cs        1
+//   osu.Game/Screens/Play/Player.cs                                 5
+//   osu.Game/Screens/Play/ReplayPlayer.cs                           1
+//   osu.Game/Screens/RankingV2/Legacy/LegacyOnlineRankingButton.cs  2
+//   osu.Game/Screens/RankingV2/Legacy/LegacyRankingButton.cs        6
+//   osu.Game/Screens/RankingV2/SlopSoloResultsScreenV2.cs           37 (this file is deleted entirely)
+// When every marker is gone, the count must be 0.
 
 using System.Linq;
 using osu.Framework.Allocation;
