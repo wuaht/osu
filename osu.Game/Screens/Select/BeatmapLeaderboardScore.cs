@@ -119,6 +119,11 @@ namespace osu.Game.Screens.Select
 
         private readonly bool sheared;
 
+        /// <summary>
+        /// Uses a denser layout (narrower score column, smaller name) so long usernames and relative dates fit in the narrow legacy song select leaderboard.
+        /// </summary>
+        public bool LegacyStyle { get; init; }
+
         public override bool ReceivePositionalInputAt(Vector2 screenSpacePos)
         {
             var inputRectangle = DrawRectangle;
@@ -274,7 +279,7 @@ namespace osu.Game.Screens.Select
                                                         Direction = FillDirection.Horizontal,
                                                         Spacing = new Vector2(5),
                                                         AutoSizeAxes = Axes.Both,
-                                                        Masking = true,
+                                                        Masking = !LegacyStyle,
                                                         Children = new Drawable[]
                                                         {
                                                             new UpdateableFlag(Score.User.CountryCode)
@@ -303,7 +308,7 @@ namespace osu.Game.Screens.Select
                                                         RelativeSizeAxes = Axes.X,
                                                         Shear = sheared ? -OsuGame.SHEAR : Vector2.Zero,
                                                         Text = Score.User.Username,
-                                                        Font = OsuFont.Style.Heading2,
+                                                        Font = LegacyStyle ? OsuFont.Style.Heading2.With(size: 15) : OsuFont.Style.Heading2,
                                                     }
                                                 }
                                             },
@@ -440,7 +445,7 @@ namespace osu.Game.Screens.Select
                                                         UseFullGlyphHeight = false,
                                                         Current = scoreManager.GetBindableTotalScoreString(Score),
                                                         Spacing = new Vector2(-1.5f),
-                                                        Font = OsuFont.Style.Subtitle.With(weight: FontWeight.Light, fixedWidth: true),
+                                                        Font = OsuFont.Style.Subtitle.With(size: LegacyStyle ? 20 : 28, weight: FontWeight.Light, fixedWidth: true),
                                                         Shear = sheared ? -OsuGame.SHEAR : Vector2.Zero,
                                                     },
                                                     modsContainer = new FillFlowContainer<Drawable>
@@ -490,11 +495,11 @@ namespace osu.Game.Screens.Select
                 switch (s.NewValue)
                 {
                     case ScoringMode.Standardised:
-                        rightContent.Width = 170;
+                        rightContent.Width = LegacyStyle ? 125 : 170;
                         break;
 
                     case ScoringMode.Classic:
-                        rightContent.Width = expanded_right_content_width;
+                        rightContent.Width = LegacyStyle ? 150 : expanded_right_content_width;
                         break;
                 }
 

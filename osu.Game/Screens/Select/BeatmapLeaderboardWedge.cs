@@ -339,6 +339,7 @@ namespace osu.Game.Screens.Select
 
                 return new BeatmapLeaderboardScore(s)
                 {
+                    LegacyStyle = LegacyStyle,
                     Rank = i + 1,
                     Highlight = highlightType,
                     SelectedMods = { BindTarget = mods },
@@ -398,6 +399,7 @@ namespace osu.Game.Screens.Select
                 personalBestDisplay.FadeIn(600, Easing.OutQuint);
                 personalBestScoreContainer.Child = new BeatmapLeaderboardScore(userScore)
                 {
+                    LegacyStyle = LegacyStyle,
                     Highlight = BeatmapLeaderboardScore.HighlightType.Own,
                     Rank = userScore.Position,
                     SelectedMods = { BindTarget = mods },
