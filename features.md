@@ -25,7 +25,7 @@ This will be a big list of features that I added to this client with more coming
   - fun lil animation playing when you get an accept
   - ![sf.png](/assets/previews/req.png)
 - **Discussions tab**: all your mods in lazer now with the discussion tab, where all discussion takes place from the website
-  - WILL require you to sign in a browser window which will open when you check a box when you sign into lazer.
+  - WILL require you to sign in a browser window which will open when you check a box when you sign into lazer, otherwise it's readonly
   - ![dffdf.png](/assets/previews/discussion.png)
 - **Editor Song Select**: Just like Stable, you can now browse through your maps and open them in the editor from the song select.
   - ![imfsag.png](/assets/previews/editorsongs.png)
@@ -48,8 +48,8 @@ This will be a big list of features that I added to this client with more coming
 - **Slider Generator**: Tool ported from [Slider Painter](https://osu.ppy.sh/community/forums/topics/1842546)
   - Generator Hotkey from [Khang](https://github.com/khang06), with an added feature of taking a random shape from a map you have downloaded (toggle in settings)
   - ![prefiew](/assets/previews/slidergen.gif)
-- Realistic auto cursor preview in the editor to look at flow, Idea from [minetoblend](https://github.com/minetoblend/)
-    - ![prefiew](/assets/previews/autoineditor.gif)
+- Realistic auto cursor preview in the editor to look at flow, Base from [minetoblend](https://github.com/minetoblend/), then tweaked
+    - auto playing btw not me or replay: ![prefiew](/assets/previews/autoineditor.gif)
 - Map cleaner (Timing Menu < Clean up map) ported from Mapping tools
 - New Snappings!! Blankets, triangles, straight lines
     - ![img.png](/assets/previews/blanket.png)
@@ -59,7 +59,7 @@ This will be a big list of features that I added to this client with more coming
 - Split sliders with ctrl + right click
 - Bend Bezier sliders with Middle Mouse button + drag
 - mirror sliders (right click and mirror)
-- Slider end snapping to timing points & later (minetoblend)
+- Slider end snapping to timing points & later ([minetoblend](https://github.com/minetoblend/))
 - Difficulty strain graph in the bottom timeline
 - Waveform styles like Three-Band, FL Studio/MiniMeters, Onsets, Default, Lazer
 - Unsnapped objects show on the timeline above with a broken link icon
@@ -90,7 +90,7 @@ This will be a big list of features that I added to this client with more coming
 ## Visuals
 - **Legacy Song Select**: Legacy Stable skins in Song Select (also unfinished legacy result screens from above)
   - ![img.png](/assets/previews/legacysongselect.png)
-- **New Slider body types**: Frosted Glass (minetoblend) and Liquid Glass styles for slider bodies and hitcircles
+- **New Slider body types**: Frosted Glass ([minetoblend](https://github.com/minetoblend/)) and Liquid Glass styles for slider bodies and hitcircles
   - ![img.png](/assets/previews/frosted.png)
   - ![imfg.png](/assets/previews/liquidglass.png)
 - Chroma color for cursor, cursor trail and combo colors
