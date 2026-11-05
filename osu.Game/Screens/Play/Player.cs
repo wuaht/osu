@@ -36,6 +36,7 @@ using osu.Game.Rulesets.UI.Scrolling;
 using osu.Game.Scoring;
 using osu.Game.Scoring.Legacy;
 using osu.Game.Screens.Ranking;
+// SLOP-RESULTS-V2: only needed for SlopSoloResultsScreenV2. Remove once upstream's results screen is merged.
 using osu.Game.Screens.RankingV2;
 using osu.Game.Skinning;
 using osu.Game.Users;

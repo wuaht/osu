@@ -79,6 +79,7 @@ using osu.Game.Screens.OnlinePlay.Playlists;
 using osu.Game.Screens.Play;
 using osu.Game.Screens.Play.Leaderboards;
 using osu.Game.Screens.Ranking;
+// SLOP-RESULTS-V2: only needed for SlopSoloResultsScreenV2. Remove once upstream's results screen is merged.
 using osu.Game.Screens.RankingV2;
 using osu.Game.Screens.Select;
 using osu.Game.Seasonal;
