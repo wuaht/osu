@@ -161,8 +161,8 @@ namespace osu.Game.Screens.Select
 
         protected override void UpdateArtwork()
         {
-            levelBarBackground.Texture = Skin.GetTexture("levelbar-bg");
-            levelBarForeground.Texture = Skin.GetTexture("levelbar");
+            levelBarBackground.SetLegacyTexture(Skin.GetTexture("levelbar-bg"));
+            levelBarForeground.SetLegacyTexture(Skin.GetTexture("levelbar"));
             background.Texture = skinManager?.DefaultClassicSkin.GetTexture("user-bg");
         }
 

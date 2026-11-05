@@ -388,6 +388,8 @@ namespace osu.Game.Screens.Select
                     Children = new Drawable[]
                     {
                         legacyFilterDisplay,
+                        // like stable, the beating logo sits below the mode button, but its hovered button covers it.
+                        legacyFilterDisplay.PlayButton.HoverLogo.CreateProxy(),
                         // above the filter controls, so that a click outside the open menu only closes it.
                         legacyModeMenu,
                     },

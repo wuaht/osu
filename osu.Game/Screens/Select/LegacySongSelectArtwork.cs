@@ -39,6 +39,19 @@ using SixLabors.ImageSharp.PixelFormats;
 
 namespace osu.Game.Screens.Select
 {
+    internal static class LegacySpriteExtensions
+    {
+        /// <summary>
+        /// Sets a skin texture and sizes the sprite to it. A <see cref="Sprite"/> only takes its texture's size while it has none,
+        /// so without this a skin or ruleset change would keep drawing the new texture at the previous one's size.
+        /// </summary>
+        public static void SetLegacyTexture(this Sprite sprite, Texture? texture)
+        {
+            sprite.Texture = texture;
+            sprite.Size = texture?.DisplaySize ?? Vector2.Zero;
+        }
+    }
+
     /// <summary>
     /// Base for stable's song select elements, which re-read their textures when the skin changes.
     /// </summary>
@@ -387,8 +400,8 @@ namespace osu.Game.Screens.Select
 
         private void updateTextures()
         {
-            modeSprite.Texture = skin.GetTexture("selection-mode");
-            overSprite.Texture = skin.GetTexture("selection-mode-over");
+            modeSprite.SetLegacyTexture(skin.GetTexture("selection-mode"));
+            overSprite.SetLegacyTexture(skin.GetTexture("selection-mode-over"));
             updateRuleset();
         }
 
@@ -396,8 +409,8 @@ namespace osu.Game.Screens.Select
         {
             Texture? icon = ruleset?.Value == null ? null : skin.GetTexture($"mode-{ruleset.Value.ShortName}-small");
 
-            rulesetIcon.Texture = icon;
-            rulesetIconFlash.Texture = icon;
+            rulesetIcon.SetLegacyTexture(icon);
+            rulesetIconFlash.SetLegacyTexture(icon);
 
             fallbackIcon.Clear();
 
@@ -700,6 +713,8 @@ namespace osu.Game.Screens.Select
                         {
                             d.Anchor = d.Origin = Anchor.Centre;
                             d.RelativeSizeAxes = Axes.Both;
+                            // icons may come with an absolute size, which would otherwise become a multiple of the container's.
+                            d.Size = Vector2.One;
                         }),
                     },
                     text = new OsuSpriteText
@@ -724,20 +739,29 @@ namespace osu.Game.Screens.Select
                 }
             }
 
+            // like stable's pSpriteMenuItem, showing and hiding drop all pending transforms, so a delayed fade-in can't revive a closed row.
+            // only the background is delayed; the icon and text fade in right away.
             public void Appear(double delay)
             {
+                foreach (var d in new Drawable[] { icon, fallbackIcon, text })
+                {
+                    d.ClearTransforms();
+                    d.FadeIn(200);
+                }
+
+                background.ClearTransforms();
+                background.Colour = background_colour;
+                background.Alpha = 0;
                 background.Delay(delay).FadeTo(background_colour.A, 200);
-                icon.Delay(delay).FadeIn(200);
-                fallbackIcon.Delay(delay).FadeIn(200);
-                text.Delay(delay).FadeIn(200);
             }
 
             public void Disappear()
             {
-                background.FadeOut(100);
-                icon.FadeOut(100);
-                fallbackIcon.FadeOut(100);
-                text.FadeOut(100);
+                foreach (var d in new Drawable[] { background, icon, fallbackIcon, text })
+                {
+                    d.ClearTransforms();
+                    d.FadeOut(100);
+                }
             }
 
             protected override bool OnHover(HoverEvent e)

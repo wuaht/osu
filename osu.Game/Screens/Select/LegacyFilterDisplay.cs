@@ -113,6 +113,11 @@ namespace osu.Game.Screens.Select
         /// </summary>
         public readonly Drawable SearchBackground;
 
+        /// <summary>
+        /// stable's play button. Its beating logo is shown through a proxy below the skinnable layer, so the skinned interface covers it.
+        /// </summary>
+        public readonly LegacyPlayButton PlayButton;
+
         private readonly Sprite searchBackground;
 
         private const float search_background_y = 46;
@@ -124,6 +129,8 @@ namespace osu.Game.Screens.Select
             this.detailsArea = detailsArea;
             this.modeButtonLayer = modeButtonLayer;
             RelativeSizeAxes = Axes.Both;
+
+            PlayButton = new LegacyPlayButton { Action = () => StartRequested?.Invoke() };
 
             // stable's colour alpha (102) also scales the sprite's alpha, which starts at the same 0.4.
             SearchBackground = searchBackground = new Sprite
@@ -198,12 +205,12 @@ namespace osu.Game.Screens.Select
             InternalChildren = new Drawable[]
             {
                 searchBackground,
-                // stable's labels sit left of their dropdowns, bottom right aligned at 40 units from the top.
+                // stable's labels sit left of their dropdowns.
                 sortText = new OsuSpriteText
                 {
                     Anchor = Anchor.TopRight,
-                    Origin = Anchor.BottomRight,
-                    Position = new Vector2(-130, 40) * scale,
+                    Origin = Anchor.TopRight,
+                    X = -130 * scale,
                     Text = SongSelectStrings.Sort,
                     Font = font(22),
                     Colour = new Color4(174, 210, 139, 255),
@@ -212,8 +219,7 @@ namespace osu.Game.Screens.Select
                 groupText = new OsuSpriteText
                 {
                     Anchor = Anchor.TopRight,
-                    Origin = Anchor.BottomRight,
-                    Y = 40 * scale,
+                    Origin = Anchor.TopRight,
                     Text = SongSelectStrings.Group,
                     Font = font(22),
                     Colour = new Color4(146, 195, 230, 255),
@@ -258,7 +264,7 @@ namespace osu.Game.Screens.Select
                     Action = updateBeatmap,
                 },
                 tabs,
-                new LegacyPlayButton { Action = () => StartRequested?.Invoke() },
+                PlayButton,
                 // stable's mode button covers the tabs and the search line in skins like WhiteCat's, and is covered by the web button.
                 modeButtonLayer,
                 // stable's web access button right of the leaderboard dropdown, centred at (214, 81).
@@ -366,6 +372,9 @@ namespace osu.Game.Screens.Select
             // stable places the group label and dropdown 258 units from the right, further left by the sort label's width.
             float groupX = -258 * scale - sortText.DrawWidth;
             groupText.X = groupX;
+
+            // in stable the labels' baseline lines up with the bottom of their dropdowns.
+            sortText.Y = groupText.Y = groupDropdown.Y + groupDropdown.HeaderHeight - sortText.LineBaseHeight;
             groupDropdown.X = groupX;
 
             string? texture = getInfoCardTexture();
@@ -634,6 +643,8 @@ namespace osu.Game.Screens.Select
 
             private readonly Color4 highlight;
 
+            public float HeaderHeight => Header.DrawHeight;
+
             public LegacyDropdown(Color4 highlight, Color4? border = null, float textSize = 13, float width = 118)
             {
                 this.highlight = highlight;
@@ -683,6 +694,45 @@ namespace osu.Game.Screens.Select
                     BackgroundColourHover = HoverColour,
                 };
 
+                // stable lays out every option at once, so the menu takes its full size immediately instead of growing (and scrolling to the selection meanwhile).
+                protected override void UpdateSize(Vector2 newSize)
+                {
+                    Width = newSize.X;
+
+                    // keep the height while closing, so the menu fades out in place.
+                    if (State == MenuState.Open)
+                        Height = newSize.Y;
+                }
+
+                protected override ScrollContainer<Drawable> CreateScrollContainer(Direction direction) => new FixedScrollContainer(direction);
+
+                /// <summary>
+                /// stable's dropdowns show all of their options and never scroll.
+                /// </summary>
+                private partial class FixedScrollContainer : BasicScrollContainer
+                {
+                    public FixedScrollContainer(Direction direction)
+                        : base(direction)
+                    {
+                        ScrollbarVisible = false;
+                        ClampExtension = 0;
+                    }
+
+                    protected override void Update()
+                    {
+                        base.Update();
+
+                        // the dropdown scrolls its selection into view, which has to stay a no-op.
+                        if (Current != 0)
+                            ScrollToStart(false);
+                    }
+
+                    // swallow the wheel so the carousel below doesn't scroll either.
+                    protected override bool OnScroll(ScrollEvent e) => true;
+
+                    protected override bool OnDragStart(DragStartEvent e) => false;
+                }
+
                 private partial class LegacyDropdownMenuItem : DrawableOsuDropdownMenuItem
                 {
                     private Content? content;
@@ -691,7 +741,20 @@ namespace osu.Game.Screens.Select
                         : base(item)
                     {
                         Foreground.Padding = new MarginPadding();
-                        CornerRadius = 0;
+
+                        // a mask here would replace the menu's rounded mask, leaving the first and last highlights square.
+                        Masking = false;
+
+                        // stable's 10pt chevron_right, centred at (6, 9) in every option and drawn in black, so it only shows on the highlight.
+                        AddInternal(new SpriteIcon
+                        {
+                            Icon = FontAwesome.Solid.ChevronRight,
+                            Origin = Anchor.Centre,
+                            Position = new Vector2(6, 9) * scale,
+                            // sized like the header's 14pt chevron.
+                            Size = new Vector2(11 * scale * 10 / 14f),
+                            Colour = Color4.Black,
+                        });
                     }
 
                     protected override Drawable CreateContent()
@@ -704,8 +767,9 @@ namespace osu.Game.Screens.Select
                         content.Label.Font = font(12);
                         content.Label.Shadow = true;
                         content.Label.Padding = new MarginPadding { Left = 12, Top = 3 };
-                        content.Chevron.Size = new Vector2(6 * scale);
-                        content.Chevron.Margin = new MarginPadding { Left = 3 * scale };
+                        // the base chevron slides in on hover; stable's static one is added by the item instead.
+                        // its colour is set on load and its alpha on hover, so it is hidden by its scale.
+                        content.Chevron.Scale = Vector2.Zero;
 
                         return content;
                     }

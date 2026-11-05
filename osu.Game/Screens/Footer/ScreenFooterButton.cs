@@ -255,9 +255,9 @@ namespace osu.Game.Screens.Footer
 
             IsLegacy = texture != null;
 
-            legacySprite.Texture = texture;
+            legacySprite.SetLegacyTexture(texture);
             // like stable, a missing hover texture falls back to the default legacy skin's.
-            legacyOverSprite.Texture = IsLegacy ? skin!.GetTexture(LegacyTextureName + "-over") : null;
+            legacyOverSprite.SetLegacyTexture(IsLegacy ? skin!.GetTexture(LegacyTextureName + "-over") : null);
 
             // old layout skins draw both sprites top-aligned at stable's y=426, i.e. 54 stable units above the screen bottom.
             bool oldLayout = IsLegacy && skin!.UsesOldSongSelectButtonLayout();
