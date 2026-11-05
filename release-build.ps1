@@ -155,7 +155,8 @@ if (-not (Test-Path (Join-Path $fpsDir 'osu.Game.Rulesets.Fposu'))) { throw "The
 
 if (-not $SkipUpload)
 {
-    gh auth status *> $null
+    # cmd swallows the stderr output; in Windows PowerShell 5.1 a redirect would turn it into a terminating error under 'Stop'.
+    cmd /c "gh auth status >nul 2>&1"
     if ($LASTEXITCODE -ne 0) { throw "The GitHub CLI is not logged in. Run 'gh auth login' first." }
 
     if (-not $Force)
