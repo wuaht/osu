@@ -90,6 +90,7 @@ namespace osu.Game.Overlays.Changelog
                             Type = getType(c.Subject),
                             Category = getCategory(c.Files),
                             Title = c.Subject,
+                            Major = isMajor(c),
                             CreatedAt = c.Date,
                             GithubUser = new APIChangelogUser { DisplayName = c.Author },
                         }).ToList(),
@@ -146,6 +147,17 @@ namespace osu.Game.Overlays.Changelog
         }
 
         /// <summary>
+        /// Whether a commit is a big new feature, which is highlighted like major entries of the official changelog.
+        /// </summary>
+        // shortcut: guessed from the number of changed files, add an explicit commit marker if this highlights the wrong commits.
+        private static bool isMajor(Commit commit)
+            => getType(commit.Subject) == ChangelogEntryType.Add && commit.Files.Count(f => !isNoise(f)) >= 15;
+
+        // tests and strings don't tell what a commit is about.
+        private static bool isNoise(string file)
+            => file.Contains(@".Tests/", StringComparison.Ordinal) || file.StartsWith(@"osu.Game/Localisation/", StringComparison.Ordinal);
+
+        /// <summary>
         /// The category of a commit, which is the area most of its changed files are in.
         /// </summary>
         private static string getCategory(string[] files)
@@ -160,8 +172,7 @@ namespace osu.Game.Overlays.Changelog
 
         private static string? categoryOf(string file)
         {
-            // tests and strings don't tell what a commit is about.
-            if (file.Contains(@".Tests/", StringComparison.Ordinal) || file.StartsWith(@"osu.Game/Localisation/", StringComparison.Ordinal))
+            if (isNoise(file))
                 return null;
 
             if (file.StartsWith(@"osu-fps", StringComparison.Ordinal))
