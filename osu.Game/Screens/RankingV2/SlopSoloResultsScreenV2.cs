@@ -7,6 +7,7 @@
 
 using System.Linq;
 using osu.Framework.Allocation;
+using osu.Framework.Graphics;
 using osu.Framework.Screens;
 using osu.Game.Configuration;
 using osu.Game.Scoring;
@@ -57,6 +58,9 @@ namespace osu.Game.Screens.RankingV2
 
         // SLOP-RESULTS-V2: temporary until upstream finishes SoloResultsScreenV2. Remove once upstream's results screen is merged.
         private bool animationStarted;
+
+        // SLOP-RESULTS-V2: set once the screen is entered, so Update() knows to start the animation. Remove once upstream's results screen is merged.
+        private SkinnableContainer? pendingAnimation;
 
         /// <summary>
         /// Whether the toolbar is hidden, like stable's results screen. Only set for legacy skins.
@@ -154,13 +158,22 @@ namespace osu.Game.Screens.RankingV2
             // SLOP-RESULTS-V2: temporary until upstream finishes SoloResultsScreenV2. Remove once upstream's results screen is merged.
             hideToolbar();
 
-            // SLOP-RESULTS-V2: upstream doesn't start the animation itself yet; the skin's components load asynchronously, so wait for them.
-            var mainScreen = InternalChildren.OfType<SkinnableContainer>().Single();
+            // SLOP-RESULTS-V2: upstream doesn't start the animation itself yet; the skin's components load asynchronously, so Update() waits for them.
+            pendingAnimation = InternalChildren.OfType<SkinnableContainer>().Single();
+        }
 
-            if (mainScreen.ComponentsLoaded)
+        // SLOP-RESULTS-V2: temporary until upstream finishes SoloResultsScreenV2. Remove once upstream's results screen is merged.
+        protected override void Update()
+        {
+            base.Update();
+
+            // SLOP-RESULTS-V2: components such as ArgonScoreRankDisplay create their animated parts in LoadComplete(),
+            // so animating as soon as ComponentsLoaded is set crashes. Wait until every component has finished loading.
+            if (pendingAnimation?.ComponentsLoaded == true && pendingAnimation.Components.OfType<Drawable>().All(d => d.IsLoaded))
+            {
+                pendingAnimation = null;
                 startAnimation();
-            else
-                mainScreen.OnComponentsLoaded += _ => startAnimation();
+            }
         }
 
         // SLOP-RESULTS-V2: temporary until upstream finishes SoloResultsScreenV2. Remove once upstream's results screen is merged.
@@ -183,7 +196,7 @@ namespace osu.Game.Screens.RankingV2
         // SLOP-RESULTS-V2: temporary until upstream finishes SoloResultsScreenV2. Remove once upstream's results screen is merged.
         private void startAnimation()
         {
-            // SLOP-RESULTS-V2: only animate on entry, not again when a skin change reloads the components.
+            // SLOP-RESULTS-V2: only animate once on entry.
             if (animationStarted) return;
 
             animationStarted = true;
