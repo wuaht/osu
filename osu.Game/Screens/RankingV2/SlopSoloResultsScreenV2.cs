@@ -58,6 +58,9 @@ namespace osu.Game.Screens.RankingV2
         // SLOP-RESULTS-V2: temporary until upstream finishes SoloResultsScreenV2. Remove once upstream's results screen is merged.
         private bool animationStarted;
 
+        // SLOP-RESULTS-V2: stable's results screen has no toolbar. Remove once upstream's results screen is merged.
+        public override bool ShowToolbarOnEnter => false;
+
         // SLOP-RESULTS-V2: temporary until upstream finishes SoloResultsScreenV2. Remove once upstream's results screen is merged.
         public SlopSoloResultsScreenV2(ScoreInfo score)
             : base(score)
@@ -142,6 +145,9 @@ namespace osu.Game.Screens.RankingV2
         {
             base.OnEntering(e);
 
+            // SLOP-RESULTS-V2: temporary until upstream finishes SoloResultsScreenV2. Remove once upstream's results screen is merged.
+            hideToolbar();
+
             // SLOP-RESULTS-V2: upstream doesn't start the animation itself yet; the skin's components load asynchronously, so wait for them.
             var mainScreen = InternalChildren.OfType<SkinnableContainer>().Single();
 
@@ -150,6 +156,19 @@ namespace osu.Game.Screens.RankingV2
             else
                 mainScreen.OnComponentsLoaded += _ => startAnimation();
         }
+
+        // SLOP-RESULTS-V2: temporary until upstream finishes SoloResultsScreenV2. Remove once upstream's results screen is merged.
+        public override void OnResuming(ScreenTransitionEvent e)
+        {
+            base.OnResuming(e);
+
+            // SLOP-RESULTS-V2: coming back from the online ranking screen shows the toolbar again. Remove once upstream's results screen is merged.
+            hideToolbar();
+        }
+
+        // SLOP-RESULTS-V2: ShowToolbarOnEnter only stops OsuGame from showing it, so hide a toolbar that is already visible (e.g. when opened from song select).
+        // Remove once upstream's results screen is merged.
+        private void hideToolbar() => game?.Toolbar.Hide();
 
         // SLOP-RESULTS-V2: temporary until upstream finishes SoloResultsScreenV2. Remove once upstream's results screen is merged.
         private void startAnimation()
