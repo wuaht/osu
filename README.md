@@ -37,8 +37,12 @@ The client also has beatmap mirror support (only Mino tested), so you don't even
 
 ## Long List of Features: [features.md](features.md)
 
-## Building/Installing
+## Installing
 
+Install the client with `slop-win-Setup.exe` from the [latest release](https://github.com/wuaht/osu/releases/latest); it updates itself from these releases and installs independently of osu!(lazer). <- hopefully
+For new features early install the [nightly release](https://github.com/wuaht/osu/releases). 
+
+## Building
 Building this client requires local osu-framework and osu-resources checkouts:** clone [wuaht/osu-framework](https://github.com/wuaht/osu-framework) and [wuaht/osu-resources](https://github.com/wuaht/osu-resources) (both on branch `slop`) next to this repository (`../osu-framework` and `../osu-resources`), as it references them directly instead of the NuGet packages (needed for features like frosted sliders and custom assets).
 Btw for a proper environment check out the [original readme](https://github.com/ppy/osu/blob/master/README.md#developing-osu) on how to set it up.
 
@@ -48,8 +52,6 @@ osu!fps lives in its own repository ([wuaht/osu-fps](https://github.com/wuaht/os
 git clone -b slop https://github.com/wuaht/osu-framework ../osu-framework
 git clone -b slop https://github.com/wuaht/osu-resources ../osu-resources
 ```
-
-Install the client with `slop-win-Setup.exe` from the [latest release](https://github.com/wuaht/osu/releases/latest); it updates itself from these releases and installs independently of osu!(lazer). <- hopefully
 
 For macOS there are untested, unsigned portable builds (`slop-osx-arm64-portable.zip` for Apple Silicon, `slop-osx-x64-portable.zip` for Intel) without auto-updates; after extracting, run `xattr -cr slop` once, then start `slop/osu!`. Releases are built with `release-build.ps1` (`-Platforms win,osx`).
 
