@@ -4,6 +4,7 @@
 using System;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
+using osu.Game.Configuration;
 using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Colour;
@@ -57,6 +58,11 @@ namespace osu.Game.Screens.Footer
 
         [Resolved]
         private ISkinSource? skin { get; set; }
+
+        [Resolved]
+        private OsuConfigManager? config { get; set; }
+
+        private IBindable<bool>? legacySongSelect;
 
         /// <summary>
         /// If this footer button controls the visibility of an overlay, it will be bound to this bindable.
@@ -242,6 +248,8 @@ namespace osu.Game.Screens.Footer
 
             if (skin != null)
                 skin.SourceChanged += onSkinChanged;
+            legacySongSelect = config?.GetBindable<bool>(OsuSetting.SlopLegacySongSelect);
+            legacySongSelect?.BindValueChanged(_ => onSkinChanged());
             updateLegacyState();
 
             FinishTransforms(true);
@@ -251,7 +259,7 @@ namespace osu.Game.Screens.Footer
 
         private void updateLegacyState()
         {
-            Texture? texture = LegacyTextureName == null ? null : skin?.GetLegacyLayoutTexture(LegacyTextureName);
+            Texture? texture = LegacyTextureName == null || legacySongSelect?.Value == false ? null : skin?.GetLegacyLayoutTexture(LegacyTextureName);
 
             IsLegacy = texture != null;
 

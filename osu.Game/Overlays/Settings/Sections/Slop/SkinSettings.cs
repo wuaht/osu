@@ -38,6 +38,12 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                 createDropdown(SlopSettingsStrings.TaikoSkin, config.GetBindable<string>(OsuSetting.SlopTaikoSkin)),
                 createDropdown(SlopSettingsStrings.CatchSkin, config.GetBindable<string>(OsuSetting.SlopCatchSkin)),
                 createDropdown(SlopSettingsStrings.ManiaSkin, config.GetBindable<string>(OsuSetting.SlopManiaSkin)),
+                new SettingsItemV2(new FormCheckBox
+                {
+                    Caption = SlopSettingsStrings.LegacySongSelect,
+                    HintText = SlopSettingsStrings.LegacySongSelectDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopLegacySongSelect),
+                }),
             };
         }
 

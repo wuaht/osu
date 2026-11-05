@@ -132,6 +132,22 @@ namespace osu.Game.Screens.Select
 
         private bool legacyLayout;
 
+        /// <summary>
+        /// Whether stable's song select layout is shown, because a legacy skin is active and <see cref="OsuSetting.SlopLegacySongSelect"/> is enabled.
+        /// </summary>
+        protected bool LegacyLayout => legacyLayout;
+
+        /// <summary>
+        /// Invoked when <see cref="LegacyLayout"/> changes.
+        /// </summary>
+        protected virtual void OnLegacyLayoutChanged()
+        {
+        }
+
+        private Bindable<bool>? legacySongSelect;
+
+        private Container skinnableContentToggle = null!;
+
         private LegacyFilterDisplay legacyFilterDisplay = null!;
 
         [Cached]
@@ -204,6 +220,7 @@ namespace osu.Game.Screens.Select
         private void load(AudioManager audio, OsuConfigManager config)
         {
             errorSample = audio.Samples.Get(@"UI/generic-error");
+            legacySongSelect = config.GetBindable<bool>(OsuSetting.SlopLegacySongSelect);
 
             AddRangeInternal(new Drawable[]
             {
@@ -371,11 +388,16 @@ namespace osu.Game.Screens.Select
                         SelectAndRun(Beatmap.Value.BeatmapInfo, OnStart);
                     },
                 }).SearchBackground.CreateProxy(),
-                skinnableContent = new SkinnableContainer(new GlobalSkinnableContainerLookup(GlobalSkinnableContainers.SongSelect))
+                // hides a legacy skin's stable artwork while its song select layout is turned off.
+                skinnableContentToggle = new Container
                 {
-                    Anchor = Anchor.Centre,
-                    Origin = Anchor.Centre,
                     RelativeSizeAxes = Axes.Both,
+                    Child = skinnableContent = new SkinnableContainer(new GlobalSkinnableContainerLookup(GlobalSkinnableContainers.SongSelect))
+                    {
+                        Anchor = Anchor.Centre,
+                        Origin = Anchor.Centre,
+                        RelativeSizeAxes = Axes.Both,
+                    },
                 },
                 // legacy skins draw their song select artwork in the skinnable layer, which should not cover the filter controls.
                 FilterControl.CreateProxy(),
@@ -482,6 +504,7 @@ namespace osu.Game.Screens.Select
             FilterControl.CriteriaChanged += criteriaChanged;
 
             skin.SourceChanged += updateLegacyLayout;
+            legacySongSelect.BindValueChanged(_ => updateLegacyLayout());
             // applied right away so the lazer layout doesn't show for a frame before the legacy one.
             applyLegacyLayout();
 
@@ -930,7 +953,10 @@ namespace osu.Game.Screens.Select
 
         private void applyLegacyLayout()
         {
-            legacyLayout = skin.UsesLegacyLayout();
+            bool legacySkin = skin.UsesLegacyLayout();
+            bool wasLegacyLayout = legacyLayout;
+            legacyLayout = legacySkin && legacySongSelect!.Value;
+            skinnableContentToggle.Alpha = legacySkin && !legacyLayout ? 0 : 1;
 
             // stable shows the beatmap details in the skinnable layer (see LegacyBeatmapDetails) and starts the leaderboard below the top artwork.
             titleWedgeWrapper.Alpha = legacyLayout ? 0 : 1;
@@ -946,13 +972,16 @@ namespace osu.Game.Screens.Select
                 logo?.FadeTo(shownLogoAlpha, 200, Easing.OutQuint);
 
             updateToolbarVisibility();
+
+            if (legacyLayout != wasLegacyLayout)
+                OnLegacyLayoutChanged();
         }
 
         /// <summary>
         /// stable has no toolbar on song select, so it isn't shown when entering (see <see cref="updateToolbarVisibility"/>).
         /// </summary>
         // skin is only resolved once the screen has loaded; updateToolbarVisibility() hides the toolbar after that.
-        public override bool ShowToolbarOnEnter => (skin as ISkinSource)?.UsesLegacyLayout() != true;
+        public override bool ShowToolbarOnEnter => legacySongSelect?.Value != true || (skin as ISkinSource)?.UsesLegacyLayout() != true;
 
         /// <summary>
         /// stable has no toolbar on song select. Showing it would also shrink the whole screen, which breaks the stable layout.

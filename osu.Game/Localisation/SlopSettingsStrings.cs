@@ -1064,6 +1064,17 @@ namespace osu.Game.Localisation
         public static LocalisableString ManiaSkin => new TranslatableString(getKey(@"mania_skin"), @"Mania skin");
 
         /// <summary>
+        /// "Use legacy skin song select"
+        /// </summary>
+        public static LocalisableString LegacySongSelect => new TranslatableString(getKey(@"legacy_song_select"), @"Use legacy skin song select");
+
+        /// <summary>
+        /// "Shows stable's song select layout while a legacy skin is active."
+        /// </summary>
+        public static LocalisableString LegacySongSelectDescription => new TranslatableString(getKey(@"legacy_song_select_description"),
+            @"Shows stable's song select layout while a legacy skin is active.");
+
+        /// <summary>
         /// "&lt;Use main skin&gt;"
         /// </summary>
         public static LocalisableString UseMainSkin => new TranslatableString(getKey(@"use_main_skin"), @"<Use main skin>");

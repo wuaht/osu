@@ -67,6 +67,11 @@ namespace osu.Game.Screens.Select
 
         private Drawable title = null!;
 
+        private Container titleWrapper = null!;
+
+        // stable's edit song select has the regular bottom buttons and no new beatmap button.
+        private bool showsPlayButtons => showPlayButtons.Value || LegacyLayout;
+
         public EditorSongSelect()
         {
             TopPadding = title_height - 10;
@@ -79,12 +84,18 @@ namespace osu.Game.Screens.Select
 
             showPlayButtons = config.GetBindable<bool>(OsuSetting.SlopEditorSongSelectShowPlayButtons);
 
-            AddInternal(title = new EditorTitle
+            // the title fades with screen transitions, so it's hidden separately in the legacy layout, where it would overlap stable's top artwork.
+            AddInternal(titleWrapper = new Container
             {
                 RelativeSizeAxes = Axes.X,
-                Height = title_height,
-                Padding = new MarginPadding { Left = 18 },
-                Alpha = 0,
+                AutoSizeAxes = Axes.Y,
+                Child = title = new EditorTitle
+                {
+                    RelativeSizeAxes = Axes.X,
+                    Height = title_height,
+                    Padding = new MarginPadding { Left = 18 },
+                    Alpha = 0,
+                },
             });
         }
 
@@ -95,20 +106,33 @@ namespace osu.Game.Screens.Select
             // the footer buttons are only created when this screen becomes current, so they need to be refreshed explicitly.
             // the footer content compares equal to the current one, so it's reset first for the change to reach the footer.
             // the footer handles content changes once per frame, so the intermediate content is never displayed.
-            showPlayButtons.BindValueChanged(_ =>
-            {
-                if (!this.IsCurrentScreen())
-                    return;
+            showPlayButtons.BindValueChanged(_ => refreshFooterButtons());
+        }
 
-                FooterContent.Value = ScreenFooterContent.None;
-                FooterContent.Value = ScreenFooterContent.Argon(leftButtons: CreateFooterButtons);
-            });
+        protected override void OnLegacyLayoutChanged()
+        {
+            base.OnLegacyLayoutChanged();
+
+            titleWrapper.Alpha = LegacyLayout ? 0 : 1;
+            refreshFooterButtons();
+        }
+
+        private void refreshFooterButtons()
+        {
+            if (!this.IsCurrentScreen())
+                return;
+
+            FooterContent.Value = ScreenFooterContent.None;
+            FooterContent.Value = ScreenFooterContent.Argon(leftButtons: CreateFooterButtons);
         }
 
         protected override BeatmapDetailsArea CreateDetailsArea() => new BeatmapDetailsArea { EditorMode = true };
 
         public override IReadOnlyList<ScreenFooterButton> CreateFooterButtons()
         {
+            if (LegacyLayout)
+                return base.CreateFooterButtons();
+
             var buttons = new List<ScreenFooterButton> { new FooterButtonNewBeatmap { Action = createNewBeatmap } };
 
             if (showPlayButtons.Value)
@@ -153,7 +177,7 @@ namespace osu.Game.Screens.Select
 
         public override bool OnPressed(KeyBindingPressEvent<GlobalAction> e)
         {
-            if (!showPlayButtons.Value)
+            if (!showsPlayButtons)
             {
                 switch (e.Action)
                 {

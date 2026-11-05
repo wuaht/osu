@@ -402,6 +402,7 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopTaikoSkin, string.Empty);
             SetDefault(OsuSetting.SlopCatchSkin, string.Empty);
             SetDefault(OsuSetting.SlopManiaSkin, string.Empty);
+            SetDefault(OsuSetting.SlopLegacySongSelect, true);
             SetDefault(OsuSetting.SlopEditorOnlyAutosaveOwnMaps, true);
             SetDefault(OsuSetting.SlopEditorAutosaveToBackups, false);
             SetDefault(OsuSetting.SlopEditorMyMapsAliases, string.Empty);
@@ -1391,6 +1392,11 @@ namespace osu.Game.Configuration
         /// The ID of the skin used during osu!mania gameplay, or empty to use the main skin.
         /// </summary>
         SlopManiaSkin,
+
+        /// <summary>
+        /// Whether legacy skins show stable's song select layout.
+        /// </summary>
+        SlopLegacySongSelect,
 
         /// <summary>
         /// Whether autosaving is restricted to beatmaps created by the local user (or one of their aliases).
