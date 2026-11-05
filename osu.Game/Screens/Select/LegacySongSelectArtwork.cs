@@ -826,8 +826,10 @@ namespace osu.Game.Screens.Select
         private readonly OsuSpriteText lengthAndBpm;
         private readonly OsuSpriteText objectCounts;
         private readonly OsuSpriteText difficulty;
-        private readonly Sprite statusIcon;
-        private string? statusTexture;
+        private readonly Container statusIcon;
+        private readonly Sprite statusSprite;
+        private readonly SpriteIcon statusGlyph;
+        private BeatmapOnlineStatus? displayedStatus;
 
         private CancellationTokenSource? cancellationSource;
         private IBindable<StarDifficulty>? starDifficulty;
@@ -838,11 +840,27 @@ namespace osu.Game.Screens.Select
 
             InternalChildren = new Drawable[]
             {
-                statusIcon = new Sprite
+                statusIcon = new Container
                 {
                     Origin = Anchor.Centre,
                     Position = new Vector2(12) * LegacySongSelectComponent.STABLE_SCALE,
+                    Size = new Vector2(28),
                     Alpha = 0,
+                    Children = new Drawable[]
+                    {
+                        statusSprite = new Sprite
+                        {
+                            Anchor = Anchor.Centre,
+                            Origin = Anchor.Centre,
+                        },
+                        statusGlyph = new SpriteIcon
+                        {
+                            Anchor = Anchor.Centre,
+                            Origin = Anchor.Centre,
+                            Size = new Vector2(20),
+                            Shadow = true,
+                        },
+                    },
                 },
                 title = createText(new Vector2(24, -3), 18, FontWeight.Regular),
                 mapper = new FillFlowContainer
@@ -946,26 +964,36 @@ namespace osu.Game.Screens.Select
             difficulty.Text = $"{attributeText} Star Rating: {starDifficulty?.Value.Stars ?? 0:0.##}★";
         }
 
-        // stable's ranked status icons always come from its default skin. It hides the icon for unsubmitted maps,
+        // stable's ranked status icons never come from the user's skin. It hides the icon for unsubmitted maps,
         // but local maps get its question mark here so they are not left without one.
         private void updateStatusIcon(BeatmapOnlineStatus status)
         {
-            string textureName = status switch
+            // the ranked/approved/loved textures are coarse and aliased, so draw their glyphs as font icons instead.
+            (IconUsage? glyph, Color4 colour) = status switch
             {
-                BeatmapOnlineStatus.Ranked => "selection-ranked",
-                BeatmapOnlineStatus.Approved or BeatmapOnlineStatus.Qualified => "selection-approved",
-                BeatmapOnlineStatus.Loved => "selection-loved",
-                _ => "selection-question",
+                BeatmapOnlineStatus.Ranked => ((IconUsage?)FontAwesome.Solid.AngleDoubleUp, new Color4(102, 204, 255, 255)),
+                BeatmapOnlineStatus.Approved or BeatmapOnlineStatus.Qualified => (FontAwesome.Solid.Check, new Color4(165, 204, 0, 255)),
+                BeatmapOnlineStatus.Loved => (FontAwesome.Solid.Heart, new Color4(255, 102, 170, 255)),
+                _ => (null, Color4.White),
             };
 
             statusIcon.ClearTransforms();
             statusIcon.Rotation = 0;
             statusIcon.Scale = Vector2.One;
 
-            if (textureName != statusTexture)
+            if (status != displayedStatus)
             {
-                statusTexture = textureName;
-                statusIcon.Texture = skinManager?.DefaultClassicSkin.GetTexture(textureName);
+                displayedStatus = status;
+
+                statusSprite.Texture = glyph == null ? skinManager?.DefaultClassicSkin.GetTexture("selection-question") : null;
+                statusGlyph.Alpha = glyph == null ? 0 : 1;
+
+                if (glyph != null)
+                {
+                    statusGlyph.Icon = glyph.Value;
+                    statusGlyph.Colour = colour;
+                }
+
                 statusIcon.FadeInFromZero(400);
             }
             else
