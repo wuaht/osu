@@ -77,7 +77,7 @@ dotnet publish osu.Desktop/osu.Desktop.csproj -c Release -r linux-x64 --self-con
 ```
 
 4. Start it with `~/slop/osu!`.
-
+    
 To update, run `git pull` in all three folders (plus `git submodule update` in `osu`) and run the `dotnet publish` command again.
 
 ## Contributing
