@@ -13,6 +13,7 @@ using osu.Framework.Bindables;
 using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Extensions.PolygonExtensions;
 using osu.Framework.Graphics;
+using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Colour;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Sprites;
@@ -91,6 +92,7 @@ namespace osu.Game.Screens.Select
         private const float personal_best_height = 112;
 
         private const float scores_scroll_left_padding = 80f;
+        private const float legacy_extra_left_padding = 40f;
 
         private const float scores_scroll_top_padding = 5f;
 
@@ -141,7 +143,8 @@ namespace osu.Game.Screens.Select
                             {
                                 Top = scores_scroll_top_padding,
                                 // Left padding offsets the shear to create a visually appealing list display.
-                                Left = scores_scroll_left_padding,
+                                // The legacy layout is too narrow to show the rank column, which otherwise keeps lower avatars on screen.
+                                Left = scores_scroll_left_padding + (LegacyStyle ? legacy_extra_left_padding : 0),
                                 // Bottom padding ensures the last entry's full width is displayed
                                 // (ie it is fully on screen after shear is considered).
                                 Bottom = BeatmapLeaderboardScore.HEIGHT * 3
@@ -168,6 +171,13 @@ namespace osu.Game.Screens.Select
                         Children = new Drawable[]
                         {
                             new WedgeBackground(),
+                            // the translucent wedge background lets legacy scores show through and makes the text unreadable.
+                            new Box
+                            {
+                                RelativeSizeAxes = Axes.Both,
+                                Colour = Colour4.Black,
+                                Alpha = LegacyStyle ? 0.7f : 0,
+                            },
                             // Required because wedge background blocks input from passing through
                             // to the main context menu container above.
                             new OsuContextMenuContainer
