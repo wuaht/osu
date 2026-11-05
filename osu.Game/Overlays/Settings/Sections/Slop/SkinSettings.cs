@@ -47,9 +47,9 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                 // SLOP-RESULTS-V2: temporary until upstream finishes SoloResultsScreenV2. Remove this checkbox once upstream's results screen is merged.
                 new SettingsItemV2(new FormCheckBox
                 {
-                    Caption = SlopSettingsStrings.LegacyResultsScreen,
-                    HintText = SlopSettingsStrings.LegacyResultsScreenDescription,
-                    Current = config.GetBindable<bool>(OsuSetting.SlopLegacyResultsScreen),
+                    Caption = SlopSettingsStrings.ResultsScreenV2,
+                    HintText = SlopSettingsStrings.ResultsScreenV2Description,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopResultsScreenV2),
                 }),
             };
         }

@@ -58,8 +58,14 @@ namespace osu.Game.Screens.RankingV2
         // SLOP-RESULTS-V2: temporary until upstream finishes SoloResultsScreenV2. Remove once upstream's results screen is merged.
         private bool animationStarted;
 
+        /// <summary>
+        /// Whether the toolbar is hidden, like stable's results screen. Only set for legacy skins.
+        /// </summary>
+        // SLOP-RESULTS-V2: temporary until upstream finishes SoloResultsScreenV2. Remove once upstream's results screen is merged.
+        public bool HideToolbar { get; init; }
+
         // SLOP-RESULTS-V2: stable's results screen has no toolbar. Remove once upstream's results screen is merged.
-        public override bool ShowToolbarOnEnter => false;
+        public override bool ShowToolbarOnEnter => !HideToolbar;
 
         // SLOP-RESULTS-V2: temporary until upstream finishes SoloResultsScreenV2. Remove once upstream's results screen is merged.
         public SlopSoloResultsScreenV2(ScoreInfo score)
@@ -168,7 +174,11 @@ namespace osu.Game.Screens.RankingV2
 
         // SLOP-RESULTS-V2: ShowToolbarOnEnter only stops OsuGame from showing it, so hide a toolbar that is already visible (e.g. when opened from song select).
         // Remove once upstream's results screen is merged.
-        private void hideToolbar() => game?.Toolbar.Hide();
+        private void hideToolbar()
+        {
+            if (HideToolbar)
+                game?.Toolbar.Hide();
+        }
 
         // SLOP-RESULTS-V2: temporary until upstream finishes SoloResultsScreenV2. Remove once upstream's results screen is merged.
         private void startAnimation()
@@ -192,7 +202,7 @@ namespace osu.Game.Screens.RankingV2
         }
 
         /// <summary>
-        /// Returns this screen in place of a plain <see cref="SoloResultsScreen"/> while a legacy skin is active and <see cref="OsuSetting.SlopLegacyResultsScreen"/> is enabled.
+        /// Returns this screen in place of a plain <see cref="SoloResultsScreen"/> while a legacy or Argon skin is active and <see cref="OsuSetting.SlopResultsScreenV2"/> is enabled.
         /// Any other results screen (multiplayer, playlists, spectator…) is returned unchanged.
         /// </summary>
         // SLOP-RESULTS-V2: temporary until upstream finishes SoloResultsScreenV2. Remove once upstream's results screen is merged.
@@ -202,8 +212,12 @@ namespace osu.Game.Screens.RankingV2
             if (results.GetType() != typeof(SoloResultsScreen) || results.Score == null)
                 return results;
 
-            // SLOP-RESULTS-V2: upstream only has a finished-looking layout for legacy skins, so lazer skins keep the old screen.
-            if (!config.Get<bool>(OsuSetting.SlopLegacyResultsScreen) || !skin.UsesLegacyLayout())
+            if (!config.Get<bool>(OsuSetting.SlopResultsScreenV2))
+                return results;
+
+            // SLOP-RESULTS-V2: upstream only has default layouts for legacy and Argon (incl. Argon Pro) skins; others (e.g. triangles) would show an empty screen, so they keep the old one.
+            bool legacyLayout = skin.UsesLegacyLayout();
+            if (!legacyLayout && skin.AllSources.FirstOrDefault() is not ArgonSkin)
                 return results;
 
             return new SlopSoloResultsScreenV2(results.Score)
@@ -211,6 +225,7 @@ namespace osu.Game.Screens.RankingV2
                 AllowRetry = results.AllowRetry,
                 AllowWatchingReplay = results.AllowWatchingReplay,
                 IsLocalPlay = results.IsLocalPlay,
+                HideToolbar = legacyLayout,
             };
         }
     }

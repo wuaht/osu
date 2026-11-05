@@ -404,7 +404,7 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopManiaSkin, string.Empty);
             SetDefault(OsuSetting.SlopLegacySongSelect, true);
             // SLOP-RESULTS-V2: temporary until upstream finishes SoloResultsScreenV2. Remove this setting once upstream's results screen is merged.
-            SetDefault(OsuSetting.SlopLegacyResultsScreen, true);
+            SetDefault(OsuSetting.SlopResultsScreenV2, true);
             SetDefault(OsuSetting.SlopEditorOnlyAutosaveOwnMaps, true);
             SetDefault(OsuSetting.SlopEditorAutosaveToBackups, false);
             SetDefault(OsuSetting.SlopEditorMyMapsAliases, string.Empty);
@@ -1401,10 +1401,10 @@ namespace osu.Game.Configuration
         SlopLegacySongSelect,
 
         /// <summary>
-        /// Whether legacy skins show upstream's work-in-progress legacy results screen.
+        /// Whether legacy and Argon skins show upstream's work-in-progress results screen.
         /// </summary>
         // SLOP-RESULTS-V2: temporary until upstream finishes SoloResultsScreenV2. Remove this setting once upstream's results screen is merged.
-        SlopLegacyResultsScreen,
+        SlopResultsScreenV2,
 
         /// <summary>
         /// Whether autosaving is restricted to beatmaps created by the local user (or one of their aliases).

@@ -1076,16 +1076,16 @@ namespace osu.Game.Localisation
 
         // SLOP-RESULTS-V2: temporary until upstream finishes SoloResultsScreenV2. Remove this string once upstream's results screen is merged.
         /// <summary>
-        /// "Use legacy skin results screen"
+        /// "Use new results screen"
         /// </summary>
-        public static LocalisableString LegacyResultsScreen => new TranslatableString(getKey(@"legacy_results_screen"), @"Use legacy skin results screen");
+        public static LocalisableString ResultsScreenV2 => new TranslatableString(getKey(@"results_screen_v2"), @"Use new results screen");
 
         // SLOP-RESULTS-V2: temporary until upstream finishes SoloResultsScreenV2. Remove this string once upstream's results screen is merged.
         /// <summary>
-        /// "Shows stable's results screen layout after solo plays while a legacy skin is active."
+        /// "Shows the work-in-progress results screen after solo plays while a legacy or Argon skin is active."
         /// </summary>
-        public static LocalisableString LegacyResultsScreenDescription => new TranslatableString(getKey(@"legacy_results_screen_description"),
-            @"Shows stable's results screen layout after solo plays while a legacy skin is active.");
+        public static LocalisableString ResultsScreenV2Description => new TranslatableString(getKey(@"results_screen_v2_description"),
+            @"Shows the work-in-progress results screen after solo plays while a legacy or Argon skin is active.");
 
         /// <summary>
         /// "&lt;Use main skin&gt;"
