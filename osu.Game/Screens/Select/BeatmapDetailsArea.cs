@@ -36,7 +36,10 @@ namespace osu.Game.Screens.Select
                 legacyLayout = value;
 
                 headerWrapper.Alpha = value ? 0 : 1;
-                contentContainer.Padding = new MarginPadding { Top = value ? legacy_content_offset : header_height };
+                contentContainer.Padding = value
+                    // the wedges are pushed left to hide their corner radius, which would cut off the straight legacy list.
+                    ? new MarginPadding { Top = legacy_content_offset, Left = SongSelect.CORNER_RADIUS_HIDE_OFFSET }
+                    : new MarginPadding { Top = header_height };
                 contentContainer.RelativeSizeAxes = value ? Axes.Y : Axes.Both;
                 contentContainer.Width = value ? legacy_content_width : 1;
 
