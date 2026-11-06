@@ -92,9 +92,13 @@ namespace osu.Game.Screens.Select
         private const float personal_best_height = 112;
 
         private const float scores_scroll_left_padding = 80f;
-        private const float legacy_extra_left_padding = 40f;
 
         private const float scores_scroll_top_padding = 5f;
+
+        // stable shows nine rows of a 240 wide score panel, spaced 33 apart (in its 640x480 space).
+        private const int legacy_max_scores = 9;
+        private const float legacy_score_width = 240 * LegacySongSelectComponent.STABLE_SCALE;
+        private const float legacy_score_spacing = 33 * LegacySongSelectComponent.STABLE_SCALE - BeatmapLeaderboardScore.HEIGHT;
 
         protected override bool OnMouseDown(MouseDownEvent e)
         {
@@ -134,21 +138,24 @@ namespace osu.Game.Screens.Select
                     {
                         RelativeSizeAxes = Axes.Both,
                         ScrollbarVisible = false,
-                        Shear = OsuGame.SHEAR,
+                        // stable's leaderboard is a straight list.
+                        Shear = LegacyStyle ? Vector2.Zero : OsuGame.SHEAR,
                         Child = scoresContainer = new Container
                         {
-                            RelativeSizeAxes = Axes.X,
+                            RelativeSizeAxes = LegacyStyle ? Axes.None : Axes.X,
+                            Width = LegacyStyle ? legacy_score_width : 1,
                             AutoSizeAxes = Axes.Y,
-                            Padding = new MarginPadding
-                            {
-                                Top = scores_scroll_top_padding,
-                                // Left padding offsets the shear to create a visually appealing list display.
-                                // The legacy layout is too narrow to show the rank column, which otherwise keeps lower avatars on screen.
-                                Left = scores_scroll_left_padding + (LegacyStyle ? legacy_extra_left_padding : 0),
-                                // Bottom padding ensures the last entry's full width is displayed
-                                // (ie it is fully on screen after shear is considered).
-                                Bottom = BeatmapLeaderboardScore.HEIGHT * 3
-                            },
+                            Padding = LegacyStyle
+                                ? new MarginPadding { Top = scores_scroll_top_padding }
+                                : new MarginPadding
+                                {
+                                    Top = scores_scroll_top_padding,
+                                    // Left padding offsets the shear to create a visually appealing list display.
+                                    Left = scores_scroll_left_padding,
+                                    // Bottom padding ensures the last entry's full width is displayed
+                                    // (ie it is fully on screen after shear is considered).
+                                    Bottom = BeatmapLeaderboardScore.HEIGHT * 3
+                                },
                         },
                     },
                     personalBestDisplay = new Container
@@ -171,13 +178,6 @@ namespace osu.Game.Screens.Select
                         Children = new Drawable[]
                         {
                             new WedgeBackground(),
-                            // the translucent wedge background lets legacy scores show through and makes the text unreadable.
-                            new Box
-                            {
-                                RelativeSizeAxes = Axes.Both,
-                                Colour = Colour4.Black,
-                                Alpha = LegacyStyle ? 0.7f : 0,
-                            },
                             // Required because wedge background blocks input from passing through
                             // to the main context menu container above.
                             new OsuContextMenuContainer
@@ -328,8 +328,22 @@ namespace osu.Game.Screens.Select
                 return;
             }
 
-            LoadComponentsAsync(scores.Select((s, i) =>
+            var displayedScores = scores.Select((s, i) => (score: s, rank: (int?)(i + 1))).ToList();
+
+            if (LegacyStyle)
             {
+                // like stable, only nine scores are shown, and a personal best below them takes the last row.
+                bool userScoreInTop = userScore != null && displayedScores.Take(legacy_max_scores).Any(e => e.score.OnlineID == userScore.OnlineID);
+
+                if (userScore == null || userScoreInTop)
+                    displayedScores = displayedScores.Take(legacy_max_scores).ToList();
+                else
+                    displayedScores = displayedScores.Take(legacy_max_scores - 1).Append((userScore, userScore.Position)).ToList();
+            }
+
+            LoadComponentsAsync(displayedScores.Select(e =>
+            {
+                var s = e.score;
                 BeatmapLeaderboardScore.HighlightType? highlightType = null;
 
                 if (s.OnlineID == userScore?.OnlineID)
@@ -337,10 +351,10 @@ namespace osu.Game.Screens.Select
                 else if (api.LocalUserState.Friends.Any(r => r.TargetID == s.UserID) && Scope.Value != BeatmapLeaderboardScope.Friend)
                     highlightType = BeatmapLeaderboardScore.HighlightType.Friend;
 
-                return new BeatmapLeaderboardScore(s)
+                return new BeatmapLeaderboardScore(s, sheared: !LegacyStyle)
                 {
                     LegacyStyle = LegacyStyle,
-                    Rank = i + 1,
+                    Rank = e.rank,
                     Highlight = highlightType,
                     SelectedMods = { BindTarget = mods },
                     Action = songSelect?.CanPresentScore == true
@@ -357,7 +371,7 @@ namespace osu.Game.Screens.Select
 
                 foreach (var d in loadedScores)
                 {
-                    d.Y = (BeatmapLeaderboardScore.HEIGHT + SPACING_BETWEEN_SCORES) * i;
+                    d.Y = (BeatmapLeaderboardScore.HEIGHT + (LegacyStyle ? legacy_score_spacing : SPACING_BETWEEN_SCORES)) * i;
 
                     // This is a bit of a weird one. We're already in a sheared state and don't want top-level
                     // shear applied, but still need the `BeatmapLeaderboardScore` to be in "sheared" mode (see ctor).
@@ -393,7 +407,8 @@ namespace osu.Game.Screens.Select
                 }
             }, cancellation: cancellationTokenSource.Token);
 
-            if (userScore != null)
+            // the legacy layout shows the personal best as the last row instead.
+            if (userScore != null && !LegacyStyle)
             {
                 personalBestDisplay.MoveToX(0, 600, Easing.OutQuint);
                 personalBestDisplay.FadeIn(600, Easing.OutQuint);
