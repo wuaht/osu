@@ -4,13 +4,9 @@
 
 # slop!
 
-A vibe-coded mapping(?) client. slop is just a *click* away!
+A vibe-coded mapping(?) client. slop is just a *prompt* away!
 
-This is an independant fork of [osu!lazer](https://github.com/ppy/osu) i made for myself which primarily focuses on the editor which implements some stable stuff + other features with the help of Claude Opus 5.5 (i'm not proud of it either ok). 
-
-I do *try* to keep up with upstream (basically telling claude to merge) to get the latest updates.
-
-This is not an AI map generator; it's just a lazer fork with extra features and some fixes.
+This is an independant fork of [osu!lazer](https://github.com/ppy/osu) i made for myself which primarily focuses on the editor which implements some stable stuff + other features with the help of Claude Opus 5.5 (i'm not proud of it either ok).
 
 ## License
 
@@ -81,7 +77,7 @@ To update, run `git pull` in all three folders (plus `git submodule update` in `
 
 ## Contributing
 
-Not accepting contributions unless you know what I'm building (this is a personal fork after all).
+You are welcome to open an issue/pull request.
 
 If you didn't already notice by now everything i added (except for logo) was made using Claude Opus 5.5, which is why *slop!* is an independant fork and is not intended to be merged into
 upstream ([they don't accept AI](https://github.com/ppy/osu/blob/master/README.md#contributing)).
