@@ -774,7 +774,34 @@ namespace osu.Game.Screens.Select
 
         protected override float GetPanelXOffset(Drawable panel)
         {
-            return base.GetPanelXOffset(panel) + (((ICarouselPanel)panel).Selected.Value ? 0 : selectionFocusOffset);
+            var carouselPanel = (ICarouselPanel)panel;
+
+            return base.GetPanelXOffset(panel)
+                   + (carouselPanel.Selected.Value ? 0 : selectionFocusOffset)
+                   + getExpandedSetFocusOffset(panel, carouselPanel.Item?.Model);
+        }
+
+        /// <summary>
+        /// How far panels outside the expanded beatmap set are pushed right, so the end of the expanded set stands out.
+        /// </summary>
+        private const float expanded_set_focus_offset = 60;
+
+        // Keyed by pooled panel instances, so the dictionary stays bounded by the pool size.
+        private readonly Dictionary<Drawable, float> expandedSetFocusOffsets = new Dictionary<Drawable, float>();
+
+        private float getExpandedSetFocusOffset(Drawable panel, object? model)
+        {
+            bool outsideExpandedSet = ExpandedBeatmapSet != null && model switch
+            {
+                GroupedBeatmapSet set => !set.Equals(ExpandedBeatmapSet),
+                GroupedBeatmap beatmap => !(EqualityComparer<GroupDefinition?>.Default.Equals(beatmap.Group,ExpandedBeatmapSet.Group) && beatmap.Beatmap.BeatmapSet?.Equals(ExpandedBeatmapSet.BeatmapSet) == true),
+                _ => true,
+            };
+
+            float current = expandedSetFocusOffsets.GetValueOrDefault(panel);
+            current = (float)Interpolation.DampContinuously(current, outsideExpandedSet ? expanded_set_focus_offset : 0, 50, Time.Elapsed);
+            expandedSetFocusOffsets[panel] = current;
+            return current;
         }
 
         #endregion
