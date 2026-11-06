@@ -323,7 +323,7 @@ namespace osu.Game.Screens.Select
 
                 if (string.IsNullOrEmpty(q.OldValue) != string.IsNullOrEmpty(q.NewValue))
                     updateSearchBackground(!string.IsNullOrEmpty(q.NewValue));
-            });
+            }, true);
             updateSearchBackground(!string.IsNullOrEmpty(query.Value), true);
         }
 
