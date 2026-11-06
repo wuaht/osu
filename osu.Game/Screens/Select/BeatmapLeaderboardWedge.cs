@@ -98,6 +98,7 @@ namespace osu.Game.Screens.Select
         // stable shows nine rows of a 240 wide score panel, spaced 33 apart (in its 640x480 space).
         private const int legacy_max_scores = 9;
         private const float legacy_score_width = 240 * LegacySongSelectComponent.STABLE_SCALE;
+        private const float legacy_left_padding = 10;
         private const float legacy_score_spacing = 33 * LegacySongSelectComponent.STABLE_SCALE - BeatmapLeaderboardScore.HEIGHT;
 
         protected override bool OnMouseDown(MouseDownEvent e)
@@ -146,7 +147,7 @@ namespace osu.Game.Screens.Select
                             Width = LegacyStyle ? legacy_score_width : 1,
                             AutoSizeAxes = Axes.Y,
                             Padding = LegacyStyle
-                                ? new MarginPadding { Top = scores_scroll_top_padding }
+                                ? new MarginPadding { Top = scores_scroll_top_padding, Left = legacy_left_padding }
                                 : new MarginPadding
                                 {
                                     Top = scores_scroll_top_padding,
@@ -328,7 +329,8 @@ namespace osu.Game.Screens.Select
                 return;
             }
 
-            var displayedScores = scores.Select((s, i) => (score: s, rank: (int?)(i + 1))).ToList();
+            var scoreList = scores.ToList();
+            var displayedScores = scoreList.Select((s, i) => (score: s, rank: (int?)(i + 1))).ToList();
 
             if (LegacyStyle)
             {
@@ -354,6 +356,8 @@ namespace osu.Game.Screens.Select
                 return new BeatmapLeaderboardScore(s, sheared: !LegacyStyle)
                 {
                     LegacyStyle = LegacyStyle,
+                    // like stable, the lead is over the score ranked directly below in the fetched list.
+                    NextScore = e.rank < scoreList.Count && scoreList[e.rank!.Value - 1] == s ? scoreList[e.rank.Value] : null,
                     Rank = e.rank,
                     Highlight = highlightType,
                     SelectedMods = { BindTarget = mods },
@@ -414,7 +418,6 @@ namespace osu.Game.Screens.Select
                 personalBestDisplay.FadeIn(600, Easing.OutQuint);
                 personalBestScoreContainer.Child = new BeatmapLeaderboardScore(userScore)
                 {
-                    LegacyStyle = LegacyStyle,
                     Highlight = BeatmapLeaderboardScore.HighlightType.Own,
                     Rank = userScore.Position,
                     SelectedMods = { BindTarget = mods },
