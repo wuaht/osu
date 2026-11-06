@@ -162,6 +162,8 @@ namespace osu.Game.Beatmaps
             var beatmapInfo = template.BeatmapInfo.Clone();
             beatmapInfo.ID = Guid.NewGuid();
             beatmapInfo.Hash = string.Empty;
+            // the import's online lookup would otherwise match the template by MD5 and link the new set to the template's online set.
+            beatmapInfo.MD5Hash = string.Empty;
             beatmapInfo.ResetOnlineInfo();
             beatmapInfo.Difficulty = template.BeatmapInfo.Difficulty.Clone();
             beatmapInfo.Metadata = template.Metadata.DeepClone();
