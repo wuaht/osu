@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using osu.Framework.Allocation;
@@ -11,6 +12,7 @@ using osu.Framework.Bindables;
 using osu.Framework.Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
+using osu.Framework.Localisation;
 using osu.Framework.Utils;
 using osu.Game.Beatmaps;
 using osu.Game.Database;
@@ -19,6 +21,7 @@ using osu.Game.Localisation;
 using osu.Game.Online;
 using osu.Game.Online.API;
 using osu.Game.Online.Chat;
+using osu.Game.Online.Omdb;
 using osu.Game.Resources.Localisation.Web;
 using osuTK;
 
@@ -32,6 +35,7 @@ namespace osu.Game.Screens.Select
         private MetadataDisplay language = null!;
         private MetadataDisplay userTags = null!;
         private MetadataDisplay mapperTags = null!;
+        private MetadataDisplay omdbRating = null!;
         private MetadataDisplay submitted = null!;
         private MetadataDisplay ranked = null!;
 
@@ -73,6 +77,14 @@ namespace osu.Game.Screens.Select
 
         [Resolved]
         private ISongSelect? songSelect { get; set; }
+
+        [Resolved]
+        private OmdbClient? omdb { get; set; }
+
+        [Resolved]
+        private OsuGame? game { get; set; }
+
+        private readonly IBindable<string> omdbApiKey = new Bindable<string>();
 
         private Sample? wedgeAppearSample;
         private Sample? wedgeHideSample;
@@ -181,6 +193,10 @@ namespace osu.Game.Screens.Select
                                                 Alpha = 0,
                                             },
                                             mapperTags = new MetadataDisplay(BeatmapsetsStrings.ShowInfoMapperTags),
+                                            omdbRating = new MetadataDisplay(SlopOmdbStrings.OmdbRating)
+                                            {
+                                                Alpha = 0,
+                                            },
                                         },
                                     },
                                 },
@@ -287,6 +303,13 @@ namespace osu.Game.Screens.Select
 
             apiState = api.State.GetBoundCopy();
             apiState.BindValueChanged(_ => Scheduler.AddOnce(updateDisplay), true);
+
+            if (omdb != null)
+            {
+                omdbApiKey.BindTo(omdb.ApiKey);
+                // the client applies the new key in its own callback, which may run after this one.
+                omdbApiKey.BindValueChanged(_ => Scheduler.AddOnce(updateOmdbRating));
+            }
         }
 
         private const double transition_duration = 300;
@@ -397,6 +420,55 @@ namespace osu.Game.Screens.Select
             ranked.Date = beatmapSetInfo.DateRanked;
 
             updateOnlineDisplay();
+            updateOmdbRating();
+        }
+
+        /// <summary>
+        /// Increased on each OMDB lookup, such that responses to earlier lookups are ignored.
+        /// </summary>
+        private int omdbLookupVersion;
+
+        private void updateOmdbRating()
+        {
+            int lookupVersion = ++omdbLookupVersion;
+            var beatmapInfo = beatmap.Value.BeatmapInfo;
+
+            if (omdb?.HasApiKey != true || beatmapInfo.OnlineID <= 0)
+            {
+                omdbRating.Hide();
+                return;
+            }
+
+            omdbRating.Show();
+            omdbRating.Data = null;
+
+            omdb.GetBeatmapAsync(beatmapInfo.OnlineID).ContinueWith(t => Schedule(() =>
+            {
+                if (lookupVersion != omdbLookupVersion)
+                    return;
+
+                if (!t.IsCompletedSuccessfully)
+                {
+                    omdbRating.Data = (SlopOmdbStrings.Unavailable, null);
+                    return;
+                }
+
+                var result = t.GetResultSafely();
+                LocalisableString summary;
+
+                if (result.RatingCount is int count && count > 0 && result.WeightedAvg is double average)
+                {
+                    string formatted = average.ToString(@"0.00", CultureInfo.InvariantCulture);
+                    summary = count == 1 ? SlopOmdbStrings.RatingSummarySingle(formatted) : SlopOmdbStrings.RatingSummary(formatted, count);
+                }
+                else
+                    summary = SlopOmdbStrings.NoRatings;
+
+                if (result.OwnRating is double own)
+                    summary = LocalisableString.Interpolate($@"{summary} ({SlopOmdbStrings.OwnRatingSuffix(own.ToString(@"0.#", CultureInfo.InvariantCulture))})");
+
+                omdbRating.Data = (summary, () => game?.OpenUrlExternally(OmdbClient.GetListingUrl(result.SetID)));
+            }));
         }
 
         private void updateOnlineDisplay()

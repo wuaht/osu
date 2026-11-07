@@ -60,6 +60,7 @@ using osu.Game.Online.Leaderboards;
 using osu.Game.Online.Metadata;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.OfflineProfiles;
+using osu.Game.Online.Omdb;
 using osu.Game.Online.Spectator;
 using osu.Game.Overlays;
 using osu.Game.Overlays.Settings;
@@ -392,6 +393,10 @@ namespace osu.Game
             var bnTrackerClient = new BnTrackerClient();
             dependencies.Cache(bnTrackerClient);
             base.Content.Add(bnTrackerClient);
+
+            var omdbClient = new OmdbClient();
+            dependencies.Cache(omdbClient);
+            base.Content.Add(omdbClient);
 
             var discordManager = new DiscordManager();
             dependencies.Cache(discordManager);

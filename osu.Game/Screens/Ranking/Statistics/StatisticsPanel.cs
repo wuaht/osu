@@ -20,7 +20,9 @@ using osu.Game.Extensions;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.UserInterface;
+using osu.Game.Localisation;
 using osu.Game.Online.API;
+using osu.Game.Online.Omdb;
 using osu.Game.Online.Placeholders;
 using osu.Game.Rulesets.Mods;
 using osu.Game.Scoring;
@@ -53,6 +55,9 @@ namespace osu.Game.Screens.Ranking.Statistics
 
         [Resolved]
         private IAPIProvider api { get; set; } = null!;
+
+        [Resolved]
+        private OmdbClient? omdb { get; set; }
 
         private readonly Container content;
         private readonly LoadingSpinner spinner;
@@ -301,6 +306,19 @@ namespace osu.Game.Screens.Ranking.Statistics
                         AutoSizeAxes = Axes.Y,
                     });
                 }
+            }
+
+            // OMDB only lists beatmaps in their original ruleset.
+            if (newScore.BeatmapInfo!.OnlineID > 0
+                && omdb?.HasApiKey == true
+                && newScore.Ruleset.OnlineID == newScore.BeatmapInfo.Ruleset.OnlineID)
+            {
+                yield return new StatisticItem(SlopOmdbStrings.OmdbRating, () => new OmdbRatingControl(newScore.BeatmapInfo.OnlineID)
+                {
+                    RelativeSizeAxes = Axes.X,
+                    Anchor = Anchor.Centre,
+                    Origin = Anchor.Centre,
+                });
             }
         }
 

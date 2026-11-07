@@ -369,6 +369,8 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopBnTrackerServer, BnTrackerClient.DEFAULT_SERVER);
             SetDefault(OsuSetting.SlopBnTrackerToken, string.Empty);
 
+            SetDefault(OsuSetting.SlopOmdbApiKey, string.Empty);
+
             SetDefault(OsuSetting.SlopUnofficialBuildNotifiedVersion, string.Empty);
             SetDefault(OsuSetting.SlopAutomaticUpdates, true);
             SetDefault(OsuSetting.SlopUnsupportedRealtimeNotifiedVersion, string.Empty);
@@ -499,6 +501,7 @@ namespace osu.Game.Configuration
                 case OsuSetting.SlopDiscordRefreshToken:
                 case OsuSetting.SlopDiscordUserToken:
                 case OsuSetting.SlopWebSession:
+                case OsuSetting.SlopOmdbApiKey:
                     return true;
             }
 
@@ -1179,6 +1182,11 @@ namespace osu.Game.Configuration
         /// The API token of the BN Tracker server.
         /// </summary>
         SlopBnTrackerToken,
+
+        /// <summary>
+        /// The API key for OMDB, which is used to show and submit beatmap ratings.
+        /// </summary>
+        SlopOmdbApiKey,
 
         /// <summary>
         /// The glass style of the background of the panels of the "request" screen of the beatmap editor.

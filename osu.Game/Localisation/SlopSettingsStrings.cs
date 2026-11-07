@@ -618,6 +618,22 @@ namespace osu.Game.Localisation
             @"The server which tracks the Beatmap Nominators asked to nominate your beatmap sets, shown on the ""request"" screen of the beatmap editor. Press enter to apply.");
 
         /// <summary>
+        /// "OMDB API key"
+        /// </summary>
+        public static LocalisableString OmdbApiKey => new TranslatableString(getKey(@"omdb_api_key"), @"OMDB API key");
+
+        /// <summary>
+        /// "Shows OMDB beatmap ratings in song select and lets you rate beatmaps from the editor and the results screen. Press enter to apply."
+        /// </summary>
+        public static LocalisableString OmdbApiKeyDescription => new TranslatableString(getKey(@"omdb_api_key_description"),
+            @"Shows OMDB beatmap ratings in song select and lets you rate beatmaps from the editor and the results screen. Press enter to apply.");
+
+        /// <summary>
+        /// "Get an OMDB API key"
+        /// </summary>
+        public static LocalisableString GetOmdbApiKey => new TranslatableString(getKey(@"get_omdb_api_key"), @"Get an OMDB API key");
+
+        /// <summary>
         /// "Sign out of the BN Tracker ({0})"
         /// </summary>
         public static LocalisableString BnTrackerSignOut(string username) => new TranslatableString(getKey(@"bn_tracker_sign_out"), @"Sign out of the BN Tracker ({0})", username);

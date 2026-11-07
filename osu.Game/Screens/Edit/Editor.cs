@@ -2022,6 +2022,15 @@ namespace osu.Game.Screens.Edit
                 yield return new EditorMenuItem(EditorStrings.OpenDiscussionPage, MenuItemType.Standard,
                     () => (Game as OsuGame)?.OpenUrlExternally(
                         $@"{api.Endpoints.WebsiteUrl}/beatmapsets/{editorBeatmap.BeatmapInfo.BeatmapSet!.OnlineID}/discussion/{editorBeatmap.BeatmapInfo.OnlineID}"));
+
+                if (editorBeatmap.BeatmapInfo.BeatmapSet?.OnlineID > 0)
+                {
+                    yield return new EditorMenuItem(SlopOmdbStrings.OpenListing, MenuItemType.Standard,
+                        () => (Game as OsuGame)?.OpenUrlExternally(Online.Omdb.OmdbClient.GetListingUrl(editorBeatmap.BeatmapInfo.BeatmapSet!.OnlineID)));
+                }
+
+                yield return new EditorMenuItem(SlopOmdbStrings.Rate, MenuItemType.Standard,
+                    () => currentScreen?.Add(new OmdbRatingAnchor(editorBeatmap.BeatmapInfo.OnlineID) { Anchor = Anchor.Centre }));
             }
 
             yield return new OsuMenuItemSpacer();

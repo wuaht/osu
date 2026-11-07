@@ -1423,6 +1423,9 @@ namespace osu.Game.Screens.Select
 
                 if (beatmap.GetOnlineURL(api, Ruleset.Value) is string url)
                     yield return new OsuMenuItem(CommonStrings.CopyLink, MenuItemType.Standard, () => (game as OsuGame)?.CopyToClipboard(url));
+
+                if (beatmap.BeatmapSet?.OnlineID > 0)
+                    yield return new OsuMenuItem(SlopOmdbStrings.OpenListing, MenuItemType.Standard, () => (game as OsuGame)?.OpenUrlExternally(Online.Omdb.OmdbClient.GetListingUrl(beatmap.BeatmapSet!.OnlineID)));
             }
 
             var fileActions = CreateBeatmapFileMenuActions(beatmap).ToList();

@@ -16,6 +16,7 @@ using osu.Game.Localisation;
 using osu.Game.Online.API;
 using osu.Game.Online.BeatmapMirrors;
 using osu.Game.Online.BnTracker;
+using osu.Game.Online.Omdb;
 using osu.Game.Overlays.Notifications;
 
 namespace osu.Game.Overlays.Settings.Sections.Slop
@@ -24,7 +25,7 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
     {
         protected override LocalisableString Header => SlopSettingsStrings.OnlineHeader;
 
-        public override IEnumerable<LocalisableString> FilterTerms => base.FilterTerms.Concat(new LocalisableString[] { "mirror", "download", "beatmap", "update", "bn", "nominator", "tracker", "request", "backup", "website", "session", "cookie", "discussion" });
+        public override IEnumerable<LocalisableString> FilterTerms => base.FilterTerms.Concat(new LocalisableString[] { "mirror", "download", "beatmap", "update", "bn", "nominator", "tracker", "request", "backup", "website", "session", "cookie", "discussion", "omdb", "rating", "api key" });
 
         [Resolved]
         private BeatmapOwnerStore ownerStore { get; set; } = null!;
@@ -37,6 +38,9 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
 
         [Resolved(canBeNull: true)]
         private WebSession? webSession { get; set; }
+
+        [Resolved]
+        private OsuGame? game { get; set; }
 
         private SettingsButtonV2 websiteSignOutButton = null!;
 
@@ -52,6 +56,13 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
         /// </summary>
         private readonly Bindable<string> bnTrackerServerText = new Bindable<string>(string.Empty);
 
+        private Bindable<string> omdbApiKey = null!;
+
+        /// <summary>
+        /// The text of the API key text box, which is only applied when committing, as each applied key is filtered from logs.
+        /// </summary>
+        private readonly Bindable<string> omdbApiKeyText = new Bindable<string>(string.Empty);
+
         private readonly IBindable<BnMe?> bnTrackerUser = new Bindable<BnMe?>();
         private readonly IBindable<bool> bnTrackerSignedIn = new Bindable<bool>();
 
@@ -59,8 +70,10 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
         private void load(OsuConfigManager config)
         {
             bnTrackerServer = config.GetBindable<string>(OsuSetting.SlopBnTrackerServer);
+            omdbApiKey = config.GetBindable<string>(OsuSetting.SlopOmdbApiKey);
 
             FormTextBox serverTextBox;
+            FormTextBox omdbApiKeyTextBox;
 
             Children = new Drawable[]
             {
@@ -91,6 +104,17 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                 {
                     Action = () => logFailure(bnTracker.SignOutAsync()),
                 },
+                new SettingsItemV2(omdbApiKeyTextBox = new FormPasswordTextBox
+                {
+                    Caption = SlopSettingsStrings.OmdbApiKey,
+                    HintText = SlopSettingsStrings.OmdbApiKeyDescription,
+                    Current = omdbApiKeyText,
+                }),
+                new SettingsButtonV2
+                {
+                    Text = SlopSettingsStrings.GetOmdbApiKey,
+                    Action = () => game?.OpenUrlExternally(OmdbClient.SETTINGS_URL),
+                },
                 new SettingsItemV2(new FormCheckBox
                 {
                     Caption = SlopSettingsStrings.BackupOnUpdate,
@@ -116,6 +140,8 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
 
                 bnTrackerServerText.Value = bnTrackerServer.Value;
             };
+
+            omdbApiKeyTextBox.OnCommit += (_, _) => omdbApiKey.Value = omdbApiKeyText.Value.Trim();
         }
 
         protected override void LoadComplete()
@@ -123,6 +149,7 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
             base.LoadComplete();
 
             bnTrackerServer.BindValueChanged(s => bnTrackerServerText.Value = s.NewValue, true);
+            omdbApiKey.BindValueChanged(k => omdbApiKeyText.Value = k.NewValue, true);
 
             if (webSession != null)
                 websiteState.BindTo(webSession.State);
