@@ -9,6 +9,7 @@ using osu.Game.Beatmaps;
 using osu.Game.Beatmaps.ControlPoints;
 using osu.Game.Beatmaps.Timing;
 using osu.Game.Database;
+using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Rulesets;
 using osu.Game.Rulesets.Osu;
 using osu.Game.Rulesets.Osu.Objects;
@@ -34,6 +35,8 @@ namespace osu.Game.Tests.Slop
 
         [Resolved]
         private RealmAccess realm { get; set; } = null!;
+
+        private static readonly APIUser mapper = new APIUser { Id = 1234, Username = "New Mapper" };
 
         private string title = null!;
 
@@ -87,12 +90,13 @@ namespace osu.Game.Tests.Slop
             });
             save();
 
-            AddStep("create new set", () => newSet = beatmapManager.CreateNewSetFromTemplate(template));
+            AddStep("create new set", () => newSet = beatmapManager.CreateNewSetFromTemplate(template, mapper));
 
             AddAssert("new set is separate", () => newSet!.BeatmapSetInfo.ID != templateSet.ID && newSet.BeatmapInfo.ID != templateSet.Beatmaps.Single().ID);
             AddAssert("new set has one difficulty", () => newSet!.BeatmapSetInfo.Beatmaps.Count, () => Is.EqualTo(1));
             AddAssert("metadata kept", () => newSet!.Metadata.Title == title && newSet.Metadata.Artist == "Artist");
-            AddAssert("background removed", () => newSet!.Metadata.BackgroundFile, () => Is.Empty);
+            AddAssert("background kept", () => newSet!.Metadata.BackgroundFile, () => Is.EqualTo("bg.jpg"));
+            AddAssert("mapper is the user", () => (newSet!.Metadata.Author.OnlineID, newSet.Metadata.Author.Username), () => Is.EqualTo((1234, "New Mapper")));
             AddAssert("difficulty kept", () => newSet!.BeatmapInfo.Difficulty.ApproachRate == 9 && newSet.BeatmapInfo.Difficulty.SliderTickRate == 2);
             AddAssert("difficulty is a copy", () => !ReferenceEquals(newSet!.BeatmapInfo.Difficulty, template.BeatmapInfo.Difficulty));
             AddAssert("no hit objects", () => newSet!.Beatmap.HitObjects, () => Is.Empty);
@@ -113,7 +117,7 @@ namespace osu.Game.Tests.Slop
             WorkingBeatmap? newSet = null;
 
             save();
-            AddStep("create new set", () => newSet = beatmapManager.CreateNewSetFromTemplate(template));
+            AddStep("create new set", () => newSet = beatmapManager.CreateNewSetFromTemplate(template, mapper));
             AddAssert("new set created", () => newSet!.BeatmapSetInfo.ID != templateSet.ID);
             AddAssert("no timing points", () => newSet!.Beatmap.ControlPointInfo.TimingPoints, () => Is.Empty);
         }
@@ -127,8 +131,8 @@ namespace osu.Game.Tests.Slop
             save();
             AddStep("create new sets", () =>
             {
-                first = beatmapManager.CreateNewSetFromTemplate(template);
-                second = beatmapManager.CreateNewSetFromTemplate(template);
+                first = beatmapManager.CreateNewSetFromTemplate(template, mapper);
+                second = beatmapManager.CreateNewSetFromTemplate(template, mapper);
             });
             AddAssert("sets are separate", () => first!.BeatmapSetInfo.ID != second!.BeatmapSetInfo.ID && first.BeatmapInfo.ID != second.BeatmapInfo.ID);
         }

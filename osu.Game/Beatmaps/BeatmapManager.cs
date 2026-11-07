@@ -150,11 +150,12 @@ namespace osu.Game.Beatmaps
         /// Create a new beatmap set with a single difficulty, which is based on the provided <paramref name="template"/> (like osu!stable).
         /// </summary>
         /// <remarks>
-        /// The metadata, difficulty and beatmap-level settings, colours, bookmarks, audio file and uninherited timing points are kept,
-        /// while hitobjects, inherited timing points, breaks, the background, the storyboard and online information are not.
+        /// The metadata (except the mapper), difficulty and beatmap-level settings, colours, bookmarks, audio file, background and uninherited timing points are kept,
+        /// while hitobjects, inherited timing points, breaks, the storyboard and online information are not.
         /// </remarks>
         /// <param name="template">The saved beatmap to use as a template.</param>
-        public WorkingBeatmap CreateNewSetFromTemplate(WorkingBeatmap template)
+        /// <param name="user">The user who becomes the mapper of the new set.</param>
+        public WorkingBeatmap CreateNewSetFromTemplate(WorkingBeatmap template, APIUser user)
         {
             if (template.Beatmap.Clone() is not Beatmap newBeatmap)
                 throw new InvalidOperationException("The template beatmap can't be copied.");
@@ -167,7 +168,11 @@ namespace osu.Game.Beatmaps
             beatmapInfo.ResetOnlineInfo();
             beatmapInfo.Difficulty = template.BeatmapInfo.Difficulty.Clone();
             beatmapInfo.Metadata = template.Metadata.DeepClone();
-            beatmapInfo.Metadata.BackgroundFile = string.Empty;
+            beatmapInfo.Metadata.Author = new RealmUser
+            {
+                OnlineID = user.OnlineID,
+                Username = user.Username,
+            };
 
             var beatmapSet = new BeatmapSetInfo
             {
@@ -184,15 +189,17 @@ namespace osu.Game.Beatmaps
 
             var newSet = imported.PerformRead(s => s.Detach());
 
-            string audioFile = template.Metadata.AudioFile;
-            string? audioPath = string.IsNullOrEmpty(audioFile) ? null : template.BeatmapSetInfo.GetPathForFile(audioFile);
-
-            if (audioPath != null)
+            foreach (string file in new[] { template.Metadata.AudioFile, template.Metadata.BackgroundFile }.Where(f => !string.IsNullOrEmpty(f)).Distinct())
             {
-                using (var stream = template.GetStream(audioPath))
+                string? path = template.BeatmapSetInfo.GetPathForFile(file);
+
+                if (path == null)
+                    continue;
+
+                using (var stream = template.GetStream(path))
                 {
                     if (stream != null)
-                        AddFile(newSet, stream, audioFile);
+                        AddFile(newSet, stream, file);
                 }
             }
 

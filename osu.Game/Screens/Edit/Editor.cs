@@ -2398,7 +2398,7 @@ namespace osu.Game.Screens.Edit
 
             try
             {
-                newSet = beatmapManager.CreateNewSetFromTemplate(beatmapManager.GetWorkingBeatmap(editorBeatmap.BeatmapInfo, true));
+                newSet = beatmapManager.CreateNewSetFromTemplate(beatmapManager.GetWorkingBeatmap(editorBeatmap.BeatmapInfo, true), api.LocalUser.Value);
             }
             catch (Exception ex)
             {

@@ -49,7 +49,7 @@ namespace osu.Game.Tests.Visual.Editing
             [BackgroundDependencyLoader]
             private void load()
             {
-                LoadComponent(Overlay = new BeatmapSubmissionOverlay());
+                LoadComponent(Overlay = new BeatmapSubmissionOverlay(OverlayColourScheme.Aquamarine.GetHue()));
             }
 
             protected override void LoadComplete()
