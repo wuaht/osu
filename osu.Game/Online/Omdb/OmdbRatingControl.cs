@@ -113,16 +113,22 @@ namespace osu.Game.Online.Omdb
 
             int requestVersion = version;
 
-            omdb.GetBeatmapAsync(beatmapId).ContinueWith(t => Schedule(() =>
+            omdb.GetBeatmapAsync(beatmapId).ContinueWith(t =>
             {
-                if (requestVersion != version)
-                    return;
+                // read right away, as the result is dropped when the request is outdated or this control is gone.
+                string error = t.IsCompletedSuccessfully ? string.Empty : errorMessageOf(t);
 
-                if (t.IsCompletedSuccessfully)
-                    show(t.GetResultSafely());
-                else
-                    statusText.Text = errorMessageOf(t);
-            }));
+                Schedule(() =>
+                {
+                    if (requestVersion != version)
+                        return;
+
+                    if (t.IsCompletedSuccessfully)
+                        show(t.GetResultSafely());
+                    else
+                        statusText.Text = error;
+                });
+            });
         }
 
         private void submit(double? score)
@@ -136,22 +142,28 @@ namespace osu.Game.Online.Omdb
             int requestVersion = version;
             var previous = beatmap;
 
-            omdb.RateAsync(beatmapId, score).ContinueWith(t => Schedule(() =>
+            omdb.RateAsync(beatmapId, score).ContinueWith(t =>
             {
-                if (requestVersion != version)
-                    return;
+                // read right away, as the result is dropped when the request is outdated or this control is gone.
+                string error = t.IsCompletedSuccessfully ? string.Empty : errorMessageOf(t);
 
-                submitting = false;
-
-                if (t.IsCompletedSuccessfully)
-                    show(t.GetResultSafely());
-                else
+                Schedule(() =>
                 {
-                    // puts the slider back to the rating which is actually stored.
-                    show(previous);
-                    statusText.Text = errorMessageOf(t);
-                }
-            }));
+                    if (requestVersion != version)
+                        return;
+
+                    submitting = false;
+
+                    if (t.IsCompletedSuccessfully)
+                        show(t.GetResultSafely());
+                    else
+                    {
+                        // puts the slider back to the rating which is actually stored.
+                        show(previous);
+                        statusText.Text = error;
+                    }
+                });
+            });
         }
 
         private void show(OmdbBeatmap shown)
