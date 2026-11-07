@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "osu-automation": {
+      "command": "node",
+      "args": ["automation-mcp/server.mjs"]
+    }
+  }
+}

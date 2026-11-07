@@ -1,8 +1,9 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.Versioning;
 using Microsoft.Win32;
@@ -10,6 +11,7 @@ using osu.Desktop.IPC;
 using osu.Desktop.Security;
 using osu.Framework.Platform;
 using osu.Game;
+using osu.Game.Automation;
 using osu.Desktop.Updater;
 using osu.Framework;
 using osu.Framework.Logging;
@@ -147,6 +149,9 @@ namespace osu.Desktop
 
             base.LoadComplete();
 
+            if (AutomationBridge.FromEnvironment() is AutomationBridge automationBridge)
+                Add(automationBridge);
+
             LoadComponentAsync(new DiscordRichPresence(), Add);
 
             switch (RuntimeInfo.OS)
@@ -170,6 +175,14 @@ namespace osu.Desktop
             archiveImportIPCChannel = new ArchiveImportIPCChannel(Host, this);
         }
 
+        [SupportedOSPlatform("windows")]
+        private void moveToOtherDesktop(IntPtr hwnd, int attemptsLeft)
+        {
+            // the window only becomes known to virtual desktops once it is shown after the first frame.
+            if (!VirtualDesktopMover.TryMove(hwnd, attemptsLeft == 0))
+                Scheduler.AddDelayed(() => moveToOtherDesktop(hwnd, attemptsLeft - 1), 50);
+        }
+
         public override void SetHost(GameHost host)
         {
             base.SetHost(host);
@@ -183,12 +196,35 @@ namespace osu.Desktop
             }
 
             host.Window.Title = Name;
+
+            if (Environment.GetEnvironmentVariable(AutomationBridge.PORT_VARIABLE) != null)
+            {
+                // keep the automated instance off the user's main monitor.
+                if (host.Window.Displays.FirstOrDefault(d => d.Index == 1) is Display second && !second.Equals(host.Window.CurrentDisplayBindable.Value))
+                {
+                    displayBeforeAutomation = host.Window.CurrentDisplayBindable.Value;
+                    host.Window.CurrentDisplayBindable.Value = second;
+                }
+
+                // the window is created hidden and shown after the first frame; it stays cloaked until it is moved, so it never appears on the user's desktop.
+                if (OperatingSystem.IsWindows() && VirtualDesktopMover.Begin() is var hwnd && hwnd != IntPtr.Zero)
+                    moveToOtherDesktop(hwnd, 200);
+            }
         }
+
+        /// <summary>
+        /// The display used before the automated instance moved to the second monitor.
+        /// Restored on exit, as the display is stored in the framework config shared with the user's own client.
+        /// </summary>
+        private Display? displayBeforeAutomation;
 
         protected override BatteryInfo CreateBatteryInfo() => FrameworkEnvironment.UseSDL3 ? new SDL3BatteryInfo() : new SDL2BatteryInfo();
 
         protected override void Dispose(bool isDisposing)
         {
+            if (displayBeforeAutomation != null && Host?.Window != null)
+                Host.Window.CurrentDisplayBindable.Value = displayBeforeAutomation;
+
             base.Dispose(isDisposing);
             osuSchemeLinkIPCChannel?.Dispose();
             archiveImportIPCChannel?.Dispose();
