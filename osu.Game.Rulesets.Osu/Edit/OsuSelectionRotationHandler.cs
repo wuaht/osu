@@ -50,6 +50,12 @@ namespace osu.Game.Rulesets.Osu.Edit
 
         public override Vector2? PlayfieldOrigin => OsuPlayfield.BASE_SIZE / 2;
 
+        /// <summary>
+        /// Whether the current operation rotates every object around its own position instead of a shared origin, as in osu!stable.
+        /// Reset when the operation is committed.
+        /// </summary>
+        public bool PerObject { get; set; }
+
         private Dictionary<OsuHitObject, Vector2>? originalPositions;
         private Dictionary<IHasPath, Vector2[]>? originalPathControlPointPositions;
 
@@ -81,7 +87,8 @@ namespace osu.Game.Rulesets.Osu.Edit
 
             foreach (var ho in objectsInRotation)
             {
-                ho.Position = GeometryUtils.RotatePointAroundOrigin(originalPositions[ho], actualOrigin, rotation);
+                // rotating around its own position leaves the object in place, so only its path turns.
+                ho.Position = PerObject ? originalPositions[ho] : GeometryUtils.RotatePointAroundOrigin(originalPositions[ho], actualOrigin, rotation);
 
                 if (ho is IHasPath withPath)
                 {
@@ -106,6 +113,7 @@ namespace osu.Game.Rulesets.Osu.Edit
             originalPositions = null;
             originalPathControlPointPositions = null;
             DefaultOrigin = null;
+            PerObject = false;
         }
 
         private IEnumerable<OsuHitObject> selectedMovableObjects => selectedItems.Cast<OsuHitObject>()

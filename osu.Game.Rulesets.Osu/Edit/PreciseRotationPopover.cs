@@ -43,6 +43,11 @@ namespace osu.Game.Rulesets.Osu.Edit
         private static bool rememberRotation;
         private static float lastRotation;
 
+        private CompactCheckbox perObjectCheckbox = null!;
+
+        // like osu!stable, per-object rotation is only remembered for the current session.
+        private static bool perObject;
+
         public PreciseRotationPopover(SelectionRotationHandler rotationHandler, OsuGridToolboxGroup gridToolbox)
         {
             this.rotationHandler = rotationHandler;
@@ -86,6 +91,10 @@ namespace osu.Game.Rulesets.Osu.Edit
                     {
                         Current = { Value = rememberRotation },
                     },
+                    perObjectCheckbox = new CompactCheckbox("Per-object")
+                    {
+                        Current = { Value = perObject },
+                    },
                 }
             };
 
@@ -101,7 +110,7 @@ namespace osu.Game.Rulesets.Osu.Edit
 
             selectionCentreButton.Selected.DisabledChanged += isDisabled =>
             {
-                selectionCentreButton.TooltipText = isDisabled ? "Select more than one object to perform selection-based rotation." : string.Empty;
+                selectionCentreButton.TooltipText = isDisabled && !rotationInfo.Value.PerObject ? "Select more than one object to perform selection-based rotation." : string.Empty;
             };
         }
 
@@ -112,10 +121,7 @@ namespace osu.Game.Rulesets.Osu.Edit
             ScheduleAfterChildren(() => angleInput.TakeFocus());
             angleInput.Current.BindValueChanged(angle => rotationInfo.Value = rotationInfo.Value with { Degrees = angle.NewValue });
 
-            rotationHandler.CanRotateAroundSelectionOrigin.BindValueChanged(e =>
-            {
-                selectionCentreButton.Selected.Disabled = !e.NewValue;
-            }, true);
+            rotationHandler.CanRotateAroundSelectionOrigin.BindValueChanged(_ => updateOriginButtons(), true);
 
             bool didSelect = false;
 
@@ -174,14 +180,37 @@ namespace osu.Game.Rulesets.Osu.Edit
                 if (!rotationHandler.OperationInProgress.Value)
                     return;
 
+                if (rotationHandler is OsuSelectionRotationHandler osuRotationHandler)
+                    osuRotationHandler.PerObject = rotation.NewValue.PerObject;
+
                 rotationHandler.Update(rotation.NewValue.Degrees, getOriginPosition(rotation.NewValue));
             });
+
+            // bound only after an origin has been selected above, as that requires at least one enabled origin button.
+            perObjectCheckbox.Current.BindValueChanged(e =>
+            {
+                perObject = e.NewValue;
+                rotationInfo.Value = rotationInfo.Value with { PerObject = e.NewValue };
+                updateOriginButtons();
+            }, true);
 
             rememberRotationCheckbox.Current.BindValueChanged(e => rememberRotation = e.NewValue);
 
             // applied immediately, so that a pattern can be built by repeatedly opening the popover and confirming.
             if (rememberRotation)
                 angleInput.Current.Value = lastRotation;
+        }
+
+        /// <summary>
+        /// The origin is irrelevant while rotating per object, so its buttons are disabled then, as in osu!stable.
+        /// </summary>
+        private void updateOriginButtons()
+        {
+            bool isPerObject = rotationInfo.Value.PerObject;
+
+            gridCentreButton.Selected.Disabled = isPerObject;
+            playfieldCentreButton.Selected.Disabled = isPerObject;
+            selectionCentreButton.Selected.Disabled = isPerObject || !rotationHandler.CanRotateAroundSelectionOrigin.Value;
         }
 
         private Vector2? getOriginPosition(PreciseRotationInfo rotation) =>
@@ -222,5 +251,5 @@ namespace osu.Game.Rulesets.Osu.Edit
         }
     }
 
-    public record PreciseRotationInfo(float Degrees, EditorOrigin Origin);
+    public record PreciseRotationInfo(float Degrees, EditorOrigin Origin, bool PerObject = false);
 }
