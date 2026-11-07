@@ -82,6 +82,7 @@ namespace osu.Game.Rulesets.Osu.Edit
                             Default = 1,
                         },
                         KeyboardStep = 0.01f,
+                        AllowExpressions = true,
                         TabbableContentContainer = this
                     },
                     new GridContainer

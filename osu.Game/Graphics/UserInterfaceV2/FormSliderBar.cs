@@ -21,6 +21,7 @@ using osu.Game.Graphics.Sprites;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Localisation;
 using osu.Game.Overlays;
+using osu.Game.Utils;
 using osuTK.Graphics;
 using Vector2 = osuTK.Vector2;
 
@@ -115,6 +116,18 @@ namespace osu.Game.Graphics.UserInterfaceV2
         /// </summary>
         public int MaxDecimalDigits { get; init; } = OsuSliderBar<T>.MAX_DECIMAL_DIGITS;
 
+        /// <summary>
+        /// Whether the text box accepts arithmetic expressions (see <see cref="ExpressionEvaluator"/>) rather than only plain numbers.
+        /// The result of an expression is previewed next to it while typing.
+        /// </summary>
+        public bool AllowExpressions { get; init; }
+
+        /// <summary>
+        /// Whether expressions are evaluated as angles in degrees (see the <c>angleMode</c> of <see cref="ExpressionEvaluator.TryEvaluate"/>).
+        /// Only has an effect if <see cref="AllowExpressions"/> is set.
+        /// </summary>
+        public bool ExpressionsAsAngles { get; init; }
+
         private Func<T, LocalisableString> labelFormat;
 
         /// <summary>
@@ -142,6 +155,7 @@ namespace osu.Game.Graphics.UserInterfaceV2
 
         private FormControlBackground background = null!;
         private OsuSpriteText valueLabel = null!;
+        private OsuSpriteText expressionPreview = null!;
         private FormFieldCaption captionText = null!;
         private IFocusManager focusManager = null!;
 
@@ -271,6 +285,13 @@ namespace osu.Game.Graphics.UserInterfaceV2
                                             RelativeSizeAxes = Axes.X,
                                             Padding = new MarginPadding { Right = 5 },
                                         },
+                                        expressionPreview = new OsuSpriteText
+                                        {
+                                            Anchor = Anchor.CentreRight,
+                                            Origin = Anchor.CentreRight,
+                                            Colour = colourProvider.Content2,
+                                            Alpha = 0,
+                                        },
                                     },
                                 },
                             },
@@ -290,7 +311,7 @@ namespace osu.Game.Graphics.UserInterfaceV2
                 currentLanguage.BindTo(game.CurrentLanguage);
         }
 
-        internal virtual FormNumberBox.InnerNumberBox CreateTextBox() => new FormNumberBox.InnerNumberBox(true);
+        internal virtual FormTextBox.InnerTextBox CreateTextBox() => AllowExpressions ? new FormTextBox.InnerTextBox() : new FormNumberBox.InnerNumberBox(true);
 
         protected override void LoadComplete()
         {
@@ -339,6 +360,21 @@ namespace osu.Game.Graphics.UserInterfaceV2
         private void tryUpdateSliderFromTextBox()
         {
             updatingFromTextBox = true;
+
+            if (AllowExpressions)
+            {
+                bool valid = ExpressionEvaluator.TryEvaluate(TextBox.Current.Value, ExpressionsAsAngles, out double result, out bool isLiteral);
+
+                // like osu!stable, only calculations get their result previewed.
+                expressionPreview.Text = valid && !isLiteral ? $"= {result.ToStandardFormattedString(MaxDecimalDigits)}" : string.Empty;
+
+                // invalid expressions are ignored, a commit restores the text box to match the slider.
+                if (valid && !currentNumberInstantaneous.Disabled)
+                    currentNumberInstantaneous.Value = T.CreateSaturating(DisplayAsPercentage && currentNumberInstantaneous.Value is not int ? result / 100 : result);
+
+                updatingFromTextBox = false;
+                return;
+            }
 
             try
             {
@@ -396,6 +432,7 @@ namespace osu.Game.Graphics.UserInterfaceV2
             TextBox.ReadOnly = currentNumberInstantaneous.Disabled;
             TextBox.Alpha = TextBox.Focused.Value ? 1 : 0;
             valueLabel.Alpha = TextBox.Focused.Value ? 0 : 1;
+            expressionPreview.Alpha = TextBox.Focused.Value ? 1 : 0;
 
             captionText.Colour = currentNumberInstantaneous.Disabled ? colourProvider.Background1 : colourProvider.Content2;
             TextBox.Colour = currentNumberInstantaneous.Disabled ? colourProvider.Background1 : colourProvider.Content1;

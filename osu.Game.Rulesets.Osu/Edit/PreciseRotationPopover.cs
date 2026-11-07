@@ -37,6 +37,12 @@ namespace osu.Game.Rulesets.Osu.Edit
 
         private Bindable<EditorOrigin> configRotationOrigin = null!;
 
+        private CompactCheckbox rememberRotationCheckbox = null!;
+
+        // like osu!stable, the last rotation is only remembered for the current session.
+        private static bool rememberRotation;
+        private static float lastRotation;
+
         public PreciseRotationPopover(SelectionRotationHandler rotationHandler, OsuGridToolboxGroup gridToolbox)
         {
             this.rotationHandler = rotationHandler;
@@ -64,15 +70,22 @@ namespace osu.Game.Rulesets.Osu.Edit
                         {
                             MinValue = -360,
                             MaxValue = 360,
-                            Precision = 1
+                            // fine enough for expressions such as "/7" to be repeatable without visible drift.
+                            Precision = 0.01f
                         },
                         KeyboardStep = 1f,
+                        AllowExpressions = true,
+                        ExpressionsAsAngles = true,
                         TabbableContentContainer = this
                     },
                     rotationOrigin = new EditorRadioButtonCollection
                     {
                         RelativeSizeAxes = Axes.X,
-                    }
+                    },
+                    rememberRotationCheckbox = new CompactCheckbox("Remember rotation")
+                    {
+                        Current = { Value = rememberRotation },
+                    },
                 }
             };
 
@@ -163,6 +176,12 @@ namespace osu.Game.Rulesets.Osu.Edit
 
                 rotationHandler.Update(rotation.NewValue.Degrees, getOriginPosition(rotation.NewValue));
             });
+
+            rememberRotationCheckbox.Current.BindValueChanged(e => rememberRotation = e.NewValue);
+
+            // applied immediately, so that a pattern can be built by repeatedly opening the popover and confirming.
+            if (rememberRotation)
+                angleInput.Current.Value = lastRotation;
         }
 
         private Vector2? getOriginPosition(PreciseRotationInfo rotation) =>
@@ -185,7 +204,10 @@ namespace osu.Game.Rulesets.Osu.Edit
             base.PopOut();
 
             if (IsLoaded)
+            {
                 rotationHandler.Commit();
+                lastRotation = angleInput.Current.Value;
+            }
         }
 
         public override bool OnPressed(KeyBindingPressEvent<GlobalAction> e)
