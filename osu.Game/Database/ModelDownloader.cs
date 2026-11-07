@@ -45,6 +45,17 @@ namespace osu.Game.Database
         protected abstract ArchiveDownloadRequest<T> CreateDownloadRequest(T model, bool minimiseDownloadSize);
 
         protected bool Download(T model, bool minimiseDownloadSize, TModel? originalModel)
+            => DownloadAndImport(model, minimiseDownloadSize, async (notification, task) => originalModel != null
+                ? await importer.ImportAsUpdate(notification, task, originalModel).ConfigureAwait(false) != null
+                : (await importer.Import(notification, new[] { task }).ConfigureAwait(false)).Any());
+
+        /// <summary>
+        /// Downloads <paramref name="model"/> and hands the downloaded archive to <paramref name="import"/> instead of the default import.
+        /// </summary>
+        /// <param name="model">The <typeparamref name="T"/> to be downloaded.</param>
+        /// <param name="minimiseDownloadSize">Whether this download should be optimised for slow connections.</param>
+        /// <param name="import">Imports the downloaded archive, updating the given notification. Returns whether the import succeeded.</param>
+        protected bool DownloadAndImport(T model, bool minimiseDownloadSize, Func<ProgressNotification, ImportTask, Task<bool>> import)
         {
             if (!canDownload(model)) return false;
 
@@ -69,10 +80,7 @@ namespace osu.Game.Database
 
                     try
                     {
-                        if (originalModel != null)
-                            importSuccessful = (await importer.ImportAsUpdate(notification, new ImportTask(filename), originalModel).ConfigureAwait(false)) != null;
-                        else
-                            importSuccessful = (await importer.Import(notification, new[] { new ImportTask(filename) }).ConfigureAwait(false)).Any();
+                        importSuccessful = await import(notification, new ImportTask(filename)).ConfigureAwait(false);
                     }
                     finally
                     {

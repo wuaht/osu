@@ -85,6 +85,11 @@ namespace osu.Game.Localisation
         public static LocalisableString CopyBeatmapSetId => new TranslatableString(getKey(@"copy_beatmap_set_id"), @"Copy beatmap set ID");
 
         /// <summary>
+        /// "Update difficulty"
+        /// </summary>
+        public static LocalisableString UpdateDifficulty => new TranslatableString(getKey(@"update_difficulty"), @"Update difficulty");
+
+        /// <summary>
         /// "Right click to set the current mods as the default for this ruleset. Hold Ctrl to also deselect the default mods."
         /// </summary>
         public static LocalisableString DeselectAllModsTooltip => new TranslatableString(getKey(@"deselect_all_mods_tooltip"),
