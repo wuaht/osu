@@ -526,6 +526,7 @@ namespace osu.Game.Screens.Select
         [Resolved]
         private ISkinSource skin { get; set; } = null!;
 
+        private readonly Box backdrop;
         private readonly OsuScrollContainer scroll;
         private readonly FillFlowContainer<Row> rows;
 
@@ -541,19 +542,33 @@ namespace osu.Game.Screens.Select
             RelativeSizeAxes = Axes.Both;
 
             // stable's rows start at its mode button and stack upwards from 56 units above the screen's bottom.
-            InternalChild = scroll = new OsuScrollContainer
+            InternalChildren = new Drawable[]
             {
-                Anchor = Anchor.BottomLeft,
-                Origin = Anchor.BottomLeft,
-                X = LegacyModeButton.STABLE_X,
-                Y = -56 * scale,
-                Size = new Vector2(280, row_height * visible_rows) * scale,
-                ScrollbarVisible = false,
-                Child = rows = new FillFlowContainer<Row>
+                // the rows' dark background stays in place while they scroll.
+                backdrop = new Box
                 {
-                    RelativeSizeAxes = Axes.X,
-                    AutoSizeAxes = Axes.Y,
-                    Direction = FillDirection.Vertical,
+                    Anchor = Anchor.BottomLeft,
+                    Origin = Anchor.BottomLeft,
+                    X = LegacyModeButton.STABLE_X,
+                    Y = -56 * scale,
+                    Width = 280 * scale,
+                    Colour = Row.BACKGROUND_COLOUR,
+                    Alpha = 0,
+                },
+                scroll = new OsuScrollContainer
+                {
+                    Anchor = Anchor.BottomLeft,
+                    Origin = Anchor.BottomLeft,
+                    X = LegacyModeButton.STABLE_X,
+                    Y = -56 * scale,
+                    Size = new Vector2(280, row_height * visible_rows) * scale,
+                    ScrollbarVisible = false,
+                    Child = rows = new FillFlowContainer<Row>
+                    {
+                        RelativeSizeAxes = Axes.X,
+                        AutoSizeAxes = Axes.Y,
+                        Direction = FillDirection.Vertical,
+                    },
                 },
             };
         }
@@ -568,11 +583,13 @@ namespace osu.Game.Screens.Select
             {
                 var r = bottomToTop[i];
 
-                rows.Add(new Row(r, i)
+                rows.Add(new Row(r)
                 {
                     Action = () => select(r),
                 });
             }
+
+            backdrop.Height = Math.Min(bottomToTop.Count, visible_rows) * row_height * scale;
         }
 
         protected override void LoadComplete()
@@ -607,9 +624,12 @@ namespace osu.Game.Screens.Select
             IsOpen = true;
             scroll.ScrollToEnd(false);
 
-            // stable shows the rows from the bottom up, 20ms apart.
+            // stable's colour alpha also scales the sprite's alpha, which fades in to the same value.
+            backdrop.ClearTransforms();
+            backdrop.FadeTo(Row.BACKGROUND_COLOUR.A, 200);
+
             foreach (var row in rows)
-                row.Appear(row.Index * 20);
+                row.Appear();
         }
 
         public void Close()
@@ -618,6 +638,9 @@ namespace osu.Game.Screens.Select
                 return;
 
             IsOpen = false;
+
+            backdrop.ClearTransforms();
+            backdrop.FadeOut(100);
 
             foreach (var row in rows)
                 row.Disappear();
@@ -662,13 +685,12 @@ namespace osu.Game.Screens.Select
         /// </summary>
         private partial class Row : CompositeDrawable
         {
-            private static readonly Color4 background_colour = new Color4(0, 0, 0, 160);
+            public static readonly Color4 BACKGROUND_COLOUR = new Color4(0, 0, 0, 160);
             private static readonly Color4 highlight_colour = new Color4(165, 90, 234, 230);
 
             private const float text_x = 90;
 
             public readonly RulesetInfo Ruleset;
-            public readonly int Index;
             public Action? Action { get; init; }
 
             [Resolved]
@@ -679,21 +701,20 @@ namespace osu.Game.Screens.Select
             private readonly Container fallbackIcon;
             private readonly OsuSpriteText text;
 
-            public Row(RulesetInfo ruleset, int index)
+            public Row(RulesetInfo ruleset)
             {
                 Ruleset = ruleset;
-                Index = index;
 
                 RelativeSizeAxes = Axes.X;
                 Height = row_height * scale;
 
                 InternalChildren = new Drawable[]
                 {
-                    // stable's colour alpha also scales the sprite's alpha, which fades in to the same value.
+                    // the hover highlight, over the menu's backdrop.
                     background = new Box
                     {
                         RelativeSizeAxes = Axes.Both,
-                        Colour = background_colour,
+                        Colour = highlight_colour,
                         Alpha = 0,
                     },
                     icon = new Sprite
@@ -739,9 +760,8 @@ namespace osu.Game.Screens.Select
                 }
             }
 
-            // like stable's pSpriteMenuItem, showing and hiding drop all pending transforms, so a delayed fade-in can't revive a closed row.
-            // only the background is delayed; the icon and text fade in right away.
-            public void Appear(double delay)
+            // like stable's pSpriteMenuItem, showing and hiding drop all pending transforms.
+            public void Appear()
             {
                 foreach (var d in new Drawable[] { icon, fallbackIcon, text })
                 {
@@ -750,9 +770,7 @@ namespace osu.Game.Screens.Select
                 }
 
                 background.ClearTransforms();
-                background.Colour = background_colour;
-                background.Alpha = 0;
-                background.Delay(delay).FadeTo(background_colour.A, 200);
+                background.Alpha = IsHovered ? BACKGROUND_COLOUR.A : 0;
             }
 
             public void Disappear()
@@ -766,7 +784,8 @@ namespace osu.Game.Screens.Select
 
             protected override bool OnHover(HoverEvent e)
             {
-                background.FadeColour(highlight_colour, 10);
+                // stable's sprite alpha stays at the background's while its colour turns purple.
+                background.FadeTo(BACKGROUND_COLOUR.A, 10);
                 // stable only bounces its own default icons.
                 fallbackIcon.ScaleTo(1.1f, 1000, Easing.OutElastic);
                 text.MoveToX((text_x + 10) * scale, 300, Easing.Out);
@@ -776,7 +795,7 @@ namespace osu.Game.Screens.Select
 
             protected override void OnHoverLost(HoverLostEvent e)
             {
-                background.FadeColour(background_colour, 100);
+                background.FadeOut(100);
                 fallbackIcon.ScaleTo(1, 1000, Easing.OutElastic);
                 text.MoveToX(text_x * scale, 300, Easing.Out);
             }
