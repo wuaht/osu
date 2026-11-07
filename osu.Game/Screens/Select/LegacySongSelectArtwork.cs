@@ -556,7 +556,7 @@ namespace osu.Game.Screens.Select
                     Colour = Row.BACKGROUND_COLOUR,
                     Alpha = 0,
                 },
-                // icons taller than their row are whole menu panels drawn by skins, which stay in place and under every row's text.
+                // icons taller than their row are whole menu panels drawn by skins, which scroll with the rows under every row's text without being clipped.
                 panels = new Container
                 {
                     RelativeSizeAxes = Axes.Both,
@@ -605,6 +605,14 @@ namespace osu.Game.Screens.Select
 
             skin.SourceChanged += onSkinChanged;
             updateIcons();
+        }
+
+        protected override void Update()
+        {
+            base.Update();
+
+            // panels are placed for the scroll's end, where the menu opens.
+            panels.Y = (float)(scroll.ScrollableExtent - scroll.Current);
         }
 
         private void onSkinChanged() => Schedule(updateIcons);
