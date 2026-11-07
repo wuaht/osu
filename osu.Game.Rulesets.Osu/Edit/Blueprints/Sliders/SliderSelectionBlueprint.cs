@@ -413,7 +413,7 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
             {
                 case MouseButton.Middle:
                     // unselected sliders keep the quick deletion of a middle click.
-                    return IsSelected && !isControlPointHovered && startCurveDrag(e.MousePosition);
+                    return IsSelected && !isControlPointHovered && startCurveDrag(e.MousePosition, e.ControlPressed);
 
                 case MouseButton.Right:
                     if (e.ControlPressed && !isControlPointHovered && splitAtPosition(e.MousePosition, !e.ShiftPressed))
@@ -643,6 +643,7 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
 
         /// <summary>
         /// The state of a middle-click drag on a bezier segment, which bends the segment so that the clicked point follows the cursor.
+        /// With control held, any segment is instead replaced by a circular arc (stored as bezier) through the clicked point.
         /// </summary>
         private CurveDrag? curveDrag;
 
@@ -652,13 +653,29 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
             /// Whether the cursor has moved far enough for this to be a drag rather than a click.
             /// </summary>
             public bool Moved { get; set; }
+
+            /// <summary>
+            /// For a perfect curve drag, the clicked point on the path, relative to the start of the path.
+            /// </summary>
+            public Vector2? PerfectCurvePosition { get; init; }
+
+            /// <summary>
+            /// For a perfect curve drag, the type of the segment before dragging, restored while the segment is straight.
+            /// </summary>
+            public PathType? OriginalType { get; init; }
         }
 
         private const float curve_drag_threshold = 4;
 
+        /// <summary>
+        /// Arcs longer than this become a straight segment instead, as in stable.
+        /// </summary>
+        private const double max_perfect_curve_drag_arc_length = 5000;
+
         /// <param name="position">The position of the cursor, in playfield space.</param>
+        /// <param name="perfectCurve">Whether the segment should become a circular arc rather than be bent.</param>
         /// <returns>Whether a drag was started.</returns>
-        private bool startCurveDrag(Vector2 position)
+        private bool startCurveDrag(Vector2 position, bool perfectCurve)
         {
             if (editorBeatmap == null || curveDrag != null)
                 return false;
@@ -685,6 +702,17 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
 
                 if (distance <= segmentStart + segmentLength || end == controlPoints.Count - 1)
                 {
+                    if (perfectCurve)
+                    {
+                        changeHandler?.BeginChange();
+                        curveDrag = new CurveDrag(position, segment, segment.Select(c => c.Position).ToArray(), Array.Empty<double>(), 0)
+                        {
+                            PerfectCurvePosition = HitObject.Path.PositionAt(distance / pathDistance),
+                            OriginalType = segment[0].Type,
+                        };
+                        return true;
+                    }
+
                     // only bezier segments with at least one point in between their ends can be bent.
                     if (segment[0].Type != PathType.BEZIER || segment.Length < 3 || segmentLength <= 0)
                         return false;
@@ -738,6 +766,21 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
 
             curveDrag.Moved = true;
 
+            if (!(curveDrag.PerfectCurvePosition is Vector2 curvePosition ? updatePerfectCurveDrag(curveDrag, curvePosition + delta) : updateBezierCurveDrag(curveDrag, delta)))
+                return;
+
+            var keyboard = GetContainingInputManager()!.CurrentState.Keyboard;
+
+            // as with dragging control points, holding alt doesn't snap the length and the slider follows its whole path.
+            if (keyboard.AltPressed)
+                HitObject.Path.ExpectedDistance.Value = null;
+            else
+                HitObject.SnapTo(distanceSnapProvider);
+        }
+
+        /// <returns>Whether the path changed.</returns>
+        private static bool updateBezierCurveDrag(CurveDrag curveDrag, Vector2 delta)
+        {
             bool changed = false;
 
             // moving each point proportionally to its influence moves the clicked point of the curve exactly with the cursor.
@@ -754,16 +797,49 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders
                 changed = true;
             }
 
-            if (!changed)
-                return;
+            return changed;
+        }
 
-            var keyboard = GetContainingInputManager()!.CurrentState.Keyboard;
+        /// <param name="curveDrag">The drag.</param>
+        /// <param name="through">The position the arc should pass through, relative to the start of the path.</param>
+        /// <returns>Whether the path changed.</returns>
+        private bool updatePerfectCurveDrag(CurveDrag curveDrag, Vector2 through)
+        {
+            PathControlPoint start = curveDrag.ControlPoints[0];
+            PathControlPoint end = curveDrag.ControlPoints[^1];
 
-            // as with dragging control points, holding alt doesn't snap the length and the slider follows its whole path.
-            if (keyboard.AltPressed)
-                HitObject.Path.ExpectedDistance.Value = null;
-            else
-                HitObject.SnapTo(distanceSnapProvider);
+            Vector2 a = start.Position;
+            Vector2 c = end.Position;
+
+            Vector2[] anchors = Array.Empty<Vector2>();
+
+            // like stable, an arc through coinciding points is not attempted and the segment becomes straight instead.
+            if (!Precision.AlmostEquals((through - a).LengthSquared, 0) && !Precision.AlmostEquals((c - through).LengthSquared, 0) && !Precision.AlmostEquals((c - a).LengthSquared, 0))
+            {
+                var arc = new CircularArcProperties(new[] { a, through, c });
+
+                if (arc.IsValid && arc.ThetaRange * arc.Radius < max_perfect_curve_drag_arc_length)
+                {
+                    Vector2[] bezier = BezierConverter.ConvertCircleToBezierAnchors(new[] { a, through, c });
+                    anchors = bezier[1..^1].Select(v => new Vector2(MathF.Round(v.X), MathF.Round(v.Y))).ToArray();
+                }
+            }
+
+            PathType? type = anchors.Length > 0 ? PathType.BEZIER : curveDrag.OriginalType;
+
+            int startIndex = controlPoints.IndexOf(start);
+            int endIndex = controlPoints.IndexOf(end);
+
+            if (start.Type == type && controlPoints.Skip(startIndex + 1).Take(endIndex - startIndex - 1).Select(p => p.Position).SequenceEqual(anchors))
+                return false;
+
+            controlPoints.RemoveRange(startIndex + 1, endIndex - startIndex - 1);
+
+            for (int i = 0; i < anchors.Length; i++)
+                controlPoints.Insert(startIndex + 1 + i, new PathControlPoint(anchors[i]));
+
+            start.Type = type;
+            return true;
         }
 
         private void endCurveDrag()
