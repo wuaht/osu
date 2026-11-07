@@ -527,6 +527,7 @@ namespace osu.Game.Screens.Select
         private ISkinSource skin { get; set; } = null!;
 
         private readonly Box backdrop;
+        private readonly Container panels;
         private readonly OsuScrollContainer scroll;
         private readonly FillFlowContainer<Row> rows;
 
@@ -553,6 +554,12 @@ namespace osu.Game.Screens.Select
                     Y = -56 * scale,
                     Width = 280 * scale,
                     Colour = Row.BACKGROUND_COLOUR,
+                    Alpha = 0,
+                },
+                // icons taller than their row are whole menu panels drawn by skins, which stay in place and under every row's text.
+                panels = new Container
+                {
+                    RelativeSizeAxes = Axes.Both,
                     Alpha = 0,
                 },
                 scroll = new OsuScrollContainer
@@ -604,8 +611,31 @@ namespace osu.Game.Screens.Select
 
         private void updateIcons()
         {
-            foreach (var row in rows)
-                row.Icon = skin.GetTexture($"mode-{row.Ruleset.ShortName}-med");
+            panels.Clear();
+
+            for (int i = 0; i < rows.Count; i++)
+            {
+                var row = rows[i];
+                var texture = skin.GetTexture($"mode-{row.Ruleset.ShortName}-med");
+
+                if (texture == null || texture.DisplaySize.Y <= row_height * scale)
+                {
+                    row.SetIcon(texture, texture != null);
+                    continue;
+                }
+
+                row.SetIcon(null, true);
+
+                // where the row's icon sits while the menu is scrolled to its end, as it opens.
+                panels.Add(new Sprite
+                {
+                    Anchor = Anchor.BottomLeft,
+                    Origin = Anchor.Centre,
+                    Position = new Vector2(LegacyModeButton.STABLE_X + 40 * scale, -(56 + 40 + (rows.Count - 1 - i) * row_height) * scale),
+                    Texture = texture,
+                    Size = texture.DisplaySize,
+                });
+            }
         }
 
         public void Toggle()
@@ -627,6 +657,8 @@ namespace osu.Game.Screens.Select
             // stable's colour alpha also scales the sprite's alpha, which fades in to the same value.
             backdrop.ClearTransforms();
             backdrop.FadeTo(Row.BACKGROUND_COLOUR.A, 200);
+            panels.ClearTransforms();
+            panels.FadeIn(200);
 
             foreach (var row in rows)
                 row.Appear();
@@ -641,6 +673,8 @@ namespace osu.Game.Screens.Select
 
             backdrop.ClearTransforms();
             backdrop.FadeOut(100);
+            panels.ClearTransforms();
+            panels.FadeOut(100);
 
             foreach (var row in rows)
                 row.Disappear();
@@ -750,14 +784,13 @@ namespace osu.Game.Screens.Select
                 };
             }
 
-            public Texture? Icon
+            /// <param name="texture">The skin's icon to show in the row.</param>
+            /// <param name="skinned">Whether the skin provides the icon, which hides the ruleset's own.</param>
+            public void SetIcon(Texture? texture, bool skinned)
             {
-                set
-                {
-                    icon.Texture = value;
-                    icon.Size = value?.DisplaySize ?? Vector2.Zero;
-                    fallbackIcon.Size = value == null ? new Vector2(62 * scale) : Vector2.Zero;
-                }
+                icon.Texture = texture;
+                icon.Size = texture?.DisplaySize ?? Vector2.Zero;
+                fallbackIcon.Size = skinned ? Vector2.Zero : new Vector2(62 * scale);
             }
 
             // like stable's pSpriteMenuItem, showing and hiding drop all pending transforms.
