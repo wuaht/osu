@@ -27,6 +27,7 @@ using osu.Framework.Input.Bindings;
 using osu.Framework.Input.Events;
 using osu.Framework.Input.StateChanges;
 using osu.Framework.Logging;
+using osu.Framework.Platform;
 using osu.Framework.Screens;
 using osu.Framework.Threading;
 using osu.Game.Beatmaps;
@@ -42,12 +43,14 @@ using osu.Game.Input.Bindings;
 using osu.Game.Localisation;
 using osu.Game.Online.API;
 using osu.Game.Online.API.Requests.Responses;
+using osu.Game.Online.BeatmapMirrors;
 using osu.Game.Overlays;
 using osu.Game.Overlays.Mods;
 using osu.Game.Overlays.Volume;
 using osu.Game.Rulesets;
 using osu.Game.Rulesets.Mods;
 using osu.Game.Scoring;
+using osu.Game.Screens.Edit;
 using osu.Game.Screens.Footer;
 using osu.Game.Screens.Menu;
 using osu.Game.Screens.Play;
@@ -1408,6 +1411,21 @@ namespace osu.Game.Screens.Select
         [Resolved]
         private RealmAccess realm { get; set; } = null!;
 
+        [Resolved]
+        private OsuConfigManager configManager { get; set; } = null!;
+
+        [Resolved]
+        private BeatmapModelDownloader beatmapDownloader { get; set; } = null!;
+
+        [Resolved]
+        private LoginOverlay? loginOverlay { get; set; }
+
+        [Resolved]
+        private BeatmapMirrorProvider? mirrors { get; set; }
+
+        [Resolved]
+        private Storage storage { get; set; } = null!;
+
         public virtual IEnumerable<OsuMenuItem> GetForwardActions(BeatmapInfo beatmap)
         {
             yield return new OsuMenuItem(GlobalActionKeyBindingStrings.Select, MenuItemType.Highlighted, () => SelectAndRun(beatmap, OnStart))
@@ -1426,6 +1444,9 @@ namespace osu.Game.Screens.Select
 
                 if (beatmap.BeatmapSet?.OnlineID > 0)
                     yield return new OsuMenuItem(SlopOmdbStrings.OpenListing, MenuItemType.Standard, () => (game as OsuGame)?.OpenUrlExternally(Online.Omdb.OmdbClient.GetListingUrl(beatmap.BeatmapSet!.OnlineID)));
+
+                if (CreateUpdateDifficultyMenuAction(beatmap) is OsuMenuItem update)
+                    yield return update;
             }
 
             var fileActions = CreateBeatmapFileMenuActions(beatmap).ToList();
@@ -1439,6 +1460,67 @@ namespace osu.Game.Screens.Select
 
             foreach (var i in CreateCollectionMenuActions(beatmap))
                 yield return i;
+        }
+
+        /// <summary>
+        /// A menu item for updating only <paramref name="beatmap"/> to its online version, if it is outdated.
+        /// </summary>
+        protected OsuMenuItem? CreateUpdateDifficultyMenuAction(BeatmapInfo beatmap)
+        {
+            if (beatmap.OnlineID <= 0 || !(beatmap.BeatmapSet?.OnlineID > 0) || beatmap.MatchesOnlineVersion)
+                return null;
+
+            return new OsuMenuItem(SlopSongSelectStrings.UpdateDifficulty, MenuItemType.Standard, () => updateDifficulty(beatmap)) { Icon = FontAwesome.Solid.SyncAlt };
+        }
+
+        /// <summary>
+        /// Updates only the given difficulty to its online version, keeping the other difficulties of its set as they are.
+        /// </summary>
+        private void updateDifficulty(BeatmapInfo beatmap, bool confirmed = false)
+        {
+            // beatmaps can be updated through a beatmap mirror without logging in.
+            if (!api.IsLoggedIn && mirrors == null)
+            {
+                loginOverlay?.Show();
+                return;
+            }
+
+            if (!confirmed && dialogOverlay != null && beatmap.Status == BeatmapOnlineStatus.LocallyModified)
+            {
+                dialogOverlay.Push(new UpdateLocalConfirmationDialog(() => updateDifficulty(beatmap, true)));
+                return;
+            }
+
+            Guid setId = beatmap.BeatmapSet!.ID;
+            bool backup = configManager.Get<bool>(OsuSetting.SlopBackupOnUpdate);
+
+            var originalSet = realm.Run(r =>
+            {
+                var liveSet = r.Find<BeatmapSetInfo>(setId);
+
+                if (liveSet == null)
+                    return null;
+
+                var liveBeatmap = liveSet.Beatmaps.FirstOrDefault(b => b.ID == beatmap.ID);
+
+                if (liveBeatmap == null)
+                    return null;
+
+                if (backup)
+                    EditorBeatmapBackup.CreateBackup(storage, liveBeatmap, EditorBeatmapBackup.UPDATE_TAG);
+
+                // detaching a set leaves out its files, which the update needs to rebuild the set.
+                var detached = liveSet.Detach();
+                foreach (var file in liveSet.Files.Detach())
+                    detached.Files.Add(file);
+
+                return detached;
+            });
+
+            if (originalSet == null)
+                return;
+
+            beatmapDownloader.DownloadAsDifficultyUpdate(originalSet, beatmap, configManager.Get<bool>(OsuSetting.PreferNoVideo));
         }
 
         /// <summary>

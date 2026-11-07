@@ -323,6 +323,9 @@ namespace osu.Game.Screens.Select
 
                 if (beatmap.GetOnlineURL(api, Ruleset.Value) is string url)
                     yield return new OsuMenuItem(CommonStrings.CopyLink, MenuItemType.Standard, () => game?.CopyToClipboard(url));
+
+                if (CreateUpdateDifficultyMenuAction(beatmap) is OsuMenuItem update)
+                    yield return update;
             }
 
             var fileActions = CreateBeatmapFileMenuActions(beatmap).ToList();

@@ -9,15 +9,12 @@ using osu.Framework.Audio;
 using osu.Framework.Audio.Sample;
 using osu.Framework.Extensions.LocalisationExtensions;
 using osu.Framework.Graphics.Sprites;
-using osu.Framework.Platform;
 using osu.Framework.Screens;
 using osu.Game.Beatmaps;
 using osu.Game.Configuration;
-using osu.Game.Database;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Localisation;
 using osu.Game.Online.API;
-using osu.Game.Online.BeatmapMirrors;
 using osu.Game.Overlays;
 using osu.Game.Overlays.Mods;
 using osu.Game.Overlays.Notifications;
@@ -63,21 +60,6 @@ namespace osu.Game.Screens.Select
 
         [Resolved]
         private OsuGame? game { get; set; }
-
-        [Resolved]
-        private BeatmapModelDownloader beatmapDownloader { get; set; } = null!;
-
-        [Resolved]
-        private LoginOverlay? loginOverlay { get; set; }
-
-        [Resolved]
-        private BeatmapMirrorProvider? mirrors { get; set; }
-
-        [Resolved]
-        private Storage storage { get; set; } = null!;
-
-        [Resolved]
-        private RealmAccess realm { get; set; } = null!;
 
         private Sample? sampleConfirmSelection { get; set; }
 
@@ -141,8 +123,8 @@ namespace osu.Game.Screens.Select
                 if (beatmap.GetOnlineURL(api, Ruleset.Value) is string url)
                     yield return new OsuMenuItem(CommonStrings.CopyLink, MenuItemType.Standard, () => game?.CopyToClipboard(url));
 
-                if (beatmap.BeatmapSet?.OnlineID > 0 && !beatmap.MatchesOnlineVersion)
-                    yield return new OsuMenuItem(SlopSongSelectStrings.UpdateDifficulty, MenuItemType.Standard, () => updateDifficulty(beatmap)) { Icon = FontAwesome.Solid.SyncAlt };
+                if (CreateUpdateDifficultyMenuAction(beatmap) is OsuMenuItem update)
+                    yield return update;
             }
 
             var fileActions = CreateBeatmapFileMenuActions(beatmap).ToList();
@@ -169,56 +151,6 @@ namespace osu.Game.Screens.Select
 
             if (beatmaps.CanHide(beatmap))
                 yield return new OsuMenuItem(WebCommonStrings.ButtonsHide.ToSentence(), MenuItemType.Standard, () => beatmaps.Hide(beatmap));
-        }
-
-        /// <summary>
-        /// Updates only the given difficulty to its online version, keeping the other difficulties of its set as they are.
-        /// </summary>
-        private void updateDifficulty(BeatmapInfo beatmap, bool confirmed = false)
-        {
-            // beatmaps can be updated through a beatmap mirror without logging in.
-            if (!api.IsLoggedIn && mirrors == null)
-            {
-                loginOverlay?.Show();
-                return;
-            }
-
-            if (!confirmed && dialogOverlay != null && beatmap.Status == BeatmapOnlineStatus.LocallyModified)
-            {
-                dialogOverlay.Push(new UpdateLocalConfirmationDialog(() => updateDifficulty(beatmap, true)));
-                return;
-            }
-
-            Guid setId = beatmap.BeatmapSet!.ID;
-            bool backup = config.Get<bool>(OsuSetting.SlopBackupOnUpdate);
-
-            var originalSet = realm.Run(r =>
-            {
-                var liveSet = r.Find<BeatmapSetInfo>(setId);
-
-                if (liveSet == null)
-                    return null;
-
-                var liveBeatmap = liveSet.Beatmaps.FirstOrDefault(b => b.ID == beatmap.ID);
-
-                if (liveBeatmap == null)
-                    return null;
-
-                if (backup)
-                    EditorBeatmapBackup.CreateBackup(storage, liveBeatmap, EditorBeatmapBackup.UPDATE_TAG);
-
-                // detaching a set leaves out its files, which the update needs to rebuild the set.
-                var detached = liveSet.Detach();
-                foreach (var file in liveSet.Files.Detach())
-                    detached.Files.Add(file);
-
-                return detached;
-            });
-
-            if (originalSet == null)
-                return;
-
-            beatmapDownloader.DownloadAsDifficultyUpdate(originalSet, beatmap, config.Get<bool>(OsuSetting.PreferNoVideo));
         }
 
         protected override void OnStart()
