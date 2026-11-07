@@ -596,6 +596,12 @@ How to time a song with a varying tempo:
         /// </summary>
         public static LocalisableString MediaReencoderComplete(string filename) => new TranslatableString(getKey(@"media_reencoder_complete"), @"Reencoded {0}.", filename);
 
+        /// <summary>
+        /// "Reencoding requires ffmpeg. Install it by running "{0}" in a terminal, then restart the game. Click here to open the ffmpeg download page."
+        /// </summary>
+        public static LocalisableString MediaReencoderFFmpegRequired(string installCommand) => new TranslatableString(getKey(@"media_reencoder_ffmpeg_required"),
+            @"Reencoding requires ffmpeg. Install it by running ""{0}"" in a terminal, then restart the game. Click here to open the ffmpeg download page.", installCommand);
+
         private static string getKey(string key) => $"{prefix}:{key}";
     }
 }

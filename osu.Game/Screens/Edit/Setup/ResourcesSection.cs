@@ -60,6 +60,9 @@ namespace osu.Game.Screens.Edit.Setup
         [Resolved]
         private INotificationOverlay? notifications { get; set; }
 
+        [Resolved]
+        private OsuGame? game { get; set; }
+
         private SetupScreenBackgroundPreview backgroundPreview = null!;
         private SetupScreenVideoPreview videoPreview = null!;
 
@@ -276,10 +279,11 @@ namespace osu.Game.Screens.Edit.Setup
                 }
                 catch (Exception e)
                 {
-                    if (e is not OperationCanceledException)
-                        Logger.Error(e, $"Failed to reencode {filename}.");
-
                     notification.State = ProgressNotificationState.Cancelled;
+
+                    if (e is not OperationCanceledException)
+                        MediaReencoder.NotifyFailure(e, filename, notifications, game);
+
                     Directory.Delete(tempDirectory, true);
                     return;
                 }

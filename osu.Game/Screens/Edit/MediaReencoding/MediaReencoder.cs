@@ -10,6 +10,11 @@ using System.IO;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using osu.Framework;
+using osu.Framework.Logging;
+using osu.Game.Localisation;
+using osu.Game.Overlays;
+using osu.Game.Overlays.Notifications;
 
 namespace osu.Game.Screens.Edit.MediaReencoding
 {
@@ -86,7 +91,8 @@ namespace osu.Game.Screens.Edit.MediaReencoding
             if (options.MediaType == MediaReencoderMediaType.Audio)
             {
                 bool ogg = options.AudioCodec == MediaReencoderAudioCodec.OggVorbis;
-                args.AddRange([@"-vn", @"-sn", @"-c:a", ogg ? @"libvorbis" : @"libmp3lame", @"-b:a", ogg ? @"208k" : @"192k"]);
+                // only the first audio stream is kept, as files often contain cover art as a video stream. tags are kept for the beatmap's metadata.
+                args.AddRange([@"-map", @"0:a:0", @"-c:a", ogg ? @"libvorbis" : @"libmp3lame", @"-b:a", ogg ? @"208k" : @"192k"]);
             }
             else
             {
@@ -159,8 +165,9 @@ namespace osu.Game.Screens.Edit.MediaReencoding
 
         /// <summary>
         /// Runs ffmpeg to convert <paramref name="inputPath"/> into <paramref name="outputPath"/>.
+        /// <paramref name="progress"/> is invoked from a background thread with the progress in [0, 1].
         /// </summary>
-        /// <param name="progress">Invoked from a background thread with the progress in [0, 1].</param>
+        /// <exception cref="Win32Exception">ffmpeg isn't installed.</exception>
         public static async Task RunAsync(MediaReencoderOptions options, string inputPath, string outputPath, Action<float>? progress, CancellationToken cancellationToken)
         {
             var startInfo = new ProcessStartInfo(@"ffmpeg")
@@ -176,15 +183,7 @@ namespace osu.Game.Screens.Edit.MediaReencoding
 
             using var process = new Process();
             process.StartInfo = startInfo;
-
-            try
-            {
-                process.Start();
-            }
-            catch (Exception e)
-            {
-                throw new InvalidOperationException("ffmpeg could not be started. Make sure it is installed and available on PATH.", e);
-            }
+            process.Start();
 
             double durationMicroseconds = 0;
             var lastErrorLines = new Queue<string>();
@@ -251,6 +250,46 @@ namespace osu.Game.Screens.Edit.MediaReencoding
             }
 
             progress?.Invoke(1);
+        }
+
+        /// <summary>
+        /// Reports a failed <see cref="RunAsync"/> to the user, pointing them to the ffmpeg download if it isn't installed.
+        /// </summary>
+        public static void NotifyFailure(Exception e, string filename, INotificationOverlay? notifications, OsuGame? game)
+        {
+            if (e is not Win32Exception)
+            {
+                Logger.Error(e, $"Failed to reencode {filename}.");
+                return;
+            }
+
+            notifications?.Post(new SimpleErrorNotification
+            {
+                Text = SlopEditorStrings.MediaReencoderFFmpegRequired(ffmpegInstallCommand),
+                Activated = () =>
+                {
+                    game?.OpenUrlExternally(@"https://ffmpeg.org/download.html");
+                    return true;
+                }
+            });
+        }
+
+        private static string ffmpegInstallCommand
+        {
+            get
+            {
+                switch (RuntimeInfo.OS)
+                {
+                    case RuntimeInfo.Platform.Windows:
+                        return @"winget install Gyan.FFmpeg";
+
+                    case RuntimeInfo.Platform.macOS:
+                        return @"brew install ffmpeg";
+
+                    default:
+                        return @"sudo apt install ffmpeg";
+                }
+            }
         }
 
         private static void tryDelete(string path)
