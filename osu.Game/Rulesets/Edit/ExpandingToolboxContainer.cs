@@ -107,9 +107,12 @@ namespace osu.Game.Rulesets.Edit
                 {
                     float currentPosition = ToLocalSpace(targetDrawable.ScreenSpaceDrawQuad.TopLeft).Y;
 
-                    if (!Precision.AlmostEquals(targetPosition, currentPosition))
+                    // a group growing while expanding is moved up as far as needed to keep it in view, rather than past the bottom.
+                    float wantedPosition = Math.Min(targetPosition, Math.Max(0, DrawHeight - targetDrawable.DrawHeight));
+
+                    if (!Precision.AlmostEquals(wantedPosition, currentPosition))
                     {
-                        double offset = currentPosition - targetPosition;
+                        double offset = currentPosition - wantedPosition;
 
                         double scrollTarget = Math.Clamp(Current + offset, 0, ScrollableExtent);
 
