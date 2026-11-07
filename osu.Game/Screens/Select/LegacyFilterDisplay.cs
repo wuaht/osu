@@ -53,7 +53,7 @@ namespace osu.Game.Screens.Select
 
         private OsuSpriteText queryText = null!;
         private OsuSpriteText statusText = null!;
-        private LegacyInfoCard infoCard = null!;
+        private readonly LegacyInfoCard infoCard;
         private LegacyWebButton webButton = null!;
 
         private readonly LegacyModeButtonLayer modeButtonLayer;
@@ -118,6 +118,11 @@ namespace osu.Game.Screens.Select
         /// </summary>
         public readonly LegacyPlayButton PlayButton;
 
+        /// <summary>
+        /// stable's info card in place of an empty leaderboard. Shown through a proxy below the mode menu, which opens over it.
+        /// </summary>
+        public Drawable InfoCard => infoCard;
+
         private readonly Sprite searchBackground;
 
         private const float search_background_y = 46;
@@ -131,6 +136,12 @@ namespace osu.Game.Screens.Select
             RelativeSizeAxes = Axes.Both;
 
             PlayButton = new LegacyPlayButton { Action = () => StartRequested?.Invoke() };
+
+            infoCard = new LegacyInfoCard
+            {
+                Position = info_card_position,
+                Action = updateBeatmap,
+            };
 
             // stable's colour alpha (102) also scales the sprite's alpha, which starts at the same 0.4.
             SearchBackground = searchBackground = new Sprite
@@ -258,11 +269,7 @@ namespace osu.Game.Screens.Select
                     Font = font(11, FontWeight.Bold),
                     Shadow = true,
                 },
-                infoCard = new LegacyInfoCard
-                {
-                    Position = info_card_position,
-                    Action = updateBeatmap,
-                },
+                infoCard,
                 tabs,
                 PlayButton,
                 // stable's mode button covers the tabs and the search line in skins like WhiteCat's, and is covered by the web button.

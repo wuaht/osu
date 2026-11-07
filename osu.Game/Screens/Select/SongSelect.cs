@@ -376,8 +376,6 @@ namespace osu.Game.Screens.Select
                         },
                     },
                 },
-                // stable draws its mode menu below the song select artwork.
-                legacyModeMenu.CreateProxy(),
                 // stable draws its search background below the song select artwork.
                 (legacyFilterDisplay = new LegacyFilterDisplay(FilterControl, detailsArea, legacyModeButtonLayer)
                 {
@@ -388,6 +386,10 @@ namespace osu.Game.Screens.Select
                         SelectAndRun(Beatmap.Value.BeatmapInfo, OnStart);
                     },
                 }).SearchBackground.CreateProxy(),
+                // the mode menu opens over the info card.
+                legacyFilterDisplay.InfoCard.CreateProxy(),
+                // stable draws its mode menu below the song select artwork.
+                legacyModeMenu.CreateProxy(),
                 // hides a legacy skin's stable artwork while its song select layout is turned off.
                 skinnableContentToggle = new Container
                 {
