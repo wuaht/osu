@@ -3,9 +3,12 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
+using osu.Framework;
 using osu.Framework.Allocation;
 using osu.Framework.Audio;
 using osu.Framework.Audio.Sample;
@@ -15,6 +18,7 @@ using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Input.Events;
+using osu.Framework.Logging;
 using osu.Framework.Screens;
 using osu.Game.Beatmaps;
 using osu.Game.Configuration;
@@ -26,6 +30,7 @@ using osu.Game.Input.Bindings;
 using osu.Game.Localisation;
 using osu.Game.Online.API;
 using osu.Game.Overlays;
+using osu.Game.Overlays.Notifications;
 using osu.Game.Screens.Edit;
 using osu.Game.Screens.Footer;
 using osu.Game.Users;
@@ -60,6 +65,9 @@ namespace osu.Game.Screens.Select
 
         [Resolved]
         private RealmAccess realm { get; set; } = null!;
+
+        [Resolved]
+        private INotificationOverlay? notifications { get; set; }
 
         private Sample? sampleConfirmSelection;
 
@@ -161,16 +169,128 @@ namespace osu.Game.Screens.Select
             this.Push(new NewBeatmapEditorLoader(audioTrack));
         }
 
-        IEnumerable<string> ICanAcceptFiles.HandledExtensions => SupportedExtensions.AUDIO_EXTENSIONS;
+        /// <summary>
+        /// Audio formats which can't be used as a beatmap's track directly, and are converted to ogg (like stable does) when dropped.
+        /// </summary>
+        private static readonly string[] convertible_audio_extensions = [@".flac", @".m4a", @".aac", @".opus"];
+
+        IEnumerable<string> ICanAcceptFiles.HandledExtensions => SupportedExtensions.AUDIO_EXTENSIONS.Concat(convertible_audio_extensions);
 
         Task ICanAcceptFiles.Import(params string[] paths)
         {
             string? audioPath = paths.FirstOrDefault(p => SupportedExtensions.AUDIO_EXTENSIONS.Contains(Path.GetExtension(p).ToLowerInvariant()));
 
             if (audioPath != null)
+            {
                 Schedule(() => createNewBeatmap(new FileInfo(audioPath)));
+                return Task.CompletedTask;
+            }
 
-            return Task.CompletedTask;
+            string? convertiblePath = paths.FirstOrDefault(p => convertible_audio_extensions.Contains(Path.GetExtension(p).ToLowerInvariant()));
+
+            return convertiblePath != null ? convertAndCreateNewBeatmap(convertiblePath) : Task.CompletedTask;
+        }
+
+        private async Task convertAndCreateNewBeatmap(string path)
+        {
+            var notification = new ProgressNotification
+            {
+                Text = SlopSongSelectStrings.ConvertingAudioFile,
+                State = ProgressNotificationState.Active,
+            };
+
+            notifications?.Post(notification);
+
+            // the converted file has to outlive this method, as it's only copied into the beatmap once the editor's setup screen is shown.
+            string outputDirectory = Path.Combine(Path.GetTempPath(), @"osu-audio-convert", Guid.NewGuid().ToString());
+            string outputPath = Path.Combine(outputDirectory, Path.ChangeExtension(Path.GetFileName(path), @".ogg"));
+
+            try
+            {
+                Directory.CreateDirectory(outputDirectory);
+                await convertToOgg(path, outputPath, notification.CancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (notification.CancellationToken.IsCancellationRequested)
+            {
+                return;
+            }
+            catch (System.ComponentModel.Win32Exception)
+            {
+                // ffmpeg couldn't be started, which means it isn't installed (or not on PATH).
+                notification.State = ProgressNotificationState.Cancelled;
+                notifications?.Post(new SimpleErrorNotification
+                {
+                    Text = SlopSongSelectStrings.FFmpegRequired(Path.GetExtension(path).ToLowerInvariant(), ffmpegInstallCommand),
+                    Activated = () =>
+                    {
+                        game?.OpenUrlExternally(@"https://ffmpeg.org/download.html");
+                        return true;
+                    }
+                });
+                return;
+            }
+            catch (Exception e)
+            {
+                Logger.Error(e, $"Failed to convert audio file {path}");
+                notification.State = ProgressNotificationState.Cancelled;
+                notifications?.Post(new SimpleErrorNotification { Text = SlopSongSelectStrings.AudioConversionFailed(e.Message) });
+                return;
+            }
+
+            notification.CompleteSilently();
+            Schedule(() => createNewBeatmap(new FileInfo(outputPath)));
+        }
+
+        private static string ffmpegInstallCommand
+        {
+            get
+            {
+                switch (RuntimeInfo.OS)
+                {
+                    case RuntimeInfo.Platform.Windows:
+                        return @"winget install Gyan.FFmpeg";
+
+                    case RuntimeInfo.Platform.macOS:
+                        return @"brew install ffmpeg";
+
+                    default:
+                        return @"sudo apt install ffmpeg";
+                }
+            }
+        }
+
+        /// <summary>
+        /// Converts an audio file to ogg vorbis using the ffmpeg installed on the system, with the same codec and bitrate as stable.
+        /// </summary>
+        /// <exception cref="System.ComponentModel.Win32Exception">ffmpeg isn't installed.</exception>
+        private static async Task convertToOgg(string inputPath, string outputPath, CancellationToken cancellationToken)
+        {
+            var startInfo = new ProcessStartInfo(@"ffmpeg")
+            {
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardError = true,
+            };
+
+            // only the first audio stream is kept, as files often contain cover art as a video stream. tags are kept for the beatmap's metadata.
+            foreach (string arg in new[] { @"-nostdin", @"-hide_banner", @"-loglevel", @"error", @"-y", @"-i", inputPath, @"-map", @"0:a:0", @"-c:a", @"libvorbis", @"-b:a", @"208k", outputPath })
+                startInfo.ArgumentList.Add(arg);
+
+            using var process = Process.Start(startInfo)!;
+
+            try
+            {
+                string error = await process.StandardError.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
+                await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+
+                if (process.ExitCode != 0)
+                    throw new InvalidOperationException(string.IsNullOrWhiteSpace(error) ? $"ffmpeg exited with code {process.ExitCode}" : error.Trim());
+            }
+            catch (OperationCanceledException)
+            {
+                process.Kill(true);
+                throw;
+            }
         }
 
         Task ICanAcceptFiles.Import(ImportTask[] tasks, ImportParameters parameters) => throw new NotImplementedException();

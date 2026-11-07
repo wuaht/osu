@@ -105,6 +105,22 @@ namespace osu.Game.Localisation
         /// </summary>
         public static LocalisableString DefaultModsCleared(string ruleset) => new TranslatableString(getKey(@"default_mods_cleared"), @"Cleared the default mods for {0}", ruleset);
 
+        /// <summary>
+        /// "Converting audio file..."
+        /// </summary>
+        public static LocalisableString ConvertingAudioFile => new TranslatableString(getKey(@"converting_audio_file"), @"Converting audio file...");
+
+        /// <summary>
+        /// "Error converting audio file: {0}"
+        /// </summary>
+        public static LocalisableString AudioConversionFailed(string error) => new TranslatableString(getKey(@"audio_conversion_failed"), @"Error converting audio file: {0}", error);
+
+        /// <summary>
+        /// "Converting {0} files requires ffmpeg. Install it by running "{1}" in a terminal, then restart the game. Click here to open the ffmpeg download page."
+        /// </summary>
+        public static LocalisableString FFmpegRequired(string extension, string installCommand) => new TranslatableString(getKey(@"ffmpeg_required"),
+            @"Converting {0} files requires ffmpeg. Install it by running ""{1}"" in a terminal, then restart the game. Click here to open the ffmpeg download page.", extension, installCommand);
+
         private static string getKey(string key) => $"{prefix}:{key}";
     }
 }
