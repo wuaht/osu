@@ -4,18 +4,23 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Extensions.ObjectExtensions;
 using osu.Framework.Graphics;
 using osu.Framework.Localisation;
 using osu.Framework.Logging;
+using osu.Framework.Platform;
 using osu.Game.Beatmaps;
 using osu.Game.Localisation;
 using osu.Game.Models;
+using osu.Game.Graphics.UserInterfaceV2;
 using osu.Game.Overlays;
+using osu.Game.Overlays.Notifications;
 using osu.Game.Screens.Backgrounds;
 using osu.Game.Screens.Edit.Components;
+using osu.Game.Screens.Edit.MediaReencoding;
 using osu.Game.Storyboards;
 using osu.Game.Utils;
 
@@ -45,6 +50,15 @@ namespace osu.Game.Screens.Edit.Setup
 
         [Resolved]
         private SetupScreen setupScreen { get; set; } = null!;
+
+        [Resolved]
+        private Storage storage { get; set; } = null!;
+
+        [Resolved]
+        private IDialogOverlay? dialogOverlay { get; set; }
+
+        [Resolved]
+        private INotificationOverlay? notifications { get; set; }
 
         private SetupScreenBackgroundPreview backgroundPreview = null!;
         private SetupScreenVideoPreview videoPreview = null!;
@@ -83,6 +97,12 @@ namespace osu.Game.Screens.Edit.Setup
                 {
                     Caption = EditorSetupStrings.AudioTrack,
                     PlaceholderText = EditorSetupStrings.ClickToSelectTrack,
+                },
+                new FormButton
+                {
+                    Caption = SlopEditorStrings.MediaReencoder,
+                    ButtonText = SlopEditorStrings.MediaReencoderButton,
+                    Action = () => dialogOverlay?.Push(new MediaReencoderDialog(currentWorkingBeatmap.Value.Storyboard.PrimaryVideo != null, reencodeMedia)),
                 },
                 new FormSampleSetChooser
                 {
@@ -215,6 +235,76 @@ namespace osu.Game.Screens.Edit.Setup
             music.ReloadCurrentTrack();
             setupScreen.MetadataChanged?.Invoke();
             return true;
+        }
+
+        private void reencodeMedia(MediaReencoderOptions options)
+        {
+            var set = currentWorkingBeatmap.Value.BeatmapSetInfo;
+            bool video = options.MediaType == MediaReencoderMediaType.Video;
+
+            string? filename = video ? currentWorkingBeatmap.Value.Storyboard.PrimaryVideo?.Path : currentWorkingBeatmap.Value.Metadata.AudioFile;
+            string? storagePath = string.IsNullOrEmpty(filename) ? null : set.GetPathForFile(filename);
+
+            if (filename == null || storagePath == null)
+            {
+                Logger.Log($"The beatmap has no {options.MediaType.ToString().ToLowerInvariant()} file to reencode.", level: LogLevel.Important);
+                return;
+            }
+
+            // only replace the file everywhere if every difficulty uses it, so differing per-difficulty files stay untouched.
+            bool applyToAllDifficulties = set.Beatmaps.All(b => video
+                ? beatmaps.GetWorkingBeatmap(b).Storyboard.PrimaryVideo?.Path == filename
+                : b.Metadata.AudioFile == filename);
+
+            string inputPath = storage.GetStorageForDirectory(@"files").GetFullPath(storagePath);
+            string tempDirectory = Directory.CreateTempSubdirectory(@"osu-reencode-").FullName;
+            string outputPath = Path.Combine(tempDirectory, Path.GetFileNameWithoutExtension(filename) + MediaReencoder.GetOutputExtension(options));
+
+            var notification = new ProgressNotification
+            {
+                Text = SlopEditorStrings.MediaReencoderProgress(filename),
+                CompletionText = SlopEditorStrings.MediaReencoderComplete(filename),
+                State = ProgressNotificationState.Active,
+            };
+            notifications?.Post(notification);
+
+            Task.Run(async () =>
+            {
+                try
+                {
+                    await MediaReencoder.RunAsync(options, inputPath, outputPath, p => notification.Progress = p, notification.CancellationToken).ConfigureAwait(false);
+                }
+                catch (Exception e)
+                {
+                    if (e is not OperationCanceledException)
+                        Logger.Error(e, $"Failed to reencode {filename}.");
+
+                    notification.State = ProgressNotificationState.Cancelled;
+                    Directory.Delete(tempDirectory, true);
+                    return;
+                }
+
+                // shortcut: only runs while the setup screen is shown and the editor is open, so switching screens delays applying the file
+                // and exiting the editor drops it (leaving it in the temporary directory). move into the editor if that turns out to matter.
+                Schedule(() =>
+                {
+                    var output = new FileInfo(outputPath);
+                    bool applied = video ? ChangeVideo(output, applyToAllDifficulties) : ChangeAudioTrack(output, applyToAllDifficulties);
+
+                    if (applied)
+                    {
+                        // refresh the choosers without re-triggering the change.
+                        var chooser = video ? videoChooser : audioTrackChooser;
+                        ref bool rollingBack = ref video ? ref rollingBackVideoChange : ref rollingBackAudioChange;
+                        rollingBack = true;
+                        chooser.Current.Value = new FileInfo(video ? currentWorkingBeatmap.Value.Storyboard.PrimaryVideo!.Path : currentWorkingBeatmap.Value.Metadata.AudioFile);
+                        rollingBack = false;
+                    }
+
+                    notification.State = applied ? ProgressNotificationState.Completed : ProgressNotificationState.Cancelled;
+                    Directory.Delete(tempDirectory, true);
+                });
+            });
         }
 
         private void changeResource(

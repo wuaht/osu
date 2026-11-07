@@ -540,6 +540,62 @@ How to time a song with a varying tempo:
 5. Open the timing point list and settings (the button on the right) to type in exact values or change the meter.
 6. Clean up with the broom button, which removes the timing points that continue the previous one unchanged.");
 
+        /// <summary>
+        /// "Media reencoder"
+        /// </summary>
+        public static LocalisableString MediaReencoder => new TranslatableString(getKey(@"media_reencoder"), @"Media reencoder");
+
+        /// <summary>
+        /// "Converts the video or audio track into an osu!-compatible format and replaces it. Requires ffmpeg on PATH."
+        /// </summary>
+        public static LocalisableString MediaReencoderBody => new TranslatableString(getKey(@"media_reencoder_body"),
+            @"Converts the video or audio track into an osu!-compatible format and replaces it. Requires ffmpeg on PATH.");
+
+        /// <summary>
+        /// "Reencode..."
+        /// </summary>
+        public static LocalisableString MediaReencoderButton => new TranslatableString(getKey(@"media_reencoder_button"), @"Reencode...");
+
+        /// <summary>
+        /// "Media type"
+        /// </summary>
+        public static LocalisableString MediaReencoderMediaType => new TranslatableString(getKey(@"media_reencoder_media_type"), @"Media type");
+
+        /// <summary>
+        /// "Encoder"
+        /// </summary>
+        public static LocalisableString MediaReencoderEncoder => new TranslatableString(getKey(@"media_reencoder_encoder"), @"Encoder");
+
+        /// <summary>
+        /// "Resize"
+        /// </summary>
+        public static LocalisableString MediaReencoderResize => new TranslatableString(getKey(@"media_reencoder_resize"), @"Resize");
+
+        /// <summary>
+        /// "Quality"
+        /// </summary>
+        public static LocalisableString MediaReencoderQuality => new TranslatableString(getKey(@"media_reencoder_quality"), @"Quality");
+
+        /// <summary>
+        /// "Lower is higher quality."
+        /// </summary>
+        public static LocalisableString MediaReencoderQualityHint => new TranslatableString(getKey(@"media_reencoder_quality_hint"), @"Lower is higher quality.");
+
+        /// <summary>
+        /// "Convert"
+        /// </summary>
+        public static LocalisableString MediaReencoderConvert => new TranslatableString(getKey(@"media_reencoder_convert"), @"Convert");
+
+        /// <summary>
+        /// "Reencoding {0}..."
+        /// </summary>
+        public static LocalisableString MediaReencoderProgress(string filename) => new TranslatableString(getKey(@"media_reencoder_progress"), @"Reencoding {0}...", filename);
+
+        /// <summary>
+        /// "Reencoded {0}."
+        /// </summary>
+        public static LocalisableString MediaReencoderComplete(string filename) => new TranslatableString(getKey(@"media_reencoder_complete"), @"Reencoded {0}.", filename);
+
         private static string getKey(string key) => $"{prefix}:{key}";
     }
 }
