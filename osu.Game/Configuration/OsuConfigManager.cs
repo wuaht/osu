@@ -490,6 +490,10 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopDiscordEmojiUsage, string.Empty);
             SetDefault(OsuSetting.SlopWebSession, string.Empty);
             SetDefault(OsuSetting.SlopWebsiteLogin, false);
+            SetDefault(OsuSetting.SlopPatternGalleryScaleToTiming, true);
+            SetDefault(OsuSetting.SlopPatternGallerySnapToDivisor, false);
+            SetDefault(OsuSetting.SlopPatternGalleryPreserveSliderVelocity, true);
+            SetDefault(OsuSetting.SlopPatternGalleryCurrentModeOnly, true);
         }
 
         protected override bool CheckLookupContainsPrivateInformation(OsuSetting lookup)
@@ -1828,5 +1832,9 @@ namespace osu.Game.Configuration
         /// Whether logging into the game also signs into the website, for online features which are only available there, such as posting in beatmap discussions.
         /// </summary>
         SlopWebsiteLogin,
+        SlopPatternGalleryScaleToTiming,
+        SlopPatternGallerySnapToDivisor,
+        SlopPatternGalleryPreserveSliderVelocity,
+        SlopPatternGalleryCurrentModeOnly,
     }
 }

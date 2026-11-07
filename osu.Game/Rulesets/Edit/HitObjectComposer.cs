@@ -34,6 +34,7 @@ using osu.Game.Screens.Edit.Components.RadioButtons;
 using osu.Game.Screens.Edit.Components.TernaryButtons;
 using osu.Game.Screens.Edit.Compose;
 using osu.Game.Screens.Edit.Compose.Components;
+using osu.Game.Screens.Edit.PatternGallery;
 using osuTK;
 
 namespace osu.Game.Rulesets.Edit
@@ -336,6 +337,9 @@ namespace osu.Game.Rulesets.Edit
             base.LoadComplete();
 
             InputManager = GetContainingInputManager()!;
+
+            // last, below the groups of the ruleset composers.
+            RightToolbox.Add(new PatternGalleryToolboxGroup());
 
             hasTiming = EditorBeatmap.HasTiming.GetBoundCopy();
             hasTiming.BindValueChanged(timing =>

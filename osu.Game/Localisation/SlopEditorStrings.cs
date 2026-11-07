@@ -602,6 +602,146 @@ How to time a song with a varying tempo:
         public static LocalisableString MediaReencoderFFmpegRequired(string installCommand) => new TranslatableString(getKey(@"media_reencoder_ffmpeg_required"),
             @"Reencoding requires ffmpeg. Install it by running ""{0}"" in a terminal, then restart the game. Click here to open the ffmpeg download page.", installCommand);
 
+        /// <summary>
+        /// "Pattern gallery"
+        /// </summary>
+        public static LocalisableString PatternGallery => new TranslatableString(getKey(@"pattern_gallery"), @"Pattern gallery");
+
+        /// <summary>
+        /// "Save selection as pattern"
+        /// </summary>
+        public static LocalisableString SavePattern => new TranslatableString(getKey(@"save_pattern"), @"Save selection as pattern");
+
+        /// <summary>
+        /// "Insert most recent pattern"
+        /// </summary>
+        public static LocalisableString InsertRecentPattern => new TranslatableString(getKey(@"insert_recent_pattern"), @"Insert most recent pattern");
+
+        /// <summary>
+        /// "Pattern name"
+        /// </summary>
+        public static LocalisableString PatternName => new TranslatableString(getKey(@"pattern_name"), @"Pattern name");
+
+        /// <summary>
+        /// "Search (e.g. jump c&gt;3 b&lt;=4)"
+        /// </summary>
+        public static LocalisableString PatternSearch => new TranslatableString(getKey(@"pattern_search"), @"Search (e.g. jump c>3 b<=4)");
+
+        /// <summary>
+        /// "Save selection"
+        /// </summary>
+        public static LocalisableString PatternSaveSelection => new TranslatableString(getKey(@"pattern_save_selection"), @"Save selection");
+
+        /// <summary>
+        /// "Mode"
+        /// </summary>
+        public static LocalisableString PatternModeToggle => new TranslatableString(getKey(@"pattern_mode_toggle"), @"Mode");
+
+        /// <summary>
+        /// "Scale"
+        /// </summary>
+        public static LocalisableString PatternScaleToggle => new TranslatableString(getKey(@"pattern_scale_toggle"), @"Scale");
+
+        /// <summary>
+        /// "Snap"
+        /// </summary>
+        public static LocalisableString PatternSnapToggle => new TranslatableString(getKey(@"pattern_snap_toggle"), @"Snap");
+
+        /// <summary>
+        /// "SV"
+        /// </summary>
+        public static LocalisableString PatternSliderVelocityToggle => new TranslatableString(getKey(@"pattern_sv_toggle"), @"SV");
+
+        /// <summary>
+        /// "Show only patterns of the current mode."
+        /// </summary>
+        public static LocalisableString PatternCurrentModeOnly => new TranslatableString(getKey(@"pattern_current_mode_only"), @"Show only patterns of the current mode.");
+
+        /// <summary>
+        /// "Rescale the pattern to the BPM it is inserted at."
+        /// </summary>
+        public static LocalisableString PatternScaleToTiming => new TranslatableString(getKey(@"pattern_scale_to_timing"), @"Rescale the pattern to the BPM it is inserted at.");
+
+        /// <summary>
+        /// "Snap inserted objects to the current beat divisor."
+        /// </summary>
+        public static LocalisableString PatternSnapToDivisor => new TranslatableString(getKey(@"pattern_snap_to_divisor"), @"Snap inserted objects to the current beat divisor.");
+
+        /// <summary>
+        /// "Keep the slider lengths the pattern was saved with."
+        /// </summary>
+        public static LocalisableString PatternPreserveSliderVelocity => new TranslatableString(getKey(@"pattern_preserve_slider_velocity"), @"Keep the slider lengths the pattern was saved with.");
+
+        /// <summary>
+        /// "import from Mapping Tools"
+        /// </summary>
+        public static LocalisableString PatternImportMappingTools => new TranslatableString(getKey(@"pattern_import_mapping_tools"), @"import from Mapping Tools");
+
+        /// <summary>
+        /// "Insert"
+        /// </summary>
+        public static LocalisableString PatternInsert => new TranslatableString(getKey(@"pattern_insert"), @"Insert");
+
+        /// <summary>
+        /// "Double-click to insert at the current time"
+        /// </summary>
+        public static LocalisableString PatternInsertTooltip => new TranslatableString(getKey(@"pattern_insert_tooltip"), @"Double-click to insert at the current time");
+
+        /// <summary>
+        /// "Overwrite"
+        /// </summary>
+        public static LocalisableString PatternOverwrite => new TranslatableString(getKey(@"pattern_overwrite"), @"Overwrite");
+
+        /// <summary>
+        /// "Delete"
+        /// </summary>
+        public static LocalisableString PatternDelete => new TranslatableString(getKey(@"pattern_delete"), @"Delete");
+
+        /// <summary>
+        /// "undo"
+        /// </summary>
+        public static LocalisableString PatternUndo => new TranslatableString(getKey(@"pattern_undo"), @"undo");
+
+        /// <summary>
+        /// "Select some objects to save them as a pattern."
+        /// </summary>
+        public static LocalisableString PatternNothingSelected => new TranslatableString(getKey(@"pattern_nothing_selected"), @"Select some objects to save them as a pattern.");
+
+        /// <summary>
+        /// "Patterns can only be saved in the four built-in modes."
+        /// </summary>
+        public static LocalisableString PatternUnsupportedRuleset => new TranslatableString(getKey(@"pattern_unsupported_ruleset"), @"Patterns can only be saved in the four built-in modes.");
+
+        /// <summary>
+        /// "This pattern could not be inserted into this mode."
+        /// </summary>
+        public static LocalisableString PatternOpenFailed => new TranslatableString(getKey(@"pattern_open_failed"), @"This pattern could not be inserted into this mode.");
+
+        /// <summary>
+        /// "No patterns yet. Select objects and save them."
+        /// </summary>
+        public static LocalisableString PatternEmpty => new TranslatableString(getKey(@"pattern_empty"), @"No patterns yet. Select objects and save them.");
+
+        /// <summary>
+        /// "{0} of {1} patterns"
+        /// </summary>
+        public static LocalisableString PatternCount(int shown, int total) => new TranslatableString(getKey(@"pattern_count"), @"{0} of {1} patterns", shown, total);
+
+        /// <summary>
+        /// "Imported {0} patterns."
+        /// </summary>
+        public static LocalisableString PatternsImported(int count) => new TranslatableString(getKey(@"patterns_imported"), @"Imported {0} patterns.", count);
+
+        /// <summary>
+        /// "Deleted “{0}”."
+        /// </summary>
+        public static LocalisableString PatternDeleted(string name) => new TranslatableString(getKey(@"pattern_deleted"), @"Deleted “{0}”.", name);
+
+        /// <summary>
+        /// "{0} beats at {1} bpm · cs {2} · used {3}x"
+        /// </summary>
+        public static LocalisableString PatternUsage(string beats, string bpm, string circleSize, int uses) => new TranslatableString(getKey(@"pattern_usage"), @"{0} beats at {1} bpm · cs {2} · used {3}x", beats, bpm, circleSize, uses);
+
         private static string getKey(string key) => $"{prefix}:{key}";
     }
 }

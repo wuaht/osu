@@ -236,6 +236,9 @@ namespace osu.Game.Input.Bindings
             // non-precise scroll arrives as horizontal scroll while shift is held, with scrolling up arriving as positive x.
             new KeyBinding(new[] { InputKey.Control, InputKey.Shift, InputKey.MouseWheelRight }, GlobalAction.EditorTimelineZoomIn),
             new KeyBinding(new[] { InputKey.Control, InputKey.Shift, InputKey.MouseWheelLeft }, GlobalAction.EditorTimelineZoomOut),
+            new KeyBinding(InputKey.None, GlobalAction.EditorPatternGalleryToggle),
+            new KeyBinding(InputKey.None, GlobalAction.EditorPatternGallerySave),
+            new KeyBinding(InputKey.None, GlobalAction.EditorPatternGalleryInsertRecent),
         }.Concat(editorUndoRedoKeyBindings);
 
         /// <summary>
@@ -800,6 +803,15 @@ namespace osu.Game.Input.Bindings
 
         [LocalisableDescription(typeof(SlopEditorStrings), nameof(SlopEditorStrings.TimelineZoomOut))]
         EditorTimelineZoomOut,
+
+        [LocalisableDescription(typeof(SlopEditorStrings), nameof(SlopEditorStrings.PatternGallery))]
+        EditorPatternGalleryToggle,
+
+        [LocalisableDescription(typeof(SlopEditorStrings), nameof(SlopEditorStrings.SavePattern))]
+        EditorPatternGallerySave,
+
+        [LocalisableDescription(typeof(SlopEditorStrings), nameof(SlopEditorStrings.InsertRecentPattern))]
+        EditorPatternGalleryInsertRecent,
     }
 
     public enum GlobalActionCategory
