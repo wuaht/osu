@@ -35,10 +35,16 @@ namespace osu.Game.Screens.Select
 {
     public sealed partial class FilterControl : OverlayContainer
     {
-        // taken from draw visualiser. used for carousel alignment purposes.
-        public const float HEIGHT_FROM_SCREEN_TOP = 141 - corner_radius;
+        // the toolbar and the filter rows without spacing (taken from draw visualiser), plus the spacing. used for carousel alignment purposes.
+        public const float HEIGHT_FROM_SCREEN_TOP = 126 + toolbar_gap + content_padding;
 
         private const float corner_radius = 10;
+
+        // keeps the background of the filter control from touching the toolbar.
+        private const float toolbar_gap = 4;
+
+        // keeps the search box in the corner of the background, like the rows below it.
+        private const float content_padding = 2;
 
         public IBindable<BeatmapSetInfo?> ScopedBeatmapSet { get; } = new Bindable<BeatmapSetInfo?>();
 
@@ -118,7 +124,7 @@ namespace osu.Game.Screens.Select
             AutoSizeAxes = Axes.Y;
 
             Shear = OsuGame.SHEAR;
-            Margin = new MarginPadding { Top = -corner_radius, Right = -40 };
+            Margin = new MarginPadding { Top = toolbar_gap, Right = -40 };
 
             InternalChildren = new Drawable[]
             {
@@ -139,7 +145,7 @@ namespace osu.Game.Screens.Select
                     AutoSizeAxes = Axes.Y,
                     AlwaysPresent = true,
                     Direction = FillDirection.Vertical,
-                    Padding = new MarginPadding { Top = corner_radius + 5, Bottom = 2, Right = 40f, Left = 2f },
+                    Padding = new MarginPadding { Top = content_padding, Bottom = 2, Right = 40f, Left = 2f },
                     Children = new Drawable[]
                     {
                         new ReverseChildIDFillFlowContainer<Drawable>
