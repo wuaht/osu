@@ -88,7 +88,12 @@ namespace osu.Game.Online.Omdb
                 if (beatmaps.TryGetValue(beatmapId, out var existing) && !existing.IsFaulted && !existing.IsCanceled)
                     return existing;
 
-                return beatmaps[beatmapId] = fetchBeatmapAsync(beatmapId);
+                var task = fetchBeatmapAsync(beatmapId);
+
+                // failures are expected (e.g. unknown beatmaps) and the cached task can outlive every caller, so observe it here once instead of relying on each caller reading the exception.
+                task.ContinueWith(t => _ = t.Exception, TaskContinuationOptions.OnlyOnFaulted);
+
+                return beatmaps[beatmapId] = task;
             }
         }
 
