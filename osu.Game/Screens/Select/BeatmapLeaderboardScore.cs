@@ -110,6 +110,7 @@ namespace osu.Game.Screens.Select
         private Container rightContent = null!;
 
         private FillFlowContainer<Drawable> modsContainer = null!;
+        private FillFlowContainer detailsRow = null!;
 
         private Box totalScoreBackground = null!;
 
@@ -446,57 +447,7 @@ namespace osu.Game.Screens.Select
                                                 RelativeSizeAxes = Axes.Both,
                                                 Colour = ColourInfo.GradientHorizontal(backgroundColour.Opacity(0), OsuColour.ForRank(Score.Rank).Opacity(0.5f)),
                                             },
-                                            new FillFlowContainer
-                                            {
-                                                AutoSizeAxes = Axes.Both,
-                                                Anchor = Anchor.CentreRight,
-                                                Origin = Anchor.CentreRight,
-                                                Direction = FillDirection.Vertical,
-                                                Padding = new MarginPadding { Horizontal = corner_radius },
-                                                Spacing = new Vector2(0f, -2f),
-                                                Children = new Drawable[]
-                                                {
-                                                    new OsuSpriteText
-                                                    {
-                                                        Anchor = Anchor.TopRight,
-                                                        Origin = Anchor.TopRight,
-                                                        UseFullGlyphHeight = false,
-                                                        Current = scoreManager.GetBindableTotalScoreString(Score),
-                                                        Spacing = new Vector2(-1.5f),
-                                                        Font = OsuFont.Style.Subtitle.With(weight: FontWeight.Light, fixedWidth: true),
-                                                        Shear = sheared ? -OsuGame.SHEAR : Vector2.Zero,
-                                                    },
-                                                    new FillFlowContainer
-                                                    {
-                                                        Anchor = Anchor.TopRight,
-                                                        Origin = Anchor.TopRight,
-                                                        AutoSizeAxes = Axes.Both,
-                                                        Direction = FillDirection.Horizontal,
-                                                        Spacing = new Vector2(4, 0),
-                                                        Children = new Drawable[]
-                                                        {
-                                                            modsContainer = new FillFlowContainer<Drawable>
-                                                            {
-                                                                Anchor = Anchor.CentreRight,
-                                                                Origin = Anchor.CentreRight,
-                                                                AutoSizeAxes = Axes.Both,
-                                                                Direction = FillDirection.Horizontal,
-                                                                Spacing = new Vector2(-10, 0),
-                                                                Shear = sheared ? -OsuGame.SHEAR : Vector2.Zero,
-                                                            },
-                                                            legacyStatisticsText = new OsuSpriteText
-                                                            {
-                                                                Anchor = Anchor.CentreRight,
-                                                                Origin = Anchor.CentreRight,
-                                                                Font = OsuFont.Style.Caption2.With(weight: FontWeight.SemiBold),
-                                                                Colour = colourProvider.Content2,
-                                                                UseFullGlyphHeight = false,
-                                                                Alpha = LegacyStyle ? 1 : 0,
-                                                            },
-                                                        }
-                                                    },
-                                                }
-                                            }
+                                            createScoreLayout(),
                                         }
                                     }
                                 }
@@ -506,6 +457,81 @@ namespace osu.Game.Screens.Select
                 }
             };
             innerAvatar.OnLoadComplete += d => d.FadeInFromZero(200);
+        }
+
+        private Drawable createScoreLayout()
+        {
+            var scoreText = new OsuSpriteText
+            {
+                Anchor = Anchor.TopRight,
+                Origin = Anchor.TopRight,
+                UseFullGlyphHeight = false,
+                Current = scoreManager.GetBindableTotalScoreString(Score),
+                Spacing = new Vector2(-1.5f),
+                Font = OsuFont.Style.Subtitle.With(weight: FontWeight.Light, fixedWidth: true),
+                Shear = sheared ? -OsuGame.SHEAR : Vector2.Zero,
+            };
+
+            detailsRow = new FillFlowContainer
+            {
+                Anchor = LegacyStyle ? Anchor.CentreRight : Anchor.TopRight,
+                Origin = LegacyStyle ? Anchor.CentreRight : Anchor.TopRight,
+                AutoSizeAxes = Axes.Both,
+                Direction = FillDirection.Horizontal,
+                Spacing = new Vector2(4, 0),
+                Children = new Drawable[]
+                {
+                    modsContainer = new FillFlowContainer<Drawable>
+                    {
+                        Anchor = Anchor.CentreRight,
+                        Origin = Anchor.CentreRight,
+                        AutoSizeAxes = Axes.Both,
+                        Direction = FillDirection.Horizontal,
+                        Spacing = new Vector2(-10, 0),
+                        Shear = sheared ? -OsuGame.SHEAR : Vector2.Zero,
+                    },
+                    legacyStatisticsText = new OsuSpriteText
+                    {
+                        Anchor = Anchor.CentreRight,
+                        Origin = Anchor.CentreRight,
+                        Font = OsuFont.Style.Caption2.With(weight: FontWeight.SemiBold),
+                        Colour = colourProvider.Content2,
+                        UseFullGlyphHeight = false,
+                        Alpha = LegacyStyle ? 1 : 0,
+                    },
+                }
+            };
+
+            if (!LegacyStyle)
+            {
+                return new FillFlowContainer
+                {
+                    AutoSizeAxes = Axes.Both,
+                    Anchor = Anchor.CentreRight,
+                    Origin = Anchor.CentreRight,
+                    Direction = FillDirection.Vertical,
+                    Padding = new MarginPadding { Horizontal = corner_radius },
+                    Spacing = new Vector2(0f, -2f),
+                    Children = new Drawable[] { scoreText, detailsRow }
+                };
+            }
+
+            // the score's box hugs its digits, so the details row is centred between the visible bottom of the score and the bottom of the card.
+            return new GridContainer
+            {
+                RelativeSizeAxes = Axes.Both,
+                Padding = new MarginPadding { Horizontal = corner_radius, Top = 5 },
+                RowDimensions = new[]
+                {
+                    new Dimension(GridSizeMode.AutoSize),
+                    new Dimension(),
+                },
+                Content = new[]
+                {
+                    new Drawable[] { scoreText },
+                    new Drawable[] { detailsRow },
+                }
+            };
         }
 
         private ColourInfo getHighlightColour(HighlightType? highlightType, float lightenAmount = 0)
@@ -563,6 +589,10 @@ namespace osu.Game.Screens.Select
                 modsContainer.Padding = new MarginPadding { Top = 4f };
                 // the text is centred on the box, but the drawn mod icon sits lower than its box, so shift it down to match.
                 legacyStatisticsText.Margin = new MarginPadding { Top = 6f };
+
+                // the offsets above only push the visible row down, which would leave it below the centre of the space under the score.
+                if (LegacyStyle)
+                    detailsRow.Padding = new MarginPadding { Bottom = 6f };
                 modsContainer.ChildrenEnumerable = Score.Mods.AsOrdered().Select(mod => new ModIcon(mod)
                 {
                     Scale = new Vector2(0.3f),
