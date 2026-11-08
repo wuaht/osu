@@ -138,7 +138,7 @@ namespace osu.Game.Graphics.UserInterfaceV2
                                 LabelContainer = new Container
                                 {
                                     Depth = float.MaxValue,
-                                    Masking = true,
+                                    // not masked: a nested mask replaces the rounded mask of the header (outer masks only clip to their bounding box), which squares off the left corners.
                                     AutoSizeAxes = Axes.Both,
                                     Children = new Drawable[]
                                     {
