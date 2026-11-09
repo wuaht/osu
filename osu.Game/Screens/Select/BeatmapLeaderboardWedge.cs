@@ -146,7 +146,8 @@ namespace osu.Game.Screens.Select
                             Width = LegacyStyle ? legacy_score_width : 1,
                             AutoSizeAxes = Axes.Y,
                             Padding = LegacyStyle
-                                ? new MarginPadding { Top = scores_scroll_top_padding, Left = legacy_left_padding }
+                                // the bottom padding lets the last score be scrolled clear of the bottom bar.
+                                ? new MarginPadding { Top = scores_scroll_top_padding, Left = legacy_left_padding, Bottom = BeatmapLeaderboardScore.HEIGHT * 3 }
                                 : new MarginPadding
                                 {
                                     Top = scores_scroll_top_padding,

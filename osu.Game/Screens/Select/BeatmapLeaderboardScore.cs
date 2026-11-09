@@ -111,6 +111,9 @@ namespace osu.Game.Screens.Select
 
         private FillFlowContainer<Drawable> modsContainer = null!;
         private FillFlowContainer detailsRow = null!;
+        private GridContainer? legacyScoreLayout;
+
+        private const float default_mod_spacing = -10;
 
         private Box totalScoreBackground = null!;
 
@@ -487,7 +490,7 @@ namespace osu.Game.Screens.Select
                         Origin = Anchor.CentreRight,
                         AutoSizeAxes = Axes.Both,
                         Direction = FillDirection.Horizontal,
-                        Spacing = new Vector2(-10, 0),
+                        Spacing = new Vector2(default_mod_spacing, 0),
                         Shear = sheared ? -OsuGame.SHEAR : Vector2.Zero,
                     },
                     legacyStatisticsText = new OsuSpriteText
@@ -517,7 +520,7 @@ namespace osu.Game.Screens.Select
             }
 
             // the score's box hugs its digits, so the details row is centred between the visible bottom of the score and the bottom of the card.
-            return new GridContainer
+            return legacyScoreLayout = new GridContainer
             {
                 RelativeSizeAxes = Axes.Both,
                 Padding = new MarginPadding { Horizontal = corner_radius, Top = 5 },
@@ -593,7 +596,7 @@ namespace osu.Game.Screens.Select
                 // the offsets above only push the visible row down, which would leave it below the centre of the space under the score.
                 if (LegacyStyle)
                     detailsRow.Padding = new MarginPadding { Bottom = 6f };
-                modsContainer.ChildrenEnumerable = Score.Mods.AsOrdered().Select(mod => new ModIcon(mod)
+                modsContainer.ChildrenEnumerable = Score.Mods.AsOrdered().Select(mod => new PoppingModIcon(mod)
                 {
                     Scale = new Vector2(0.3f),
                     // trim mod icon height down to its true height for alignment purposes.
@@ -651,6 +654,27 @@ namespace osu.Game.Screens.Select
                 Left = rankLabelStandalone.DrawWidth,
                 Right = rightContent.DrawWidth,
             };
+
+            if (legacyScoreLayout != null)
+                fitLegacyMods(legacyScoreLayout.ChildSize.X);
+        }
+
+        /// <summary>
+        /// Overlaps the mod icons further when they would not fit, so accuracy and combo beside them are never cut off.
+        /// </summary>
+        private void fitLegacyMods(float availableWidth)
+        {
+            int count = modsContainer.Count;
+
+            if (count < 2)
+                return;
+
+            float iconsWidth = modsContainer.Sum(d => d.DrawWidth * d.Scale.X);
+            float modsWidth = availableWidth - legacyStatisticsText.DrawWidth - detailsRow.Spacing.X;
+            float spacing = Math.Min(default_mod_spacing, (modsWidth - iconsWidth) / (count - 1));
+
+            if (spacing != modsContainer.Spacing.X)
+                modsContainer.Spacing = new Vector2(spacing, 0);
         }
 
         private void updateDisplayMode(DisplayMode mode)
@@ -829,6 +853,29 @@ namespace osu.Game.Screens.Select
         {
             Own,
             Friend,
+        }
+
+        /// <summary>
+        /// A mod icon that jumps up while hovered, so it stands out from the icons overlapping it.
+        /// </summary>
+        private partial class PoppingModIcon : ModIcon
+        {
+            public PoppingModIcon(IMod mod)
+                : base(mod)
+            {
+            }
+
+            protected override bool OnHover(HoverEvent e)
+            {
+                this.MoveToY(-8, 300, Easing.OutBack);
+                return base.OnHover(e);
+            }
+
+            protected override void OnHoverLost(HoverLostEvent e)
+            {
+                this.MoveToY(0, 300, Easing.OutQuint);
+                base.OnHoverLost(e);
+            }
         }
     }
 }
