@@ -17,7 +17,6 @@ namespace osu.Game.Online.API.Requests
 {
     public class GetScoresRequest : APIRequest<APIScoresCollection>, IEquatable<GetScoresRequest>
     {
-        public const int DEFAULT_SCORES_PER_REQUEST = 50;
         public const int MAX_SCORES_PER_REQUEST = 100;
 
         public int ScoresRequested { get; }
@@ -40,7 +39,7 @@ namespace osu.Game.Online.API.Requests
             this.ruleset = ruleset ?? throw new ArgumentNullException(nameof(ruleset));
             this.mods = mods ?? Array.Empty<IMod>();
 
-            ScoresRequested = this.scope.RequiresSupporter(this.mods.Any()) ? MAX_SCORES_PER_REQUEST : DEFAULT_SCORES_PER_REQUEST;
+            ScoresRequested = MAX_SCORES_PER_REQUEST;
         }
 
         protected override string Target => $@"beatmaps/{beatmapInfo.OnlineID}/scores";

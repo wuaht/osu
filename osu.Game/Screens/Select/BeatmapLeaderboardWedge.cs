@@ -95,8 +95,7 @@ namespace osu.Game.Screens.Select
 
         private const float scores_scroll_top_padding = 5f;
 
-        // stable shows nine rows of a 240 wide score panel, spaced 33 apart (in its 640x480 space).
-        private const int legacy_max_scores = 9;
+        // stable uses a 240 wide score panel, spaced 33 apart (in its 640x480 space).
         private const float legacy_score_width = 240 * LegacySongSelectComponent.STABLE_SCALE;
         private const float legacy_left_padding = 10;
         private const float legacy_score_spacing = 33 * LegacySongSelectComponent.STABLE_SCALE - BeatmapLeaderboardScore.HEIGHT;
@@ -334,13 +333,9 @@ namespace osu.Game.Screens.Select
 
             if (LegacyStyle)
             {
-                // like stable, only nine scores are shown, and a personal best below them takes the last row.
-                bool userScoreInTop = userScore != null && displayedScores.Take(legacy_max_scores).Any(e => e.score.OnlineID == userScore.OnlineID);
-
-                if (userScore == null || userScoreInTop)
-                    displayedScores = displayedScores.Take(legacy_max_scores).ToList();
-                else
-                    displayedScores = displayedScores.Take(legacy_max_scores - 1).Append((userScore, userScore.Position)).ToList();
+                // every fetched score is listed (scrollable); a personal best outside them is appended as the last row.
+                if (userScore != null && displayedScores.All(e => e.score.OnlineID != userScore.OnlineID))
+                    displayedScores.Add((userScore, userScore.Position));
             }
 
             LoadComponentsAsync(displayedScores.Select(e =>
