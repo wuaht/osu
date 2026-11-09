@@ -68,6 +68,12 @@ namespace osu.Game.Screens.Edit
             AddInternal(underlyingClock);
 
             track.BindValueChanged(_ => TrackChanged?.Invoke());
+
+            LoopPlayback.BindValueChanged(_ =>
+            {
+                if (adjustmentsBound)
+                    updateTrackLooping();
+            });
         }
 
         /// <summary>
@@ -235,9 +241,39 @@ namespace osu.Game.Screens.Edit
             transformSeekTo(seekDestination, transform_time, Easing.OutQuint);
         }
 
-        public void BindAdjustments() => track.Value?.BindAdjustments(AudioAdjustments);
+        private bool adjustmentsBound;
 
-        public void UnbindAdjustments() => track.Value?.UnbindAdjustments(AudioAdjustments);
+        public void BindAdjustments()
+        {
+            track.Value?.BindAdjustments(AudioAdjustments);
+            adjustmentsBound = true;
+            updateTrackLooping();
+        }
+
+        public void UnbindAdjustments()
+        {
+            track.Value?.UnbindAdjustments(AudioAdjustments);
+            adjustmentsBound = false;
+            updateTrackLooping();
+        }
+
+        /// <summary>
+        /// Lets the track loop natively while the editor owns it.
+        /// Restarting a completed track instead races against its end callback, which can mark it completed again and block it from starting.
+        /// </summary>
+        private void updateTrackLooping()
+        {
+            if (track.Value == null)
+                return;
+
+            bool loop = adjustmentsBound && LoopPlayback.Value;
+
+            track.Value.Looping = loop;
+
+            // song select leaves the restart point at the preview time.
+            if (loop)
+                track.Value.RestartPoint = 0;
+        }
 
         public void ResetSpeedAdjustments()
         {
@@ -288,11 +324,10 @@ namespace osu.Game.Screens.Edit
 
             playbackFinished = CurrentTime >= TrackLength;
 
+            // the track loops by itself (see updateTrackLooping()); this only catches offsets pushing the clock past the end first.
             if (playbackFinished && IsRunning && LoopPlayback.Value)
             {
                 underlyingClock.Seek(0);
-                // the track stops itself on completion, so seeking alone doesn't resume playback.
-                underlyingClock.Start();
                 playbackFinished = false;
             }
 
