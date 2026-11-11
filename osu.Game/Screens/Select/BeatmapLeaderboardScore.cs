@@ -89,6 +89,11 @@ namespace osu.Game.Screens.Select
         private const float statistics_compact_min_width = 90;
         private const float rank_label_width = 40;
 
+        /// <summary>
+        /// Width of the highlight strip kept visible in <see cref="LegacyStyle"/>, whose rows are too narrow for the rank label.
+        /// </summary>
+        private const float legacy_highlight_width = 6;
+
         private const int corner_radius = 10;
         private const int transition_duration = 200;
 
@@ -194,6 +199,7 @@ namespace osu.Game.Screens.Select
                             new RankLabel(Rank, sheared, darkText: Highlight == HighlightType.Own)
                             {
                                 RelativeSizeAxes = Axes.Both,
+                                Alpha = LegacyStyle ? 0 : 1,
                             }
                         },
                     },
@@ -331,6 +337,8 @@ namespace osu.Game.Screens.Select
                                                         Shear = sheared ? -OsuGame.SHEAR : Vector2.Zero,
                                                         Text = Score.User.Username,
                                                         Font = OsuFont.Style.Heading2,
+                                                        // like the gameplay leaderboard, friends' names are pink.
+                                                        Colour = LegacyStyle && Highlight == HighlightType.Friend ? colours.Pink1 : Colour4.White,
                                                     },
                                                 }
                                             },
@@ -682,6 +690,8 @@ namespace osu.Game.Screens.Select
             double duration = currentMode == null ? 0 : transition_duration;
             if (mode >= DisplayMode.Full)
                 rankLabelStandalone.FadeIn(duration, Easing.OutQuint).ResizeWidthTo(rank_label_width, duration, Easing.OutQuint);
+            else if (LegacyStyle && Highlight != null)
+                rankLabelStandalone.FadeIn(duration, Easing.OutQuint).ResizeWidthTo(legacy_highlight_width, duration, Easing.OutQuint);
             else
                 rankLabelStandalone.FadeOut(duration, Easing.OutQuint).ResizeWidthTo(0, duration, Easing.OutQuint);
 

@@ -346,7 +346,8 @@ namespace osu.Game.Screens.Select
 
                 if (s.OnlineID == userScore?.OnlineID)
                     highlightType = BeatmapLeaderboardScore.HighlightType.Own;
-                else if (api.LocalUserState.Friends.Any(r => r.TargetID == s.UserID) && Scope.Value != BeatmapLeaderboardScope.Friend)
+                // the legacy leaderboard only marks mutual friends.
+                else if (api.LocalUserState.Friends.Any(r => r.TargetID == s.UserID && (!LegacyStyle || r.Mutual)) && Scope.Value != BeatmapLeaderboardScope.Friend)
                     highlightType = BeatmapLeaderboardScore.HighlightType.Friend;
 
                 return new BeatmapLeaderboardScore(s, sheared: !LegacyStyle)
