@@ -8,8 +8,10 @@ using osu.Framework.Extensions.ObjectExtensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Input.Events;
+using osu.Game.Extensions;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Online;
+using osu.Game.Online.API;
 using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Overlays.Profile.Header.Components;
 using osu.Game.Resources.Localisation.Web;
@@ -55,6 +57,12 @@ namespace osu.Game.Users
         [Resolved]
         private IBindable<RulesetInfo> ruleset { get; set; } = null!;
 
+        [Resolved]
+        private IAPIProvider api { get; set; } = null!;
+
+        private bool hasStatistics;
+        private (int userId, string ruleset)? requestedStatistics;
+
         /// <summary>
         /// Returns the statistics which are displayed, or <c>null</c> if they aren't available yet.
         /// </summary>
@@ -76,9 +84,39 @@ namespace osu.Game.Users
                 UpdateDisplay();
         }
 
+        protected override void Update()
+        {
+            base.Update();
+
+            if (hasStatistics)
+                return;
+
+            // the provider's cache may be cleared and refilled around user changes without an update reaching this panel, so recover while nothing is shown.
+            if (GetStatistics(ruleset.Value) != null)
+                UpdateDisplay();
+            else
+                requestMissingStatistics();
+        }
+
+        private void requestMissingStatistics()
+        {
+            var user = api.LocalUser.Value;
+
+            if (statisticsProvider == null || api.State.Value != APIState.Online || user is GuestUser || user.Id <= 1 || !ruleset.Value.IsLegacyRuleset())
+                return;
+
+            var key = (user.Id, ruleset.Value.ShortName);
+            if (requestedStatistics == key)
+                return;
+
+            requestedStatistics = key;
+            statisticsProvider.RefetchStatistics(ruleset.Value);
+        }
+
         protected void UpdateDisplay()
         {
             var statistics = GetStatistics(ruleset.Value);
+            hasStatistics = statistics != null;
 
             loadingLayer.State.Value = statistics == null ? Visibility.Visible : Visibility.Hidden;
 
