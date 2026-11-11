@@ -310,7 +310,7 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopEditorShowDifficultyStrains, false);
             SetDefault(OsuSetting.SlopEditorShowOffscreenObjects, false);
             SetDefault(OsuSetting.SlopEditorWaveformStyle, EditorWaveformStyle.Default);
-            SetDefault(OsuSetting.SlopEditorRedundantTimingPointLeeway, 4.0, 0, 20, 0.5);
+            SetDefault(OsuSetting.SlopEditorRedundantTimingPointLeeway, 4.0, 0, 50, 0.5);
             SetDefault(OsuSetting.SlopEditorUnsnapMode, EditorUnsnapMode.Enabled);
             SetDefault(OsuSetting.SlopEditorUnsnapDivisors, @"10,12,16");
             SetDefault(OsuSetting.SlopEditorLoopMusic, false);
