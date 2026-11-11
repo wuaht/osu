@@ -808,7 +808,7 @@ namespace osu.Game.Overlays.Discord
                         return null;
 
                     return new DiscordMediaImage(embed.Url ?? image.Url, image.ProxyUrl ?? image.Url, DiscordMedia.FitSize(image.Width, image.Height),
-                        image.Url.EndsWith(@".gif", StringComparison.OrdinalIgnoreCase), image.Width, image.Height);
+                        image.IsGif, image.Width, image.Height);
 
                 case @"video" when string.IsNullOrEmpty(embed.Title) && embed.Video?.Url != null && embed.Provider == null:
                     return new DiscordMediaVideo(embed.Video.ProxyUrl ?? embed.Video.Url, embed.Thumbnail?.ProxyUrl ?? embed.Thumbnail?.Url,
@@ -1311,7 +1311,7 @@ namespace osu.Game.Overlays.Discord
                 if (image?.Url != null)
                 {
                     content.Add(new DiscordMediaImage(embed.Url ?? image.Url, image.ProxyUrl ?? image.Url, DiscordMedia.FitSize(image.Width, image.Height, 400, 300),
-                        image.Url.EndsWith(@".gif", StringComparison.OrdinalIgnoreCase), image.Width, image.Height));
+                        image.IsGif, image.Width, image.Height));
                 }
 
                 Color4 barColour = DiscordStyle.FromInteger(embed.Colour) ?? colourProvider.Background2;

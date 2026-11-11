@@ -581,6 +581,16 @@ namespace osu.Game.Online.Discord
 
         [JsonProperty("height")]
         public int? Height { get; set; }
+
+        [JsonProperty("content_type")]
+        public string? ContentType { get; set; }
+
+        /// <summary>
+        /// Whether this is a GIF. Links usually have a query (Discord's CDN always adds one), so only the path of the URL is checked.
+        /// </summary>
+        [JsonIgnore]
+        public bool IsGif => ContentType == @"image/gif"
+                             || (Uri.TryCreate(Url, UriKind.Absolute, out var uri) && uri.AbsolutePath.EndsWith(@".gif", StringComparison.OrdinalIgnoreCase));
     }
 
     public class DiscordEmbedAuthor
