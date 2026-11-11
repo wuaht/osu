@@ -448,7 +448,10 @@ namespace osu.Game.Overlays.Discord
             {
                 string url = !string.IsNullOrEmpty(Gif.Src) ? Gif.Src : Gif.Preview!;
 
-                if (Gif.IsVideo || url.EndsWith(@".mp4", StringComparison.OrdinalIgnoreCase) || url.EndsWith(@".webm", StringComparison.OrdinalIgnoreCase))
+                // Favourites from Discord's CDN carry a query, so only the path is checked.
+                string path = Uri.TryCreate(url, UriKind.Absolute, out var uri) ? uri.AbsolutePath : url;
+
+                if (Gif.IsVideo || path.EndsWith(@".mp4", StringComparison.OrdinalIgnoreCase) || path.EndsWith(@".webm", StringComparison.OrdinalIgnoreCase))
                 {
                     return new DiscordMediaVideo(url, null, DrawSize, true)
                     {
@@ -457,7 +460,8 @@ namespace osu.Game.Overlays.Discord
                     };
                 }
 
-                return new DiscordRemoteImage(url, url.EndsWith(@".gif", StringComparison.OrdinalIgnoreCase)) { RelativeSizeAxes = Axes.Both };
+                // Every tile is a GIF, and animated WebPs decode the same way, while a still image just becomes a single frame.
+                return new DiscordRemoteImage(url, true) { RelativeSizeAxes = Axes.Both };
             }
 
             protected override bool OnHover(HoverEvent e)
