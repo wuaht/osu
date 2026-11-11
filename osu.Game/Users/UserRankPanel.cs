@@ -66,7 +66,12 @@ namespace osu.Game.Users
         /// <summary>
         /// Returns the statistics which are displayed, or <c>null</c> if they aren't available yet.
         /// </summary>
-        protected virtual UserStatistics? GetStatistics(RulesetInfo ruleset) => statisticsProvider?.GetStatisticsFor(ruleset);
+        protected virtual UserStatistics? GetStatistics(RulesetInfo ruleset) => ruleset.IsLegacyRuleset() ? statisticsProvider?.GetStatisticsFor(ruleset) : no_online_statistics;
+
+        /// <summary>
+        /// Shown for rulesets without online statistics, so that the panel doesn't keep loading.
+        /// </summary>
+        private static readonly UserStatistics no_online_statistics = new UserStatistics();
 
         protected override void LoadComplete()
         {
