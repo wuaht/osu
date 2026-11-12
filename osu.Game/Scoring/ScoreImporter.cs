@@ -91,7 +91,10 @@ namespace osu.Game.Scoring
             ArgumentNullException.ThrowIfNull(model.BeatmapInfo);
             ArgumentNullException.ThrowIfNull(model.Ruleset);
 
-            if (!ModUtils.CheckCompatibleSet(model.Mods))
+            // Online scores were validated by the server when set; mod incompatibilities added later (e.g. HD + FR) must not make their replays unimportable.
+            bool submittedOnline = model.OnlineID > 0 || model.LegacyOnlineID > 0;
+
+            if (!submittedOnline && !ModUtils.CheckCompatibleSet(model.Mods))
                 throw new InvalidOperationException(@"The score specifies an incompatible set of mods!");
 
             if (string.IsNullOrEmpty(model.StatisticsJson))
