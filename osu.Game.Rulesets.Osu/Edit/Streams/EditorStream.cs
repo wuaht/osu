@@ -35,6 +35,11 @@ namespace osu.Game.Rulesets.Osu.Edit.Streams
         public int BeatDivisor = 4;
 
         /// <summary>
+        /// The number of circles left out at the start and end of the path, after the stream was cut.
+        /// </summary>
+        public int TrimStart, TrimEnd;
+
+        /// <summary>
         /// The circles of the stream, in order.
         /// </summary>
         public readonly List<HitCircle> Circles = new List<HitCircle>();
@@ -153,13 +158,119 @@ namespace osu.Game.Rulesets.Osu.Edit.Streams
         /// </summary>
         public List<(double Time, Vector2 Position)> Generate(ControlPointInfo controlPointInfo, double sliderMultiplier)
         {
+            var result = generateUntrimmed(controlPointInfo, sliderMultiplier, out _);
+            int start = trimmedStart(result.Count);
+            return result.GetRange(start, trimmedEnd(result.Count) - start);
+        }
+
+        // at least one circle is kept, so that editing the path of a cut stream never deletes it.
+        private int trimmedStart(int count) => Math.Min(TrimStart, count - 1);
+
+        private int trimmedEnd(int count) => Math.Max(trimmedStart(count) + 1, count - TrimEnd);
+
+        /// <summary>
+        /// Creates a separate stream which covers only the circles from <paramref name="first"/> to <paramref name="last"/> (indices into <see cref="Generate"/>).
+        /// Its path is cut at those circles, and the densities are carried over so that the circles stay in place.
+        /// </summary>
+        /// <returns>The part, or <c>null</c> if its path would be empty.</returns>
+        public EditorStream? CreatePart(int first, int last, ControlPointInfo controlPointInfo, double sliderMultiplier)
+        {
+            var full = generateUntrimmed(controlPointInfo, sliderMultiplier, out var distances);
+            int offset = trimmedStart(full.Count);
+
+            if (first < 0 || offset + last >= full.Count)
+                return null;
+
+            double length = Path.Path.Distance;
+            double from = distances[offset + first];
+            double to = distances[offset + last];
+
+            if (to - from < 0.01)
+                return null;
+
+            var anchors = GetDensityAnchors();
+            var points = Path.Path.ControlPoints.Select(p => new PathControlPoint(p.Position, p.Type)).ToList();
+
+            // the end is cut first, so that "from" is still measured along the original path.
+            if (to < length - 0.01)
+                points = cut(points, anchors, to, true);
+
+            points = cut(points, anchors, from, false);
+
+            Vector2 start = points[0].Position;
+
+            foreach (var p in points)
+                p.Position -= start;
+
+            points[0].Type ??= PathType.LINEAR;
+
+            var part = new EditorStream { BeatDivisor = BeatDivisor };
+            part.Path.Position = Path.Position + start;
+            part.Path.StartTime = full[offset + first].Time;
+            part.Path.Path.ControlPoints.AddRange(points);
+
+            var stops = getDensityStops(length);
+
+            foreach (var (point, distance) in part.GetDensityAnchors())
+            {
+                double originalDistance = from + distance;
+
+                part.densities[point] = Math.Clamp(Math.Round(densityAt(stops, originalDistance), 2), MIN_DENSITY, MAX_DENSITY);
+
+                // an anchor inside an accelerating segment keeps accelerating towards the original segment's end.
+                int segment = stops.FindLastIndex(s => s.Distance <= originalDistance + 0.01);
+                if (segment >= 0 && segment < stops.Count - 1 && stops[segment].Accelerates)
+                    part.accelerating.Add(point);
+            }
+
+            return part;
+        }
+
+        /// <summary>
+        /// Cuts <paramref name="points"/> at <paramref name="distance"/>, keeping the part before (<paramref name="keepHead"/>) or after it.
+        /// Cuts at an anchor of the original path slice the control points, so that no degenerate segment is left.
+        /// </summary>
+        private static List<PathControlPoint> cut(List<PathControlPoint> points, List<(PathControlPoint Point, double Distance)> anchors, double distance, bool keepHead)
+        {
+            if (distance <= 0.01)
+                return points;
+
+            int anchor = anchors.FindIndex(a => Math.Abs(a.Distance - distance) <= 0.01);
+
+            if (anchor >= 0)
+            {
+                // anchors are matched by position, as the points were copied.
+                Vector2 position = anchors[anchor].Point.Position;
+                int index = points.FindIndex(p => p.Type != null && p.Position == position);
+
+                if (index == -1 && anchor == anchors.Count - 1)
+                    index = points.Count - 1;
+
+                if (index >= 0)
+                {
+                    var sliced = keepHead ? points.Take(index + 1).ToList() : points.Skip(index).ToList();
+                    var result = sliced.Select(p => new PathControlPoint(p.Position, p.Type)).ToList();
+
+                    if (keepHead)
+                        result[^1].Type = null;
+
+                    return result;
+                }
+            }
+
+            var (head, tail) = SliderPathSplitter.Split(new SliderPath(points.ToArray()), distance);
+            return (keepHead ? head : tail).ToList();
+        }
+
+        private List<(double Time, Vector2 Position)> generateUntrimmed(ControlPointInfo controlPointInfo, double sliderMultiplier, out List<double> distances)
+        {
             var result = new List<(double, Vector2)>();
 
             double length = Path.Path.Distance;
             double baseSpacing = 100 * sliderMultiplier / Math.Max(1, BeatDivisor);
             var stops = getDensityStops(length);
 
-            var distances = new List<double> { 0 };
+            distances = new List<double> { 0 };
 
             // every section between two anchors is fitted separately, so that a circle lies exactly on each anchor.
             for (int i = 0; i < stops.Count - 1 && distances.Count < max_circles; i++)
@@ -324,8 +435,18 @@ namespace osu.Game.Rulesets.Osu.Edit.Streams
             string pointsString = string.Join('|', points.Select(p => $"{serialiseType(p.Type)}:{format(p.Position.X)}:{format(p.Position.Y)}"));
             string densitiesString = string.Join('|', points.Select(p => HasDensity(p) ? format(GetDensity(p)) + (GetAccelerates(p) ? "~" : string.Empty) : string.Empty));
 
-            return string.Join(',', format(Path.Position.X), format(Path.Position.Y), format(Path.StartTime), BeatDivisor.ToString(CultureInfo.InvariantCulture), pointsString, densitiesString, format_version);
+            string line = string.Join(',', format(Path.Position.X), format(Path.Position.Y), format(Path.StartTime), BeatDivisor.ToString(CultureInfo.InvariantCulture), pointsString, densitiesString, format_version);
+
+            if (TrimStart != 0 || TrimEnd != 0)
+                line += FormattableString.Invariant($",{TrimStart},{TrimEnd}");
+
+            return line;
         }
+
+        /// <summary>
+        /// Creates an independent copy of the stream, without its circles.
+        /// </summary>
+        public EditorStream? Clone() => Parse(Serialise());
 
         /// <summary>
         /// Parses a line of the <c>[SlopStreams]</c> section. Returns <c>null</c> if the line is invalid.
@@ -347,6 +468,12 @@ namespace osu.Game.Rulesets.Osu.Edit.Streams
                 string[] points = parts[4].Split('|');
                 string[] pointDensities = parts[5].Split('|');
                 bool legacy = parts.Length < 7;
+
+                if (parts.Length >= 9)
+                {
+                    stream.TrimStart = Math.Max(0, int.Parse(parts[7], CultureInfo.InvariantCulture));
+                    stream.TrimEnd = Math.Max(0, int.Parse(parts[8], CultureInfo.InvariantCulture));
+                }
 
                 for (int i = 0; i < points.Length; i++)
                 {

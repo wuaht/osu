@@ -22,6 +22,7 @@ namespace osu.Game.Rulesets.Osu.Edit.Streams
     /// </summary>
     /// <remarks>
     /// Moving, rotating, scaling, mirroring or time-shifting all circles of a stream together is applied to the stream.
+    /// Removing some of its circles cuts the stream into parts which stay streams.
     /// Any other change to its circles turns them into regular hit circles.
     /// </remarks>
     public partial class EditorStreamManager : Component
@@ -392,6 +393,13 @@ namespace osu.Game.Rulesets.Osu.Edit.Streams
 
                 foreach (var stream in streams.ToArray())
                 {
+                    if (stream.Circles.Any(c => !hitObjects.Contains(c)) && trySplit(stream, hitObjects))
+                    {
+                        dirty = true;
+                        removed = true;
+                        continue;
+                    }
+
                     switch (validate(stream, hitObjects))
                     {
                         case ValidationResult.Changed:
@@ -459,6 +467,81 @@ namespace osu.Game.Rulesets.Osu.Edit.Streams
             takeSnapshot(stream);
             StreamsChanged?.Invoke();
             return ValidationResult.Changed;
+        }
+
+        /// <summary>
+        /// Cuts <paramref name="stream"/> at circles which were removed from the beatmap (e.g. deleted or replaced by a placement),
+        /// keeping every remaining run of at least two untouched circles as its own stream. Single leftover circles become regular hit circles.
+        /// </summary>
+        /// <returns>Whether the stream was replaced by its parts. If <c>false</c>, the remaining circles were changed otherwise and the stream is left to <see cref="validate"/>.</returns>
+        private bool trySplit(EditorStream stream, HashSet<HitObject> hitObjects)
+        {
+            var circles = stream.Circles;
+            var snapshot = stream.Snapshot;
+
+            if (circles.Count != snapshot.Length)
+                return false;
+
+            for (int i = 0; i < circles.Count; i++)
+            {
+                if (hitObjects.Contains(circles[i])
+                    && (Math.Abs(circles[i].StartTime - snapshot[i].Time) > 0.01 || Vector2.Distance(circles[i].Position, snapshot[i].Position) > 0.01f))
+                    return false;
+            }
+
+            int index = streams.IndexOf(stream);
+            streams.RemoveAt(index);
+            pendingLayouts.Remove(stream);
+            individuallySelected.Remove(stream);
+
+            for (int start = 0; start < circles.Count; start++)
+            {
+                if (!hitObjects.Contains(circles[start]))
+                    continue;
+
+                int end = start;
+                while (end + 1 < circles.Count && hitObjects.Contains(circles[end + 1]))
+                    end++;
+
+                var run = circles.GetRange(start, end - start + 1);
+
+                if (end > start && createPart(stream, start, end, run) is EditorStream part)
+                {
+                    part.Circles.AddRange(run);
+                    takeSnapshot(part);
+                    streams.Insert(index++, part);
+                }
+
+                start = end;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Creates a stream whose path covers only <paramref name="run"/>.
+        /// If cutting the path would move its circles (e.g. a different number of circles fits after refitting), the part keeps the whole path and hides the other circles instead.
+        /// </summary>
+        private EditorStream? createPart(EditorStream stream, int first, int last, List<HitCircle> run)
+        {
+            var part = stream.CreatePart(first, last, editorBeatmap.ControlPointInfo, editorBeatmap.Difficulty.SliderMultiplier);
+
+            if (part != null)
+            {
+                var layout = generate(part);
+
+                if (layout.Count == run.Count && layout.Zip(run).All(p => Math.Abs(p.First.Time - p.Second.StartTime) <= 1 && Vector2.Distance(p.First.Position, p.Second.Position) <= 1))
+                    return part;
+            }
+
+            part = stream.Clone();
+
+            if (part == null)
+                return null;
+
+            part.TrimStart = stream.TrimStart + first;
+            part.TrimEnd = stream.TrimEnd + stream.Circles.Count - 1 - last;
+            return part;
         }
 
         /// <summary>
