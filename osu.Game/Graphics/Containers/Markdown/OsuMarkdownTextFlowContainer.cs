@@ -14,8 +14,11 @@ using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Containers.Markdown;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
+using osu.Framework.Localisation;
+using osu.Framework.Platform;
 using osu.Game.Graphics.Containers.Markdown.Footnotes;
 using osu.Game.Overlays;
+using osu.Game.Overlays.Discord;
 using osu.Game.Users;
 using osu.Game.Users.Drawables;
 using osuTK;
@@ -24,6 +27,52 @@ namespace osu.Game.Graphics.Containers.Markdown
 {
     public partial class OsuMarkdownTextFlowContainer : MarkdownTextFlowContainer
     {
+        private DiscordTextureStore? ownEmojiTextures;
+
+        // shortcut: one texture store per text flow for emoji images, see OsuTextFlowContainer.
+        protected override IReadOnlyDependencyContainer CreateChildDependencies(IReadOnlyDependencyContainer parent)
+        {
+            var dependencies = new DependencyContainer(base.CreateChildDependencies(parent));
+
+            if (parent.Get<DiscordTextureStore>() == null)
+                dependencies.Cache(ownEmojiTextures = new DiscordTextureStore(parent.Get<GameHost>()));
+
+            return dependencies;
+        }
+
+        /// <summary>
+        /// Adds text, showing unicode emoji as images because the game's fonts don't contain them.
+        /// </summary>
+        public override ITextPart AddText(LocalisableString text, Action<SpriteText> creationParameters = null)
+        {
+            var parts = DiscordEmoji.Split(text.ToString()).ToList();
+
+            if (!parts.Any(p => p.EmojiUrl != null))
+                return base.AddText(text, creationParameters);
+
+            var probe = CreateSpriteText();
+            creationParameters?.Invoke(probe);
+            float emojiSize = probe.Font.Size * 1.2f;
+
+            ITextPart? last = null;
+
+            foreach (var (part, emojiUrl) in parts)
+            {
+                if (emojiUrl == null)
+                    last = base.AddText((LocalisableString)part, creationParameters);
+                else
+                    AddDrawable(new DrawableDiscordEmoji(emojiUrl, part, part, emojiSize));
+            }
+
+            return last!;
+        }
+
+        protected override void Dispose(bool isDisposing)
+        {
+            base.Dispose(isDisposing);
+            ownEmojiTextures?.Dispose();
+        }
+
         protected override void AddLinkText(string text, LinkInline linkInline)
             => AddDrawable(new OsuMarkdownLinkText(text, linkInline));
 
