@@ -100,7 +100,7 @@ namespace osu.Game.Screens.Select
         private const float legacy_left_padding = 10;
         private const float legacy_score_spacing = 33 * LegacySongSelectComponent.STABLE_SCALE - BeatmapLeaderboardScore.HEIGHT;
 
-        // like stable, a personal best outside the first eight rows is pinned in the ninth row while the list scrolls above it.
+        // like stable, a personal best missing from the leaderboard is pinned in the ninth row while the list scrolls behind it.
         private const int legacy_pinned_row = 8;
         private const float legacy_pinned_y = scores_scroll_top_padding + legacy_pinned_row * (BeatmapLeaderboardScore.HEIGHT + legacy_score_spacing);
 
@@ -371,13 +371,13 @@ namespace osu.Game.Screens.Select
                 };
             }
 
-            if (LegacyStyle && userScore != null && displayedScores.Take(legacy_pinned_row).All(e => e.score.OnlineID != userScore.OnlineID))
+            if (LegacyStyle && userScore != null && displayedScores.All(e => e.score.OnlineID != userScore.OnlineID))
             {
                 legacyPersonalBestContainer.Child = createScore(userScore, userScore.Position, null);
                 legacyPersonalBestContainer.FadeInFromZero(300, Easing.OutQuint);
 
                 scoresScroll.RelativeSizeAxes = Axes.X;
-                scoresScroll.Height = legacy_pinned_y;
+                scoresScroll.Height = legacy_pinned_y + BeatmapLeaderboardScore.HEIGHT;
             }
 
             // like stable, the lead is over the score ranked directly below in the fetched list.
