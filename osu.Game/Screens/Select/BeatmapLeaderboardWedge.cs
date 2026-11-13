@@ -100,6 +100,12 @@ namespace osu.Game.Screens.Select
         private const float legacy_left_padding = 10;
         private const float legacy_score_spacing = 33 * LegacySongSelectComponent.STABLE_SCALE - BeatmapLeaderboardScore.HEIGHT;
 
+        // like stable, a personal best outside the first eight rows is pinned in the ninth row while the list scrolls above it.
+        private const int legacy_pinned_row = 8;
+        private const float legacy_pinned_y = scores_scroll_top_padding + legacy_pinned_row * (BeatmapLeaderboardScore.HEIGHT + legacy_score_spacing);
+
+        private Container<BeatmapLeaderboardScore> legacyPersonalBestContainer = null!;
+
         protected override bool OnMouseDown(MouseDownEvent e)
         {
             // No scores, allow background preview
@@ -158,6 +164,13 @@ namespace osu.Game.Screens.Select
                                     Bottom = BeatmapLeaderboardScore.HEIGHT * 3
                                 },
                         },
+                    },
+                    legacyPersonalBestContainer = new Container<BeatmapLeaderboardScore>
+                    {
+                        Width = legacy_score_width,
+                        AutoSizeAxes = Axes.Y,
+                        Y = legacy_pinned_y,
+                        Padding = new MarginPadding { Left = legacy_left_padding },
                     },
                     personalBestDisplay = new Container
                     {
@@ -332,16 +345,8 @@ namespace osu.Game.Screens.Select
             var scoreList = scores.ToList();
             var displayedScores = scoreList.Select((s, i) => (score: s, rank: (int?)(i + 1))).ToList();
 
-            if (LegacyStyle)
+            BeatmapLeaderboardScore createScore(ScoreInfo s, int? rank, ScoreInfo? nextScore)
             {
-                // every fetched score is listed (scrollable); a personal best outside them is appended as the last row.
-                if (userScore != null && displayedScores.All(e => e.score.OnlineID != userScore.OnlineID))
-                    displayedScores.Add((userScore, userScore.Position));
-            }
-
-            LoadComponentsAsync(displayedScores.Select(e =>
-            {
-                var s = e.score;
                 BeatmapLeaderboardScore.HighlightType? highlightType = null;
 
                 if (s.OnlineID == userScore?.OnlineID)
@@ -353,9 +358,8 @@ namespace osu.Game.Screens.Select
                 return new BeatmapLeaderboardScore(s, sheared: !LegacyStyle)
                 {
                     LegacyStyle = LegacyStyle,
-                    // like stable, the lead is over the score ranked directly below in the fetched list.
-                    NextScore = e.rank < scoreList.Count && scoreList[e.rank!.Value - 1] == s ? scoreList[e.rank.Value] : null,
-                    Rank = e.rank,
+                    NextScore = nextScore,
+                    Rank = rank,
                     Highlight = highlightType,
                     SelectedMods = { BindTarget = mods },
                     Action = songSelect?.CanPresentScore == true
@@ -365,7 +369,19 @@ namespace osu.Game.Screens.Select
                         ? info => songSelect.PresentScore(info, ScorePresentType.Gameplay)
                         : null
                 };
-            }), loadedScores =>
+            }
+
+            if (LegacyStyle && userScore != null && displayedScores.Take(legacy_pinned_row).All(e => e.score.OnlineID != userScore.OnlineID))
+            {
+                legacyPersonalBestContainer.Child = createScore(userScore, userScore.Position, null);
+                legacyPersonalBestContainer.FadeInFromZero(300, Easing.OutQuint);
+
+                scoresScroll.RelativeSizeAxes = Axes.X;
+                scoresScroll.Height = legacy_pinned_y;
+            }
+
+            // like stable, the lead is over the score ranked directly below in the fetched list.
+            LoadComponentsAsync(displayedScores.Select(e => createScore(e.score, e.rank, e.rank < scoreList.Count ? scoreList[e.rank!.Value] : null)), loadedScores =>
             {
                 int delay = 200;
                 int i = 0;
@@ -453,6 +469,10 @@ namespace osu.Game.Screens.Select
 
             personalBestDisplay.MoveToX(-100, 300, Easing.OutQuint);
             personalBestDisplay.FadeOut(300, Easing.OutQuint);
+
+            legacyPersonalBestContainer.FadeOut(120, Easing.Out);
+            scoresScroll.RelativeSizeAxes = Axes.Both;
+            scoresScroll.Height = 1;
             scoresScroll.TransformTo(nameof(scoresScroll.Padding), new MarginPadding(), 300, Easing.OutQuint);
 
             scoreSfxDelegates.ForEach(d => d.Cancel());
