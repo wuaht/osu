@@ -13,6 +13,7 @@ using osu.Framework.Localisation;
 using osu.Framework.Logging;
 using osu.Framework.Platform;
 using osu.Game.Beatmaps;
+using osu.Game.Beatmaps.Timing;
 using osu.Game.Localisation;
 using osu.Game.Models;
 using osu.Game.Graphics.UserInterfaceV2;
@@ -56,6 +57,9 @@ namespace osu.Game.Screens.Edit.Setup
 
         [Resolved]
         private IDialogOverlay? dialogOverlay { get; set; }
+
+        [Resolved]
+        private EditorBeatmap editorBeatmap { get; set; } = null!;
 
         [Resolved]
         private INotificationOverlay? notifications { get; set; }
@@ -305,10 +309,57 @@ namespace osu.Game.Screens.Edit.Setup
                         rollingBack = false;
                     }
 
+                    if (applied && !video && options.ShiftBeatmap && options.LeadInMilliseconds > 0)
+                        shiftBeatmap(options.LeadInMilliseconds);
+
                     notification.State = applied ? ProgressNotificationState.Completed : ProgressNotificationState.Cancelled;
                     Directory.Delete(tempDirectory, true);
                 });
             });
+        }
+
+        /// <summary>
+        /// Moves everything time-based in the current difficulty by <paramref name="offset"/> milliseconds, so it stays in sync with a track that gained leading silence.
+        /// </summary>
+        private void shiftBeatmap(double offset)
+        {
+            foreach (var hitObject in editorBeatmap.HitObjects)
+                hitObject.StartTime += offset;
+
+            var controlPoints = editorBeatmap.ControlPointInfo;
+            var oldGroups = controlPoints.Groups.ToList();
+            var shiftedGroups = oldGroups.Select(g => (time: g.Time + offset, points: g.ControlPoints.ToList())).ToList();
+
+            foreach (var group in oldGroups)
+            {
+                foreach (var point in group.ControlPoints.ToList())
+                    group.Remove(point);
+            }
+
+            controlPoints.Clear();
+
+            foreach (var (time, points) in shiftedGroups)
+            {
+                var group = controlPoints.GroupAt(time, true)!;
+
+                foreach (var point in points)
+                    group.Add(point);
+            }
+
+            var shiftedBreaks = editorBeatmap.Breaks.Select(b => new BreakPeriod(b.StartTime + offset, b.EndTime + offset)).ToList();
+            editorBeatmap.Breaks.Clear();
+            editorBeatmap.Breaks.AddRange(shiftedBreaks);
+
+            int intOffset = (int)Math.Round(offset);
+
+            if (editorBeatmap.PreviewTime.Value >= 0)
+                editorBeatmap.PreviewTime.Value += intOffset;
+
+            var shiftedBookmarks = editorBeatmap.Bookmarks.Select(b => b + intOffset).ToArray();
+            editorBeatmap.Bookmarks.Clear();
+            editorBeatmap.Bookmarks.AddRange(shiftedBookmarks);
+
+            editorBeatmap.UpdateAllHitObjects();
         }
 
         private void changeResource(

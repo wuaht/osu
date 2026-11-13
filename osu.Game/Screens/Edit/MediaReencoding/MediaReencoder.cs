@@ -64,7 +64,9 @@ namespace osu.Game.Screens.Edit.MediaReencoding
         MediaReencoderVideoCodec VideoCodec = MediaReencoderVideoCodec.H264,
         MediaReencoderResize Resize = MediaReencoderResize.Height720,
         MediaReencoderAudioCodec AudioCodec = MediaReencoderAudioCodec.OggVorbis,
-        int Quality = 23);
+        int Quality = 23,
+        int LeadInMilliseconds = 0,
+        bool ShiftBeatmap = false);
 
     /// <summary>
     /// Converts videos and audio tracks into formats accepted by the ranking criteria, using the ffmpeg executable on PATH.
@@ -91,6 +93,10 @@ namespace osu.Game.Screens.Edit.MediaReencoding
             if (options.MediaType == MediaReencoderMediaType.Audio)
             {
                 bool ogg = options.AudioCodec == MediaReencoderAudioCodec.OggVorbis;
+
+                if (options.LeadInMilliseconds > 0)
+                    args.AddRange([@"-af", $@"adelay={options.LeadInMilliseconds}:all=1"]);
+
                 // only the first audio stream is kept, as files often contain cover art as a video stream. tags are kept for the beatmap's metadata.
                 args.AddRange([@"-map", @"0:a:0", @"-c:a", ogg ? @"libvorbis" : @"libmp3lame", @"-b:a", ogg ? @"208k" : @"192k"]);
             }

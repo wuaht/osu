@@ -582,6 +582,26 @@ How to time a song with a varying tempo:
         public static LocalisableString MediaReencoderQualityHint => new TranslatableString(getKey(@"media_reencoder_quality_hint"), @"Lower is higher quality.");
 
         /// <summary>
+        /// "Lead-in (ms)"
+        /// </summary>
+        public static LocalisableString MediaReencoderLeadIn => new TranslatableString(getKey(@"media_reencoder_lead_in"), @"Lead-in (ms)");
+
+        /// <summary>
+        /// "Silence in milliseconds added to the start of the audio track."
+        /// </summary>
+        public static LocalisableString MediaReencoderLeadInHint => new TranslatableString(getKey(@"media_reencoder_lead_in_hint"), @"Silence in milliseconds added to the start of the audio track.");
+
+        /// <summary>
+        /// "Shift beatmap"
+        /// </summary>
+        public static LocalisableString MediaReencoderShiftBeatmap => new TranslatableString(getKey(@"media_reencoder_shift_beatmap"), @"Shift beatmap");
+
+        /// <summary>
+        /// "Moves hit objects, timing points, breaks and bookmarks by the lead-in so they stay in sync with the audio. Only applies to the current difficulty."
+        /// </summary>
+        public static LocalisableString MediaReencoderShiftBeatmapHint => new TranslatableString(getKey(@"media_reencoder_shift_beatmap_hint"), @"Moves hit objects, timing points, breaks and bookmarks by the lead-in so they stay in sync with the audio. Only applies to the current difficulty.");
+
+        /// <summary>
         /// "Convert"
         /// </summary>
         public static LocalisableString MediaReencoderConvert => new TranslatableString(getKey(@"media_reencoder_convert"), @"Convert");

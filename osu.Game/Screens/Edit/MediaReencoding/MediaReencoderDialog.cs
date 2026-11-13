@@ -35,6 +35,14 @@ namespace osu.Game.Screens.Edit.MediaReencoding
             MaxValue = MediaReencoder.MAX_QUALITY,
         };
 
+        private readonly BindableInt leadIn = new BindableInt
+        {
+            MinValue = 0,
+            MaxValue = 10000,
+        };
+
+        private readonly BindableBool shiftBeatmap = new BindableBool();
+
         private readonly FillFlowContainer videoOptions;
         private readonly Drawable audioOptions;
 
@@ -91,10 +99,32 @@ namespace osu.Game.Screens.Edit.MediaReencoding
                             },
                         }
                     },
-                    audioOptions = new FormEnumDropdown<MediaReencoderAudioCodec>
+                    audioOptions = new FillFlowContainer
                     {
-                        Caption = SlopEditorStrings.MediaReencoderEncoder,
-                        Current = audioCodec,
+                        RelativeSizeAxes = Axes.X,
+                        AutoSizeAxes = Axes.Y,
+                        Direction = FillDirection.Vertical,
+                        Spacing = new Vector2(7),
+                        Children = new Drawable[]
+                        {
+                            new FormEnumDropdown<MediaReencoderAudioCodec>
+                            {
+                                Caption = SlopEditorStrings.MediaReencoderEncoder,
+                                Current = audioCodec,
+                            },
+                            new FormSliderBar<int>
+                            {
+                                Caption = SlopEditorStrings.MediaReencoderLeadIn,
+                                HintText = SlopEditorStrings.MediaReencoderLeadInHint,
+                                Current = leadIn,
+                            },
+                            new FormCheckBox
+                            {
+                                Caption = SlopEditorStrings.MediaReencoderShiftBeatmap,
+                                HintText = SlopEditorStrings.MediaReencoderShiftBeatmapHint,
+                                Current = shiftBeatmap,
+                            },
+                        }
                     },
                 }
             };
@@ -104,7 +134,7 @@ namespace osu.Game.Screens.Edit.MediaReencoding
                 new PopupDialogOkButton
                 {
                     Text = SlopEditorStrings.MediaReencoderConvert,
-                    Action = () => convert(new MediaReencoderOptions(mediaType.Value, videoCodec.Value, resize.Value, audioCodec.Value, quality.Value)),
+                    Action = () => convert(new MediaReencoderOptions(mediaType.Value, videoCodec.Value, resize.Value, audioCodec.Value, quality.Value, leadIn.Value, shiftBeatmap.Value)),
                 },
                 new PopupDialogCancelButton
                 {
