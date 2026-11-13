@@ -310,7 +310,21 @@ namespace osu.Game.Screens.Edit.Setup
                     }
 
                     if (applied && !video && options.ShiftBeatmap && options.LeadInMilliseconds > 0)
+                    {
                         shiftBeatmap(options.LeadInMilliseconds);
+
+                        // only difficulties that received the new track need shifting; the rest keep their old audio.
+                        if (applyToAllDifficulties)
+                        {
+                            foreach (var b in set.Beatmaps.Where(b => !b.Equals(currentWorkingBeatmap.Value.BeatmapInfo)))
+                            {
+                                var working = beatmaps.GetWorkingBeatmap(b);
+                                var playable = working.GetPlayableBeatmap(b.Ruleset);
+                                shiftOtherDifficulty(playable, options.LeadInMilliseconds);
+                                beatmaps.Save(b, playable, working.GetSkin(), working.Storyboard);
+                            }
+                        }
+                    }
 
                     notification.State = applied ? ProgressNotificationState.Completed : ProgressNotificationState.Cancelled;
                     Directory.Delete(tempDirectory, true);
@@ -323,10 +337,53 @@ namespace osu.Game.Screens.Edit.Setup
         /// </summary>
         private void shiftBeatmap(double offset)
         {
-            foreach (var hitObject in editorBeatmap.HitObjects)
+            shiftTiming(editorBeatmap, offset);
+
+            var shiftedBreaks = editorBeatmap.Breaks.Select(b => new BreakPeriod(b.StartTime + offset, b.EndTime + offset)).ToList();
+            editorBeatmap.Breaks.Clear();
+            editorBeatmap.Breaks.AddRange(shiftedBreaks);
+
+            int intOffset = (int)Math.Round(offset);
+
+            if (editorBeatmap.PreviewTime.Value >= 0)
+                editorBeatmap.PreviewTime.Value += intOffset;
+
+            var shiftedBookmarks = editorBeatmap.Bookmarks.Select(b => b + intOffset).ToArray();
+            editorBeatmap.Bookmarks.Clear();
+            editorBeatmap.Bookmarks.AddRange(shiftedBookmarks);
+
+            editorBeatmap.UpdateAllHitObjects();
+        }
+
+        /// <summary>
+        /// Shifts a difficulty that isn't open in the editor and is saved straight away, so it stays in sync with the set's new audio track.
+        /// </summary>
+        private static void shiftOtherDifficulty(IBeatmap beatmap, double offset)
+        {
+            beatmap.ControlPointInfo = EditorBeatmap.ConvertControlPoints(beatmap.ControlPointInfo);
+            shiftTiming(beatmap, offset);
+
+            var shiftedBreaks = beatmap.Breaks.Select(b => new BreakPeriod(b.StartTime + offset, b.EndTime + offset)).ToList();
+            beatmap.Breaks.Clear();
+            beatmap.Breaks.AddRange(shiftedBreaks);
+
+            int intOffset = (int)Math.Round(offset);
+
+            if (beatmap.BeatmapInfo.Metadata.PreviewTime >= 0)
+                beatmap.BeatmapInfo.Metadata.PreviewTime += intOffset;
+
+            beatmap.Bookmarks = beatmap.Bookmarks.Select(b => b + intOffset).ToArray();
+        }
+
+        /// <summary>
+        /// Moves all hit objects and control point groups of <paramref name="beatmap"/> by <paramref name="offset"/> milliseconds.
+        /// </summary>
+        private static void shiftTiming(IBeatmap beatmap, double offset)
+        {
+            foreach (var hitObject in beatmap.HitObjects)
                 hitObject.StartTime += offset;
 
-            var controlPoints = editorBeatmap.ControlPointInfo;
+            var controlPoints = beatmap.ControlPointInfo;
             var oldGroups = controlPoints.Groups.ToList();
             var shiftedGroups = oldGroups.Select(g => (time: g.Time + offset, points: g.ControlPoints.ToList())).ToList();
 
@@ -345,21 +402,6 @@ namespace osu.Game.Screens.Edit.Setup
                 foreach (var point in points)
                     group.Add(point);
             }
-
-            var shiftedBreaks = editorBeatmap.Breaks.Select(b => new BreakPeriod(b.StartTime + offset, b.EndTime + offset)).ToList();
-            editorBeatmap.Breaks.Clear();
-            editorBeatmap.Breaks.AddRange(shiftedBreaks);
-
-            int intOffset = (int)Math.Round(offset);
-
-            if (editorBeatmap.PreviewTime.Value >= 0)
-                editorBeatmap.PreviewTime.Value += intOffset;
-
-            var shiftedBookmarks = editorBeatmap.Bookmarks.Select(b => b + intOffset).ToArray();
-            editorBeatmap.Bookmarks.Clear();
-            editorBeatmap.Bookmarks.AddRange(shiftedBookmarks);
-
-            editorBeatmap.UpdateAllHitObjects();
         }
 
         private void changeResource(
