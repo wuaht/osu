@@ -97,7 +97,7 @@ namespace osu.Game.Screens.Select
 
         // stable uses a 240 wide score panel, spaced 33 apart (in its 640x480 space).
         private const float legacy_score_width = 240 * LegacySongSelectComponent.STABLE_SCALE;
-        private const float legacy_left_padding = 10;
+        private const float legacy_left_padding = 4;
         private const float legacy_score_spacing = 33 * LegacySongSelectComponent.STABLE_SCALE - BeatmapLeaderboardScore.HEIGHT;
 
         // like stable, a personal best missing from the leaderboard is pinned in the ninth row while the list scrolls behind it.

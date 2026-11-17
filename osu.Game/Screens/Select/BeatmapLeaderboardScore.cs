@@ -1,4 +1,4 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
@@ -13,6 +13,7 @@ using osu.Framework.Graphics.Colour;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Cursor;
 using osu.Framework.Graphics.Shapes;
+using osu.Framework.Graphics.Sprites;
 using osu.Framework.Graphics.UserInterface;
 using osu.Framework.Input.Events;
 using osu.Framework.Localisation;
@@ -89,10 +90,16 @@ namespace osu.Game.Screens.Select
         private const float statistics_compact_min_width = 90;
         private const float rank_label_width = 40;
 
-        /// <summary>
-        /// Width of the highlight strip kept visible in <see cref="LegacyStyle"/>, whose rows are too narrow for the rank label.
-        /// </summary>
-        private const float legacy_highlight_width = 6;
+        private const float legacy_highlight_width = 3;
+        private const float legacy_grade_width = 28;
+        private const float legacy_corner_radius = 6;
+        private const float legacy_padding = 8;
+        private const float legacy_primary_row_height = 15;
+        // keeps the mod icons in the secondary row clear of the score digits above.
+        private const float legacy_row_spacing = 4;
+        private const float legacy_secondary_row_height = 15;
+        private const float legacy_spacing = 4;
+        private const float legacy_min_user_width = 130;
 
         private const int corner_radius = 10;
         private const int transition_duration = 200;
@@ -115,8 +122,6 @@ namespace osu.Game.Screens.Select
         private Container rightContent = null!;
 
         private FillFlowContainer<Drawable> modsContainer = null!;
-        private FillFlowContainer detailsRow = null!;
-        private GridContainer? legacyScoreLayout;
 
         private const float default_mod_spacing = -10;
 
@@ -130,7 +135,7 @@ namespace osu.Game.Screens.Select
         private readonly bool sheared;
 
         /// <summary>
-        /// Shows combo, accuracy and the lead over <see cref="NextScore"/> below the username, like stable's song select leaderboard.
+        /// Uses the compact, unsheared row of the legacy song select, which also shows accuracy, combo and the lead over <see cref="NextScore"/>.
         /// </summary>
         public bool LegacyStyle { get; init; }
 
@@ -139,8 +144,13 @@ namespace osu.Game.Screens.Select
         /// </summary>
         public ScoreInfo? NextScore { get; init; }
 
+        private OsuSpriteText legacyScoreText = null!;
         private OsuSpriteText legacyStatisticsText = null!;
+        private OsuSpriteText legacyModsOverflowText = null!;
+        private (float mods, float icon, float overflow) lastLegacyFitKey;
+        private Container legacyTeamFlag = null!;
         private OsuSpriteText legacyLeadText = null!;
+        private FillFlowContainer legacyMetaRow = null!;
 
         public override bool ReceivePositionalInputAt(Vector2 screenSpacePos)
         {
@@ -168,6 +178,30 @@ namespace osu.Game.Screens.Select
             foregroundColour = colourProvider.Background5;
             backgroundColour = colourProvider.Background3;
             totalScoreBackgroundGradient = ColourInfo.GradientHorizontal(backgroundColour.Opacity(0), backgroundColour);
+
+            if (LegacyStyle)
+            {
+                Children = new[]
+                {
+                    createLegacyContent(),
+                    // a bar in the left margin outside the row, so highlighted rows keep the avatar fully visible and square.
+                    highlightGradient = new Container
+                    {
+                        Anchor = Anchor.CentreLeft,
+                        Origin = Anchor.CentreRight,
+                        RelativeSizeAxes = Axes.Y,
+                        Width = legacy_highlight_width,
+                        X = -1,
+                        Masking = true,
+                        CornerRadius = legacy_highlight_width / 2,
+                        Alpha = Highlight != null ? 1 : 0,
+                        Colour = getHighlightColour(Highlight),
+                        Child = new Box { RelativeSizeAxes = Axes.Both },
+                    },
+                };
+                innerAvatar.OnLoadComplete += d => d.FadeInFromZero(200);
+                return;
+            }
 
             Child = new Container
             {
@@ -199,7 +233,6 @@ namespace osu.Game.Screens.Select
                             new RankLabel(Rank, sheared, darkText: Highlight == HighlightType.Own)
                             {
                                 RelativeSizeAxes = Axes.Both,
-                                Alpha = LegacyStyle ? 0 : 1,
                             }
                         },
                     },
@@ -319,16 +352,7 @@ namespace osu.Game.Screens.Select
                                                                 Origin = Anchor.CentreLeft,
                                                                 Colour = colourProvider.Content2,
                                                                 UseFullGlyphHeight = false,
-                                                            },
-                                                            legacyLeadText = new OsuSpriteText
-                                                            {
-                                                                Anchor = Anchor.CentreLeft,
-                                                                Origin = Anchor.CentreLeft,
-                                                                Font = OsuFont.Style.Caption1.With(weight: FontWeight.SemiBold),
-                                                                Colour = colourProvider.Content2,
-                                                                UseFullGlyphHeight = false,
-                                                                Alpha = LegacyStyle && NextScore != null ? 1 : 0,
-                                                            },
+                                                            }
                                                         }
                                                     },
                                                     new TruncatingSpriteText
@@ -337,9 +361,7 @@ namespace osu.Game.Screens.Select
                                                         Shear = sheared ? -OsuGame.SHEAR : Vector2.Zero,
                                                         Text = Score.User.Username,
                                                         Font = OsuFont.Style.Heading2,
-                                                        // like the gameplay leaderboard, friends' names are pink.
-                                                        Colour = LegacyStyle && Highlight == HighlightType.Friend ? colours.Pink1 : Colour4.White,
-                                                    },
+                                                    }
                                                 }
                                             },
                                             new Container
@@ -470,80 +492,328 @@ namespace osu.Game.Screens.Select
             innerAvatar.OnLoadComplete += d => d.FadeInFromZero(200);
         }
 
-        private Drawable createScoreLayout()
+        private Drawable createScoreLayout() => new FillFlowContainer
         {
-            var scoreText = new OsuSpriteText
+            AutoSizeAxes = Axes.Both,
+            Anchor = Anchor.CentreRight,
+            Origin = Anchor.CentreRight,
+            Direction = FillDirection.Vertical,
+            Padding = new MarginPadding { Horizontal = corner_radius },
+            Spacing = new Vector2(0f, -2f),
+            Children = new Drawable[]
             {
-                Anchor = Anchor.TopRight,
-                Origin = Anchor.TopRight,
-                UseFullGlyphHeight = false,
-                Current = scoreManager.GetBindableTotalScoreString(Score),
-                Spacing = new Vector2(-1.5f),
-                Font = OsuFont.Style.Subtitle.With(weight: FontWeight.Light, fixedWidth: true),
-                Shear = sheared ? -OsuGame.SHEAR : Vector2.Zero,
-            };
+                new OsuSpriteText
+                {
+                    Anchor = Anchor.TopRight,
+                    Origin = Anchor.TopRight,
+                    UseFullGlyphHeight = false,
+                    Current = scoreManager.GetBindableTotalScoreString(Score),
+                    Spacing = new Vector2(-1.5f),
+                    Font = OsuFont.Style.Subtitle.With(weight: FontWeight.Light, fixedWidth: true),
+                    Shear = sheared ? -OsuGame.SHEAR : Vector2.Zero,
+                },
+                modsContainer = new FillFlowContainer<Drawable>
+                {
+                    Anchor = Anchor.TopRight,
+                    Origin = Anchor.TopRight,
+                    AutoSizeAxes = Axes.Both,
+                    Direction = FillDirection.Horizontal,
+                    Spacing = new Vector2(default_mod_spacing, 0),
+                    Shear = sheared ? -OsuGame.SHEAR : Vector2.Zero,
+                },
+            }
+        };
 
-            detailsRow = new FillFlowContainer
+        /// <summary>
+        /// Two aligned text rows beside the avatar: name and meta on the left, score and statistics on the right, the grade at the edge.
+        /// </summary>
+        private Drawable createLegacyContent()
+        {
+            var rankColour = OsuColour.ForRank(Score.Rank);
+
+            return new Container
             {
-                Anchor = LegacyStyle ? Anchor.CentreRight : Anchor.TopRight,
-                Origin = LegacyStyle ? Anchor.CentreRight : Anchor.TopRight,
-                AutoSizeAxes = Axes.Both,
-                Direction = FillDirection.Horizontal,
-                Spacing = new Vector2(4, 0),
+                Masking = true,
+                CornerRadius = legacy_corner_radius,
+                RelativeSizeAxes = Axes.Both,
                 Children = new Drawable[]
                 {
-                    modsContainer = new FillFlowContainer<Drawable>
+                    background = new Box
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Alpha = 0.6f,
+                        Colour = backgroundColour,
+                    },
+                    foreground = new Box
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Alpha = 0.4f,
+                        Colour = foregroundColour,
+                    },
+                    new CoverBackground
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Model = Score.User,
+                        Colour = ColourInfo.GradientHorizontal(Colour4.White.Opacity(0.5f), Colour4.FromHex(@"222A27")),
+                    },
+                    new Container
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Width = 0.6f,
+                        Anchor = Anchor.TopRight,
+                        Origin = Anchor.TopRight,
+                        Padding = new MarginPadding { Right = legacy_grade_width },
+                        Children = new Drawable[]
+                        {
+                            totalScoreBackground = new Box
+                            {
+                                RelativeSizeAxes = Axes.Both,
+                                Colour = totalScoreBackgroundGradient,
+                            },
+                            new Box
+                            {
+                                RelativeSizeAxes = Axes.Both,
+                                Colour = ColourInfo.GradientHorizontal(rankColour.Opacity(0), rankColour.Opacity(0.2f)),
+                            },
+                        }
+                    },
+                    new GridContainer
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        ColumnDimensions = new[]
+                        {
+                            new Dimension(GridSizeMode.Absolute, HEIGHT),
+                            new Dimension(),
+                            new Dimension(GridSizeMode.AutoSize),
+                            new Dimension(GridSizeMode.Absolute, legacy_grade_width),
+                        },
+                        Content = new[]
+                        {
+                            new[]
+                            {
+                                createLegacyAvatar(),
+                                createLegacyUserColumn(),
+                                createLegacyScoreColumn(),
+                                new Container
+                                {
+                                    RelativeSizeAxes = Axes.Both,
+                                    Children = new Drawable[]
+                                    {
+                                        new Box
+                                        {
+                                            RelativeSizeAxes = Axes.Both,
+                                            Colour = rankColour,
+                                        },
+                                        new OsuSpriteText
+                                        {
+                                            Anchor = Anchor.Centre,
+                                            Origin = Anchor.Centre,
+                                            Spacing = new Vector2(-1),
+                                            Colour = DrawableRank.GetRankLetterColour(Score.Rank),
+                                            Font = OsuFont.Numeric.With(size: 13),
+                                            Text = DrawableRank.GetRankLetter(Score.Rank),
+                                            ShadowColour = Color4.Black.Opacity(0.3f),
+                                            ShadowOffset = new Vector2(0, 0.08f),
+                                            Shadow = true,
+                                            UseFullGlyphHeight = false,
+                                        },
+                                    }
+                                },
+                            }
+                        }
+                    },
+                }
+            };
+        }
+
+        private Drawable createLegacyAvatar() => new Container
+        {
+            RelativeSizeAxes = Axes.Both,
+            Children = new Drawable[]
+            {
+                new DelayedLoadWrapper(innerAvatar = new ClickableAvatar(Score.User)
+                {
+                    RelativeSizeAxes = Axes.Both,
+                })
+                {
+                    RelativeSizeAxes = Axes.Both,
+                },
+                // the row has no room for the rank, so it is shown over the avatar on hover.
+                rankLabelOverlay = new Container
+                {
+                    RelativeSizeAxes = Axes.Both,
+                    Alpha = 0,
+                    Children = new Drawable[]
+                    {
+                        new Box
+                        {
+                            RelativeSizeAxes = Axes.Both,
+                            Colour = Colour4.Black.Opacity(0.5f),
+                        },
+                        new RankLabel(Rank, false, false)
+                        {
+                            AutoSizeAxes = Axes.Both,
+                            Anchor = Anchor.Centre,
+                            Origin = Anchor.Centre,
+                        },
+                    }
+                },
+            }
+        };
+
+        private Drawable createLegacyUserColumn() => new FillFlowContainer
+        {
+            Anchor = Anchor.CentreLeft,
+            Origin = Anchor.CentreLeft,
+            RelativeSizeAxes = Axes.X,
+            AutoSizeAxes = Axes.Y,
+            Direction = FillDirection.Vertical,
+            Spacing = new Vector2(0, legacy_row_spacing),
+            Padding = new MarginPadding { Horizontal = legacy_padding },
+            Children = new Drawable[]
+            {
+                new Container
+                {
+                    RelativeSizeAxes = Axes.X,
+                    Height = legacy_primary_row_height,
+                    Child = new TruncatingSpriteText
+                    {
+                        Anchor = Anchor.BottomLeft,
+                        Origin = Anchor.BottomLeft,
+                        RelativeSizeAxes = Axes.X,
+                        Text = Score.User.Username,
+                        Font = OsuFont.Style.Heading2,
+                        UseFullGlyphHeight = false,
+                        // like the gameplay leaderboard, friends' names are pink.
+                        Colour = Highlight == HighlightType.Friend ? colours.Pink1 : Colour4.White,
+                    },
+                },
+                new Container
+                {
+                    RelativeSizeAxes = Axes.X,
+                    Height = legacy_secondary_row_height,
+                    Child = legacyMetaRow = new FillFlowContainer
+                    {
+                        Anchor = Anchor.CentreLeft,
+                        Origin = Anchor.CentreLeft,
+                        AutoSizeAxes = Axes.Both,
+                        Direction = FillDirection.Horizontal,
+                        Spacing = new Vector2(legacy_spacing, 0),
+                        Children = new Drawable[]
+                        {
+                            new UpdateableFlag(Score.User.CountryCode)
+                            {
+                                Anchor = Anchor.CentreLeft,
+                                Origin = Anchor.CentreLeft,
+                                Size = new Vector2(18, 13),
+                            },
+                            // stays hidden until the flag texture has loaded, instead of showing a grey placeholder box.
+                            legacyTeamFlag = new Container
+                            {
+                                Anchor = Anchor.CentreLeft,
+                                Origin = Anchor.CentreLeft,
+                                // grows in once loaded, so the date beside it slides over instead of jumping.
+                                Size = new Vector2(0, 13),
+                                Masking = true,
+                                CornerRadius = 13 / 8f,
+                                Alpha = 0,
+                            },
+                            new DateLabel(Score.Date)
+                            {
+                                Anchor = Anchor.CentreLeft,
+                                Origin = Anchor.CentreLeft,
+                                Font = OsuFont.Style.Caption1.With(weight: FontWeight.SemiBold),
+                                Colour = colourProvider.Content2,
+                                UseFullGlyphHeight = false,
+                            },
+                            legacyLeadText = new OsuSpriteText
+                            {
+                                Anchor = Anchor.CentreLeft,
+                                Origin = Anchor.CentreLeft,
+                                Font = OsuFont.Style.Caption1.With(weight: FontWeight.SemiBold),
+                                Colour = colourProvider.Light1,
+                                UseFullGlyphHeight = false,
+                                Alpha = 0,
+                            },
+                        }
+                    },
+                },
+            }
+        };
+
+        private Drawable createLegacyScoreColumn() => new FillFlowContainer
+        {
+            Anchor = Anchor.CentreRight,
+            Origin = Anchor.CentreRight,
+            AutoSizeAxes = Axes.Both,
+            Direction = FillDirection.Vertical,
+            Spacing = new Vector2(0, legacy_row_spacing),
+            Padding = new MarginPadding { Horizontal = legacy_padding },
+            Children = new Drawable[]
+            {
+                new Container
+                {
+                    Anchor = Anchor.TopRight,
+                    Origin = Anchor.TopRight,
+                    AutoSizeAxes = Axes.X,
+                    Height = legacy_primary_row_height,
+                    Child = legacyScoreText = new OsuSpriteText
+                    {
+                        Anchor = Anchor.BottomRight,
+                        Origin = Anchor.BottomRight,
+                        Current = scoreManager.GetBindableTotalScoreString(Score),
+                        Spacing = new Vector2(-2f),
+                        Font = OsuFont.Style.Heading1.With(weight: FontWeight.Regular, fixedWidth: true),
+                        UseFullGlyphHeight = false,
+                    },
+                },
+                new Container
+                {
+                    Anchor = Anchor.TopRight,
+                    Origin = Anchor.TopRight,
+                    AutoSizeAxes = Axes.X,
+                    Height = legacy_secondary_row_height,
+                    Child = new FillFlowContainer
                     {
                         Anchor = Anchor.CentreRight,
                         Origin = Anchor.CentreRight,
                         AutoSizeAxes = Axes.Both,
                         Direction = FillDirection.Horizontal,
-                        Spacing = new Vector2(default_mod_spacing, 0),
-                        Shear = sheared ? -OsuGame.SHEAR : Vector2.Zero,
+                        Spacing = new Vector2(legacy_spacing, 0),
+                        Children = new Drawable[]
+                        {
+                            legacyModsOverflowText = new OsuSpriteText
+                            {
+                                Anchor = Anchor.CentreRight,
+                                Origin = Anchor.CentreRight,
+                                Font = OsuFont.Style.Caption1.With(weight: FontWeight.SemiBold),
+                                Colour = colourProvider.Content2,
+                                UseFullGlyphHeight = false,
+                                Alpha = 0,
+                            },
+                            modsContainer = new FillFlowContainer<Drawable>
+                            {
+                                Anchor = Anchor.CentreRight,
+                                Origin = Anchor.CentreRight,
+                                AutoSizeAxes = Axes.Both,
+                                Direction = FillDirection.Horizontal,
+                                Spacing = new Vector2(default_mod_spacing, 0),
+                                // the icons are heavier than the text, so they sit slightly lower to stay clear of the score digits.
+                                Y = 1,
+                            },
+                            legacyStatisticsText = new OsuSpriteText
+                            {
+                                Anchor = Anchor.CentreRight,
+                                Origin = Anchor.CentreRight,
+                                Font = OsuFont.Style.Caption1.With(weight: FontWeight.SemiBold),
+                                Colour = colourProvider.Content2,
+                                UseFullGlyphHeight = false,
+                            },
+                        }
                     },
-                    legacyStatisticsText = new OsuSpriteText
-                    {
-                        Anchor = Anchor.CentreRight,
-                        Origin = Anchor.CentreRight,
-                        Font = OsuFont.Style.Caption2.With(weight: FontWeight.SemiBold),
-                        Colour = colourProvider.Content2,
-                        UseFullGlyphHeight = false,
-                        Alpha = LegacyStyle ? 1 : 0,
-                    },
-                }
-            };
-
-            if (!LegacyStyle)
-            {
-                return new FillFlowContainer
-                {
-                    AutoSizeAxes = Axes.Both,
-                    Anchor = Anchor.CentreRight,
-                    Origin = Anchor.CentreRight,
-                    Direction = FillDirection.Vertical,
-                    Padding = new MarginPadding { Horizontal = corner_radius },
-                    Spacing = new Vector2(0f, -2f),
-                    Children = new Drawable[] { scoreText, detailsRow }
-                };
-            }
-
-            // the score's box hugs its digits, so the details row is centred between the visible bottom of the score and the bottom of the card.
-            return legacyScoreLayout = new GridContainer
-            {
-                RelativeSizeAxes = Axes.Both,
-                Padding = new MarginPadding { Horizontal = corner_radius, Top = 5 },
-                RowDimensions = new[]
-                {
-                    new Dimension(GridSizeMode.AutoSize),
-                    new Dimension(),
                 },
-                Content = new[]
-                {
-                    new Drawable[] { scoreText },
-                    new Drawable[] { detailsRow },
-                }
-            };
-        }
+            }
+        };
 
         private ColourInfo getHighlightColour(HighlightType? highlightType, float lightenAmount = 0)
         {
@@ -564,9 +834,29 @@ namespace osu.Game.Screens.Select
         {
             base.LoadComplete();
 
+            if (LegacyStyle && Score.User.Team?.FlagUrl is string flagUrl)
+            {
+                LoadComponentAsync(new LegacyTeamFlagSprite(flagUrl), flag =>
+                {
+                    if (flag.Texture == null)
+                        return;
+
+                    legacyTeamFlag.Child = flag;
+                    legacyTeamFlag.ResizeWidthTo(26, transition_duration, Easing.OutQuint);
+                    legacyTeamFlag.FadeIn(transition_duration, Easing.OutQuint);
+                });
+            }
+
             scoringMode = config.GetBindable<ScoringMode>(OsuSetting.ScoreDisplayMode);
             scoringMode.BindValueChanged(s =>
             {
+                if (LegacyStyle)
+                {
+                    updateModDisplay();
+                    updateLegacyStatistics(s.NewValue);
+                    return;
+                }
+
                 switch (s.NewValue)
                 {
                     case ScoringMode.Standardised:
@@ -579,9 +869,6 @@ namespace osu.Game.Screens.Select
                 }
 
                 updateModDisplay();
-
-                if (LegacyStyle)
-                    updateLegacyStatistics(s.NewValue);
             }, true);
         }
 
@@ -589,21 +876,18 @@ namespace osu.Game.Screens.Select
         {
             legacyStatisticsText.Text = $"{Score.DisplayAccuracy} · {Score.MaxCombo}x";
 
-            if (NextScore != null)
-                legacyLeadText.Text = $"+{Score.GetDisplayScore(mode) - NextScore.GetDisplayScore(mode):N0}";
+            if (NextScore != null && Score.GetDisplayScore(mode) > NextScore.GetDisplayScore(mode))
+                legacyLeadText.Text = $"· +{Score.GetDisplayScore(mode) - NextScore.GetDisplayScore(mode):N0}";
         }
 
         private void updateModDisplay()
         {
             if (Score.Mods.Length > 0)
             {
-                modsContainer.Padding = new MarginPadding { Top = 4f };
-                // the text is centred on the box, but the drawn mod icon sits lower than its box, so shift it down to match.
-                legacyStatisticsText.Margin = new MarginPadding { Top = 6f };
+                if (!LegacyStyle)
+                    modsContainer.Padding = new MarginPadding { Top = 4f };
 
-                // the offsets above only push the visible row down, which would leave it below the centre of the space under the score.
-                if (LegacyStyle)
-                    detailsRow.Padding = new MarginPadding { Bottom = 6f };
+                lastLegacyFitKey = default;
                 modsContainer.ChildrenEnumerable = Score.Mods.AsOrdered().Select(mod => new PoppingModIcon(mod)
                 {
                     Scale = new Vector2(0.3f),
@@ -652,6 +936,12 @@ namespace osu.Game.Screens.Select
         {
             base.Update();
 
+            if (LegacyStyle)
+            {
+                updateLegacyFit();
+                return;
+            }
+
             DisplayMode mode = getCurrentDisplayMode();
 
             if (currentMode != mode)
@@ -662,27 +952,57 @@ namespace osu.Game.Screens.Select
                 Left = rankLabelStandalone.DrawWidth,
                 Right = rightContent.DrawWidth,
             };
-
-            if (legacyScoreLayout != null)
-                fitLegacyMods(legacyScoreLayout.ChildSize.X);
         }
 
         /// <summary>
-        /// Overlaps the mod icons further when they would not fit, so accuracy and combo beside them are never cut off.
+        /// Keeps the legacy row from clipping: mods overlap further to stay under the score, and the lead is only shown when it fits whole.
         /// </summary>
-        private void fitLegacyMods(float availableWidth)
+        private void updateLegacyFit()
         {
             int count = modsContainer.Count;
 
-            if (count < 2)
+            if (count >= 2)
+            {
+                // the score column may grow until the name column would drop below its minimum width.
+                float columnWidth = DrawWidth - HEIGHT - legacy_grade_width - legacy_min_user_width - legacy_padding * 2;
+                float modsWidth = Math.Max(legacyScoreText.DrawWidth, columnWidth) - legacyStatisticsText.DrawWidth - legacy_spacing;
+
+                // only refit when an input changed; text and icon sizes settle a frame late, so they are part of the key.
+                var key = (modsWidth, modsContainer[0].DrawWidth, legacyModsOverflowText.DrawWidth);
+
+                if (key != lastLegacyFitKey)
+                {
+                    lastLegacyFitKey = key;
+                    fitLegacyMods(count, modsWidth);
+                }
+            }
+
+            if (legacyLeadText.Text.ToString().Length == 0)
                 return;
 
-            float iconsWidth = modsContainer.Sum(d => d.DrawWidth * d.Scale.X);
-            float modsWidth = availableWidth - legacyStatisticsText.DrawWidth - detailsRow.Spacing.X;
-            float spacing = Math.Min(default_mod_spacing, (modsWidth - iconsWidth) / (count - 1));
+            // measured without the lead itself, so showing or hiding it cannot change the result.
+            float metaWidth = legacyMetaRow.Where(d => d != legacyLeadText && d.IsPresent).Sum(d => d.DrawWidth + legacy_spacing);
+            legacyLeadText.Alpha = metaWidth + legacyLeadText.DrawWidth <= legacyMetaRow.Parent!.DrawWidth ? 1 : 0;
+        }
 
-            if (spacing != modsContainer.Spacing.X)
-                modsContainer.Spacing = new Vector2(spacing, 0);
+        private void fitLegacyMods(int count, float modsWidth)
+        {
+            float iconWidth = modsContainer[0].DrawWidth * modsContainer[0].Scale.X;
+            int shown = count;
+
+            // icons never overlap further than the default spacing, so each stays recognisable; the rest collapse into "+N".
+            if (count * iconWidth + (count - 1) * default_mod_spacing > modsWidth)
+            {
+                // measured with the widest label first, so the final label is never wider than what was reserved.
+                legacyModsOverflowText.Text = $"+{count - 1}";
+                float available = modsWidth - legacyModsOverflowText.DrawWidth - legacy_spacing;
+                shown = Math.Clamp((int)((available - default_mod_spacing) / (iconWidth + default_mod_spacing)), 1, count - 1);
+                legacyModsOverflowText.Text = $"+{count - shown}";
+            }
+
+            for (int i = 0; i < count; i++)
+                modsContainer[i].Alpha = i < shown ? 1 : 0;
+            legacyModsOverflowText.Alpha = shown < count ? 1 : 0;
         }
 
         private void updateDisplayMode(DisplayMode mode)
@@ -690,8 +1010,6 @@ namespace osu.Game.Screens.Select
             double duration = currentMode == null ? 0 : transition_duration;
             if (mode >= DisplayMode.Full)
                 rankLabelStandalone.FadeIn(duration, Easing.OutQuint).ResizeWidthTo(rank_label_width, duration, Easing.OutQuint);
-            else if (LegacyStyle && Highlight != null)
-                rankLabelStandalone.FadeIn(duration, Easing.OutQuint).ResizeWidthTo(legacy_highlight_width, duration, Easing.OutQuint);
             else
                 rankLabelStandalone.FadeOut(duration, Easing.OutQuint).ResizeWidthTo(0, duration, Easing.OutQuint);
 
@@ -766,6 +1084,27 @@ namespace osu.Game.Screens.Select
             Compact,
             Regular,
             Full
+        }
+
+        [LongRunningLoad]
+        private partial class LegacyTeamFlagSprite : Sprite
+        {
+            private readonly string url;
+
+            public LegacyTeamFlagSprite(string url)
+            {
+                this.url = url;
+                RelativeSizeAxes = Axes.Both;
+                FillMode = FillMode.Fit;
+                Anchor = Anchor.Centre;
+                Origin = Anchor.Centre;
+            }
+
+            [BackgroundDependencyLoader]
+            private void load(OnlineAssetCachingStore textures)
+            {
+                Texture = textures.Get(url);
+            }
         }
 
         private partial class DateLabel : DrawableDate
