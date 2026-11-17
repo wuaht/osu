@@ -223,6 +223,7 @@ namespace osu.Game.Input.Bindings
             new KeyBinding(InputKey.None, GlobalAction.EditorToggleGridDisplay),
             new KeyBinding(InputKey.None, GlobalAction.EditorRandomSliderRotation),
             new KeyBinding(InputKey.None, GlobalAction.EditorRandomSliderShape),
+            new KeyBinding(InputKey.None, GlobalAction.EditorRandomSliderShapeFromAnchors),
             new KeyBinding(InputKey.None, GlobalAction.EditorSwitchToPerfectCurve),
             new KeyBinding(InputKey.None, GlobalAction.EditorSwitchToBezierCurve),
             new KeyBinding(InputKey.None, GlobalAction.EditorSwitchToLinearCurve),
@@ -812,6 +813,9 @@ namespace osu.Game.Input.Bindings
 
         [LocalisableDescription(typeof(SlopEditorStrings), nameof(SlopEditorStrings.InsertRecentPattern))]
         EditorPatternGalleryInsertRecent,
+
+        [LocalisableDescription(typeof(SlopEditorStrings), nameof(SlopEditorStrings.RandomSliderShapeFromAnchors))]
+        EditorRandomSliderShapeFromAnchors,
     }
 
     public enum GlobalActionCategory

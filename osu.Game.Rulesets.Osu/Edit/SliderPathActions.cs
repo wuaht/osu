@@ -47,9 +47,6 @@ namespace osu.Game.Rulesets.Osu.Edit
         [Resolved]
         private Storage storage { get; set; } = null!;
 
-        [Resolved]
-        private OsuConfigManager config { get; set; } = null!;
-
         private InputManager inputManager = null!;
 
         private readonly Random rng = new Random();
@@ -85,7 +82,10 @@ namespace osu.Game.Rulesets.Osu.Edit
                     return rotateSlidersRandomly();
 
                 case GlobalAction.EditorRandomSliderShape:
-                    return randomiseSliderShape();
+                    return randomiseSliderShape(false);
+
+                case GlobalAction.EditorRandomSliderShapeFromAnchors:
+                    return randomiseSliderShape(true);
             }
 
             return false;
@@ -295,9 +295,10 @@ namespace osu.Game.Rulesets.Osu.Edit
         }
 
         /// <summary>
-        /// Replaces the path of the selected slider with a random slider of another beatmap, or else a generated path, between its head and its last control point.
+        /// Replaces the path of the selected slider with a random slider of another beatmap (or else a generated path) or with random anchors,
+        /// between its head and its last control point.
         /// </summary>
-        private bool randomiseSliderShape()
+        private bool randomiseSliderShape(bool randomAnchors)
         {
             if (editorBeatmap.SelectedHitObjects.Count != 1 || editorBeatmap.SelectedHitObjects[0] is not Slider slider)
                 return false;
@@ -311,7 +312,7 @@ namespace osu.Game.Rulesets.Osu.Edit
             Vector2 head = origin + controlPoints[0].Position;
             Vector2 tail = origin + controlPoints[^1].Position;
 
-            var newPoints = config.Get<bool>(OsuSetting.SlopEditorRandomSliderAnchors)
+            var newPoints = randomAnchors
                 ? generatePath(controlPoints, origin, head, tail)
                 : pathFromLibrary(controlPoints, origin, head, tail) ?? generatePath(controlPoints, origin, head, tail);
 

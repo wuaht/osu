@@ -100,9 +100,14 @@ namespace osu.Game.Localisation
         public static LocalisableString RandomSliderRotation => new TranslatableString(getKey(@"random_slider_rotation"), @"Rotate selected sliders randomly");
 
         /// <summary>
-        /// "Randomise selected slider shape"
+        /// "Randomise selected slider shape from another beatmap"
         /// </summary>
-        public static LocalisableString RandomSliderShape => new TranslatableString(getKey(@"random_slider_shape"), @"Randomise selected slider shape");
+        public static LocalisableString RandomSliderShape => new TranslatableString(getKey(@"random_slider_shape"), @"Randomise selected slider shape from another beatmap");
+
+        /// <summary>
+        /// "Randomise selected slider shape from random anchors"
+        /// </summary>
+        public static LocalisableString RandomSliderShapeFromAnchors => new TranslatableString(getKey(@"random_slider_shape_from_anchors"), @"Randomise selected slider shape from random anchors");
 
         /// <summary>
         /// "Switch to perfect curve"

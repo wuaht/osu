@@ -82,12 +82,6 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                 }),
                 new SettingsItemV2(new FormCheckBox
                 {
-                    Caption = SlopSettingsStrings.EditorRandomSliderAnchors,
-                    HintText = SlopSettingsStrings.EditorRandomSliderAnchorsDescription,
-                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorRandomSliderAnchors),
-                }),
-                new SettingsItemV2(new FormCheckBox
-                {
                     Caption = SlopSettingsStrings.SliderPartOnFirstClick,
                     HintText = SlopSettingsStrings.SliderPartOnFirstClickDescription,
                     Current = config.GetBindable<bool>(OsuSetting.SlopEditorSliderPartOnFirstClick),
