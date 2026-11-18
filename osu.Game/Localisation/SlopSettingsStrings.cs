@@ -882,7 +882,7 @@ namespace osu.Game.Localisation
         /// <summary>
         /// "Disables the dimming effect and notification on fail when the above option is disabled."
         /// </summary>
-        public static LocalisableString DisableSoftFailEffectsDescription => new TranslatableString(getKey(@"disable_soft_fail_effects_description"), @"Disables the dimming effect and notification on fail when the above option is disabled.");
+        public static LocalisableString DisableSoftFailEffectsDescription => new TranslatableString(getKey(@"disable_soft_fail_effects_description"), @"Disables the notification on fail when the above option is disabled.");
 
         /// <summary>
         /// "Failed"

@@ -1136,11 +1136,6 @@ namespace osu.Game.Screens.Play
                 return;
 
             AddInternal(new SoftFailNotification());
-
-            string rulesetName = ruleset.RulesetInfo.ShortName;
-
-            if (rulesetName != @"mania" && rulesetName != @"taiko")
-                DrawableRuleset.FadeColour(Color4.Gray, 500);
         }
 
         /// <summary>

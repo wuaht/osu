@@ -27,6 +27,7 @@ namespace osu.Game.Screens.Play
                 Text = SlopSettingsStrings.SoftFailNotification,
                 Font = OsuFont.Torus.With(size: 72, weight: FontWeight.Bold),
                 Colour = colours.Red,
+                Alpha = 0.5f,
             };
         }
 
