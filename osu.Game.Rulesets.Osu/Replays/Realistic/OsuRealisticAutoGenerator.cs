@@ -622,8 +622,9 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
             float duration = (float)exit.Duration;
 
             // the movement leaves with the velocity of the spin (so it doesn't kink) and comes to rest on the next object.
+            // a start tangent between 1.5 and 3 times the distance only ever slows down (2 times slows down evenly).
             Vector2 startTangent = spinVelocity * duration;
-            float maxTangent = 1.25f * Vector2.Distance(from, to);
+            float maxTangent = 3 * Vector2.Distance(from, to);
             if (startTangent.Length > maxTangent)
                 startTangent *= maxTangent / startTangent.Length;
 
@@ -660,12 +661,17 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
             double planned = Math.Max(earliest, Math.Min(spinner.EndTime, next.StartTime - minDuration));
             double plannedDuration = Math.Clamp(arrivalTime - planned, 1, maxDuration);
 
-            // the spin is about as fast as the movement starts off when the hand lets go of it, which then speeds up a little before slowing down.
-            double exitSpeed = Math.Clamp(0.75 * Vector2.Distance(SPINNER_CENTRE, next.StackedPosition) / plannedDuration / (spin_speed * 120), 0.05, 1);
-            double slowdown = Math.Clamp(plannedDuration / 2, spin_slowdown_duration, 2 * spin_slowdown_duration);
+            // the hand lets go with exactly the speed which, slowing down evenly, carries it to the next object in time (covering distance d in time t needs a start speed of 2d / t),
+            // and the spin slows down at that same rate before letting go, so the speed only ever decreases from the spin to the next object.
+            double rotation = 2 * Math.PI / spin_speed;
+            double fullSpeed = 0;
+            for (double t = spinner.StartTime + 1; t <= spinner.StartTime + rotation; t++)
+                fullSpeed += Vector2.Distance(spinTarget(t, spinner).target, spinTarget(t - 1, spinner).target) / rotation;
+
+            double exitSpeed = Math.Clamp(2 * Vector2.Distance(SPINNER_CENTRE, next.StackedPosition) / plannedDuration / fullSpeed, 0.05, 1);
+            double slowdown = Math.Clamp((1 - exitSpeed) / exitSpeed * plannedDuration, spin_slowdown_duration, 4 * spin_slowdown_duration);
 
             // search one rotation around the planned time, without cutting into the time needed to reach the next object.
-            double rotation = 2 * Math.PI / spin_speed;
             double searchStart = Math.Max(earliest, planned - rotation);
             double searchEnd = Math.Min(searchStart + rotation, Math.Max(planned, next.StartTime - minDuration / 2));
 

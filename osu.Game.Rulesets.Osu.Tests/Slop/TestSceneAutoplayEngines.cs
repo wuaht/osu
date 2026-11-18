@@ -300,20 +300,28 @@ namespace osu.Game.Rulesets.Osu.Tests.Slop
                 var generator = new OsuRealisticAutoGenerator(converted, new List<Mod>());
                 var allFrames = generator.Generate().Frames.Cast<OsuReplayFrame>().ToList();
                 var circle = (OsuHitObject)converted.HitObjects[1];
-                double exitTime = generator.GetSpinnerExit((Spinner)converted.HitObjects[0], circle).Time;
+                var exit = generator.GetSpinnerExit((Spinner)converted.HitObjects[0], circle);
+                double exitTime = exit.Time;
                 var frames = allFrames.Where(f => f.Time >= exitTime - 20 && f.Time <= circle.StartTime).ToList();
 
                 // a kink shows as a sharp change of direction while moving fast, a u-turn as moving away from the object.
                 double maxTurn = 0;
                 double maxAway = 0;
+                // the movement carries the spin's momentum, so it only ever slows down instead of slowing and then speeding up again.
+                double maxRise = 0;
 
                 for (int i = 1; i < frames.Count - 1; i++)
                 {
                     Vector2 before = frames[i].Position - frames[i - 1].Position;
                     Vector2 after = frames[i + 1].Position - frames[i].Position;
-                    double speed = Math.Min(before.Length / (frames[i].Time - frames[i - 1].Time), after.Length / (frames[i + 1].Time - frames[i].Time));
+                    double speedBefore = before.Length / (frames[i].Time - frames[i - 1].Time);
+                    double speedAfter = after.Length / (frames[i + 1].Time - frames[i].Time);
+                    double speed = Math.Min(speedBefore, speedAfter);
 
-                    TestContext.WriteLine($"{frames[i].Time:F0}: {frames[i].Position} speed {speed:F2}");
+                    if (frames[i].Time > exitTime)
+                        maxRise = Math.Max(maxRise, speedAfter - speedBefore);
+
+                    TestContext.WriteLine($"{frames[i].Time:F0}: {frames[i].Position} speed {speedAfter:F2}");
 
                     if (speed < 0.3)
                         continue;
@@ -327,10 +335,10 @@ namespace osu.Game.Rulesets.Osu.Tests.Slop
                 }
 
                 // with time to spare, the cursor moves calmly instead of rushing to the object and waiting there.
-                double arrival = frames.First(f => Vector2.Distance(f.Position, frames[^1].Position) < 5).Time;
+                double arrival = frames.First(f => Vector2.Distance(f.Position, frames[^1].Position) < 1).Time;
 
-                TestContext.WriteLine($"exit {exitTime:F0}, arrival {arrival:F0}, max turn {maxTurn:F1}, max away {maxAway:F2}");
-                return maxTurn < 40 && maxAway < 1 && arrival > circle.StartTime - 150;
+                TestContext.WriteLine($"exit {exitTime:F0}, arrival {arrival:F0}, max turn {maxTurn:F1}, max away {maxAway:F2}, max speed rise {maxRise:F3}");
+                return maxTurn < 40 && maxAway < 1 && maxRise < 0.05 && arrival > circle.StartTime - 150;
             });
         }
 
