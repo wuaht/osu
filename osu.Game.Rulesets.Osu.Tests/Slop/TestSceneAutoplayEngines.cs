@@ -300,7 +300,7 @@ namespace osu.Game.Rulesets.Osu.Tests.Slop
                 var generator = new OsuRealisticAutoGenerator(converted, new List<Mod>());
                 var allFrames = generator.Generate().Frames.Cast<OsuReplayFrame>().ToList();
                 var circle = (OsuHitObject)converted.HitObjects[1];
-                double exitTime = generator.SpinnerExitTime((Spinner)converted.HitObjects[0], circle);
+                double exitTime = generator.GetSpinnerExit((Spinner)converted.HitObjects[0], circle).Time;
                 var frames = allFrames.Where(f => f.Time >= exitTime - 20 && f.Time <= circle.StartTime).ToList();
 
                 // a kink shows as a sharp change of direction while moving fast, a u-turn as moving away from the object.
@@ -326,8 +326,11 @@ namespace osu.Game.Rulesets.Osu.Tests.Slop
                         maxAway = Math.Max(maxAway, -Vector2.Dot(after, (circle.StackedPosition - frames[i].Position).Normalized()));
                 }
 
-                TestContext.WriteLine($"exit {exitTime:F0}, max turn {maxTurn:F1}, max away {maxAway:F2}");
-                return maxTurn < 40 && maxAway < 1;
+                // with time to spare, the cursor moves calmly instead of rushing to the object and waiting there.
+                double arrival = frames.First(f => Vector2.Distance(f.Position, frames[^1].Position) < 5).Time;
+
+                TestContext.WriteLine($"exit {exitTime:F0}, arrival {arrival:F0}, max turn {maxTurn:F1}, max away {maxAway:F2}");
+                return maxTurn < 40 && maxAway < 1 && arrival > circle.StartTime - 150;
             });
         }
 
