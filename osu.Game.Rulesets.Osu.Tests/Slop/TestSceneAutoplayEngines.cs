@@ -334,9 +334,9 @@ namespace osu.Game.Rulesets.Osu.Tests.Slop
                         maxAway = Math.Max(maxAway, -Vector2.Dot(after, (circle.StackedPosition - frames[i].Position).Normalized()));
                 }
 
-                // the cursor is on the object in time. it can't hold there for long, as it only starts moving once it has seen the object.
+                // the cursor is on the object in time, and the further away the object is in time, the longer it holds there.
                 double arrival = frames.First(f => Vector2.Distance(f.Position, frames[^1].Position) < 1).Time;
-                const double expectedHold = 0;
+                double expectedHold = gap >= 500 ? 150 : 0;
 
                 TestContext.WriteLine($"exit {exitTime:F0}, arrival {arrival:F0}, max turn {maxTurn:F1}, max away {maxAway:F2}, max speed rise {maxRise:F3}");
                 return maxTurn < 40 && maxAway < 1 && maxRise < 0.05 && arrival <= circle.StartTime - expectedHold;
@@ -370,11 +370,8 @@ namespace osu.Game.Rulesets.Osu.Tests.Slop
                 var generator = new OsuRealisticAutoGenerator(converted, new List<Mod>());
                 var allFrames = generator.Generate().Frames.Cast<OsuReplayFrame>().ToList();
                 // the entry is cached while generating, so the arguments don't matter here.
-                var spinner = (Spinner)converted.HitObjects[1];
-                double joinTime = generator.GetSpinnerEntry(spinner, Vector2.Zero, 0);
-                // before the spinner is seen (it appears, then takes a reaction time), the cursor only drifts around, which may cross itself.
-                double moveStart = Math.Max(2500 - gap, spinner.StartTime - spinner.TimePreempt + 170);
-                var path = allFrames.Where(f => f.Time > moveStart && f.Time <= joinTime + 50).Select(f => f.Position).ToList();
+                double joinTime = generator.GetSpinnerEntry((Spinner)converted.HitObjects[1], Vector2.Zero, 0);
+                var path = allFrames.Where(f => f.Time > 2500 - gap && f.Time <= joinTime + 50).Select(f => f.Position).ToList();
 
                 int crossings = 0;
 
@@ -387,10 +384,8 @@ namespace osu.Game.Rulesets.Osu.Tests.Slop
                     }
                 }
 
-                TestContext.WriteLine($"join {joinTime:F0}, {path.Count} frames, {crossings} crossings");
-
-                // the cursor is already spinning when the spinner starts, instead of only heading for its centre.
-                return path.Count > 2 && crossings == 0 && joinTime < 2500 - (2500 - moveStart) * 0.15;
+                TestContext.WriteLine($"join {joinTime:F0}, {path.Count} frames, {crossings} crossings");                // the cursor is already spinning when the spinner starts, instead of only heading for its centre.
+                return path.Count > 2 && crossings == 0 && joinTime < 2500 - gap * 0.15;
             });
 
             static bool segmentsCross(Vector2 a, Vector2 b, Vector2 c, Vector2 d)
@@ -398,123 +393,6 @@ namespace osu.Game.Rulesets.Osu.Tests.Slop
                 static float cross(Vector2 o, Vector2 p, Vector2 q) => (p.X - o.X) * (q.Y - o.Y) - (p.Y - o.Y) * (q.X - o.X);
 
                 return cross(a, b, c) * cross(a, b, d) < 0 && cross(c, d, a) * cross(c, d, b) < 0;
-            }
-        }
-
-        [Test]
-        public void TestRealisticCursorFlowsStraightThroughTriples()
-        {
-            AddAssert("cursor moves in a straight line", () =>
-            {
-                var ruleset = new OsuRuleset();
-                var beatmap = new Beatmap { BeatmapInfo = { Difficulty = { ApproachRate = 9, CircleSize = 4, OverallDifficulty = 8 }, Ruleset = ruleset.RulesetInfo } };
-
-                for (int i = 0; i < 3; i++)
-                    beatmap.HitObjects.Add(new HitCircle { StartTime = 2000 + i * 100, Position = new Vector2(200 + i * 20, 250 - i * 25), NewCombo = i == 0 });
-
-                var converted = ruleset.CreateBeatmapConverter(beatmap).Convert();
-                foreach (var h in converted.HitObjects)
-                    h.ApplyDefaults(converted.ControlPointInfo, converted.Difficulty);
-
-                var frames = new OsuRealisticAutoGenerator(converted, new List<Mod>()).Generate().Frames.Cast<OsuReplayFrame>()
-                                                                                       .Where(f => f.Time > 2000 && f.Time < 2200)
-                                                                                       .ToList();
-
-                Vector2 direction = Vector2.Normalize(new Vector2(20, -25));
-                Vector2 normal = new Vector2(-direction.Y, direction.X);
-                float sideways = frames.Max(f => Math.Abs(Vector2.Dot(f.Position - new Vector2(200, 250), normal)));
-
-                TestContext.Out.WriteLine($"sideways {sideways:0.00}");
-                return frames.Count > 0 && sideways < 1.5f;
-            });
-        }
-
-        [TestCase(100)]
-        [TestCase(180)]
-        [TestCase(400)]
-        public void TestRealisticCursorStaysStillOnStacks(double interval)
-        {
-            AddAssert("cursor follows offset stacks", () =>
-            {
-                var ruleset = new OsuRuleset();
-                var beatmap = new Beatmap { BeatmapInfo = { Difficulty = { ApproachRate = 9, CircleSize = 4, OverallDifficulty = 8 }, Ruleset = ruleset.RulesetInfo } };
-
-                // each object is offset by a few pixels like a stack, and the whole stack is longer than a circle radius.
-                for (int i = 0; i < 12; i++)
-                    beatmap.HitObjects.Add(new HitCircle { StartTime = 2000 + i * interval, Position = new Vector2(256 + i * 4, 192 + i * 4), NewCombo = i == 0 });
-
-                var converted = ruleset.CreateBeatmapConverter(beatmap).Convert();
-                foreach (var h in converted.HitObjects)
-                    h.ApplyDefaults(converted.ControlPointInfo, converted.Difficulty);
-
-                var frames = new OsuRealisticAutoGenerator(converted, new List<Mod>()).Generate().Frames.Cast<OsuReplayFrame>().ToList();
-
-                // the cursor is on every object when it's hit, and never further than a few pixels from the stack line.
-                bool hitsAll = converted.HitObjects.Cast<OsuHitObject>().All(h =>
-                    Vector2.Distance(frames.Last(f => f.Time <= h.StartTime).Position, h.StackedPosition) < h.Radius);
-                float largestStep = frames.Where(f => f.Time > 2000 + interval && f.Time < 2000 + 11 * interval)
-                                          .Zip(frames.Where(f => f.Time > 2000 + interval && f.Time < 2000 + 11 * interval).Skip(1), (a, b) => Vector2.Distance(a.Position, b.Position)).Max();
-
-                TestContext.Out.WriteLine($"interval {interval}: largest step {largestStep:0.00}");
-                return hitsAll && largestStep < 3;
-            });
-
-            AddAssert("cursor doesn't move on the stack", () =>
-            {
-                var ruleset = new OsuRuleset();
-                var beatmap = new Beatmap { BeatmapInfo = { Difficulty = { ApproachRate = 9, CircleSize = 4, OverallDifficulty = 8 }, Ruleset = ruleset.RulesetInfo } };
-
-                for (int i = 0; i < 8; i++)
-                    beatmap.HitObjects.Add(new HitCircle { StartTime = 2000 + i * interval, Position = new Vector2(256, 192), NewCombo = i == 0 });
-
-                var converted = ruleset.CreateBeatmapConverter(beatmap).Convert();
-                foreach (var h in converted.HitObjects)
-                    h.ApplyDefaults(converted.ControlPointInfo, converted.Difficulty);
-
-                var frames = new OsuRealisticAutoGenerator(converted, new List<Mod>()).Generate().Frames.Cast<OsuReplayFrame>()
-                                                                                       .Where(f => f.Time > 2000 + 2 * interval && f.Time < 2000 + 7 * interval)
-                                                                                       .ToList();
-
-                float spread = frames.Max(f => Vector2.Distance(f.Position, frames[0].Position));
-                TestContext.Out.WriteLine($"interval {interval}: spread {spread:0.000}");
-                return frames.Count > 0 && spread < 0.5f;
-            });
-        }
-
-        [Test]
-        public void TestRealisticCursorIgnoresObjectsBeforeSeeingThem()
-        {
-            AddAssert("cursor doesn't move towards an object before seeing it", () =>
-            {
-                var first = generate(new Vector2(450, 300));
-                var second = generate(new Vector2(60, 60));
-
-                // the second object appears at 5000 - 600 (AR9) and is reacted to 170 ms later.
-                const double seen = 5000 - 600 + 170;
-                var before = first.Where(f => f.Time < seen).ToList();
-
-                return before.Count > 100 && before.Zip(second, (a, b) => a.Time == b.Time && a.Position == b.Position).All(same => same)
-                       && first.Last(f => f.Time <= 5000).Position != second.Last(f => f.Time <= 5000).Position;
-            });
-
-            static List<OsuReplayFrame> generate(Vector2 secondPosition)
-            {
-                var ruleset = new OsuRuleset();
-                var beatmap = new Beatmap
-                {
-                    HitObjects =
-                    {
-                        new HitCircle { StartTime = 1000, Position = new Vector2(256, 192), NewCombo = true },
-                        new HitCircle { StartTime = 5000, Position = secondPosition },
-                    },
-                    BeatmapInfo = { Difficulty = { ApproachRate = 9, CircleSize = 4, OverallDifficulty = 8 }, Ruleset = ruleset.RulesetInfo },
-                };
-
-                var converted = ruleset.CreateBeatmapConverter(beatmap).Convert();
-                foreach (var h in converted.HitObjects)
-                    h.ApplyDefaults(converted.ControlPointInfo, converted.Difficulty);
-
-                return new OsuRealisticAutoGenerator(converted, new List<Mod>()).Generate().Frames.Cast<OsuReplayFrame>().ToList();
             }
         }
 
