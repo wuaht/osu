@@ -321,9 +321,17 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
                 return;
             }
 
-            // before the first object, move towards it. after the last object, rest.
+            // keep spinning until a final spinner ends.
+            if (current is Spinner lastSpinner && time < lastSpinner.EndTime)
+            {
+                spin(time, dt, lastSpinner);
+                return;
+            }
+
+            // before the first object, move towards it. after the last object, settle on a fixed spot.
+            // (targeting the cursor's own position would keep its momentum and send it flying off in a straight line.)
             setTargetSource(next);
-            moveTo(dt, next?.StackedPosition ?? cursor.Position, resting);
+            moveTo(dt, next?.StackedPosition ?? (current is Spinner ? SPINNER_CENTRE : lastTarget), resting);
         }
 
         /// <summary>
@@ -469,6 +477,16 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
             }
 
             double leaveTime = getLeaveTime(current);
+
+            // after a spinner, keep spinning until it ends and then drift towards the centre, instead of freezing on the circle until the next object appears.
+            if (current is Spinner spinner && time < Math.Max(leaveTime, next.StartTime - next.TimePreempt))
+            {
+                if (time < spinner.EndTime)
+                    spin(time, dt, spinner);
+                else
+                    moveTo(dt, SPINNER_CENTRE, resting);
+                return;
+            }
 
             // movements start where the cursor's target was when it left the previous object, so that the target doesn't jump.
             if (leftObject != current)
