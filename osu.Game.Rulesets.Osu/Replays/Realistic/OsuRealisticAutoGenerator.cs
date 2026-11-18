@@ -617,9 +617,9 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
             float s2 = s * s;
             float s3 = s2 * s;
 
-            // the movement starts from rest and speeds up into the spin, joining it with its velocity (a tangent of 1.5 to 3 times the distance only ever speeds up).
+            // the movement starts from rest and speeds up into the spin, joining it with its velocity (capped at 2 times the distance, so it speeds up evenly - at 3 times it would barely move at first).
             Vector2 endTangent = (to - spinTarget(joinTime - 1, spinner).target) * duration;
-            float maxTangent = 3 * Vector2.Distance(from, to);
+            float maxTangent = 2 * Vector2.Distance(from, to);
             if (endTangent.Length > maxTangent)
                 endTangent *= maxTangent / endTangent.Length;
 
@@ -696,9 +696,9 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
             float duration = (float)exit.Duration;
 
             // the movement leaves with the velocity of the spin (so it doesn't kink) and comes to rest on the next object.
-            // a start tangent between 1.5 and 3 times the distance only ever slows down (2 times slows down evenly).
+            // a start tangent of at most 2 times the distance slows down evenly (3 times would creep onto the object at the end).
             Vector2 startTangent = spinVelocity * duration;
-            float maxTangent = 3 * Vector2.Distance(from, to);
+            float maxTangent = 2 * Vector2.Distance(from, to);
             if (startTangent.Length > maxTangent)
                 startTangent *= maxTangent / startTangent.Length;
 
