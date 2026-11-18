@@ -502,16 +502,16 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
 
             float distance = Vector2.Distance(from, to);
 
-            // during pauses, players wait and only start moving when needed (Fitts's law), arriving at the next object shortly before hitting it.
-            double gap = next.StartTime - leaveTime;
-            double realGap = ApplyModsToTimeDelta(leaveTime, next.StartTime);
+            // during pauses, players wait until the next object (and its approach circle) appears, then move towards it, arriving shortly before hitting it.
+            double moveStartTime = Math.Max(leaveTime, next.StartTime - next.TimePreempt);
+            double gap = next.StartTime - moveStartTime;
+            double realGap = ApplyModsToTimeDelta(moveStartTime, next.StartTime);
             double movementTime = (80 + 90 * Math.Log2(distance / (2 * next.Radius) + 1)) * movement_speed;
             // the further the movement, the longer the cursor rests to aim, up to the full rest at the length of a jump.
             double arrivalHold = (arrival_hold_min + (arrival_hold_max - arrival_hold_min) * RealisticMath.Random(next.StackedPosition + new Vector2(1, 1)))
                                  * Math.Clamp(distance / (arrival_hold_full_distance * next.Radius), 0, 1);
             double hold = Math.Clamp(realGap - movementTime, 0, arrivalHold);
             double arrivalTime = realGap > 0 ? next.StartTime - gap * hold / realGap : next.StartTime;
-            double moveStartTime = realGap > movementTime + hold ? arrivalTime - gap * movementTime / realGap : leaveTime;
 
             double aheadTime = time + ApplyModsToRate(time, tracking_lag);
             double progress = arrivalTime > moveStartTime ? Math.Clamp((aheadTime - moveStartTime) / (arrivalTime - moveStartTime), 0, 1) : 1;
