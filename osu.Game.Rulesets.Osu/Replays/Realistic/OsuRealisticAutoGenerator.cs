@@ -906,6 +906,10 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
             double tremor = aheadTime / stream_tremor_interval;
             target += new Vector2(smoothNoise(new Vector2(3, 11), tremor) * 2 - 1, smoothNoise(new Vector2(5, 13), tremor) * 2 - 1) * (float)current.Radius * stream_tremor;
 
+            // on stacks, the cursor stays completely still.
+            if (flowPoint(currentIndex) == flowPoint(currentIndex + 1))
+                target = flowPoint(currentIndex);
+
             moveTo(dt, target, tracking);
         }
 
@@ -916,6 +920,15 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
         private Vector2 flowPoint(int index)
         {
             var hitObject = hitObjects[index];
+
+            // on stacks, the cursor stays on the same point instead of jumping between slightly different ones.
+            if (flowsInto(index - 1))
+            {
+                Vector2 previous = flowPoint(index - 1);
+                if (Vector2.Distance(previous, hitObject.StackedPosition) < hitObject.Radius * 0.5f)
+                    return previous;
+            }
+
             Vector2 seed = hitObject.StackedPosition + new Vector2((float)(hitObject.StartTime % 10000), 3);
 
             Vector2 offset = new Vector2(RealisticMath.Random(seed) * 2 - 1, RealisticMath.Random(seed + new Vector2(0, 1)) * 2 - 1);

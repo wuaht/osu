@@ -401,6 +401,33 @@ namespace osu.Game.Rulesets.Osu.Tests.Slop
             }
         }
 
+        [TestCase(100)]
+        [TestCase(180)]
+        [TestCase(400)]
+        public void TestRealisticCursorStaysStillOnStacks(double interval)
+        {
+            AddAssert("cursor doesn't move on the stack", () =>
+            {
+                var ruleset = new OsuRuleset();
+                var beatmap = new Beatmap { BeatmapInfo = { Difficulty = { ApproachRate = 9, CircleSize = 4, OverallDifficulty = 8 }, Ruleset = ruleset.RulesetInfo } };
+
+                for (int i = 0; i < 8; i++)
+                    beatmap.HitObjects.Add(new HitCircle { StartTime = 2000 + i * interval, Position = new Vector2(256, 192), NewCombo = i == 0 });
+
+                var converted = ruleset.CreateBeatmapConverter(beatmap).Convert();
+                foreach (var h in converted.HitObjects)
+                    h.ApplyDefaults(converted.ControlPointInfo, converted.Difficulty);
+
+                var frames = new OsuRealisticAutoGenerator(converted, new List<Mod>()).Generate().Frames.Cast<OsuReplayFrame>()
+                                                                                       .Where(f => f.Time > 2000 + 2 * interval && f.Time < 2000 + 7 * interval)
+                                                                                       .ToList();
+
+                float spread = frames.Max(f => Vector2.Distance(f.Position, frames[0].Position));
+                TestContext.Out.WriteLine($"interval {interval}: spread {spread:0.000}");
+                return frames.Count > 0 && spread < 0.5f;
+            });
+        }
+
         [Test]
         public void TestRealisticCursorIgnoresObjectsBeforeSeeingThem()
         {
