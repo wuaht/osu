@@ -349,6 +349,12 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
 
         private void spin(double time, float dt, Spinner spinner)
         {
+            var (target, parameters) = spinTarget(time, spinner);
+            moveTo(dt, target, parameters);
+        }
+
+        private static (Vector2 target, DynamicsParameters parameters) spinTarget(double time, Spinner spinner)
+        {
             float angle = (float)(time - spinner.StartTime) * 0.05f;
             float rotation = MathF.Floor(angle / (2 * MathF.PI));
 
@@ -359,8 +365,13 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
             Vector2 target = SPINNER_CENTRE + rotate(rotate(new Vector2(0, 120), angle) * scale, tilt);
             float random = RealisticMath.Random(new Vector2(rotation, 4));
 
-            moveTo(dt, target, new DynamicsParameters(4 + random, 0.8f + random, 0.5f));
+            return (target, new DynamicsParameters(4 + random, 0.8f + random, 0.5f));
         }
+
+        private static DynamicsParameters lerp(DynamicsParameters a, DynamicsParameters b, float t) => new DynamicsParameters(
+            a.Frequency + (b.Frequency - a.Frequency) * t,
+            a.Damping + (b.Damping - a.Damping) * t,
+            a.Response + (b.Response - a.Response) * t);
 
         private void followSlider(double time, float dt, Slider slider)
         {
@@ -518,10 +529,18 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
             double aheadTime = time + ApplyModsToRate(time, tracking_lag);
             double progress = arrivalTime > moveStartTime ? Math.Clamp((aheadTime - moveStartTime) / (arrivalTime - moveStartTime), 0, 1) : 1;
 
-            Vector2 target = Vector2.Lerp(from, to, (float)minimumJerk(progress));
+            float eased = (float)minimumJerk(progress);
+
+            // spinning blends into and out of movements, so that the cursor spirals out of a spinner instead of swinging around with its momentum,
+            // and starts spinning on the way to a spinner instead of waiting for it to begin.
+            bool spinsOut = current is Spinner && moveStartTime < current.GetEndTime();
+            var (start, startParameters) = spinsOut ? spinTarget(time, (Spinner)current) : (from, tracking);
+            var (end, endParameters) = next is Spinner nextSpinner ? spinTarget(time, nextSpinner) : (to, tracking);
+
+            Vector2 target = Vector2.Lerp(start, end, eased);
 
             // movements curve slightly to one side.
-            if (distance > 0)
+            if (distance > 0 && !spinsOut && next is not Spinner)
             {
                 Vector2 direction = (to - from) / distance;
                 float side = RealisticMath.Random(next.StackedPosition + new Vector2(0, 1)) < 0.5f ? -1 : 1;
@@ -529,7 +548,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
                 target += new Vector2(-direction.Y, direction.X) * side * MathF.Sin(MathF.PI * (float)progress) * distance * 0.05f;
             }
 
-            moveTo(dt, target, tracking);
+            moveTo(dt, target, lerp(startParameters, endParameters, eased));
         }
 
         /// <summary>
