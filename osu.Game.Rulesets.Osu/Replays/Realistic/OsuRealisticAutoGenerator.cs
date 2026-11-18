@@ -115,16 +115,6 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
         private const double reaction_time = 170;
 
         /// <summary>
-        /// How far the cursor drifts around while there is nothing to aim for, in osu!pixels.
-        /// </summary>
-        private const float idle_drift_distance = 12;
-
-        /// <summary>
-        /// How long it takes the drifting to change direction, in milliseconds.
-        /// </summary>
-        private const double idle_drift_interval = 700;
-
-        /// <summary>
         /// How far jumps miss their aim point before being corrected, relative to the distance of the jump.
         /// </summary>
         private const float aim_error = 0.08f;
@@ -586,18 +576,22 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
             double moveStartTime = Math.Max(leaveTime, seenTime(next));
             double aheadTime = time + ApplyModsToRate(time, tracking_lag);
 
-            // until the next object is seen, there is nothing to aim for, so the hand only drifts around.
+            // until the next object is seen, there is nothing to aim for, so the hand stays where it is.
             if (aheadTime < moveStartTime)
             {
-                moveTo(dt, idlePosition(current, leaveTime, aheadTime), tracking);
+                moveTo(dt, idlePosition(leaveTime, aheadTime), tracking);
                 return;
             }
 
-            Vector2 from = idlePosition(current, leaveTime, moveStartTime);
+            Vector2 from = idlePosition(leaveTime, moveStartTime);
 
             // aim for the near side of the next object, never at exactly the same spot.
             // streams are aimed at their centres instead, as they are flowed through.
             Vector2 to = flowsInto(currentIndex + 1) ? flowPoint(currentIndex + 1) : aimPoint(from, next);
+
+            // on stacks and overlapping objects, the cursor is already where it needs to be and stays completely still.
+            if (Vector2.Distance(from, next.StackedPosition) < next.Radius * 0.5f)
+                to = from;
 
             float distance = Vector2.Distance(from, to);
 
@@ -648,22 +642,14 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
         }
 
         /// <summary>
-        /// Where the hand drifts to while it has nothing to aim for, after leaving <paramref name="current"/> at <paramref name="leaveTime"/>.
+        /// Where the hand rests while it has nothing to aim for, after leaving the previous object at <paramref name="leaveTime"/>.
         /// </summary>
-        private Vector2 idlePosition(OsuHitObject current, double leaveTime, double time)
+        private Vector2 idlePosition(double leaveTime, double time)
         {
             double idle = ApplyModsToTimeDelta(leaveTime, time);
-            if (idle <= 0)
-                return leavePosition;
-
-            Vector2 seed = current.StackedPosition + new Vector2((float)(current.StartTime % 10000), 17);
-            double t = idle / idle_drift_interval;
-            Vector2 wander = new Vector2(smoothNoise(seed, t) * 2 - 1, smoothNoise(seed + new Vector2(0, 5), t) * 2 - 1);
 
             // during longer pauses, the hand relaxes back towards the middle of the screen.
-            float relax = smoothstep((idle - 1000) / 3000) * 0.3f;
-
-            return Vector2.Lerp(leavePosition, SPINNER_CENTRE, relax) + wander * smoothstep(idle / 400) * idle_drift_distance;
+            return Vector2.Lerp(leavePosition, SPINNER_CENTRE, smoothstep((idle - 1000) / 3000) * 0.3f);
         }
 
         /// <summary>
