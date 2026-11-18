@@ -122,6 +122,11 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
         /// </summary>
         private const double movement_speed = 0.85;
 
+        /// <summary>
+        /// How much longer movements out of spinners take than other movements, as the hand first has to stop spinning.
+        /// </summary>
+        private const double spinner_exit_slowdown = 1.6;
+
         private static readonly Vector2 playfield_min = new Vector2(-512, -384);
         private static readonly Vector2 playfield_max = new Vector2(1024, 768);
 
@@ -489,13 +494,9 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
 
             double leaveTime = getLeaveTime(current);
 
-            // after a spinner, keep spinning until it ends and then drift towards the centre, instead of freezing on the circle until the next object appears.
-            if (current is Spinner spinner && time < Math.Max(leaveTime, next.StartTime - next.TimePreempt))
+            if (current is Spinner spinner)
             {
-                if (time < spinner.EndTime)
-                    spin(time, dt, spinner);
-                else
-                    moveTo(dt, SPINNER_CENTRE, resting);
+                exitSpinner(time, dt, spinner, next, leaveTime);
                 return;
             }
 
@@ -510,10 +511,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
 
             // aim for the near side of the next object, never at exactly the same spot.
             // streams are aimed at their centres instead, as they are flowed through.
-            Vector2 to = flowsInto(currentIndex + 1)
-                ? flowPoint(currentIndex + 1)
-                : RealisticMath.MoveIntoCircle((from + next.StackedPosition) / 2, next.StackedPosition, (float)next.Radius * 0.5f)
-                  + new Vector2(RealisticMath.Random(next.StackedPosition) - 0.5f, RealisticMath.Random(next.StackedPosition + new Vector2(1, 0)) - 0.5f) * (float)next.Radius * 0.25f;
+            Vector2 to = flowsInto(currentIndex + 1) ? flowPoint(currentIndex + 1) : aimPoint(from, next);
 
             float distance = Vector2.Distance(from, to);
 
@@ -521,7 +519,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
             double moveStartTime = Math.Max(leaveTime, next.StartTime - next.TimePreempt);
             double gap = next.StartTime - moveStartTime;
             double realGap = ApplyModsToTimeDelta(moveStartTime, next.StartTime);
-            double movementTime = (80 + 90 * Math.Log2(distance / (2 * next.Radius) + 1)) * movement_speed;
+            double movementTime = fittsTime(distance, next);
             // the movement takes its natural time, and the cursor rests on the object for whatever time is left.
             double hold = Math.Max(0, realGap - movementTime);
             double arrivalTime = realGap > 0 ? next.StartTime - gap * hold / realGap : next.StartTime;
@@ -531,16 +529,18 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
 
             float eased = (float)minimumJerk(progress);
 
-            // spinning blends into and out of movements, so that the cursor spirals out of a spinner instead of swinging around with its momentum,
-            // and starts spinning on the way to a spinner instead of waiting for it to begin.
-            bool spinsOut = current is Spinner && moveStartTime < current.GetEndTime();
-            var (start, startParameters) = spinsOut ? spinTarget(time, (Spinner)current) : (from, tracking);
-            var (end, endParameters) = next is Spinner nextSpinner ? spinTarget(time, nextSpinner) : (to, tracking);
+            // the cursor starts spinning on the way to a spinner, instead of waiting in its centre for it to begin.
+            if (next is Spinner nextSpinner)
+            {
+                var (spinPosition, spinParameters) = spinTarget(time, nextSpinner);
+                moveTo(dt, Vector2.Lerp(from, spinPosition, eased), lerp(tracking, spinParameters, eased));
+                return;
+            }
 
-            Vector2 target = Vector2.Lerp(start, end, eased);
+            Vector2 target = Vector2.Lerp(from, to, eased);
 
             // movements curve slightly to one side.
-            if (distance > 0 && !spinsOut && next is not Spinner)
+            if (distance > 0)
             {
                 Vector2 direction = (to - from) / distance;
                 float side = RealisticMath.Random(next.StackedPosition + new Vector2(0, 1)) < 0.5f ? -1 : 1;
@@ -548,8 +548,75 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
                 target += new Vector2(-direction.Y, direction.X) * side * MathF.Sin(MathF.PI * (float)progress) * distance * 0.05f;
             }
 
-            moveTo(dt, target, lerp(startParameters, endParameters, eased));
+            moveTo(dt, target, tracking);
         }
+
+        /// <summary>
+        /// Keeps spinning for as long as there is time, then leaves the spinner along the direction of the spin and moves to the next object a bit slower than usual.
+        /// </summary>
+        private void exitSpinner(double time, float dt, Spinner spinner, OsuHitObject next, double leaveTime)
+        {
+            if (next is Spinner nextSpinner)
+            {
+                spin(time, dt, time < spinner.EndTime ? spinner : nextSpinner);
+                return;
+            }
+
+            double duration = ApplyModsToRate(time, fittsTime(Vector2.Distance(SPINNER_CENTRE, next.StackedPosition), next) * spinner_exit_slowdown);
+
+            // spin until the spinner ends if there is enough time left, but don't move towards the next object before it appears.
+            double exitTime = Math.Max(leaveTime, Math.Max(Math.Min(spinner.EndTime, next.StartTime - duration), next.StartTime - next.TimePreempt));
+
+            if (time < exitTime)
+            {
+                // once the spinner is over, drift towards its centre until the next object appears.
+                if (time < spinner.EndTime)
+                    spin(time, dt, spinner);
+                else
+                    moveTo(dt, SPINNER_CENTRE, resting);
+                return;
+            }
+
+            bool spinning = exitTime < spinner.EndTime;
+            Vector2 from = spinning ? spinTarget(exitTime, spinner).target : SPINNER_CENTRE;
+            Vector2 to = aimPoint(from, next);
+            double arrivalTime = Math.Min(next.StartTime, exitTime + duration);
+
+            // leave along the direction of the spin. the speed is limited, so that the cursor curves out of the spinner instead of looping around.
+            Vector2 tangent = Vector2.Zero;
+
+            if (spinning)
+            {
+                Vector2 spinVelocity = spinTarget(exitTime + 1, spinner).target - from;
+                tangent = spinVelocity * (float)(arrivalTime - exitTime);
+
+                float maxLength = Vector2.Distance(from, to);
+                if (tangent.Length > maxLength)
+                    tangent = tangent.Normalized() * maxLength;
+            }
+
+            double aheadTime = time + ApplyModsToRate(time, tracking_lag);
+            float t = arrivalTime > exitTime ? (float)Math.Clamp((aheadTime - exitTime) / (arrivalTime - exitTime), 0, 1) : 1;
+            float t2 = t * t;
+            float t3 = t2 * t;
+
+            // a hermite curve which starts with the spin's direction and comes to rest on the next object.
+            Vector2 target = (2 * t3 - 3 * t2 + 1) * from + (t3 - 2 * t2 + t) * tangent + (-2 * t3 + 3 * t2) * to;
+
+            moveTo(dt, target, tracking);
+        }
+
+        /// <summary>
+        /// Where the cursor aims at the next object: its near side, and never at exactly the same spot.
+        /// </summary>
+        private static Vector2 aimPoint(Vector2 from, OsuHitObject next) =>
+            RealisticMath.MoveIntoCircle((from + next.StackedPosition) / 2, next.StackedPosition, (float)next.Radius * 0.5f)
+            + new Vector2(RealisticMath.Random(next.StackedPosition) - 0.5f, RealisticMath.Random(next.StackedPosition + new Vector2(1, 0)) - 0.5f) * (float)next.Radius * 0.25f;
+
+        /// <summary>
+        /// How long a movement over <paramref name="distance"/> to <paramref name="next"/> takes (Fitts's law), in milliseconds.
+        /// </summary>
+        private static double fittsTime(float distance, OsuHitObject next) => (80 + 90 * Math.Log2(distance / (2 * next.Radius) + 1)) * movement_speed;
 
         /// <summary>
         /// Moves through a stream in one continuous motion, instead of stopping at every object.
