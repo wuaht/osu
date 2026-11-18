@@ -935,6 +935,16 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
             if (offset.Length > 1)
                 offset.Normalize();
 
+            // the cursor only lands early or late along the stream, not beside it, so lined-up objects are flowed through in a straight line instead of zigzagging.
+            Vector2 before = flowsInto(index - 1) ? hitObjects[index - 1].StackedPosition : hitObject.StackedPosition;
+            Vector2 after = flowsInto(index) ? hitObjects[index + 1].StackedPosition : hitObject.StackedPosition;
+
+            if (after != before)
+            {
+                Vector2 along = Vector2.Normalize(after - before);
+                offset = along * Vector2.Dot(offset, along);
+            }
+
             return hitObject.StackedPosition + offset * (float)hitObject.Radius * stream_deviation;
         }
 

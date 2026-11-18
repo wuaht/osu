@@ -401,6 +401,34 @@ namespace osu.Game.Rulesets.Osu.Tests.Slop
             }
         }
 
+        [Test]
+        public void TestRealisticCursorFlowsStraightThroughTriples()
+        {
+            AddAssert("cursor moves in a straight line", () =>
+            {
+                var ruleset = new OsuRuleset();
+                var beatmap = new Beatmap { BeatmapInfo = { Difficulty = { ApproachRate = 9, CircleSize = 4, OverallDifficulty = 8 }, Ruleset = ruleset.RulesetInfo } };
+
+                for (int i = 0; i < 3; i++)
+                    beatmap.HitObjects.Add(new HitCircle { StartTime = 2000 + i * 100, Position = new Vector2(200 + i * 20, 250 - i * 25), NewCombo = i == 0 });
+
+                var converted = ruleset.CreateBeatmapConverter(beatmap).Convert();
+                foreach (var h in converted.HitObjects)
+                    h.ApplyDefaults(converted.ControlPointInfo, converted.Difficulty);
+
+                var frames = new OsuRealisticAutoGenerator(converted, new List<Mod>()).Generate().Frames.Cast<OsuReplayFrame>()
+                                                                                       .Where(f => f.Time > 2000 && f.Time < 2200)
+                                                                                       .ToList();
+
+                Vector2 direction = Vector2.Normalize(new Vector2(20, -25));
+                Vector2 normal = new Vector2(-direction.Y, direction.X);
+                float sideways = frames.Max(f => Math.Abs(Vector2.Dot(f.Position - new Vector2(200, 250), normal)));
+
+                TestContext.Out.WriteLine($"sideways {sideways:0.00}");
+                return frames.Count > 0 && sideways < 1.5f;
+            });
+        }
+
         [TestCase(100)]
         [TestCase(180)]
         [TestCase(400)]
