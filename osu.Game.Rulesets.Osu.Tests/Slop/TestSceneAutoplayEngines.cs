@@ -434,6 +434,31 @@ namespace osu.Game.Rulesets.Osu.Tests.Slop
         [TestCase(400)]
         public void TestRealisticCursorStaysStillOnStacks(double interval)
         {
+            AddAssert("cursor follows offset stacks", () =>
+            {
+                var ruleset = new OsuRuleset();
+                var beatmap = new Beatmap { BeatmapInfo = { Difficulty = { ApproachRate = 9, CircleSize = 4, OverallDifficulty = 8 }, Ruleset = ruleset.RulesetInfo } };
+
+                // each object is offset by a few pixels like a stack, and the whole stack is longer than a circle radius.
+                for (int i = 0; i < 12; i++)
+                    beatmap.HitObjects.Add(new HitCircle { StartTime = 2000 + i * interval, Position = new Vector2(256 + i * 4, 192 + i * 4), NewCombo = i == 0 });
+
+                var converted = ruleset.CreateBeatmapConverter(beatmap).Convert();
+                foreach (var h in converted.HitObjects)
+                    h.ApplyDefaults(converted.ControlPointInfo, converted.Difficulty);
+
+                var frames = new OsuRealisticAutoGenerator(converted, new List<Mod>()).Generate().Frames.Cast<OsuReplayFrame>().ToList();
+
+                // the cursor is on every object when it's hit, and never further than a few pixels from the stack line.
+                bool hitsAll = converted.HitObjects.Cast<OsuHitObject>().All(h =>
+                    Vector2.Distance(frames.Last(f => f.Time <= h.StartTime).Position, h.StackedPosition) < h.Radius);
+                float largestStep = frames.Where(f => f.Time > 2000 + interval && f.Time < 2000 + 11 * interval)
+                                          .Zip(frames.Where(f => f.Time > 2000 + interval && f.Time < 2000 + 11 * interval).Skip(1), (a, b) => Vector2.Distance(a.Position, b.Position)).Max();
+
+                TestContext.Out.WriteLine($"interval {interval}: largest step {largestStep:0.00}");
+                return hitsAll && largestStep < 3;
+            });
+
             AddAssert("cursor doesn't move on the stack", () =>
             {
                 var ruleset = new OsuRuleset();

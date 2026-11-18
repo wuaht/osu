@@ -589,9 +589,9 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
             // streams are aimed at their centres instead, as they are flowed through.
             Vector2 to = flowsInto(currentIndex + 1) ? flowPoint(currentIndex + 1) : aimPoint(from, next);
 
-            // on stacks and overlapping objects, the cursor is already where it needs to be and stays completely still.
-            if (Vector2.Distance(from, next.StackedPosition) < next.Radius * 0.5f)
-                to = from;
+            // on stacks, the cursor only follows the stack offset, and stays completely still on perfect stacks.
+            if (!flowsInto(currentIndex + 1) && isStacked(current, next))
+                to = from + next.StackedPosition - current.StackedPosition;
 
             float distance = Vector2.Distance(from, to);
 
@@ -902,13 +902,17 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
                              + (-2 * t3 + 3 * t2) * flowPoint(currentIndex + 1)
                              + (t3 - t2) * endTangent;
 
-            // the hand trembles slightly while moving fast.
-            double tremor = aheadTime / stream_tremor_interval;
-            target += new Vector2(smoothNoise(new Vector2(3, 11), tremor) * 2 - 1, smoothNoise(new Vector2(5, 13), tremor) * 2 - 1) * (float)current.Radius * stream_tremor;
-
-            // on stacks, the cursor stays completely still.
-            if (flowPoint(currentIndex) == flowPoint(currentIndex + 1))
-                target = flowPoint(currentIndex);
+            if (isStacked(current, next))
+            {
+                // on stacks, the cursor only follows the stack offset in a straight line, and stays completely still on perfect stacks.
+                target = Vector2.Lerp(flowPoint(currentIndex), flowPoint(currentIndex + 1), t);
+            }
+            else
+            {
+                // the hand trembles slightly while moving fast.
+                double tremor = aheadTime / stream_tremor_interval;
+                target += new Vector2(smoothNoise(new Vector2(3, 11), tremor) * 2 - 1, smoothNoise(new Vector2(5, 13), tremor) * 2 - 1) * (float)current.Radius * stream_tremor;
+            }
 
             moveTo(dt, target, tracking);
         }
@@ -921,13 +925,9 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
         {
             var hitObject = hitObjects[index];
 
-            // on stacks, the cursor stays on the same point instead of jumping between slightly different ones.
-            if (flowsInto(index - 1))
-            {
-                Vector2 previous = flowPoint(index - 1);
-                if (Vector2.Distance(previous, hitObject.StackedPosition) < hitObject.Radius * 0.5f)
-                    return previous;
-            }
+            // on stacks, the cursor keeps the same point relative to the objects instead of jumping between slightly different ones.
+            if (flowsInto(index - 1) && isStacked(hitObjects[index - 1], hitObject))
+                return flowPoint(index - 1) + hitObject.StackedPosition - hitObjects[index - 1].StackedPosition;
 
             Vector2 seed = hitObject.StackedPosition + new Vector2((float)(hitObject.StartTime % 10000), 3);
 
@@ -988,6 +988,11 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
                                             && next.StartTime > current.StartTime
                                             && ApplyModsToTimeDelta(current.StartTime, next.StartTime) <= flow_max_interval;
         }
+
+        /// <summary>
+        /// Whether <paramref name="next"/> is stacked on <paramref name="current"/>, or overlaps it closely enough to be hit without aiming again.
+        /// </summary>
+        private static bool isStacked(OsuHitObject current, OsuHitObject next) => Vector2.Distance(current.StackedPosition, next.StackedPosition) < next.Radius * 0.5f;
 
         private static float smoothstep(double t)
         {
