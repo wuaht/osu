@@ -274,13 +274,12 @@ namespace osu.Game.Rulesets.Osu.Tests.Slop
         /// <summary>
         /// Jumps onto sliders of different speeds and lengths, including short kick and buzz sliders.
         /// </summary>
-        // the hand stops spinning at the leave time when the next object is close, otherwise at the end of the spinner.
-        [TestCase(150, 2350)]
-        [TestCase(500, 2500)]
-        [TestCase(1500, 2500)]
-        public void TestRealisticCursorLeavesSpinnersSmoothly(double gap, double stopTime)
+        [TestCase(150)]
+        [TestCase(500)]
+        [TestCase(1500)]
+        public void TestRealisticCursorLeavesSpinnersSmoothly(double gap)
         {
-            AddAssert("no kinks after the spinner", () =>
+            AddAssert("no kinks or u-turns after the spinner", () =>
             {
                 var ruleset = new OsuRuleset();
                 var beatmap = new Beatmap
@@ -298,11 +297,15 @@ namespace osu.Game.Rulesets.Osu.Tests.Slop
                 foreach (var h in converted.HitObjects)
                     h.ApplyDefaults(converted.ControlPointInfo, converted.Difficulty);
 
-                var frames = new OsuRealisticAutoGenerator(converted, new List<Mod>()).Generate().Frames.Cast<OsuReplayFrame>()
-                                                                                     .Where(f => f.Time >= stopTime && f.Time <= 2500 + gap).ToList();
+                var generator = new OsuRealisticAutoGenerator(converted, new List<Mod>());
+                var allFrames = generator.Generate().Frames.Cast<OsuReplayFrame>().ToList();
+                var circle = (OsuHitObject)converted.HitObjects[1];
+                double exitTime = generator.SpinnerExitTime((Spinner)converted.HitObjects[0], circle);
+                var frames = allFrames.Where(f => f.Time >= exitTime - 20 && f.Time <= circle.StartTime).ToList();
 
-                // a kink shows as a sharp change of direction while moving fast.
+                // a kink shows as a sharp change of direction while moving fast, a u-turn as moving away from the object.
                 double maxTurn = 0;
+                double maxAway = 0;
 
                 for (int i = 1; i < frames.Count - 1; i++)
                 {
@@ -317,10 +320,14 @@ namespace osu.Game.Rulesets.Osu.Tests.Slop
 
                     double turn = Math.Acos(Math.Clamp(Vector2.Dot(before.Normalized(), after.Normalized()), -1, 1)) * 180 / Math.PI;
                     maxTurn = Math.Max(maxTurn, turn);
+
+                    // the cursor still lags behind the spin right after letting go of it.
+                    if (frames[i].Time > exitTime + 50)
+                        maxAway = Math.Max(maxAway, -Vector2.Dot(after, (circle.StackedPosition - frames[i].Position).Normalized()));
                 }
 
-                TestContext.WriteLine($"max turn {maxTurn:F1}");
-                return maxTurn < 40;
+                TestContext.WriteLine($"exit {exitTime:F0}, max turn {maxTurn:F1}, max away {maxAway:F2}");
+                return maxTurn < 40 && maxAway < 1;
             });
         }
 
