@@ -516,7 +516,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
             float distance = Vector2.Distance(from, to);
 
             // during pauses, players wait until the next object (and its approach circle) appears, then move towards it, arriving shortly before hitting it.
-            double moveStartTime = Math.Max(leaveTime, next.StartTime - next.TimePreempt);
+            double moveStartTime = Math.Max(leaveTime, appearTime(next));
             double gap = next.StartTime - moveStartTime;
             double realGap = ApplyModsToTimeDelta(moveStartTime, next.StartTime);
             double movementTime = fittsTime(distance, next);
@@ -565,20 +565,30 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
             double duration = ApplyModsToRate(time, fittsTime(Vector2.Distance(SPINNER_CENTRE, next.StackedPosition), next) * spinner_exit_slowdown);
 
             // spin until the spinner ends if there is enough time left, but don't move towards the next object before it appears.
-            double exitTime = Math.Max(leaveTime, Math.Max(Math.Min(spinner.EndTime, next.StartTime - duration), next.StartTime - next.TimePreempt));
+            double exitTime = Math.Max(leaveTime, Math.Max(Math.Min(spinner.EndTime, next.StartTime - duration), appearTime(next)));
 
+            if (time < Math.Min(exitTime, spinner.EndTime))
+            {
+                spin(time, dt, spinner);
+                return;
+            }
+
+            // the hand stops wherever the spin ended, so that the target doesn't jump.
+            if (leftObject != spinner)
+            {
+                leftObject = spinner;
+                leavePosition = lastTarget;
+            }
+
+            // once the spinner is over, rest there until the next object appears.
             if (time < exitTime)
             {
-                // once the spinner is over, drift towards its centre until the next object appears.
-                if (time < spinner.EndTime)
-                    spin(time, dt, spinner);
-                else
-                    moveTo(dt, SPINNER_CENTRE, resting);
+                moveTo(dt, leavePosition, resting);
                 return;
             }
 
             bool spinning = exitTime < spinner.EndTime;
-            Vector2 from = spinning ? spinTarget(exitTime, spinner).target : SPINNER_CENTRE;
+            Vector2 from = leavePosition;
             Vector2 to = aimPoint(from, next);
             double arrivalTime = Math.Min(next.StartTime, exitTime + duration);
 
@@ -587,7 +597,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
 
             if (spinning)
             {
-                Vector2 spinVelocity = spinTarget(exitTime + 1, spinner).target - from;
+                Vector2 spinVelocity = spinTarget(exitTime + 1, spinner).target - spinTarget(exitTime, spinner).target;
                 tangent = spinVelocity * (float)(arrivalTime - exitTime);
 
                 float maxLength = Vector2.Distance(from, to);
@@ -605,6 +615,11 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
 
             moveTo(dt, target, tracking);
         }
+
+        /// <summary>
+        /// When <paramref name="hitObject"/> becomes visible. Legacy skins only fade spinners in shortly before they start.
+        /// </summary>
+        private static double appearTime(OsuHitObject hitObject) => hitObject is Spinner ? hitObject.StartTime - hitObject.TimeFadeIn : hitObject.StartTime - hitObject.TimePreempt;
 
         /// <summary>
         /// Where the cursor aims at the next object: its near side, and never at exactly the same spot.
