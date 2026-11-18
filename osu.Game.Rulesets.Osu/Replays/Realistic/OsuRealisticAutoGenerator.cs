@@ -152,6 +152,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
         private readonly Dictionary<Slider, Vector2> stillSliderPositions = new Dictionary<Slider, Vector2>();
         private readonly Dictionary<OsuHitObject, double> leaveTimes = new Dictionary<OsuHitObject, double>();
         private readonly Dictionary<Spinner, SpinnerExit> spinnerExits = new Dictionary<Spinner, SpinnerExit>();
+        private readonly Dictionary<Spinner, double> spinnerEntries = new Dictionary<Spinner, double>();
 
         private SecondOrderDynamics cursor = null!;
 
@@ -578,8 +579,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
             // the cursor starts spinning on the way to a spinner, instead of waiting in its centre for it to begin.
             if (next is Spinner nextSpinner)
             {
-                var (spinPosition, spinParameters) = spinTarget(time, nextSpinner);
-                moveTo(dt, Vector2.Lerp(from, spinPosition, eased), lerp(tracking, spinParameters, eased));
+                enterSpinner(time, dt, nextSpinner, from, moveStartTime, arrivalTime);
                 return;
             }
 
@@ -595,6 +595,72 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
             }
 
             moveTo(dt, target, tracking);
+        }
+
+        /// <summary>
+        /// Swings from <paramref name="from"/> into the spin of <paramref name="spinner"/>, joining it where the spin heads away from <paramref name="from"/>,
+        /// so that the movement runs straight into the circle instead of looping around on the way there.
+        /// </summary>
+        private void enterSpinner(double time, float dt, Spinner spinner, Vector2 from, double moveStartTime, double arrivalTime)
+        {
+            double joinTime = GetSpinnerEntry(spinner, from, moveStartTime, arrivalTime);
+            var (to, spinParameters) = spinTarget(joinTime, spinner);
+
+            if (time >= joinTime)
+            {
+                moveTo(dt, spinTarget(time, spinner).target, spinParameters);
+                return;
+            }
+
+            float duration = (float)Math.Max(1, joinTime - moveStartTime);
+            float s = (float)Math.Clamp((time - moveStartTime) / duration, 0, 1);
+            float s2 = s * s;
+            float s3 = s2 * s;
+
+            // the movement starts from rest and speeds up into the spin, joining it with its velocity (a tangent of 1.5 to 3 times the distance only ever speeds up).
+            Vector2 endTangent = (to - spinTarget(joinTime - 1, spinner).target) * duration;
+            float maxTangent = 3 * Vector2.Distance(from, to);
+            if (endTangent.Length > maxTangent)
+                endTangent *= maxTangent / endTangent.Length;
+
+            Vector2 target = (2 * s3 - 3 * s2 + 1) * from + (3 * s2 - 2 * s3) * to + (s3 - s2) * endTangent;
+            moveTo(dt, target, lerp(tracking, spinParameters, (float)minimumJerk(s)));
+        }
+
+        /// <summary>
+        /// When the movement from <paramref name="from"/> joins the spin of <paramref name="spinner"/>:
+        /// around <paramref name="arrivalTime"/>, at the point of a rotation where the spin heads away from <paramref name="from"/>.
+        /// </summary>
+        internal double GetSpinnerEntry(Spinner spinner, Vector2 from, double moveStartTime, double arrivalTime)
+        {
+            if (spinnerEntries.TryGetValue(spinner, out double cached))
+                return cached;
+
+            double rotation = 2 * Math.PI / spin_speed;
+            // never join much sooner than the movement would naturally take.
+            double searchStart = Math.Max(arrivalTime - rotation / 2, moveStartTime + (arrivalTime - moveStartTime) * 0.75);
+            double best = arrivalTime;
+            float bestAlignment = float.MinValue;
+
+            for (double t = searchStart; t <= searchStart + rotation; t += 2)
+            {
+                Vector2 position = spinTarget(t, spinner).target;
+                Vector2 direction = position - spinTarget(t - 1, spinner).target;
+                Vector2 fromStart = position - from;
+
+                if (direction.Length == 0 || fromStart.Length == 0)
+                    continue;
+
+                float alignment = Vector2.Dot(direction.Normalized(), fromStart.Normalized());
+
+                if (alignment > bestAlignment)
+                {
+                    bestAlignment = alignment;
+                    best = t;
+                }
+            }
+
+            return spinnerEntries[spinner] = best;
         }
 
         /// <summary>

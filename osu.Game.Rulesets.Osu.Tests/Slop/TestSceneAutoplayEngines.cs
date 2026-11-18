@@ -343,6 +343,57 @@ namespace osu.Game.Rulesets.Osu.Tests.Slop
             });
         }
 
+        [TestCase(400, 330)]
+        [TestCase(100, 100)]
+        [TestCase(300, 200)]
+        public void TestRealisticCursorEntersSpinnersWithoutLooping(float x, float y)
+        {
+            AddAssert("no loops on the way into the spinner", () =>
+            {
+                var ruleset = new OsuRuleset();
+                var beatmap = new Beatmap
+                {
+                    HitObjects =
+                    {
+                        new HitCircle { StartTime = 500, Position = new Vector2(x, y), NewCombo = true },
+                        new Spinner { StartTime = 2500, EndTime = 4000, NewCombo = true },
+                    },
+                    BeatmapInfo = { Difficulty = { ApproachRate = 9, CircleSize = 4, OverallDifficulty = 8 }, Ruleset = ruleset.RulesetInfo },
+                };
+
+                var converted = ruleset.CreateBeatmapConverter(beatmap).Convert();
+                foreach (var h in converted.HitObjects)
+                    h.ApplyDefaults(converted.ControlPointInfo, converted.Difficulty);
+
+                var generator = new OsuRealisticAutoGenerator(converted, new List<Mod>());
+                var allFrames = generator.Generate().Frames.Cast<OsuReplayFrame>().ToList();
+                // the entry is cached while generating, so the arguments don't matter here.
+                double joinTime = generator.GetSpinnerEntry((Spinner)converted.HitObjects[1], Vector2.Zero, 0, 0);
+                var path = allFrames.Where(f => f.Time > 700 && f.Time <= joinTime + 50).Select(f => f.Position).ToList();
+
+                int crossings = 0;
+
+                for (int i = 1; i < path.Count; i++)
+                {
+                    for (int j = i + 2; j < path.Count; j++)
+                    {
+                        if (segmentsCross(path[i - 1], path[i], path[j - 1], path[j]))
+                            crossings++;
+                    }
+                }
+
+                TestContext.WriteLine($"join {joinTime:F0}, {path.Count} frames, {crossings} crossings");
+                return path.Count > 5 && crossings == 0;
+            });
+
+            static bool segmentsCross(Vector2 a, Vector2 b, Vector2 c, Vector2 d)
+            {
+                static float cross(Vector2 o, Vector2 p, Vector2 q) => (p.X - o.X) * (q.Y - o.Y) - (p.Y - o.Y) * (q.X - o.X);
+
+                return cross(a, b, c) * cross(a, b, d) < 0 && cross(c, d, a) * cross(c, d, b) < 0;
+            }
+        }
+
         private static Beatmap createSliderBeatmap()
         {
             var objects = new List<HitObject>();
