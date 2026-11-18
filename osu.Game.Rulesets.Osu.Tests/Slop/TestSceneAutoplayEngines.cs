@@ -274,6 +274,56 @@ namespace osu.Game.Rulesets.Osu.Tests.Slop
         /// <summary>
         /// Jumps onto sliders of different speeds and lengths, including short kick and buzz sliders.
         /// </summary>
+        // the hand stops spinning at the leave time when the next object is close, otherwise at the end of the spinner.
+        [TestCase(150, 2350)]
+        [TestCase(500, 2500)]
+        [TestCase(1500, 2500)]
+        public void TestRealisticCursorLeavesSpinnersSmoothly(double gap, double stopTime)
+        {
+            AddAssert("no kinks after the spinner", () =>
+            {
+                var ruleset = new OsuRuleset();
+                var beatmap = new Beatmap
+                {
+                    HitObjects =
+                    {
+                        new Spinner { StartTime = 1000, EndTime = 2500, NewCombo = true },
+                        new HitCircle { StartTime = 2500 + gap, Position = new Vector2(400, 80), NewCombo = true },
+                        new HitCircle { StartTime = 2800 + gap, Position = new Vector2(100, 80) },
+                    },
+                    BeatmapInfo = { Difficulty = { ApproachRate = 9, CircleSize = 4, OverallDifficulty = 8 }, Ruleset = ruleset.RulesetInfo },
+                };
+
+                var converted = ruleset.CreateBeatmapConverter(beatmap).Convert();
+                foreach (var h in converted.HitObjects)
+                    h.ApplyDefaults(converted.ControlPointInfo, converted.Difficulty);
+
+                var frames = new OsuRealisticAutoGenerator(converted, new List<Mod>()).Generate().Frames.Cast<OsuReplayFrame>()
+                                                                                     .Where(f => f.Time >= stopTime && f.Time <= 2500 + gap).ToList();
+
+                // a kink shows as a sharp change of direction while moving fast.
+                double maxTurn = 0;
+
+                for (int i = 1; i < frames.Count - 1; i++)
+                {
+                    Vector2 before = frames[i].Position - frames[i - 1].Position;
+                    Vector2 after = frames[i + 1].Position - frames[i].Position;
+                    double speed = Math.Min(before.Length / (frames[i].Time - frames[i - 1].Time), after.Length / (frames[i + 1].Time - frames[i].Time));
+
+                    TestContext.WriteLine($"{frames[i].Time:F0}: {frames[i].Position} speed {speed:F2}");
+
+                    if (speed < 0.3)
+                        continue;
+
+                    double turn = Math.Acos(Math.Clamp(Vector2.Dot(before.Normalized(), after.Normalized()), -1, 1)) * 180 / Math.PI;
+                    maxTurn = Math.Max(maxTurn, turn);
+                }
+
+                TestContext.WriteLine($"max turn {maxTurn:F1}");
+                return maxTurn < 40;
+            });
+        }
+
         private static Beatmap createSliderBeatmap()
         {
             var objects = new List<HitObject>();

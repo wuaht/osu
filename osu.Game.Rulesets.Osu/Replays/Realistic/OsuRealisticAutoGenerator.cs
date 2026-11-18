@@ -128,11 +128,9 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
         private const double spinner_exit_slowdown = 1.6;
 
         /// <summary>
-        /// How long (in seconds) and how far the hand keeps moving after it stops spinning.
+        /// How long the hand takes to slow down from spinning to a stop, before moving away from a spinner.
         /// </summary>
-        private const float spinner_coast_time = 0.04f;
-
-        private const float spinner_coast_distance = 30;
+        private const double spin_slowdown_duration = 150;
 
         private static readonly Vector2 playfield_min = new Vector2(-512, -384);
         private static readonly Vector2 playfield_max = new Vector2(1024, 768);
@@ -148,7 +146,6 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
         private OsuHitObject? targetSource;
         private OsuHitObject? leftObject;
         private Vector2 leavePosition;
-        private Vector2 leaveVelocity;
         private Vector2 lastTarget;
         private Slider? enteredSlider;
         private Vector2 sliderEntryOffset;
@@ -314,7 +311,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
                 {
                     case Spinner spinner:
                         setTargetSource(spinner);
-                        spin(time, dt, spinner);
+                        spin(time, dt, spinner, spinStopTime(spinner, next));
                         return;
 
                     case Slider slider:
@@ -337,14 +334,14 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
             // keep spinning until a final spinner ends.
             if (current is Spinner lastSpinner && time < lastSpinner.EndTime)
             {
-                spin(time, dt, lastSpinner);
+                spin(time, dt, lastSpinner, lastSpinner.EndTime);
                 return;
             }
 
             // before the first object, move towards it. after the last object, settle on a fixed spot.
             // (targeting the cursor's own position would keep its momentum and send it flying off in a straight line.)
             setTargetSource(next);
-            moveTo(dt, next?.StackedPosition ?? (current is Spinner ? SPINNER_CENTRE : lastTarget), resting);
+            moveTo(dt, next?.StackedPosition ?? lastTarget, resting);
         }
 
         /// <summary>
@@ -360,15 +357,28 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
             cursor.ResetTarget();
         }
 
-        private void spin(double time, float dt, Spinner spinner)
+        private void spin(double time, float dt, Spinner spinner, double stopTime)
         {
-            var (target, parameters) = spinTarget(time, spinner);
+            var (target, parameters) = spinTarget(time, spinner, stopTime);
             moveTo(dt, target, parameters);
         }
 
-        private static (Vector2 target, DynamicsParameters parameters) spinTarget(double time, Spinner spinner)
+        /// <param name="time">The time.</param>
+        /// <param name="spinner">The spinner.</param>
+        /// <param name="stopTime">When the hand stops spinning. The spin gradually slows down before this, and stays put afterwards.</param>
+        private static (Vector2 target, DynamicsParameters parameters) spinTarget(double time, Spinner spinner, double stopTime = double.PositiveInfinity)
         {
-            float angle = (float)(time - spinner.StartTime) * 0.05f;
+            double elapsed = time - spinner.StartTime;
+            double slowdownStart = Math.Max(spinner.StartTime, stopTime - spin_slowdown_duration);
+
+            if (time > slowdownStart)
+            {
+                double slowdown = stopTime - slowdownStart;
+                double slowed = Math.Min(time, stopTime) - slowdownStart;
+                elapsed = slowdownStart - spinner.StartTime + (slowdown > 0 ? slowed - slowed * slowed / (2 * slowdown) : 0);
+            }
+
+            float angle = (float)elapsed * 0.05f;
             float rotation = MathF.Floor(angle / (2 * MathF.PI));
 
             // vary the shape of the circle with every rotation.
@@ -504,7 +514,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
 
             if (current is Spinner spinner)
             {
-                exitSpinner(time, dt, spinner, next, leaveTime);
+                exitSpinner(time, dt, spinner, next);
                 return;
             }
 
@@ -562,74 +572,69 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
         /// <summary>
         /// Keeps spinning for as long as there is time, then leaves the spinner along the direction of the spin and moves to the next object a bit slower than usual.
         /// </summary>
-        private void exitSpinner(double time, float dt, Spinner spinner, OsuHitObject next, double leaveTime)
+        private void exitSpinner(double time, float dt, Spinner spinner, OsuHitObject next)
         {
             if (next is Spinner nextSpinner)
             {
-                spin(time, dt, time < spinner.EndTime ? spinner : nextSpinner);
+                spin(time, dt, time < spinner.EndTime ? spinner : nextSpinner, double.PositiveInfinity);
                 return;
             }
 
-            double duration = ApplyModsToRate(time, fittsTime(Vector2.Distance(SPINNER_CENTRE, next.StackedPosition), next) * spinner_exit_slowdown);
+            double duration = spinnerExitDuration(spinner, next);
+            double exitTime = spinnerExitTime(spinner, next);
+            double stopTime = Math.Min(exitTime, spinner.EndTime);
 
-            // spin until the spinner ends if there is enough time left, but don't move towards the next object before it appears.
-            double exitTime = Math.Max(leaveTime, Math.Max(Math.Min(spinner.EndTime, next.StartTime - duration), appearTime(next)));
-
-            if (time < Math.Min(exitTime, spinner.EndTime))
-            {
-                spin(time, dt, spinner);
-                return;
-            }
-
-            // the spin's target runs far ahead of the lagging cursor, so continuing from the target would make the cursor snap onto it.
-            // instead, everything after the spin continues from where the cursor actually is and how it actually moves.
-            if (leftObject != spinner)
-            {
-                leftObject = spinner;
-                leavePosition = cursor.Position;
-                leaveVelocity = cursor.Velocity;
-                cursor.ResetTarget();
-            }
-
-            // once the spinner is over, the hand coasts to a stop and rests there until the next object appears.
-            float coastTime = MathF.Min(spinner_coast_time, spinner_coast_distance / MathF.Max(leaveVelocity.Length, 1));
-            Vector2 restPosition = leavePosition + leaveVelocity * coastTime;
-
+            // the spin slows down to a stop before this (see spinTarget), so that the cursor isn't flung out of the spinner at full speed.
             if (time < exitTime)
             {
-                float coasted = (float)ApplyModsToTimeDelta(spinner.EndTime, time) / 1000;
-                moveTo(dt, leavePosition + leaveVelocity * coastTime * (1 - MathF.Exp(-coasted / coastTime)), tracking);
+                spin(time, dt, spinner, stopTime);
                 return;
             }
 
-            bool spinning = exitTime < spinner.EndTime;
-            Vector2 from = spinning ? leavePosition : restPosition;
+            var (from, spinParameters) = spinTarget(exitTime, spinner, stopTime);
             Vector2 to = aimPoint(from, next);
             double arrivalTime = Math.Min(next.StartTime, exitTime + duration);
 
-            // leave along the direction the hand is spinning. the speed is limited, so that the cursor curves out of the spinner instead of looping around.
-            Vector2 tangent = Vector2.Zero;
+            // the movement starts off in the direction of the spin and curves towards the next object.
+            // when the spin heads away from the next object, the movement goes straight instead of making a u-turn.
+            Vector2 spinDirection = from - spinTarget(stopTime - 1, spinner).target;
+            float distance = Vector2.Distance(from, to);
+            Vector2 control = from;
 
-            if (spinning)
+            if (spinDirection.Length > 0 && distance > 0)
             {
-                tangent = leaveVelocity * (float)ApplyModsToTimeDelta(exitTime, arrivalTime) / 1000;
-
-                float maxLength = Vector2.Distance(from, to);
-                if (tangent.Length > maxLength)
-                    tangent = tangent.Normalized() * maxLength;
+                spinDirection.Normalize();
+                control += spinDirection * distance * 0.4f * MathF.Max(0, Vector2.Dot(spinDirection, (to - from) / distance));
             }
 
             double aheadTime = time + ApplyModsToRate(time, tracking_lag);
-            float t = arrivalTime > exitTime ? (float)Math.Clamp((aheadTime - exitTime) / (arrivalTime - exitTime), 0, 1) : 1;
-            float t2 = t * t;
-            float t3 = t2 * t;
+            float t = (float)minimumJerk(arrivalTime > exitTime ? Math.Clamp((aheadTime - exitTime) / (arrivalTime - exitTime), 0, 1) : 1);
 
-            // a hermite curve which starts with the spin's direction and comes to rest on the next object.
-            Vector2 target = (2 * t3 - 3 * t2 + 1) * from + (t3 - 2 * t2 + t) * tangent + (-2 * t3 + 3 * t2) * to;
+            Vector2 target = (1 - t) * (1 - t) * from + 2 * (1 - t) * t * control + t * t * to;
 
             // the hand's loose spinning motion only gradually turns into an aimed movement.
-            moveTo(dt, target, spinning ? lerp(spinTarget(exitTime, spinner).parameters, tracking, t) : tracking);
+            moveTo(dt, target, lerp(spinParameters, tracking, t));
         }
+
+        private double spinnerExitDuration(Spinner spinner, OsuHitObject next) =>
+            ApplyModsToRate(spinner.EndTime, fittsTime(Vector2.Distance(SPINNER_CENTRE, next.StackedPosition), next) * spinner_exit_slowdown);
+
+        /// <summary>
+        /// When the cursor starts moving from <paramref name="spinner"/> to <paramref name="next"/>:
+        /// at the spinner's end if there is enough time left, but never before the next object appears.
+        /// </summary>
+        private double spinnerExitTime(Spinner spinner, OsuHitObject next) =>
+            Math.Max(getLeaveTime(spinner), Math.Max(Math.Min(spinner.EndTime, next.StartTime - spinnerExitDuration(spinner, next)), appearTime(next)));
+
+        /// <summary>
+        /// When the hand stops spinning <paramref name="spinner"/>.
+        /// </summary>
+        private double spinStopTime(Spinner spinner, OsuHitObject? next) => next switch
+        {
+            null => spinner.EndTime,
+            Spinner => double.PositiveInfinity,
+            _ => Math.Min(spinner.EndTime, spinnerExitTime(spinner, next)),
+        };
 
         /// <summary>
         /// When <paramref name="hitObject"/> becomes visible. Legacy skins only fade spinners in shortly before they start.
