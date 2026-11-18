@@ -334,11 +334,12 @@ namespace osu.Game.Rulesets.Osu.Tests.Slop
                         maxAway = Math.Max(maxAway, -Vector2.Dot(after, (circle.StackedPosition - frames[i].Position).Normalized()));
                 }
 
-                // with time to spare, the cursor moves calmly instead of rushing to the object and waiting there.
+                // the cursor is on the object in time, and the further away the object is in time, the longer it holds there.
                 double arrival = frames.First(f => Vector2.Distance(f.Position, frames[^1].Position) < 1).Time;
+                double expectedHold = gap >= 500 ? 150 : 0;
 
                 TestContext.WriteLine($"exit {exitTime:F0}, arrival {arrival:F0}, max turn {maxTurn:F1}, max away {maxAway:F2}, max speed rise {maxRise:F3}");
-                return maxTurn < 40 && maxAway < 1 && maxRise < 0.05 && arrival > circle.StartTime - 150;
+                return maxTurn < 40 && maxAway < 1 && maxRise < 0.05 && arrival <= circle.StartTime - expectedHold;
             });
         }
 

@@ -128,9 +128,10 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
         private const double spinner_exit_slowdown = 1.6;
 
         /// <summary>
-        /// How much longer than usual movements out of spinners may take when there is time, instead of rushing to the next object and waiting there.
+        /// How much longer than usual movements out of spinners may take when there is time.
+        /// Only a little, since an object that is further away in time also appears earlier, so the cursor gets there early and holds.
         /// </summary>
-        private const double spinner_exit_max_stretch = 2.5;
+        private const double spinner_exit_max_stretch = 1.25;
 
         /// <summary>
         /// How long the hand takes to slow down its spinning, before moving away from a spinner.
