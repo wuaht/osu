@@ -1,4 +1,4 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
@@ -343,10 +343,12 @@ namespace osu.Game.Rulesets.Osu.Tests.Slop
             });
         }
 
-        [TestCase(400, 330)]
-        [TestCase(100, 100)]
-        [TestCase(300, 200)]
-        public void TestRealisticCursorEntersSpinnersWithoutLooping(float x, float y)
+        [TestCase(400, 330, 2000)]
+        [TestCase(100, 100, 2000)]
+        [TestCase(300, 200, 2000)]
+        [TestCase(200, 40, 300)]
+        [TestCase(200, 40, 150)]
+        public void TestRealisticCursorEntersSpinnersWithoutLooping(float x, float y, double gap)
         {
             AddAssert("no loops on the way into the spinner", () =>
             {
@@ -355,7 +357,7 @@ namespace osu.Game.Rulesets.Osu.Tests.Slop
                 {
                     HitObjects =
                     {
-                        new HitCircle { StartTime = 500, Position = new Vector2(x, y), NewCombo = true },
+                        new HitCircle { StartTime = 2500 - gap, Position = new Vector2(x, y), NewCombo = true },
                         new Spinner { StartTime = 2500, EndTime = 4000, NewCombo = true },
                     },
                     BeatmapInfo = { Difficulty = { ApproachRate = 9, CircleSize = 4, OverallDifficulty = 8 }, Ruleset = ruleset.RulesetInfo },
@@ -368,8 +370,8 @@ namespace osu.Game.Rulesets.Osu.Tests.Slop
                 var generator = new OsuRealisticAutoGenerator(converted, new List<Mod>());
                 var allFrames = generator.Generate().Frames.Cast<OsuReplayFrame>().ToList();
                 // the entry is cached while generating, so the arguments don't matter here.
-                double joinTime = generator.GetSpinnerEntry((Spinner)converted.HitObjects[1], Vector2.Zero, 0, 0);
-                var path = allFrames.Where(f => f.Time > 700 && f.Time <= joinTime + 50).Select(f => f.Position).ToList();
+                double joinTime = generator.GetSpinnerEntry((Spinner)converted.HitObjects[1], Vector2.Zero, 0);
+                var path = allFrames.Where(f => f.Time > 2500 - gap && f.Time <= joinTime + 50).Select(f => f.Position).ToList();
 
                 int crossings = 0;
 
@@ -382,8 +384,8 @@ namespace osu.Game.Rulesets.Osu.Tests.Slop
                     }
                 }
 
-                TestContext.WriteLine($"join {joinTime:F0}, {path.Count} frames, {crossings} crossings");
-                return path.Count > 5 && crossings == 0;
+                TestContext.WriteLine($"join {joinTime:F0}, {path.Count} frames, {crossings} crossings");                // the cursor is already spinning when the spinner starts, instead of only heading for its centre.
+                return path.Count > 2 && crossings == 0 && joinTime < 2500 - gap * 0.15;
             });
 
             static bool segmentsCross(Vector2 a, Vector2 b, Vector2 c, Vector2 d)

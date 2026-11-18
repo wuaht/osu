@@ -1,4 +1,4 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
@@ -579,7 +579,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
             // the cursor starts spinning on the way to a spinner, instead of waiting in its centre for it to begin.
             if (next is Spinner nextSpinner)
             {
-                enterSpinner(time, dt, nextSpinner, from, moveStartTime, arrivalTime);
+                enterSpinner(time, dt, nextSpinner, from, moveStartTime);
                 return;
             }
 
@@ -601,9 +601,9 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
         /// Swings from <paramref name="from"/> into the spin of <paramref name="spinner"/>, joining it where the spin heads away from <paramref name="from"/>,
         /// so that the movement runs straight into the circle instead of looping around on the way there.
         /// </summary>
-        private void enterSpinner(double time, float dt, Spinner spinner, Vector2 from, double moveStartTime, double arrivalTime)
+        private void enterSpinner(double time, float dt, Spinner spinner, Vector2 from, double moveStartTime)
         {
-            double joinTime = GetSpinnerEntry(spinner, from, moveStartTime, arrivalTime);
+            double joinTime = GetSpinnerEntry(spinner, from, moveStartTime);
             var (to, spinParameters) = spinTarget(joinTime, spinner);
 
             if (time >= joinTime)
@@ -629,20 +629,23 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
 
         /// <summary>
         /// When the movement from <paramref name="from"/> joins the spin of <paramref name="spinner"/>:
-        /// around <paramref name="arrivalTime"/>, at the point of a rotation where the spin heads away from <paramref name="from"/>.
+        /// as soon as a quick swing from <paramref name="moveStartTime"/> reaches the circle, at the point of a rotation where the spin heads away from <paramref name="from"/>.
         /// </summary>
-        internal double GetSpinnerEntry(Spinner spinner, Vector2 from, double moveStartTime, double arrivalTime)
+        internal double GetSpinnerEntry(Spinner spinner, Vector2 from, double moveStartTime)
         {
             if (spinnerEntries.TryGetValue(spinner, out double cached))
                 return cached;
 
             double rotation = 2 * Math.PI / spin_speed;
-            // never join much sooner than the movement would naturally take.
-            double searchStart = Math.Max(arrivalTime - rotation / 2, moveStartTime + (arrivalTime - moveStartTime) * 0.75);
-            double best = arrivalTime;
+            // players start spinning as soon as they can (right after the previous object, or once the spinner appears), not when the spinner begins.
+            float swingDistance = Math.Max(0, Vector2.Distance(from, SPINNER_CENTRE) - 120);
+            // the spin itself takes over once the spinner starts, so the swing has to join it by then.
+            double searchStart = Math.Min(moveStartTime + Math.Max(80, fittsTime(swingDistance, spinner)), spinner.StartTime);
+            double searchEnd = Math.Min(searchStart + rotation, spinner.StartTime);
+            double best = searchStart;
             float bestAlignment = float.MinValue;
 
-            for (double t = searchStart; t <= searchStart + rotation; t += 2)
+            for (double t = searchStart; t <= searchEnd; t += 2)
             {
                 Vector2 position = spinTarget(t, spinner).target;
                 Vector2 direction = position - spinTarget(t - 1, spinner).target;
@@ -658,6 +661,10 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
                     bestAlignment = alignment;
                     best = t;
                 }
+
+                // the first point that heads roughly away is good enough, waiting for a better one would delay spinning.
+                if (alignment > 0.7f)
+                    break;
             }
 
             return spinnerEntries[spinner] = best;
