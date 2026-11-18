@@ -103,6 +103,33 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
         private const double stream_max_interval = 125;
 
         /// <summary>
+        /// The longest time between two objects for the cursor to move through them without aiming at each one separately, in milliseconds.
+        /// Between this and <see cref="stream_max_interval"/>, the cursor flows less and less and briefly slows down on every object.
+        /// </summary>
+        private const double flow_max_interval = 200;
+
+        /// <summary>
+        /// How long it takes to react to an object after it appears, in milliseconds.
+        /// Until then, the cursor knows nothing about the object.
+        /// </summary>
+        private const double reaction_time = 170;
+
+        /// <summary>
+        /// How far the cursor drifts around while there is nothing to aim for, in osu!pixels.
+        /// </summary>
+        private const float idle_drift_distance = 12;
+
+        /// <summary>
+        /// How long it takes the drifting to change direction, in milliseconds.
+        /// </summary>
+        private const double idle_drift_interval = 700;
+
+        /// <summary>
+        /// How far jumps miss their aim point before being corrected, relative to the distance of the jump.
+        /// </summary>
+        private const float aim_error = 0.08f;
+
+        /// <summary>
         /// How far from their centres objects in streams are passed through, relative to their radius.
         /// </summary>
         private const float stream_deviation = 0.15f;
@@ -176,7 +203,8 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
                     continue;
 
                 var next = i + 1 < hitObjects.Count ? hitObjects[i + 1] : null;
-                sliderPaths[slider] = new LenientSliderPath(slider, next is Spinner ? null : next);
+                // the slider is only left towards the next object if it has been seen by then.
+                sliderPaths[slider] = new LenientSliderPath(slider, next is Spinner || (next != null && seenTime(next) > slider.EndTime - 50) ? null : next);
 
                 var body = new List<Vector2>();
                 slider.Path.GetPathToProgress(body, 0, 1);
@@ -351,10 +379,10 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
                 return;
             }
 
-            // before the first object, move towards it. after the last object, settle on a fixed spot.
+            // before the first object, move towards it once it is seen. after the last object, settle on a fixed spot.
             // (targeting the cursor's own position would keep its momentum and send it flying off in a straight line.)
             setTargetSource(next);
-            moveTo(dt, next?.StackedPosition ?? lastTarget, resting);
+            moveTo(dt, next != null && time >= seenTime(next) ? next.StackedPosition : lastTarget, resting);
         }
 
         /// <summary>
@@ -554,7 +582,18 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
                 leavePosition = lastTarget;
             }
 
-            Vector2 from = leavePosition;
+            // during pauses, players wait until they see the next object (and its approach circle), then move towards it, arriving shortly before hitting it.
+            double moveStartTime = Math.Max(leaveTime, seenTime(next));
+            double aheadTime = time + ApplyModsToRate(time, tracking_lag);
+
+            // until the next object is seen, there is nothing to aim for, so the hand only drifts around.
+            if (aheadTime < moveStartTime)
+            {
+                moveTo(dt, idlePosition(current, leaveTime, aheadTime), tracking);
+                return;
+            }
+
+            Vector2 from = idlePosition(current, leaveTime, moveStartTime);
 
             // aim for the near side of the next object, never at exactly the same spot.
             // streams are aimed at their centres instead, as they are flowed through.
@@ -562,8 +601,6 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
 
             float distance = Vector2.Distance(from, to);
 
-            // during pauses, players wait until the next object (and its approach circle) appears, then move towards it, arriving shortly before hitting it.
-            double moveStartTime = Math.Max(leaveTime, appearTime(next));
             double gap = next.StartTime - moveStartTime;
             double realGap = ApplyModsToTimeDelta(moveStartTime, next.StartTime);
             double movementTime = fittsTime(distance, next);
@@ -571,7 +608,6 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
             double hold = Math.Max(0, realGap - movementTime);
             double arrivalTime = realGap > 0 ? next.StartTime - gap * hold / realGap : next.StartTime;
 
-            double aheadTime = time + ApplyModsToRate(time, tracking_lag);
             double progress = arrivalTime > moveStartTime ? Math.Clamp((aheadTime - moveStartTime) / (arrivalTime - moveStartTime), 0, 1) : 1;
 
             float eased = (float)minimumJerk(progress);
@@ -591,10 +627,43 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
                 Vector2 direction = (to - from) / distance;
                 float side = RealisticMath.Random(next.StackedPosition + new Vector2(0, 1)) < 0.5f ? -1 : 1;
 
-                target += new Vector2(-direction.Y, direction.X) * side * MathF.Sin(MathF.PI * (float)progress) * distance * 0.05f;
+                Vector2 normal = new Vector2(-direction.Y, direction.X);
+
+                target += normal * side * MathF.Sin(MathF.PI * (float)progress) * distance * 0.05f;
+
+                // jumps land slightly off (more often too far than too short, and mostly along the movement) and are corrected towards the end.
+                // the error grows with the distance and with how rushed the movement is.
+                if (!flowsInto(currentIndex + 1))
+                {
+                    Vector2 seed = next.StackedPosition + new Vector2((float)(next.StartTime % 10000), 23);
+                    float rush = (float)Math.Clamp(movementTime / Math.Max(1, Math.Min(realGap, movementTime)), 1, 2);
+                    float errorSize = Math.Min(distance * aim_error * rush, (float)next.Radius);
+                    Vector2 error = (direction * (RealisticMath.Random(seed) * 2 - 0.8f) + normal * (RealisticMath.Random(seed + new Vector2(0, 1)) * 2 - 1) * 0.5f) * errorSize;
+
+                    target += error * (eased - smoothstep((progress - 0.7) / 0.3));
+                }
             }
 
             moveTo(dt, target, tracking);
+        }
+
+        /// <summary>
+        /// Where the hand drifts to while it has nothing to aim for, after leaving <paramref name="current"/> at <paramref name="leaveTime"/>.
+        /// </summary>
+        private Vector2 idlePosition(OsuHitObject current, double leaveTime, double time)
+        {
+            double idle = ApplyModsToTimeDelta(leaveTime, time);
+            if (idle <= 0)
+                return leavePosition;
+
+            Vector2 seed = current.StackedPosition + new Vector2((float)(current.StartTime % 10000), 17);
+            double t = idle / idle_drift_interval;
+            Vector2 wander = new Vector2(smoothNoise(seed, t) * 2 - 1, smoothNoise(seed + new Vector2(0, 5), t) * 2 - 1);
+
+            // during longer pauses, the hand relaxes back towards the middle of the screen.
+            float relax = smoothstep((idle - 1000) / 3000) * 0.3f;
+
+            return Vector2.Lerp(leavePosition, SPINNER_CENTRE, relax) + wander * smoothstep(idle / 400) * idle_drift_distance;
         }
 
         /// <summary>
@@ -731,7 +800,9 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
             // the cursor lags behind its target, so the target arrives a bit early.
             double arrivalTime = next.StartTime - ApplyModsToRate(next.StartTime, tracking_lag);
 
-            double earliest = Math.Max(getLeaveTime(spinner), appearTime(next));
+            // the spin only starts slowing down once the next object is seen.
+            double seen = seenTime(next);
+            double earliest = Math.Max(getLeaveTime(spinner), seen + spin_slowdown_duration);
             double planned = Math.Max(earliest, Math.Min(spinner.EndTime, next.StartTime - minDuration));
             double plannedDuration = Math.Clamp(arrivalTime - planned, 1, maxDuration);
 
@@ -748,6 +819,13 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
             // search one rotation around the planned time, without cutting into the time needed to reach the next object.
             double searchStart = Math.Max(earliest, planned - rotation);
             double searchEnd = Math.Min(searchStart + rotation, Math.Max(planned, next.StartTime - minDuration / 2));
+
+            // the spin can't start slowing down before the next object is seen. a shorter slowdown lets go faster, so the speed still decreases evenly.
+            if (slowdown > searchStart - seen)
+            {
+                slowdown = searchStart - seen;
+                exitSpeed = Math.Max(exitSpeed, plannedDuration / (slowdown + plannedDuration));
+            }
 
             double best = planned;
             float bestAlignment = float.MinValue;
@@ -768,6 +846,11 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
                     bestAlignment = alignment;
                     best = t;
                 }
+
+                // when the spin only goes on because the object hasn't been seen yet, the first point that heads roughly towards it is good enough.
+                // waiting for a better one would only rush the movement.
+                if (seen > getLeaveTime(spinner) && alignment > 0.7f)
+                    break;
             }
 
             return spinnerExits[spinner] = new SpinnerExit(best, Math.Clamp(arrivalTime - best, 1, maxDuration), exitSpeed, slowdown);
@@ -783,6 +866,11 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
         /// When <paramref name="hitObject"/> becomes visible. Spinners also appear a full approach time early (legacy skins fade them in later, but they're still seen coming).
         /// </summary>
         private static double appearTime(OsuHitObject hitObject) => hitObject.StartTime - hitObject.TimePreempt;
+
+        /// <summary>
+        /// When the player has seen <paramref name="hitObject"/> and reacts to it. Nothing about the object may affect the cursor before this.
+        /// </summary>
+        private double seenTime(OsuHitObject hitObject) => appearTime(hitObject) + ApplyModsToRate(appearTime(hitObject), reaction_time);
 
         /// <summary>
         /// Where the cursor aims at the next object: its near side, and never at exactly the same spot.
@@ -863,8 +951,17 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
             var previous = hitObjects[index - 1];
             var following = hitObjects[index + 1];
 
-            return (flowPoint(index + 1) - flowPoint(index - 1)) / (float)(following.StartTime - previous.StartTime);
+            // slower patterns are flowed through less, until each object is aimed at separately.
+            float weight = Math.Min(flowWeight(index - 1), flowWeight(index));
+
+            return (flowPoint(index + 1) - flowPoint(index - 1)) / (float)(following.StartTime - previous.StartTime) * weight;
         }
+
+        /// <summary>
+        /// How much the cursor keeps moving through the object at <paramref name="index"/> towards the next one: fully in streams, and less and less up to <see cref="flow_max_interval"/>.
+        /// </summary>
+        private float flowWeight(int index) =>
+            smoothstep((flow_max_interval - ApplyModsToTimeDelta(hitObjects[index].StartTime, hitObjects[index + 1].StartTime)) / (flow_max_interval - stream_max_interval));
 
         /// <summary>
         /// Whether the cursor flows from the object at <paramref name="index"/> to the next one as part of a stream.
@@ -880,7 +977,13 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
             // objects at the same time can't be flowed through, as the cursor would have to move between them instantly.
             return isHitLikeCircle(current) && isHitLikeCircle(next)
                                             && next.StartTime > current.StartTime
-                                            && ApplyModsToTimeDelta(current.StartTime, next.StartTime) <= stream_max_interval;
+                                            && ApplyModsToTimeDelta(current.StartTime, next.StartTime) <= flow_max_interval;
+        }
+
+        private static float smoothstep(double t)
+        {
+            float x = (float)Math.Clamp(t, 0, 1);
+            return x * x * (3 - 2 * x);
         }
 
         private bool isHitLikeCircle(OsuHitObject hitObject) => hitObject is HitCircle || (hitObject is Slider && getLeaveTime(hitObject) == hitObject.StartTime);

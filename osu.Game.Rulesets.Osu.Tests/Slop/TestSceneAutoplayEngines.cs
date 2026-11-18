@@ -334,9 +334,9 @@ namespace osu.Game.Rulesets.Osu.Tests.Slop
                         maxAway = Math.Max(maxAway, -Vector2.Dot(after, (circle.StackedPosition - frames[i].Position).Normalized()));
                 }
 
-                // the cursor is on the object in time, and the further away the object is in time, the longer it holds there.
+                // the cursor is on the object in time. it can't hold there for long, as it only starts moving once it has seen the object.
                 double arrival = frames.First(f => Vector2.Distance(f.Position, frames[^1].Position) < 1).Time;
-                double expectedHold = gap >= 500 ? 150 : 0;
+                const double expectedHold = 0;
 
                 TestContext.WriteLine($"exit {exitTime:F0}, arrival {arrival:F0}, max turn {maxTurn:F1}, max away {maxAway:F2}, max speed rise {maxRise:F3}");
                 return maxTurn < 40 && maxAway < 1 && maxRise < 0.05 && arrival <= circle.StartTime - expectedHold;
@@ -370,8 +370,11 @@ namespace osu.Game.Rulesets.Osu.Tests.Slop
                 var generator = new OsuRealisticAutoGenerator(converted, new List<Mod>());
                 var allFrames = generator.Generate().Frames.Cast<OsuReplayFrame>().ToList();
                 // the entry is cached while generating, so the arguments don't matter here.
-                double joinTime = generator.GetSpinnerEntry((Spinner)converted.HitObjects[1], Vector2.Zero, 0);
-                var path = allFrames.Where(f => f.Time > 2500 - gap && f.Time <= joinTime + 50).Select(f => f.Position).ToList();
+                var spinner = (Spinner)converted.HitObjects[1];
+                double joinTime = generator.GetSpinnerEntry(spinner, Vector2.Zero, 0);
+                // before the spinner is seen (it appears, then takes a reaction time), the cursor only drifts around, which may cross itself.
+                double moveStart = Math.Max(2500 - gap, spinner.StartTime - spinner.TimePreempt + 170);
+                var path = allFrames.Where(f => f.Time > moveStart && f.Time <= joinTime + 50).Select(f => f.Position).ToList();
 
                 int crossings = 0;
 
@@ -384,8 +387,10 @@ namespace osu.Game.Rulesets.Osu.Tests.Slop
                     }
                 }
 
-                TestContext.WriteLine($"join {joinTime:F0}, {path.Count} frames, {crossings} crossings");                // the cursor is already spinning when the spinner starts, instead of only heading for its centre.
-                return path.Count > 2 && crossings == 0 && joinTime < 2500 - gap * 0.15;
+                TestContext.WriteLine($"join {joinTime:F0}, {path.Count} frames, {crossings} crossings");
+
+                // the cursor is already spinning when the spinner starts, instead of only heading for its centre.
+                return path.Count > 2 && crossings == 0 && joinTime < 2500 - (2500 - moveStart) * 0.15;
             });
 
             static bool segmentsCross(Vector2 a, Vector2 b, Vector2 c, Vector2 d)
@@ -393,6 +398,43 @@ namespace osu.Game.Rulesets.Osu.Tests.Slop
                 static float cross(Vector2 o, Vector2 p, Vector2 q) => (p.X - o.X) * (q.Y - o.Y) - (p.Y - o.Y) * (q.X - o.X);
 
                 return cross(a, b, c) * cross(a, b, d) < 0 && cross(c, d, a) * cross(c, d, b) < 0;
+            }
+        }
+
+        [Test]
+        public void TestRealisticCursorIgnoresObjectsBeforeSeeingThem()
+        {
+            AddAssert("cursor doesn't move towards an object before seeing it", () =>
+            {
+                var first = generate(new Vector2(450, 300));
+                var second = generate(new Vector2(60, 60));
+
+                // the second object appears at 5000 - 600 (AR9) and is reacted to 170 ms later.
+                const double seen = 5000 - 600 + 170;
+                var before = first.Where(f => f.Time < seen).ToList();
+
+                return before.Count > 100 && before.Zip(second, (a, b) => a.Time == b.Time && a.Position == b.Position).All(same => same)
+                       && first.Last(f => f.Time <= 5000).Position != second.Last(f => f.Time <= 5000).Position;
+            });
+
+            static List<OsuReplayFrame> generate(Vector2 secondPosition)
+            {
+                var ruleset = new OsuRuleset();
+                var beatmap = new Beatmap
+                {
+                    HitObjects =
+                    {
+                        new HitCircle { StartTime = 1000, Position = new Vector2(256, 192), NewCombo = true },
+                        new HitCircle { StartTime = 5000, Position = secondPosition },
+                    },
+                    BeatmapInfo = { Difficulty = { ApproachRate = 9, CircleSize = 4, OverallDifficulty = 8 }, Ruleset = ruleset.RulesetInfo },
+                };
+
+                var converted = ruleset.CreateBeatmapConverter(beatmap).Convert();
+                foreach (var h in converted.HitObjects)
+                    h.ApplyDefaults(converted.ControlPointInfo, converted.Difficulty);
+
+                return new OsuRealisticAutoGenerator(converted, new List<Mod>()).Generate().Frames.Cast<OsuReplayFrame>().ToList();
             }
         }
 
