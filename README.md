@@ -4,9 +4,11 @@
 
 # slop!
 
-A vibe-coded mapping(?) client. slop is just a *prompt* away!
+A vibe-coded and (primarily) mapping client. 
 
-This is an independant fork of [osu!lazer](https://github.com/ppy/osu) i made for myself which primarily focuses on the editor which implements some stable stuff + other features with the help of Claude Opus 5.5 (i'm not proud of it either ok).
+This is a secret independant fork of [osu!lazer](https://github.com/ppy/osu) i made for myself which primarily focuses on the editor which implements some stable stuff + other features with the help of Claude Opus 5.5 (i'm not proud of it either ok).
+
+Lead developer [peppy](https://github.com/peppy) has stated [his opinion about AI slop lazer forks](https://youtu.be/hxz6ieZx_jQ?si=TXHoS4Jv6AuUqKWy&t=660) and I agree with his stance, which is why I'm not promoting this client in any way so if you've somehow found it, congrats you're one of the     very few people who know about this client.
 
 ## License
 
