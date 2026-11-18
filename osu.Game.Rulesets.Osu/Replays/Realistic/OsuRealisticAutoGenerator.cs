@@ -773,9 +773,9 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
         internal readonly record struct SpinnerExit(double Time, double Duration, double Speed, double Slowdown);
 
         /// <summary>
-        /// When <paramref name="hitObject"/> becomes visible. Legacy skins only fade spinners in shortly before they start.
+        /// When <paramref name="hitObject"/> becomes visible. Spinners also appear a full approach time early (legacy skins fade them in later, but they're still seen coming).
         /// </summary>
-        private static double appearTime(OsuHitObject hitObject) => hitObject is Spinner ? hitObject.StartTime - hitObject.TimeFadeIn : hitObject.StartTime - hitObject.TimePreempt;
+        private static double appearTime(OsuHitObject hitObject) => hitObject.StartTime - hitObject.TimePreempt;
 
         /// <summary>
         /// Where the cursor aims at the next object: its near side, and never at exactly the same spot.
