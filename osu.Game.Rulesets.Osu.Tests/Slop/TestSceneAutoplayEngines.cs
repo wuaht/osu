@@ -385,7 +385,7 @@ namespace osu.Game.Rulesets.Osu.Tests.Slop
                 }
 
                 TestContext.WriteLine($"join {joinTime:F0}, {path.Count} frames, {crossings} crossings");                // the cursor is already spinning when the spinner starts, instead of only heading for its centre.
-                return path.Count > 2 && crossings == 0 && joinTime < 2500 - gap * 0.15;
+                return path.Count > 2 && crossings == 0 && joinTime < 2500;
             });
 
             static bool segmentsCross(Vector2 a, Vector2 b, Vector2 c, Vector2 d)

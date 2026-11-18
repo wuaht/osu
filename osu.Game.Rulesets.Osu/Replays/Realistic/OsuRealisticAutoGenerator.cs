@@ -617,9 +617,9 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
             float s2 = s * s;
             float s3 = s2 * s;
 
-            // the movement starts from rest and speeds up into the spin, joining it with its velocity (capped at 2 times the distance, so it speeds up evenly - at 3 times it would barely move at first).
+            // the movement starts from rest and speeds up into the spin, joining it with its velocity (a tangent of 1.5 to 3 times the distance only ever speeds up).
             Vector2 endTangent = (to - spinTarget(joinTime - 1, spinner).target) * duration;
-            float maxTangent = 2 * Vector2.Distance(from, to);
+            float maxTangent = 3 * Vector2.Distance(from, to);
             if (endTangent.Length > maxTangent)
                 endTangent *= maxTangent / endTangent.Length;
 
@@ -644,6 +644,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
             double searchEnd = Math.Min(searchStart + rotation, spinner.StartTime);
             double best = searchStart;
             float bestAlignment = float.MinValue;
+            bool bestReachable = false;
 
             for (double t = searchStart; t <= searchEnd; t += 2)
             {
@@ -655,15 +656,19 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
                     continue;
 
                 float alignment = Vector2.Dot(direction.Normalized(), fromStart.Normalized());
+                // a swing from rest can only reach the spin's speed over enough distance (at most 3 times the distance as tangent),
+                // otherwise it creeps along a point close to the start and then suddenly shoots off into the spin.
+                bool reachable = direction.Length * (t - moveStartTime) <= 3 * fromStart.Length;
 
-                if (alignment > bestAlignment)
+                if ((reachable && !bestReachable) || (reachable == bestReachable && alignment > bestAlignment))
                 {
                     bestAlignment = alignment;
+                    bestReachable = reachable;
                     best = t;
                 }
 
                 // the first point that heads roughly away is good enough, waiting for a better one would delay spinning.
-                if (alignment > 0.7f)
+                if (reachable && alignment > 0.7f)
                     break;
             }
 
