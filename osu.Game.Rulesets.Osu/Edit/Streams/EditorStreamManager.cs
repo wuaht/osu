@@ -230,33 +230,72 @@ namespace osu.Game.Rulesets.Osu.Edit.Streams
         /// </summary>
         private bool resolve(EditorStream stream, HashSet<HitObject> claimed)
         {
-            var hitObjects = editorBeatmap.HitObjects;
+            var layout = generate(stream);
+            var circles = matchLayout(layout, claimed) ?? matchAlongPath(stream, layout[0].Time, claimed);
 
-            foreach (var (time, generatedPosition) in generate(stream))
+            if (circles == null)
+                return false;
+
+            claimed.UnionWith(circles);
+            stream.Circles.AddRange(circles);
+            takeSnapshot(stream);
+            return true;
+        }
+
+        private List<HitCircle>? matchLayout(List<(double Time, Vector2 Position)> layout, HashSet<HitObject> claimed)
+        {
+            var circles = new List<HitCircle>();
+
+            foreach (var (time, generatedPosition) in layout)
             {
                 // the decoder clamps the positions of hit objects (see ConvertHitObjectParser), so circles outside of it don't match otherwise.
                 Vector2 position = Vector2.Clamp(generatedPosition, Vector2.Zero, new Vector2(512));
 
-                HitCircle? match = null;
-
-                for (int i = lowerBound(hitObjects, time - time_leniency); i < hitObjects.Count && hitObjects[i].StartTime <= time + time_leniency; i++)
-                {
-                    if (hitObjects[i] is HitCircle circle && !claimed.Contains(circle) && Vector2.Distance(circle.Position, position) <= position_leniency)
-                    {
-                        match = circle;
-                        break;
-                    }
-                }
+                var match = findCircle(time, c => Vector2.Distance(c.Position, position) <= position_leniency, claimed);
 
                 if (match == null)
-                    return false;
+                    return null;
 
-                claimed.Add(match);
-                stream.Circles.Add(match);
+                circles.Add(match);
             }
 
-            takeSnapshot(stream);
-            return true;
+            return circles;
+        }
+
+        /// <summary>
+        /// The layout depends on the timing, the slider multiplier and the layout algorithm itself, so it may no longer match the circles after any of these changed.
+        /// In that case, the consecutive circles which still lie on the path at the stream's rhythm are kept as they are, until the stream is edited.
+        /// </summary>
+        private List<HitCircle>? matchAlongPath(EditorStream stream, double firstTime, HashSet<HitObject> claimed)
+        {
+            var circles = new List<HitCircle>();
+            double time = firstTime;
+
+            while (circles.Count < EditorStream.MAX_CIRCLES)
+            {
+                var match = findCircle(time, c => stream.DistanceToPath(c.Position) <= position_leniency, claimed);
+
+                if (match == null)
+                    break;
+
+                circles.Add(match);
+                time = stream.NextCircleTime(editorBeatmap.ControlPointInfo, time);
+            }
+
+            return circles.Count > 0 ? circles : null;
+        }
+
+        private HitCircle? findCircle(double time, Func<HitCircle, bool> matches, HashSet<HitObject> claimed)
+        {
+            var hitObjects = editorBeatmap.HitObjects;
+
+            for (int i = lowerBound(hitObjects, time - time_leniency); i < hitObjects.Count && hitObjects[i].StartTime <= time + time_leniency; i++)
+            {
+                if (hitObjects[i] is HitCircle circle && !claimed.Contains(circle) && matches(circle))
+                    return circle;
+            }
+
+            return null;
         }
 
         private static int lowerBound(IReadOnlyList<HitObject> hitObjects, double time)

@@ -28,7 +28,7 @@ namespace osu.Game.Rulesets.Osu.Tests.Slop
         }
 
         [Test]
-        public void TestCircleLiesOnAnchor()
+        public void TestSpacingIgnoresAnchors()
         {
             var stream = createTwoSegmentStream();
             var points = stream.Path.Path.ControlPoints;
@@ -38,8 +38,24 @@ namespace osu.Game.Rulesets.Osu.Tests.Slop
 
             float[] xs = layout(stream);
 
-            // the first section is stretched slightly so that its last circle lies on the anchor at 210.
-            Assert.That(xs, Is.EqualTo(new float[] { 0, 26.25f, 52.5f, 78.75f, 105, 131.25f, 157.5f, 183.75f, 210, 260, 310, 360, 410 }).Within(0.01f));
+            // the spacing stays exactly one distance snap, so no circle lands on the anchor at 210 and the rest of the path past 375 is too short for another.
+            Assert.That(xs, Is.EqualTo(new float[] { 0, 25, 50, 75, 100, 125, 150, 175, 200, 225, 275, 325, 375 }).Within(0.01f));
+        }
+
+        [Test]
+        public void TestSpacingIsStraightDistanceOnCurves()
+        {
+            var stream = new EditorStream { BeatDivisor = 4 };
+            var points = stream.Path.Path.ControlPoints;
+
+            points.Add(new PathControlPoint(Vector2.Zero, PathType.PERFECT_CURVE));
+            points.Add(new PathControlPoint(new Vector2(100, 100)));
+            points.Add(new PathControlPoint(new Vector2(200, 0)));
+
+            var positions = stream.Generate(new ControlPointInfo(), 1).Select(c => c.Position).ToArray();
+
+            Assert.That(positions.Length, Is.GreaterThan(2));
+            Assert.That(positions.Zip(positions.Skip(1), Vector2.Distance), Is.All.EqualTo(25).Within(0.01f));
         }
 
         [Test]

@@ -22,7 +22,7 @@ namespace osu.Game.Rulesets.Osu.Edit.Streams
         public const double MIN_DENSITY = 0.1;
         public const double MAX_DENSITY = 10;
 
-        private const int max_circles = 512;
+        internal const int MAX_CIRCLES = 512;
 
         /// <summary>
         /// The path of the stream, with its start position and time. This is never part of the beatmap.
@@ -215,7 +215,8 @@ namespace osu.Game.Rulesets.Osu.Edit.Streams
             {
                 double originalDistance = from + distance;
 
-                part.densities[point] = Math.Clamp(Math.Round(densityAt(stops, originalDistance), 2), MIN_DENSITY, MAX_DENSITY);
+                // same offset as in generateUntrimmed, for cuts at a circle which lies on an anchor.
+                part.densities[point] = Math.Clamp(Math.Round(densityAt(stops, originalDistance + 0.01), 2), MIN_DENSITY, MAX_DENSITY);
 
                 // an anchor inside an accelerating segment keeps accelerating towards the original segment's end.
                 int segment = stops.FindLastIndex(s => s.Distance <= originalDistance + 0.01);
@@ -272,24 +273,106 @@ namespace osu.Game.Rulesets.Osu.Edit.Streams
 
             distances = new List<double> { 0 };
 
-            // every section between two anchors is fitted separately, so that a circle lies exactly on each anchor.
-            for (int i = 0; i < stops.Count - 1 && distances.Count < max_circles; i++)
-                fitSection(stops, stops[i].Distance, stops[i + 1].Distance, baseSpacing, distances);
+            // every circle is exactly one distance snap (times the density) away from the previous one, independent of where the anchors lie.
+            // the small offset keeps a circle which lands on an anchor from using the previous segment's density due to floating point inaccuracies.
+            while (distances.Count < MAX_CIRCLES)
+            {
+                double? next = nextDistance(distances[^1], baseSpacing * densityAt(stops, distances[^1] + 0.01), length);
+
+                if (next == null)
+                    break;
+
+                distances.Add(next.Value);
+            }
 
             double time = Path.StartTime;
 
-            foreach (double distance in distances.Take(max_circles))
+            foreach (double distance in distances)
             {
                 if (result.Count > 0)
-                    time += controlPointInfo.TimingPointAt(time).BeatLength / Math.Max(1, BeatDivisor);
+                    time = NextCircleTime(controlPointInfo, time);
 
                 result.Add((time, Path.Position + Path.Path.PositionAt(length > 0 ? Math.Min(1, distance / length) : 0)));
-
-                if (length <= 0)
-                    break;
             }
 
             return result;
+        }
+
+        /// <summary>
+        /// The time of the circle following the one at <paramref name="time"/>.
+        /// </summary>
+        internal double NextCircleTime(ControlPointInfo controlPointInfo, double time) => time + controlPointInfo.TimingPointAt(time).BeatLength / Math.Max(1, BeatDivisor);
+
+        /// <summary>
+        /// Finds the first distance along the path after <paramref name="from"/> whose straight distance to the position at <paramref name="from"/> is <paramref name="spacing"/>,
+        /// as distance snapping measures straight distances rather than distances along the path.
+        /// </summary>
+        /// <returns>The distance, or <c>null</c> if the rest of the path is too short.</returns>
+        private double? nextDistance(double from, double spacing, double length)
+        {
+            if (spacing <= 0 || length <= 0)
+                return null;
+
+            Vector2 origin = positionAt(from);
+            double step = Math.Min(spacing / 8, 2);
+            double low = from;
+
+            while (true)
+            {
+                double high = Math.Min(low + step, length);
+
+                if (Vector2.Distance(positionAt(high), origin) >= spacing)
+                {
+                    for (int i = 0; i < 30; i++)
+                    {
+                        double mid = (low + high) / 2;
+
+                        if (Vector2.Distance(positionAt(mid), origin) >= spacing)
+                            high = mid;
+                        else
+                            low = mid;
+                    }
+
+                    return high;
+                }
+
+                if (high >= length)
+                {
+                    // floating point inaccuracies would otherwise drop a circle which lies exactly on the end of the path (e.g. of a cut part).
+                    return Vector2.Distance(positionAt(length), origin) >= spacing - 0.05 ? length : null;
+                }
+
+                low = high;
+            }
+
+            Vector2 positionAt(double distance) => Path.Path.PositionAt(distance / length);
+        }
+
+        /// <summary>
+        /// The distance of <paramref name="position"/> to the path.
+        /// </summary>
+        internal float DistanceToPath(Vector2 position)
+        {
+            var vertices = new List<Vector2>();
+            Path.Path.GetPathToProgress(vertices, 0, 1);
+
+            Vector2 local = position - Path.Position;
+
+            if (vertices.Count == 0)
+                return Vector2.Distance(local, Vector2.Zero);
+
+            float min = Vector2.Distance(local, vertices[0]);
+
+            for (int i = 1; i < vertices.Count; i++)
+            {
+                Vector2 a = vertices[i - 1];
+                Vector2 ab = vertices[i] - a;
+                float t = ab.LengthSquared > 0 ? Math.Clamp(Vector2.Dot(local - a, ab) / ab.LengthSquared, 0, 1) : 0;
+
+                min = Math.Min(min, Vector2.Distance(local, a + ab * t));
+            }
+
+            return min;
         }
 
         /// <summary>
@@ -312,81 +395,6 @@ namespace osu.Game.Rulesets.Osu.Edit.Streams
 
         private List<(double Distance, double Density, bool Accelerates)> getDensityStops(double length)
             => GetDensityAnchors().Select(a => (Math.Min(a.Distance, length), GetDensity(a.Point), GetAccelerates(a.Point))).ToList();
-
-        /// <summary>
-        /// Adds the distances of the circles from <paramref name="from"/> (exclusive) to <paramref name="to"/> (inclusive).
-        /// The densities are scaled slightly, so that the section holds a whole number of circles and the last one lies on <paramref name="to"/>.
-        /// </summary>
-        private static void fitSection(List<(double Distance, double Density, bool Accelerates)> stops, double from, double to, double baseSpacing, List<double> distances)
-        {
-            if (to - from <= 0.001)
-                return;
-
-            int count = Math.Max(1, (int)Math.Round(countSteps(stops, from, to, baseSpacing)));
-
-            // the end of the section after walking the circles grows with the scale, so the scale which ends exactly on the anchor can be bisected.
-            double low = 0;
-            double high = 1;
-
-            while (walk(stops, from, count, baseSpacing * high) < to && high < 1024)
-                high *= 2;
-
-            for (int iteration = 0; iteration < 50; iteration++)
-            {
-                double mid = (low + high) / 2;
-
-                if (walk(stops, from, count, baseSpacing * mid) < to)
-                    low = mid;
-                else
-                    high = mid;
-            }
-
-            double distance = from;
-
-            for (int i = 1; i < count && distances.Count < max_circles; i++)
-            {
-                distance += baseSpacing * high * densityAt(stops, distance);
-                distances.Add(Math.Min(distance, to));
-            }
-
-            if (distances.Count < max_circles)
-                distances.Add(to);
-        }
-
-        /// <summary>
-        /// The number of circle spacings, including fractions, which fit between <paramref name="from"/> and <paramref name="to"/> at the chosen densities.
-        /// </summary>
-        private static double countSteps(List<(double Distance, double Density, bool Accelerates)> stops, double from, double to, double baseSpacing)
-        {
-            double distance = from;
-            double steps = 0;
-
-            while (steps < max_circles)
-            {
-                double spacing = baseSpacing * densityAt(stops, distance);
-
-                if (spacing <= 0)
-                    return steps;
-
-                if (distance + spacing >= to)
-                    return steps + (to - distance) / spacing;
-
-                distance += spacing;
-                steps++;
-            }
-
-            return steps;
-        }
-
-        private static double walk(List<(double Distance, double Density, bool Accelerates)> stops, double from, int count, double baseSpacing)
-        {
-            double distance = from;
-
-            for (int i = 0; i < count; i++)
-                distance += baseSpacing * densityAt(stops, distance);
-
-            return distance;
-        }
 
         private static double densityAt(List<(double Distance, double Density, bool Accelerates)> stops, double distance)
         {
