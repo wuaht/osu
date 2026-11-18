@@ -2058,6 +2058,17 @@ namespace osu.Game.Localisation
         public static LocalisableString LiquidGlassDarknessDescription => new TranslatableString(getKey(@"liquid_glass_darkness_description"),
             @"How much liquid glass darkens the content behind it, which keeps text on top of it readable.");
 
+        /// <summary>
+        /// "Hit object backlight"
+        /// </summary>
+        public static LocalisableString LiquidGlassHitObjectBacklight => new TranslatableString(getKey(@"liquid_glass_hit_object_backlight"), @"Hit object backlight");
+
+        /// <summary>
+        /// "How much liquid glass hit circles and sliders act as if a white light was behind them, which keeps them visible on dark backgrounds."
+        /// </summary>
+        public static LocalisableString LiquidGlassHitObjectBacklightDescription => new TranslatableString(getKey(@"liquid_glass_hit_object_backlight_description"),
+            @"How much liquid glass hit circles and sliders act as if a white light was behind them, which keeps them visible on dark backgrounds.");
+
         private static string getKey(string key) => $"{prefix}:{key}";
     }
 }

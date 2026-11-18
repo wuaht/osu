@@ -29,6 +29,7 @@ namespace osu.Game.Configuration
         private readonly BindableFloat sliderBodyBrightness = new BindableFloat();
         private readonly BindableFloat blur = new BindableFloat(0.15f);
         private readonly BindableFloat darkness = new BindableFloat(0.1f);
+        private readonly BindableFloat hitObjectBacklight = new BindableFloat();
 
         /// <param name="config">The config to read the settings from, or null to use the default settings.</param>
         /// <param name="changed">Invoked whenever a setting changes.</param>
@@ -44,6 +45,7 @@ namespace osu.Game.Configuration
             bind(OsuSetting.SlopLiquidGlassSliderBodyBrightness, sliderBodyBrightness);
             bind(OsuSetting.SlopLiquidGlassBlur, blur);
             bind(OsuSetting.SlopLiquidGlassDarkness, darkness);
+            bind(OsuSetting.SlopLiquidGlassHitObjectBacklight, hitObjectBacklight);
 
             void bind(OsuSetting setting, BindableFloat bindable)
             {
@@ -83,7 +85,8 @@ namespace osu.Game.Configuration
         /// <param name="maxThickness">The width of the refracting edge at the highest thickness setting, in the local space of the drawable.</param>
         /// <param name="cornerRadius">The corner radius of the glass, in the local space of the drawable.</param>
         /// <param name="shape">The area covered by the glass, or null to cover the whole drawable.</param>
-        public LiquidGlassParameters CreateParameters(float maxThickness, float cornerRadius = 0, RectangleF? shape = null) => new LiquidGlassParameters
+        /// <param name="isHitObject">Whether the glass is a hit object, which is lit from behind according to the hit object backlight setting.</param>
+        public LiquidGlassParameters CreateParameters(float maxThickness, float cornerRadius = 0, RectangleF? shape = null, bool isHitObject = false) => new LiquidGlassParameters
         {
             Thickness = maxThickness * thickness.Value,
             CornerRadius = cornerRadius,
@@ -91,6 +94,7 @@ namespace osu.Game.Configuration
             Refraction = refraction.Value,
             ChromaticAberration = chromaticAberration.Value,
             Darkness = darkness.Value,
+            Backlight = isHitObject ? hitObjectBacklight.Value : 0,
         };
 
         /// <summary>

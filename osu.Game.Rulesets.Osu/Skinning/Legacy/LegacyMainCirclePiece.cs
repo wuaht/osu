@@ -334,7 +334,7 @@ namespace osu.Game.Rulesets.Osu.Skinning.Legacy
                 float radius = Math.Min(circle.DrawWidth * circle.Scale.X, circle.DrawHeight * circle.Scale.Y) / 2 * visible_radius;
                 var shape = new RectangleF(DrawSize / 2 - new Vector2(radius), new Vector2(radius * 2));
 
-                LiquidGlass = liquidGlass.CreateParameters(radius * max_liquid_glass_thickness, radius, shape);
+                LiquidGlass = liquidGlass.CreateParameters(radius * max_liquid_glass_thickness, radius, shape, isHitObject: true);
             }
         }
     }

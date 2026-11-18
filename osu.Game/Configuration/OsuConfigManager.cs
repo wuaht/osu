@@ -272,6 +272,7 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopLiquidGlassSliderBodyBrightness, 0f, 0f, 1f, 0.01f);
             SetDefault(OsuSetting.SlopLiquidGlassBlur, 0.15f, 0f, 1f, 0.01f);
             SetDefault(OsuSetting.SlopLiquidGlassDarkness, 0.1f, 0f, 1f, 0.01f);
+            SetDefault(OsuSetting.SlopLiquidGlassHitObjectBacklight, 0f, 0f, 1f, 0.01f);
             SetDefault(OsuSetting.SlopMenuCursorStyle, MenuCursorStyle.Default);
             SetDefault(OsuSetting.SlopForceArgonCursorTrail, false);
             SetDefault(OsuSetting.SlopSliderBorderComboColour, false);
@@ -810,6 +811,11 @@ namespace osu.Game.Configuration
         /// How much liquid glass darkens the content behind it, from 0 to 1.
         /// </summary>
         SlopLiquidGlassDarkness,
+
+        /// <summary>
+        /// How much liquid glass hit circles and sliders act as if a white light was behind them, from 0 to 1.
+        /// </summary>
+        SlopLiquidGlassHitObjectBacklight,
 
         /// <summary>
         /// The cursor used in menus and the editor.

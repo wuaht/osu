@@ -51,6 +51,8 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                     SlopSettingsStrings.LiquidGlassSliderBodyBrightnessDescription),
                 createSlider(config, OsuSetting.SlopLiquidGlassBlur, SlopSettingsStrings.LiquidGlassBlur, SlopSettingsStrings.LiquidGlassBlurDescription),
                 createSlider(config, OsuSetting.SlopLiquidGlassDarkness, SlopSettingsStrings.LiquidGlassDarkness, SlopSettingsStrings.LiquidGlassDarknessDescription),
+                createSlider(config, OsuSetting.SlopLiquidGlassHitObjectBacklight, SlopSettingsStrings.LiquidGlassHitObjectBacklight,
+                    SlopSettingsStrings.LiquidGlassHitObjectBacklightDescription),
             };
 
             foreach (var setting in new[]
