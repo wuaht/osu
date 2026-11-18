@@ -127,6 +127,13 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
         /// </summary>
         private const double spinner_exit_slowdown = 1.6;
 
+        /// <summary>
+        /// How long (in seconds) and how far the hand keeps moving after it stops spinning.
+        /// </summary>
+        private const float spinner_coast_time = 0.04f;
+
+        private const float spinner_coast_distance = 30;
+
         private static readonly Vector2 playfield_min = new Vector2(-512, -384);
         private static readonly Vector2 playfield_max = new Vector2(1024, 768);
 
@@ -141,6 +148,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
         private OsuHitObject? targetSource;
         private OsuHitObject? leftObject;
         private Vector2 leavePosition;
+        private Vector2 leaveVelocity;
         private Vector2 lastTarget;
         private Slider? enteredSlider;
         private Vector2 sliderEntryOffset;
@@ -573,32 +581,38 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
                 return;
             }
 
-            // the hand stops wherever the spin ended, so that the target doesn't jump.
+            // the spin's target runs far ahead of the lagging cursor, so continuing from the target would make the cursor snap onto it.
+            // instead, everything after the spin continues from where the cursor actually is and how it actually moves.
             if (leftObject != spinner)
             {
                 leftObject = spinner;
-                leavePosition = lastTarget;
+                leavePosition = cursor.Position;
+                leaveVelocity = cursor.Velocity;
+                cursor.ResetTarget();
             }
 
-            // once the spinner is over, rest there until the next object appears.
+            // once the spinner is over, the hand coasts to a stop and rests there until the next object appears.
+            float coastTime = MathF.Min(spinner_coast_time, spinner_coast_distance / MathF.Max(leaveVelocity.Length, 1));
+            Vector2 restPosition = leavePosition + leaveVelocity * coastTime;
+
             if (time < exitTime)
             {
-                moveTo(dt, leavePosition, resting);
+                float coasted = (float)ApplyModsToTimeDelta(spinner.EndTime, time) / 1000;
+                moveTo(dt, leavePosition + leaveVelocity * coastTime * (1 - MathF.Exp(-coasted / coastTime)), tracking);
                 return;
             }
 
             bool spinning = exitTime < spinner.EndTime;
-            Vector2 from = leavePosition;
+            Vector2 from = spinning ? leavePosition : restPosition;
             Vector2 to = aimPoint(from, next);
             double arrivalTime = Math.Min(next.StartTime, exitTime + duration);
 
-            // leave along the direction of the spin. the speed is limited, so that the cursor curves out of the spinner instead of looping around.
+            // leave along the direction the hand is spinning. the speed is limited, so that the cursor curves out of the spinner instead of looping around.
             Vector2 tangent = Vector2.Zero;
 
             if (spinning)
             {
-                Vector2 spinVelocity = spinTarget(exitTime + 1, spinner).target - spinTarget(exitTime, spinner).target;
-                tangent = spinVelocity * (float)(arrivalTime - exitTime);
+                tangent = leaveVelocity * (float)ApplyModsToTimeDelta(exitTime, arrivalTime) / 1000;
 
                 float maxLength = Vector2.Distance(from, to);
                 if (tangent.Length > maxLength)
@@ -613,7 +627,8 @@ namespace osu.Game.Rulesets.Osu.Replays.Realistic
             // a hermite curve which starts with the spin's direction and comes to rest on the next object.
             Vector2 target = (2 * t3 - 3 * t2 + 1) * from + (t3 - 2 * t2 + t) * tangent + (-2 * t3 + 3 * t2) * to;
 
-            moveTo(dt, target, tracking);
+            // the hand's loose spinning motion only gradually turns into an aimed movement.
+            moveTo(dt, target, spinning ? lerp(spinTarget(exitTime, spinner).parameters, tracking, t) : tracking);
         }
 
         /// <summary>
