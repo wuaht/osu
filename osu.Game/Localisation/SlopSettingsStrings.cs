@@ -481,6 +481,17 @@ namespace osu.Game.Localisation
             @"How the waveform is displayed in the timeline at the top of the editor.");
 
         /// <summary>
+        /// "Always snap to onsets in the timing screen"
+        /// </summary>
+        public static LocalisableString AlwaysSnapToOnsets => new TranslatableString(getKey(@"always_snap_to_onsets"), @"Always snap to onsets in the timing screen");
+
+        /// <summary>
+        /// "Snaps the cursor in the bar view of the timing screen to onsets of the audio, even when the timeline waveform isn't set to onsets. Hold Shift to place freely."
+        /// </summary>
+        public static LocalisableString AlwaysSnapToOnsetsDescription => new TranslatableString(getKey(@"always_snap_to_onsets_description"),
+            @"Snaps the cursor in the bar view of the timing screen to onsets of the audio, even when the timeline waveform isn't set to onsets. Hold Shift to place freely.");
+
+        /// <summary>
         /// "Default"
         /// </summary>
         public static LocalisableString WaveformStyleDefault => new TranslatableString(getKey(@"waveform_style_default"), @"Default");

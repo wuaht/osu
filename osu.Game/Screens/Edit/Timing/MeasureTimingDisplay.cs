@@ -102,6 +102,7 @@ namespace osu.Game.Screens.Edit.Timing
 
         private BindableDouble redundantLeeway = null!;
         private Bindable<EditorWaveformStyle> waveformStyle = null!;
+        private Bindable<bool> alwaysSnapToOnsets = null!;
         private Bindable<float> waveformOpacity = null!;
 
         /// <summary>
@@ -173,6 +174,7 @@ namespace osu.Game.Screens.Edit.Timing
             adjustHitObjects = config.GetBindable<bool>(OsuSetting.EditorAdjustExistingObjectsOnTimingChanges);
             redundantLeeway = (BindableDouble)config.GetBindable<double>(OsuSetting.SlopEditorRedundantTimingPointLeeway);
             waveformStyle = config.GetBindable<EditorWaveformStyle>(OsuSetting.SlopEditorWaveformStyle);
+            alwaysSnapToOnsets = config.GetBindable<bool>(OsuSetting.SlopEditorAlwaysSnapToOnsets);
             waveformOpacity = config.GetBindable<float>(OsuSetting.EditorWaveformOpacity);
 
             InternalChildren = new Drawable[]
@@ -949,13 +951,13 @@ namespace osu.Game.Screens.Edit.Timing
         #region Placement
 
         /// <summary>
-        /// Snaps a time to the closest onset in the audio while the onsets waveform is displayed, unless Shift is held.
+        /// Snaps a time to the closest onset in the audio while the onsets waveform is displayed (or always, see <see cref="OsuSetting.SlopEditorAlwaysSnapToOnsets"/>), unless Shift is held.
         /// </summary>
         private (double time, bool snapped) snapToOnset(double time, MeasureRow row)
         {
             var envelope = analyser?.Envelope;
 
-            if (envelope == null || shiftPressed || waveformStyle.Value != EditorWaveformStyle.Onsets)
+            if (envelope == null || shiftPressed || (waveformStyle.Value != EditorWaveformStyle.Onsets && !alwaysSnapToOnsets.Value))
                 return (Math.Round(time), false);
 
             double radius = Math.Clamp(VariableTimingOverlay.ONSET_SNAP_DISTANCE * millisecondsPerPixel(row),

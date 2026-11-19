@@ -311,6 +311,7 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopEditorShowDifficultyStrains, false);
             SetDefault(OsuSetting.SlopEditorShowOffscreenObjects, false);
             SetDefault(OsuSetting.SlopEditorWaveformStyle, EditorWaveformStyle.Default);
+            SetDefault(OsuSetting.SlopEditorAlwaysSnapToOnsets, true);
             SetDefault(OsuSetting.SlopEditorRedundantTimingPointLeeway, 4.0, 0, 50, 0.5);
             SetDefault(OsuSetting.SlopEditorUnsnapMode, EditorUnsnapMode.Enabled);
             SetDefault(OsuSetting.SlopEditorUnsnapDivisors, @"10,12,16");
@@ -953,6 +954,11 @@ namespace osu.Game.Configuration
         /// How the waveform is displayed in the timeline of the beatmap editor.
         /// </summary>
         SlopEditorWaveformStyle,
+
+        /// <summary>
+        /// Whether the bar view of the timing screen snaps the cursor to onsets even when the timeline waveform isn't the onsets style.
+        /// </summary>
+        SlopEditorAlwaysSnapToOnsets,
 
         /// <summary>
         /// How far the beats may move, in milliseconds, when removing redundant timing points in the bar view of the timing screen.

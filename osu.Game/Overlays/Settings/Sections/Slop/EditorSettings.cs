@@ -103,6 +103,12 @@ namespace osu.Game.Overlays.Settings.Sections.Slop
                     HintText = SlopSettingsStrings.WaveformStyleDescription,
                     Current = config.GetBindable<EditorWaveformStyle>(OsuSetting.SlopEditorWaveformStyle),
                 }),
+                new SettingsItemV2(new FormCheckBox
+                {
+                    Caption = SlopSettingsStrings.AlwaysSnapToOnsets,
+                    HintText = SlopSettingsStrings.AlwaysSnapToOnsetsDescription,
+                    Current = config.GetBindable<bool>(OsuSetting.SlopEditorAlwaysSnapToOnsets),
+                }),
                 new SettingsItemV2(new FormEnumDropdown<GlassStyle>
                 {
                     Caption = SlopSettingsStrings.BnTrackerPanelsGlassStyle,
