@@ -534,7 +534,7 @@ namespace osu.Game.Screens.Edit.Timing
                 if (findPointAt(index, fraction) is TimingControlPoint point)
                 {
                     hoverTime = point.Time;
-                    status = $"{bpm(point.BeatLength)} · drag onto a beat, Ctrl+drag to change the offset, Ctrl+right-click to remove";
+                    status = $"{bpm(point.BeatLength)} · drag onto a beat, Ctrl+drag to change the offset, Ctrl+right-click to remove, Alt+click/right-click to double/halve the BPM";
                 }
                 else
                 {
@@ -1015,6 +1015,13 @@ namespace osu.Game.Screens.Edit.Timing
 
             var row = rows[index];
             var point = findPointAt(index, fraction);
+
+            // Alt+click doubles the BPM of the bar's timing point, Alt+right-click halves it.
+            if (altPressed && row.Point != null && e.Button is MouseButton.Left or MouseButton.Right)
+            {
+                TimingSectionAdjustments.ScaleBPM(beatmap, row.Point, e.Button == MouseButton.Left ? 2 : 0.5, adjustHitObjects.Value);
+                return true;
+            }
 
             switch (e.Button)
             {

@@ -160,6 +160,16 @@ namespace osu.Game.Localisation
         public static LocalisableString TimelineZoomOut => new TranslatableString(getKey(@"timeline_zoom_out"), @"Zoom timeline out");
 
         /// <summary>
+        /// "Double BPM"
+        /// </summary>
+        public static LocalisableString DoubleBPM => new TranslatableString(getKey(@"double_bpm"), @"Double BPM");
+
+        /// <summary>
+        /// "Halve BPM"
+        /// </summary>
+        public static LocalisableString HalveBPM => new TranslatableString(getKey(@"halve_bpm"), @"Halve BPM");
+
+        /// <summary>
         /// "Rotation hotkey origin"
         /// </summary>
         public static LocalisableString RotationHotkeyOrigin => new TranslatableString(getKey(@"rotation_hotkey_origin"), @"Rotation hotkey origin");

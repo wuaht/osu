@@ -234,6 +234,8 @@ namespace osu.Game.Input.Bindings
             new KeyBinding(new[] { InputKey.Control, InputKey.Alt, InputKey.Period }, GlobalAction.EditorRotateByCustomAngleClockwise),
             new KeyBinding(new[] { InputKey.Control, InputKey.Alt, InputKey.Comma }, GlobalAction.EditorRotateByCustomAngleCounterclockwise),
             new KeyBinding(new[] { InputKey.Control, InputKey.Shift, InputKey.C }, GlobalAction.EditorCopyAsOsuFormat),
+            new KeyBinding(new[] { InputKey.Control, InputKey.Shift, InputKey.Up }, GlobalAction.EditorDoubleBPM),
+            new KeyBinding(new[] { InputKey.Control, InputKey.Shift, InputKey.Down }, GlobalAction.EditorHalveBPM),
             // non-precise scroll arrives as horizontal scroll while shift is held, with scrolling up arriving as positive x.
             new KeyBinding(new[] { InputKey.Control, InputKey.Shift, InputKey.MouseWheelRight }, GlobalAction.EditorTimelineZoomIn),
             new KeyBinding(new[] { InputKey.Control, InputKey.Shift, InputKey.MouseWheelLeft }, GlobalAction.EditorTimelineZoomOut),
@@ -816,6 +818,12 @@ namespace osu.Game.Input.Bindings
 
         [LocalisableDescription(typeof(SlopEditorStrings), nameof(SlopEditorStrings.RandomSliderShapeFromAnchors))]
         EditorRandomSliderShapeFromAnchors,
+
+        [LocalisableDescription(typeof(SlopEditorStrings), nameof(SlopEditorStrings.DoubleBPM))]
+        EditorDoubleBPM,
+
+        [LocalisableDescription(typeof(SlopEditorStrings), nameof(SlopEditorStrings.HalveBPM))]
+        EditorHalveBPM,
     }
 
     public enum GlobalActionCategory

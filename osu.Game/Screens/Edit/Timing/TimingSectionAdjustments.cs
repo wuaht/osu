@@ -95,5 +95,24 @@ namespace osu.Game.Screens.Edit.Timing
                     hitObjectWithDuration.Duration *= timingControlPoint.BeatLength / oldBeatLength;
             }
         }
+
+        /// <summary>
+        /// Multiplies the BPM of <paramref name="timingControlPoint"/> by <paramref name="factor"/> (2 doubles it, 0.5 halves it), keeping its time signature.
+        /// </summary>
+        public static void ScaleBPM(EditorBeatmap beatmap, TimingControlPoint timingControlPoint, double factor, bool adjustHitObjects)
+        {
+            beatmap.BeginChange();
+
+            double oldBeatLength = timingControlPoint.BeatLength;
+            timingControlPoint.BeatLength = oldBeatLength / factor;
+
+            if (adjustHitObjects)
+            {
+                SetHitObjectBPM(beatmap, timingControlPoint, oldBeatLength);
+                beatmap.UpdateAllHitObjects();
+            }
+
+            beatmap.EndChange();
+        }
     }
 }

@@ -13,14 +13,16 @@ using osu.Framework.Input.Bindings;
 using osu.Framework.Input.Events;
 using osu.Framework.Platform;
 using osu.Game.Beatmaps.ControlPoints;
+using osu.Game.Configuration;
 using osu.Game.Extensions;
+using osu.Game.Input.Bindings;
 using osu.Game.Overlays;
 using osu.Game.Screens.Edit.Compose.Components.Timeline;
 using osuTK;
 
 namespace osu.Game.Screens.Edit.Timing
 {
-    public partial class TimingScreen : EditorScreenWithTimeline, IKeyBindingHandler<PlatformAction>
+    public partial class TimingScreen : EditorScreenWithTimeline, IKeyBindingHandler<PlatformAction>, IKeyBindingHandler<GlobalAction>
     {
         [Cached]
         public readonly Bindable<ControlPointGroup> SelectedGroup = new Bindable<ControlPointGroup>();
@@ -47,6 +49,9 @@ namespace osu.Game.Screens.Edit.Timing
 
         [Resolved]
         private Clipboard hostClipboard { get; set; } = null!;
+
+        [Resolved]
+        private OsuConfigManager config { get; set; } = null!;
 
         public TimingScreen()
             : base(EditorScreenMode.Timing)
@@ -234,6 +239,26 @@ namespace osu.Game.Screens.Edit.Timing
         }
 
         public void OnReleased(KeyBindingReleaseEvent<PlatformAction> e)
+        {
+        }
+
+        public bool OnPressed(KeyBindingPressEvent<GlobalAction> e)
+        {
+            if (e.Action != GlobalAction.EditorDoubleBPM && e.Action != GlobalAction.EditorHalveBPM)
+                return false;
+
+            // the selected timing point, otherwise the one active at the playback position.
+            var point = SelectedGroup.Value?.ControlPoints.OfType<TimingControlPoint>().FirstOrDefault()
+                        ?? EditorBeatmap.ControlPointInfo.TimingPoints.LastOrDefault(p => p.Time <= (editorClock?.CurrentTime ?? 0))
+                        ?? EditorBeatmap.ControlPointInfo.TimingPoints.FirstOrDefault();
+
+            if (point != null)
+                TimingSectionAdjustments.ScaleBPM(EditorBeatmap, point, e.Action == GlobalAction.EditorDoubleBPM ? 2 : 0.5, config.Get<bool>(OsuSetting.EditorAdjustExistingObjectsOnTimingChanges));
+
+            return true;
+        }
+
+        public void OnReleased(KeyBindingReleaseEvent<GlobalAction> e)
         {
         }
 

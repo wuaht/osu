@@ -9,10 +9,12 @@ using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Input.Events;
+using osu.Framework.Localisation;
 using osu.Game.Beatmaps.ControlPoints;
 using osu.Game.Configuration;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Graphics.UserInterfaceV2;
+using osu.Game.Localisation;
 using osu.Game.Overlays;
 using osuTK;
 
@@ -114,10 +116,30 @@ namespace osu.Game.Screens.Edit.Timing
                         },
                         new Drawable[]
                         {
-                            bpmControl = new FormDiscreteAdjustmentControl<double>(0.1)
+                            new GridContainer
                             {
-                                Caption = "BPM",
+                                RelativeSizeAxes = Axes.X,
+                                AutoSizeAxes = Axes.Y,
                                 Margin = new MarginPadding { Bottom = padding },
+                                ColumnDimensions = new[]
+                                {
+                                    new Dimension(),
+                                    new Dimension(GridSizeMode.AutoSize),
+                                    new Dimension(GridSizeMode.AutoSize),
+                                },
+                                RowDimensions = new[] { new Dimension(GridSizeMode.AutoSize) },
+                                Content = new[]
+                                {
+                                    new Drawable[]
+                                    {
+                                        bpmControl = new FormDiscreteAdjustmentControl<double>(0.1)
+                                        {
+                                            Caption = "BPM",
+                                        },
+                                        createScaleButton("×2", 2, SlopEditorStrings.DoubleBPM),
+                                        createScaleButton("÷2", 0.5, SlopEditorStrings.HalveBPM),
+                                    }
+                                },
                             },
                         },
                         new Drawable[]
@@ -260,6 +282,22 @@ namespace osu.Game.Screens.Edit.Timing
             if (!editorClock.IsRunning && wasAtStart)
                 editorClock.Seek(newOffset);
         }
+
+        private RoundedButton createScaleButton(string text, double factor, LocalisableString tooltip) => new RoundedButton
+        {
+            Anchor = Anchor.CentreLeft,
+            Origin = Anchor.CentreLeft,
+            Width = 44,
+            Height = 36,
+            Margin = new MarginPadding { Left = 5 },
+            Text = text,
+            TooltipText = tooltip,
+            Action = () =>
+            {
+                if (selectedGroup.Value?.ControlPoints.OfType<TimingControlPoint>().FirstOrDefault() is TimingControlPoint timing)
+                    TimingSectionAdjustments.ScaleBPM(beatmap, timing, factor, configManager.Get<bool>(OsuSetting.EditorAdjustExistingObjectsOnTimingChanges));
+            },
+        };
 
         private void setBpm(ValueChangedEvent<double> bpmChange)
         {
