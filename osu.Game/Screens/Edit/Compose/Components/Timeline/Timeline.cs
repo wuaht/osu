@@ -114,6 +114,8 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
 
         private TimelineTimingChangeDisplay controlPoints = null!;
 
+        private TimelineEffectChangeDisplay effectPoints = null!;
+
         private Bindable<float> waveformOpacity = null!;
         private Bindable<bool> controlPointsVisible = null!;
         private Bindable<bool> ticksVisible = null!;
@@ -159,6 +161,12 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
                     Colour = colourProvider.Background1,
                 },
                 controlPoints = new TimelineTimingChangeDisplay
+                {
+                    RelativeSizeAxes = Axes.Both,
+                    Anchor = Anchor.CentreLeft,
+                    Origin = Anchor.CentreLeft,
+                },
+                effectPoints = new TimelineEffectChangeDisplay
                 {
                     RelativeSizeAxes = Axes.Both,
                     Anchor = Anchor.CentreLeft,
@@ -268,9 +276,15 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
             controlPointsVisible.BindValueChanged(visible =>
             {
                 if (visible.NewValue || alwaysShowControlPoints)
+                {
                     controlPoints.FadeIn(400, Easing.OutQuint);
+                    effectPoints.FadeIn(400, Easing.OutQuint);
+                }
                 else
+                {
                     controlPoints.FadeOut(200, Easing.OutQuint);
+                    effectPoints.FadeOut(200, Easing.OutQuint);
+                }
             }, true);
         }
 

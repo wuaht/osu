@@ -15,6 +15,7 @@ using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Input.Events;
+using osu.Framework.Localisation;
 using osu.Framework.Logging;
 using osu.Framework.Screens;
 using osu.Game.Beatmaps;
@@ -249,7 +250,7 @@ namespace osu.Game.Screens.Select
 
             if (beatmap.OnlineID > 0)
             {
-                yield return new OsuMenuItem(CommonStrings.Details, MenuItemType.Standard, () => beatmapOverlay?.FetchAndShowBeatmap(beatmap.OnlineID));
+                yield return new OsuMenuItem(LocalisableString.Interpolate($@"{CommonStrings.Details}..."), MenuItemType.Standard, () => beatmapOverlay?.FetchAndShowBeatmap(beatmap.OnlineID));
 
                 if (beatmap.GetOnlineURL(api, Ruleset.Value) is string url)
                     yield return new OsuMenuItem(CommonStrings.CopyLink, MenuItemType.Standard, () => game?.CopyToClipboard(url));
@@ -290,7 +291,7 @@ namespace osu.Game.Screens.Select
                 yield return new OsuMenuItem(WebCommonStrings.ButtonsHide.ToSentence(), MenuItemType.Standard, () => beatmaps.Hide(beatmap));
 
             if (beatmap.BeatmapSet != null)
-                yield return new OsuMenuItem(CommonStrings.DeleteWithConfirmation, MenuItemType.Destructive, () => Delete(beatmap.BeatmapSet)) { Icon = FontAwesome.Solid.Trash };
+                yield return new OsuMenuItem(Resources.Localisation.Web.CommonStrings.ButtonsDelete, MenuItemType.Destructive, () => Delete(beatmap.BeatmapSet)) { Icon = FontAwesome.Solid.Trash };
         }
 
         // beatmaps provided by the carousel are detached and don't carry their files, so the exporters need the managed instances.
