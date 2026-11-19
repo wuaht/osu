@@ -99,7 +99,7 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
         private bool styledWaveformLoaded;
 
         /// <summary>
-        /// Whether this timeline is part of the timing screen, where the waveform is always fully visible as it's essential for timing.
+        /// Whether this timeline is part of the timing screen, which uses its own waveform opacity (<see cref="OsuSetting.SlopEditorTimingWaveformOpacity"/>).
         /// </summary>
         private bool isTimingScreen;
 
@@ -117,6 +117,7 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
         private TimelineEffectChangeDisplay effectPoints = null!;
 
         private Bindable<float> waveformOpacity = null!;
+        private Bindable<float> timingWaveformOpacity = null!;
         private Bindable<bool> controlPointsVisible = null!;
         private Bindable<bool> ticksVisible = null!;
 
@@ -205,6 +206,7 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
             });
 
             waveformOpacity = config.GetBindable<float>(OsuSetting.EditorWaveformOpacity);
+            timingWaveformOpacity = config.GetBindable<float>(OsuSetting.SlopEditorTimingWaveformOpacity);
             waveformStyle = config.GetBindable<EditorWaveformStyle>(OsuSetting.SlopEditorWaveformStyle);
             maniaPlayfieldWaveform = config.GetBindable<bool>(OsuSetting.SlopEditorManiaPlayfieldWaveform);
             controlPointsVisible = config.GetBindable<bool>(OsuSetting.EditorTimelineShowTimingChanges);
@@ -267,6 +269,9 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
             isTimingScreen = this.FindClosestParent<TimingScreen>() != null;
             isManiaComposeScreen = this.FindClosestParent<ComposeScreen>() != null && editorBeatmap.BeatmapInfo.Ruleset.ShortName == @"mania";
 
+            if (isTimingScreen)
+                waveformOpacity = timingWaveformOpacity;
+
             waveformOpacity.BindValueChanged(_ => updateWaveformOpacity(), true);
             waveformStyle.BindValueChanged(_ => updateWaveformStyle());
             maniaPlayfieldWaveform.BindValueChanged(_ => updateWaveformOpacity());
@@ -291,7 +296,7 @@ namespace osu.Game.Screens.Edit.Compose.Components.Timeline
         private void updateWaveformOpacity()
         {
             bool useStyledWaveform = waveformStyle.Value != EditorWaveformStyle.Default;
-            float opacity = isTimingScreen ? 1 : waveformOpacity.Value;
+            float opacity = waveformOpacity.Value;
 
             if (isManiaComposeScreen && maniaPlayfieldWaveform.Value)
                 opacity = 0;

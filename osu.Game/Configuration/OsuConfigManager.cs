@@ -312,6 +312,7 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SlopEditorShowOffscreenObjects, false);
             SetDefault(OsuSetting.SlopEditorWaveformStyle, EditorWaveformStyle.Default);
             SetDefault(OsuSetting.SlopEditorAlwaysSnapToOnsets, true);
+            SetDefault(OsuSetting.SlopEditorTimingWaveformOpacity, 0.75f, 0f, 1f, 0.25f);
             SetDefault(OsuSetting.SlopEditorRedundantTimingPointLeeway, 4.0, 0, 50, 0.5);
             SetDefault(OsuSetting.SlopEditorUnsnapMode, EditorUnsnapMode.Enabled);
             SetDefault(OsuSetting.SlopEditorUnsnapDivisors, @"10,12,16");
@@ -959,6 +960,11 @@ namespace osu.Game.Configuration
         /// Whether the bar view of the timing screen snaps the cursor to onsets even when the timeline waveform isn't the onsets style.
         /// </summary>
         SlopEditorAlwaysSnapToOnsets,
+
+        /// <summary>
+        /// The waveform opacity used while on the timing screen, separate from <see cref="EditorWaveformOpacity"/>.
+        /// </summary>
+        SlopEditorTimingWaveformOpacity,
 
         /// <summary>
         /// How far the beats may move, in milliseconds, when removing redundant timing points in the bar view of the timing screen.

@@ -175,7 +175,7 @@ namespace osu.Game.Screens.Edit.Timing
             redundantLeeway = (BindableDouble)config.GetBindable<double>(OsuSetting.SlopEditorRedundantTimingPointLeeway);
             waveformStyle = config.GetBindable<EditorWaveformStyle>(OsuSetting.SlopEditorWaveformStyle);
             alwaysSnapToOnsets = config.GetBindable<bool>(OsuSetting.SlopEditorAlwaysSnapToOnsets);
-            waveformOpacity = config.GetBindable<float>(OsuSetting.EditorWaveformOpacity);
+            waveformOpacity = config.GetBindable<float>(OsuSetting.SlopEditorTimingWaveformOpacity);
 
             InternalChildren = new Drawable[]
             {
